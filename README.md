@@ -33,8 +33,6 @@ http://127.0.0.1:3005
 
 `npm run smoke:index` builds a small local database from `data/sample-bible.json`. It is only for testing the app path; it is not the real Bible index.
 
-On this machine, `npm run dev` mirrors the app into `/private/tmp/cross-cannon-remix-dev` and runs the real Remix Vite dev server there. This avoids a local esbuild resolver hang from the Desktop workspace path.
-
 Useful checks:
 
 ```bash

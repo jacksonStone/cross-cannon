@@ -4,10 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/remix-tmp.mjs build",
-    "build:direct": "remix vite:build",
-    "dev": "node scripts/remix-tmp.mjs dev",
-    "dev:direct": "remix vite:dev --host 127.0.0.1 --port 3005",
+    "build": "remix vite:build",
+    "dev": "remix vite:dev --host 127.0.0.1 --port 3005",
     "start": "NODE_ENV=production remix-serve ./build/server/index.js",
     "typecheck": "tsc --noEmit",
     "index:bible": "node --import tsx scripts/index-bible.ts",
