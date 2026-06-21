@@ -1,8 +1,21 @@
 # Cross Cannon
 
-Public Remix 2.16 scripture retrieval app for `crosscannon.com`.
+Public Remix 2.16 app for `crosscannon.com`.
 
-Users submit a question and receive related Scripture passages only. The app does not generate an answer. It embeds the question when `OPENAI_API_KEY` is configured, searches a persisted libSQL/Turso passage index, and falls back to lexical search for local development.
+Cross Cannon accepts a user's question and returns related Scripture only. It does not write an answer, commentary, or summary. Results are mixed verse and chapter passages from a persisted libSQL/Turso-compatible index.
+
+## How It Works
+
+1. The user submits a question from the Remix route in `app/routes/_index.tsx`.
+2. `app/lib/rate-limit.server.ts` limits each IP address to 5 searches per minute. Behind the reverse proxy it reads `X-Forwarded-For`.
+3. `app/lib/search.server.ts` embeds the question with OpenAI when `OPENAI_API_KEY` is configured.
+4. The app searches the persisted `passages` table in libSQL/SQLite:
+   - vector search when embeddings are available
+   - stored-vector brute force fallback if needed
+   - FTS/LIKE lexical fallback for local testing or no embedding key
+5. The response renders about 10 Scripture passages. The only returned content is passage reference and Bible text.
+
+The index is built ahead of time by `scripts/index-bible.ts`. It stores both verse-level and chapter-level passages, so search results can include either.
 
 ## Local Development
 
@@ -12,24 +25,27 @@ npm run smoke:index
 npm run dev
 ```
 
-The local Remix dev server runs on:
+Open:
 
 ```text
 http://127.0.0.1:3005
 ```
 
-On this machine, `npm run dev` mirrors the app into `/private/tmp/cross-cannon-remix-dev` and runs the real Remix 2.16 Vite dev server there. The Desktop workspace path causes esbuild's package resolver to hang, while the same Remix app runs normally from `/private/tmp`.
+`npm run smoke:index` builds a small local database from `data/sample-bible.json`. It is only for testing the app path; it is not the real Bible index.
 
-Useful local checks:
+On this machine, `npm run dev` mirrors the app into `/private/tmp/cross-cannon-remix-dev` and runs the real Remix Vite dev server there. This avoids a local esbuild resolver hang from the Desktop workspace path.
+
+Useful checks:
 
 ```bash
 curl -I http://127.0.0.1:3005/
+
 curl -X POST 'http://127.0.0.1:3005/?index' \
   -H 'Content-Type: application/x-www-form-urlencoded' \
   --data 'question=fear and comfort'
 ```
 
-Production build also uses the temp mirror and copies artifacts back into `./build`:
+Production build/start locally:
 
 ```bash
 npm run build
@@ -48,53 +64,57 @@ TURSO_AUTH_TOKEN=
 BIBLE_JSON_PATH=/home/ubuntu/cross-cannon-data/bible.json
 ```
 
-For Turso, set `DATABASE_URL` to the Turso/libSQL URL and `TURSO_AUTH_TOKEN` to the database token.
+Use `file:./storage/crosscannon.db` for local SQLite/libSQL. For Turso, set `DATABASE_URL` to the Turso/libSQL URL and set `TURSO_AUTH_TOKEN`.
 
-## Indexing
+## Full Bible Index
 
-Use the local or server-side Bible JSON:
-
-```bash
-npm run index:bible -- /path/to/bible.json
-```
-
-The public source repo is:
+The source Bible JSON is Jackson's public repo:
 
 ```text
 https://github.com/jacksonStone/Bible_as_JSON
-```
-
-The raw JSON URL is:
-
-```text
 https://raw.githubusercontent.com/jacksonStone/Bible_as_JSON/main/bible.json
 ```
 
-On the Ubuntu box, download it outside the app checkout and index it:
+Build the full index from a downloaded JSON file:
 
 ```bash
 mkdir -p /home/ubuntu/cross-cannon-data
-curl -L https://raw.githubusercontent.com/jacksonStone/Bible_as_JSON/main/bible.json -o /home/ubuntu/cross-cannon-data/bible.json
-cd /home/ubuntu/cross-cannon
+curl -L https://raw.githubusercontent.com/jacksonStone/Bible_as_JSON/main/bible.json \
+  -o /home/ubuntu/cross-cannon-data/bible.json
+
+DATABASE_URL=file:./storage/crosscannon.db \
+OPENAI_API_KEY=your_key_here \
 npm run index:bible -- /home/ubuntu/cross-cannon-data/bible.json
 ```
 
-The importer supports:
+If `OPENAI_API_KEY` is blank, the importer still creates the passage and text-search tables, but no embeddings are stored. That is fine for local smoke testing. Real semantic search requires indexing with the same embedding configuration used at runtime.
+
+Supported importer shapes:
 
 - flat arrays with `book`, `chapter`, `verse`, `text`
 - `{ "books": [{ "name": "...", "chapters": [...] }] }`
-- object maps shaped like `{ "Genesis": { "1": { "1": "..." } } }`
+- object maps like `{ "Genesis": { "1": { "1": "..." } } }`
 
-When `OPENAI_API_KEY` is set, indexing persists embeddings into the `passages` table. Without the key, it still builds the text index for local testing.
+## Deployment
 
-## Rate Limit
+This repo includes:
 
-Search actions are limited to 5 requests per minute per IP address. The limiter reads `X-Forwarded-For` first for reverse-proxy deployments.
+- `deploy.sh` for building and syncing the app on the Ubuntu box
+- `cross-cannon.service` for systemd
+- default port `3005`
 
-## Deployment Notes
-
-The service file expects the app at `/home/ubuntu/cross-cannon` and runs on port `3005` behind the shared reverse proxy. Add this mapping to `DOMAINS_TO_PORTS` in the Ubuntu env file:
+The shared reverse proxy should route:
 
 ```text
 crosscannon.com:3005
 ```
+
+The systemd service expects the app at:
+
+```text
+/home/ubuntu/cross-cannon
+```
+
+## Current Status
+
+The committed app runs locally, builds successfully, and can return results from the smoke-test database. The full Bible embedding index has not been generated yet; run the full indexing command above with an OpenAI key before expecting real semantic results.
