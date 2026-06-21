@@ -1,0 +1,11 @@
+node_modules/
+.npm-cache/
+.tmp/
+build/
+.cache/
+.env
+.env.*
+storage/*.db
+storage/*.db-*
+*.zip
+cross-cannon/

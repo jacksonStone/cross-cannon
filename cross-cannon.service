@@ -1,0 +1,15 @@
+[Unit]
+Description=CrossCannonScriptureSearch
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cross-cannon
+ExecStart=/home/ubuntu/.nvm/versions/node/v20.15.0/bin/npm run start
+EnvironmentFile=/home/ubuntu/.ubuntu-env
+Environment=PORT=3005
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

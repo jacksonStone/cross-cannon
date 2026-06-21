@@ -1,0 +1,38 @@
+{
+  "name": "cross-cannon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/remix-tmp.mjs build",
+    "build:direct": "remix vite:build",
+    "dev": "node scripts/remix-tmp.mjs dev",
+    "dev:direct": "remix vite:dev --host 127.0.0.1 --port 3005",
+    "start": "NODE_ENV=production remix-serve ./build/server/index.js",
+    "typecheck": "tsc --noEmit",
+    "index:bible": "node --import tsx scripts/index-bible.ts",
+    "smoke:index": "DATABASE_URL=file:./storage/crosscannon.db node --import tsx scripts/index-bible.ts data/sample-bible.json"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.15",
+    "@remix-run/node": "2.16.0",
+    "@remix-run/react": "2.16.0",
+    "@remix-run/serve": "2.16.0",
+    "isbot": "^5.1.31",
+    "openai": "^6.10.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "2.16.0",
+    "@types/node": "^22.10.7",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vite": "^5.4.11"
+  },
+  "engines": {
+    "node": ">=20.15.0"
+  }
+}

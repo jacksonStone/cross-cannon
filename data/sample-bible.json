@@ -1,0 +1,118 @@
+{
+  "books": [
+    {
+      "name": "Genesis",
+      "chapters": [
+        {
+          "chapter": 1,
+          "verses": [
+            {
+              "verse": 1,
+              "text": "In the beginning God created the heaven and the earth."
+            },
+            {
+              "verse": 2,
+              "text": "And the earth was without form, and void; and darkness was upon the face of the deep."
+            },
+            {
+              "verse": 3,
+              "text": "And God said, Let there be light: and there was light."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Psalm",
+      "chapters": [
+        {
+          "chapter": 23,
+          "verses": [
+            {
+              "verse": 1,
+              "text": "The LORD is my shepherd; I shall not want."
+            },
+            {
+              "verse": 2,
+              "text": "He maketh me to lie down in green pastures: he leadeth me beside the still waters."
+            },
+            {
+              "verse": 3,
+              "text": "He restoreth my soul: he leadeth me in the paths of righteousness for his name's sake."
+            },
+            {
+              "verse": 4,
+              "text": "Yea, though I walk through the valley of the shadow of death, I will fear no evil: for thou art with me."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Matthew",
+      "chapters": [
+        {
+          "chapter": 6,
+          "verses": [
+            {
+              "verse": 25,
+              "text": "Therefore I say unto you, Take no thought for your life, what ye shall eat, or what ye shall drink."
+            },
+            {
+              "verse": 33,
+              "text": "But seek ye first the kingdom of God, and his righteousness; and all these things shall be added unto you."
+            },
+            {
+              "verse": 34,
+              "text": "Take therefore no thought for the morrow: for the morrow shall take thought for the things of itself."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "John",
+      "chapters": [
+        {
+          "chapter": 3,
+          "verses": [
+            {
+              "verse": 16,
+              "text": "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish but have everlasting life."
+            },
+            {
+              "verse": 17,
+              "text": "For God sent not his Son into the world to condemn the world; but that the world through him might be saved."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Romans",
+      "chapters": [
+        {
+          "chapter": 8,
+          "verses": [
+            {
+              "verse": 1,
+              "text": "There is therefore now no condemnation to them which are in Christ Jesus."
+            },
+            {
+              "verse": 28,
+              "text": "And we know that all things work together for good to them that love God."
+            },
+            {
+              "verse": 38,
+              "text": "For I am persuaded, that neither death, nor life, nor angels, nor principalities, nor powers, nor things present, nor things to come,"
+            },
+            {
+              "verse": 39,
+              "text": "Nor height, nor depth, nor any other creature, shall be able to separate us from the love of God."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
