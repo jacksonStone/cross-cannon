@@ -105,6 +105,8 @@ const CANONICAL_BOOKS = [
 const CANONICAL_BOOK_ORDER = new Map(
   CANONICAL_BOOKS.map((book, index) => [book, index])
 );
+const scriptureCacheLoads = new Map<string, Promise<BrowserPassage[]>>();
+const scriptureCacheData = new Map<string, BrowserPassage[]>();
 
 export async function loader({}: LoaderFunctionArgs) {
   await ensureDatabase();
@@ -239,17 +241,10 @@ export default function Index() {
     let ignore = false;
 
     setIsScriptureReady(false);
-    fetch(scriptureCacheUrl)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to load scripture cache: ${response.status}`);
-        }
-
-        return response.json() as Promise<{ passages: BrowserPassage[] }>;
-      })
-      .then((data) => {
+    loadScriptureCache(scriptureCacheUrl)
+      .then((loadedPassages) => {
         if (!ignore) {
-          setPassages(data.passages);
+          setPassages(loadedPassages);
           setIsScriptureReady(true);
         }
       })
@@ -434,6 +429,40 @@ export default function Index() {
       </section>
     </main>
   );
+}
+
+function loadScriptureCache(scriptureCacheUrl: string) {
+  const cachedPassages = scriptureCacheData.get(scriptureCacheUrl);
+
+  if (cachedPassages) {
+    return Promise.resolve(cachedPassages);
+  }
+
+  const existingLoad = scriptureCacheLoads.get(scriptureCacheUrl);
+
+  if (existingLoad) {
+    return existingLoad;
+  }
+
+  const load = fetch(scriptureCacheUrl)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to load scripture cache: ${response.status}`);
+      }
+
+      return response.json() as Promise<{ passages: BrowserPassage[] }>;
+    })
+    .then((data) => {
+      scriptureCacheData.set(scriptureCacheUrl, data.passages);
+      return data.passages;
+    })
+    .catch((error) => {
+      scriptureCacheLoads.delete(scriptureCacheUrl);
+      throw error;
+    });
+
+  scriptureCacheLoads.set(scriptureCacheUrl, load);
+  return load;
 }
 
 function withMatchStrength<T extends { score?: number }>(results: T[]) {
