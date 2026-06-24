@@ -50,6 +50,11 @@ npm run build
 PORT=3005 npm run start
 ```
 
+`npm run build` also writes the browser scripture cache to `scripture-cache/`.
+The index page exposes that cache key and fetches `/scripture-cache/<key>.json`
+separately, so the Bible text can be cached and served compressed instead of
+embedded in the HTML.
+
 ## Environment
 
 ```text

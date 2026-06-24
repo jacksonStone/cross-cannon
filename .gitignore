@@ -10,5 +10,6 @@ storage/*.db
 storage/*.db-*
 storage/archive/
 storage/verse-index/
+scripture-cache/
 *.zip
 cross-cannon/

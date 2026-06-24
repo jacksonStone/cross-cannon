@@ -7,17 +7,7 @@ import { Form, useActionData, useLoaderData, useNavigation } from "@remix-run/re
 import { ensureDatabase, getDb } from "~/lib/db.server";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import { searchScripture } from "~/lib/search.server";
-
-type BrowserPassage = {
-  id: string;
-  reference: string;
-  text: string;
-  type: "paragraph";
-  verses: Array<{
-    number: number;
-    text: string;
-  }>;
-};
+import { getScriptureCacheInfo, type BrowserPassage } from "~/lib/scripture-cache.server";
 
 type ActionData = {
   error?: string;
@@ -118,7 +108,7 @@ const CANONICAL_BOOK_ORDER = new Map(
 
 export async function loader({}: LoaderFunctionArgs) {
   await ensureDatabase();
-  const scriptureCacheKey = await getScriptureCacheVersion();
+  const scriptureCache = await getScriptureCacheInfo();
 
   const booksResponse = await getDb().execute(`
     SELECT book
@@ -129,8 +119,8 @@ export async function loader({}: LoaderFunctionArgs) {
 
   return json({
     books: sortCanonicalBooks(booksResponse.rows.map((row) => String(row.book))),
-    scriptureCacheKey,
-    scriptureCacheUrl: `/scripture-cache?v=${encodeURIComponent(scriptureCacheKey)}`
+    scriptureCacheKey: scriptureCache.version,
+    scriptureCacheUrl: scriptureCache.url
   });
 }
 
@@ -444,24 +434,6 @@ export default function Index() {
       </section>
     </main>
   );
-}
-
-async function getScriptureCacheVersion() {
-  const response = await getDb().execute(`
-    SELECT
-      (SELECT COUNT(*) FROM passages) AS passage_count,
-      (SELECT COUNT(*) FROM paragraph_verses) AS verse_count,
-      (SELECT COALESCE(MAX(id), '') FROM passages) AS max_passage_id,
-      (SELECT COALESCE(MAX(source_hash), '') FROM paragraph_verses) AS max_verse_hash
-  `);
-  const row = response.rows[0];
-
-  return [
-    row?.passage_count,
-    row?.verse_count,
-    row?.max_passage_id,
-    row?.max_verse_hash
-  ].join("-");
 }
 
 function withMatchStrength<T extends { score?: number }>(results: T[]) {

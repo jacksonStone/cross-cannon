@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "remix vite:build",
+    "build": "node --import tsx scripts/build-scripture-cache.ts && remix vite:build",
     "dev": "remix vite:dev --host 127.0.0.1 --port 3005",
     "start": "NODE_ENV=production remix-serve ./build/server/index.js",
     "typecheck": "tsc --noEmit",

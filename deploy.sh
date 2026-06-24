@@ -15,7 +15,7 @@ trap cleanup EXIT
 npm run build
 
 mkdir -p "$PACKAGE_DIR"
-cp -r build public package.json package-lock.json README.md "$PACKAGE_DIR/"
+cp -r build public scripture-cache package.json package-lock.json README.md "$PACKAGE_DIR/"
 
 zip -r -X "$ZIP_FILE" "$PACKAGE_DIR"
 
