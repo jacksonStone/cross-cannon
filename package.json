@@ -9,7 +9,8 @@
     "start": "NODE_ENV=production remix-serve ./build/server/index.js",
     "typecheck": "tsc --noEmit",
     "index:bible": "node --import tsx scripts/index-bible.ts",
-    "smoke:index": "DATABASE_URL=file:./storage/crosscannon.db node --import tsx scripts/index-bible.ts data/sample-bible.json"
+    "index:genesis": "node --import tsx scripts/index-bible.ts data/bible.json --reset --passage-type paragraph --book Genesis",
+    "smoke:index": "EMBEDDING_PROVIDER=mock node --import tsx scripts/index-bible.ts data/sample-bible.json --reset --limit 10 --passage-type paragraph"
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",

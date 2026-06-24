@@ -5,7 +5,10 @@ build/
 .cache/
 .env
 .env.*
+data/bible.json
 storage/*.db
 storage/*.db-*
+storage/archive/
+storage/verse-index/
 *.zip
 cross-cannon/

@@ -9,6 +9,7 @@ WorkingDirectory=/home/ubuntu/cross-cannon
 ExecStart=/home/ubuntu/.nvm/versions/node/v20.15.0/bin/npm run start
 EnvironmentFile=/home/ubuntu/.ubuntu-env
 Environment=PORT=3005
+Environment=PATH=/home/ubuntu/.nvm/versions/node/v20.15.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Restart=on-failure
 
 [Install]

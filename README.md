@@ -1,6 +1,6 @@
 # Cross Cannon
 
-Public Remix 2.16 app for `crosscannon.com`.
+Public Remix 2.16 app for `crosscanon.com`.
 
 Cross Cannon accepts a user's question and returns related Scripture only. It does not write an answer, commentary, or summary. Results are mixed verse and chapter passages from a persisted libSQL/Turso-compatible index.
 
@@ -104,7 +104,7 @@ This repo includes:
 The shared reverse proxy should route:
 
 ```text
-crosscannon.com:3005
+crosscanon.com:3005
 ```
 
 The systemd service expects the app at:
