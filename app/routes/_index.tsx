@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -36,6 +36,14 @@ type ActionData = {
 };
 
 const TRANSLATION_ABBREVIATION = "WEB";
+const SEARCH_EXAMPLES = [
+  "Hope after death",
+  "greed and money problems",
+  "anxiety",
+  "laughing when times are hard",
+  "always learning",
+  "the beauty of nature"
+];
 const CANONICAL_BOOKS = [
   "Genesis",
   "Exodus",
@@ -238,6 +246,7 @@ export default function Index() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const submittingRef = useRef(false);
+  const [exampleIndex, setExampleIndex] = useState(0);
   const isSearching = navigation.state === "submitting";
   const isSearchingAllBooks =
     isSearching && (navigation.formData?.getAll("books").length ?? 0) === 0;
@@ -251,6 +260,14 @@ export default function Index() {
       submittingRef.current = false;
     }
   }, [navigation.state]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setExampleIndex((index) => (index + 1) % SEARCH_EXAMPLES.length);
+    }, 2800);
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   return (
     <main className="page-shell">
@@ -288,7 +305,7 @@ export default function Index() {
               maxLength={500}
               required
               disabled={isSearching}
-              placeholder="creation and light, covenant promises, family conflict, waiting, forgiveness"
+              placeholder={SEARCH_EXAMPLES[exampleIndex]}
               defaultValue={actionData?.question ?? ""}
             />
             <div className="search-controls">
