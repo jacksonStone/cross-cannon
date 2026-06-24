@@ -11,6 +11,8 @@ import stylesheet from "./styles.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
+  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  { rel: "apple-touch-icon", href: "/favicon-512.png" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
   {
@@ -20,11 +22,28 @@ export const links: LinksFunction = () => [
 ];
 
 export const meta: MetaFunction = () => [
-  { title: "Cross Cannon" },
+  { title: "Cross Canon" },
   {
     name: "description",
     content: "Find related Scripture passages from a question."
-  }
+  },
+  { property: "og:title", content: "Cross Canon" },
+  {
+    property: "og:description",
+    content: "Search Scripture by theme. Related passages. No commentary."
+  },
+  { property: "og:image", content: "https://www.crosscanon.com/og-image.png" },
+  { property: "og:image:width", content: "1200" },
+  { property: "og:image:height", content: "630" },
+  { property: "og:image:alt", content: "Cross Canon Scripture search" },
+  { property: "og:type", content: "website" },
+  { name: "twitter:card", content: "summary_large_image" },
+  { name: "twitter:title", content: "Cross Canon" },
+  {
+    name: "twitter:description",
+    content: "Search Scripture by theme. Related passages. No commentary."
+  },
+  { name: "twitter:image", content: "https://www.crosscanon.com/og-image.png" }
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

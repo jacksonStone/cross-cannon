@@ -239,6 +239,8 @@ export default function Index() {
   const navigation = useNavigation();
   const submittingRef = useRef(false);
   const isSearching = navigation.state === "submitting";
+  const isSearchingAllBooks =
+    isSearching && (navigation.formData?.getAll("books").length ?? 0) === 0;
   const passageMap = useMemo(
     () => new Map(passages.map((passage) => [passage.id, passage])),
     [passages]
@@ -254,7 +256,7 @@ export default function Index() {
     <main className="page-shell">
       <header className="site-header">
         <div>
-          <p className="eyebrow">Cross Cannon</p>
+          <p className="eyebrow">Cross Canon</p>
           <h1>Search Scripture by theme.</h1>
         </div>
       </header>
@@ -332,7 +334,9 @@ export default function Index() {
               </button>
               {isSearching ? (
                 <p className="search-status" role="status">
-                  Searching indexed passages...
+                  {isSearchingAllBooks
+                    ? "Searching all indexed books. Results can take about 15 seconds..."
+                    : "Searching selected books. Results can take a couple seconds..."}
                 </p>
               ) : null}
             </div>

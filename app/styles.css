@@ -87,23 +87,26 @@ h1 {
 
 .search-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px;
+  grid-template-columns: minmax(0, 1fr) 154px;
   gap: 14px;
   align-items: start;
 }
 
 .search-controls {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .field-control {
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
   gap: 6px;
 }
 
 .field-control label {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  line-height: 1;
 }
 
 textarea {
@@ -134,6 +137,13 @@ select {
   padding: 0 11px;
 }
 
+.field-control input:not([type="checkbox"]) {
+  width: 58px;
+  min-height: 34px;
+  padding: 0 6px;
+  text-align: center;
+}
+
 input:not([type="checkbox"]):focus,
 select:focus {
   outline: 3px solid rgba(47, 111, 135, 0.18);
@@ -142,12 +152,12 @@ select:focus {
 
 .book-picker {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
-  padding: 10px;
+  padding: 8px;
 }
 
 .book-picker legend {
@@ -160,14 +170,14 @@ select:focus {
 .book-picker-hint {
   margin: 0;
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 0.69rem;
   line-height: 1.35;
 }
 
 .book-options {
   display: grid;
-  gap: 6px;
-  max-height: 154px;
+  gap: 4px;
+  max-height: 132px;
   overflow: auto;
   padding-right: 2px;
 }
@@ -175,17 +185,19 @@ select:focus {
 .book-option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 28px;
+  gap: 6px;
+  min-height: 24px;
   color: var(--ink);
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.2;
 }
 
 .book-option input {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   margin: 0;
+  flex: 0 0 auto;
   accent-color: var(--accent);
 }
 

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Cross Canon social sharing image</title>
+  <desc id="desc">Cross Canon wordmark with a quiet cross and Scripture-result lines on warm paper.</desc>
+  <rect width="1200" height="630" fill="#fbfaf7"/>
+  <rect x="0" y="0" width="1200" height="630" fill="#f2eee7" opacity=".55"/>
+  <path d="M96 112h1008" stroke="#ddd6cc" stroke-width="2"/>
+  <path d="M96 518h1008" stroke="#ddd6cc" stroke-width="2"/>
+
+  <g opacity=".32">
+    <path d="M724 194h226" stroke="#8f3526" stroke-width="8" stroke-linecap="round" opacity=".16"/>
+    <path d="M724 238h340" stroke="#24211d" stroke-width="8" stroke-linecap="round" opacity=".1"/>
+    <path d="M724 282h284" stroke="#24211d" stroke-width="8" stroke-linecap="round" opacity=".1"/>
+    <path d="M724 326h376" stroke="#8f3526" stroke-width="8" stroke-linecap="round" opacity=".16"/>
+    <path d="M724 370h248" stroke="#24211d" stroke-width="8" stroke-linecap="round" opacity=".1"/>
+    <path d="M724 414h318" stroke="#24211d" stroke-width="8" stroke-linecap="round" opacity=".1"/>
+  </g>
+
+  <g transform="translate(126 116)">
+    <rect x="0" y="0" width="322" height="398" rx="18" fill="#ffffff"/>
+    <rect x="0" y="0" width="322" height="398" rx="18" fill="none" stroke="#ddd6cc" stroke-width="3"/>
+    <path d="M92 44h138a30 30 0 0 1 30 30v210a47 47 0 0 0-30-10H92a30 30 0 0 1-30-30V74a30 30 0 0 1 30-30Z" fill="#8f3526" opacity=".08"/>
+    <path d="M141 62h48v232h-48z" fill="#8f3526"/>
+    <path d="M62 143h206v48H62z" fill="#8f3526"/>
+    <path d="M200 78h30a14 14 0 0 1 14 14v182.5a70 70 0 0 0-36-9.5h-8Z" fill="#8f3526" opacity=".34"/>
+    <path d="M86 324h158c18 0 29 9.5 29 25s-11 25-29 25H86c-18 0-29-9.5-29-25s11-25 29-25Z" fill="#8f3526" opacity=".16"/>
+    <path d="M89 349h148" stroke="#8f3526" stroke-width="8" stroke-linecap="round" opacity=".28"/>
+  </g>
+
+  <g transform="translate(514 171)">
+    <text x="0" y="0" fill="#8f3526" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="4.25">SCRIPTURE SEARCH</text>
+    <text x="0" y="103" fill="#24211d" font-family="Georgia, 'Times New Roman', serif" font-size="88" font-weight="600" letter-spacing="0">Cross Canon</text>
+    <text x="2" y="169" fill="#686058" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="600" letter-spacing="0">Search Scripture by theme.</text>
+    <text x="2" y="221" fill="#686058" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="500" letter-spacing="0">Related passages. No commentary.</text>
+    <g transform="translate(2 273)">
+      <rect x="0" y="0" width="168" height="42" rx="21" fill="#8f3526"/>
+      <text x="84" y="28" text-anchor="middle" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700">crosscanon.com</text>
+    </g>
+  </g>
+</svg>
