@@ -118,45 +118,19 @@ const CANONICAL_BOOK_ORDER = new Map(
 
 export async function loader({}: LoaderFunctionArgs) {
   await ensureDatabase();
+  const scriptureCacheKey = await getScriptureCacheVersion();
 
-  const response = await getDb().execute(`
-    SELECT id, reference, text, result_type
-    FROM passages
-    WHERE text <> ''
-    ORDER BY book, chapter, verse_start IS NULL, verse_start
-  `);
   const booksResponse = await getDb().execute(`
     SELECT book
     FROM passages
     GROUP BY book
     ORDER BY MIN(rowid)
   `);
-  const versesResponse = await getDb().execute(`
-    SELECT paragraph_id, verse, text
-    FROM paragraph_verses
-    ORDER BY book, chapter, verse
-  `);
-  const versesByParagraph = new Map<string, BrowserPassage["verses"]>();
-
-  for (const row of versesResponse.rows) {
-    const paragraphId = String(row.paragraph_id);
-    const verses = versesByParagraph.get(paragraphId) ?? [];
-    verses.push({
-      number: Number(row.verse),
-      text: String(row.text)
-    });
-    versesByParagraph.set(paragraphId, verses);
-  }
 
   return json({
-    passages: response.rows.map((row) => ({
-      id: String(row.id),
-      reference: String(row.reference),
-      text: String(row.text),
-      type: "paragraph",
-      verses: versesByParagraph.get(String(row.id)) ?? []
-    })) satisfies BrowserPassage[],
-    books: sortCanonicalBooks(booksResponse.rows.map((row) => String(row.book)))
+    books: sortCanonicalBooks(booksResponse.rows.map((row) => String(row.book))),
+    scriptureCacheKey,
+    scriptureCacheUrl: `/scripture-cache?v=${encodeURIComponent(scriptureCacheKey)}`
   });
 }
 
@@ -242,11 +216,13 @@ function sortCanonicalBooks(books: string[]) {
 }
 
 export default function Index() {
-  const { books, passages } = useLoaderData<typeof loader>();
+  const { books, scriptureCacheKey, scriptureCacheUrl } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const submittingRef = useRef(false);
   const [exampleIndex, setExampleIndex] = useState(0);
+  const [passages, setPassages] = useState<BrowserPassage[]>([]);
+  const [isScriptureReady, setIsScriptureReady] = useState(false);
   const isSearching = navigation.state === "submitting";
   const isSearchingAllBooks =
     isSearching && (navigation.formData?.getAll("books").length ?? 0) === 0;
@@ -269,8 +245,39 @@ export default function Index() {
     return () => window.clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    let ignore = false;
+
+    setIsScriptureReady(false);
+    fetch(scriptureCacheUrl)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to load scripture cache: ${response.status}`);
+        }
+
+        return response.json() as Promise<{ passages: BrowserPassage[] }>;
+      })
+      .then((data) => {
+        if (!ignore) {
+          setPassages(data.passages);
+          setIsScriptureReady(true);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setPassages([]);
+          setIsScriptureReady(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [scriptureCacheUrl]);
+
   return (
     <main className="page-shell">
+      <data value={scriptureCacheKey} data-scripture-cache-key hidden />
       <header className="site-header">
         <div>
           <p className="eyebrow">Cross Canon</p>
@@ -339,12 +346,18 @@ export default function Index() {
                   defaultValue={actionData?.matchCount ?? 5}
                 />
               </div>
-              <button className="search-button" type="submit" disabled={isSearching}>
+              <button
+                className="search-button"
+                type="submit"
+                disabled={isSearching || !isScriptureReady}
+              >
                 {isSearching ? (
                   <>
                     <span className="button-spinner" aria-hidden="true" />
                     Searching
                   </>
+                ) : !isScriptureReady ? (
+                  "Loading text"
                 ) : (
                   "Search"
                 )}
@@ -354,6 +367,10 @@ export default function Index() {
                   {isSearchingAllBooks
                     ? "Searching all indexed books. Results can take about 15 seconds..."
                     : "Searching selected books. Results can take a couple seconds..."}
+                </p>
+              ) : !isScriptureReady ? (
+                <p className="search-status" role="status">
+                  Loading scripture text...
                 </p>
               ) : null}
             </div>
@@ -414,7 +431,7 @@ export default function Index() {
                     ))}
                   </p>
                 ) : (
-                  <p>{passage?.text ?? "Passage text is unavailable in the browser index."}</p>
+                  <p>{passage?.text ?? "Passage text is loading."}</p>
                 )}
               </article>
             );
@@ -427,6 +444,24 @@ export default function Index() {
       </section>
     </main>
   );
+}
+
+async function getScriptureCacheVersion() {
+  const response = await getDb().execute(`
+    SELECT
+      (SELECT COUNT(*) FROM passages) AS passage_count,
+      (SELECT COUNT(*) FROM paragraph_verses) AS verse_count,
+      (SELECT COALESCE(MAX(id), '') FROM passages) AS max_passage_id,
+      (SELECT COALESCE(MAX(source_hash), '') FROM paragraph_verses) AS max_verse_hash
+  `);
+  const row = response.rows[0];
+
+  return [
+    row?.passage_count,
+    row?.verse_count,
+    row?.max_passage_id,
+    row?.max_verse_hash
+  ].join("-");
 }
 
 function withMatchStrength<T extends { score?: number }>(results: T[]) {
