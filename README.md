@@ -1,3 +1,5 @@
+(This was vibe coded, be warned!)
+
 # Cross Cannon
 
 Public Remix 2.16 app for `crosscanon.com`.
