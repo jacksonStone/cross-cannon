@@ -114,7 +114,7 @@ if (!jobId) {
       absoluteInputPath,
       sourceHash,
       options.runtimeDbUrl,
-      process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-small",
+      process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-large",
       Number(process.env.OPENAI_EMBEDDING_DIMENSIONS ?? 1536),
       options.passageType,
       options.book,

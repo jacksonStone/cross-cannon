@@ -61,7 +61,7 @@ embedded in the HTML.
 PORT=3005
 DATABASE_URL=file:./storage/crosscannon.db
 OPENAI_API_KEY=
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_EMBEDDING_MODEL=text-embedding-3-large
 OPENAI_EMBEDDING_DIMENSIONS=1536
 TURSO_AUTH_TOKEN=
 BIBLE_JSON_PATH=/home/ubuntu/cross-cannon-data/bible.json
@@ -87,6 +87,8 @@ curl -L https://raw.githubusercontent.com/jacksonStone/Bible_as_JSON/main/bible.
 
 DATABASE_URL=file:./storage/crosscannon.db \
 OPENAI_API_KEY=your_key_here \
+OPENAI_EMBEDDING_MODEL=text-embedding-3-large \
+OPENAI_EMBEDDING_DIMENSIONS=1536 \
 npm run index:bible -- /home/ubuntu/cross-cannon-data/bible.json
 ```
 

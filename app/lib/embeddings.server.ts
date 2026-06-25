@@ -28,7 +28,7 @@ export async function embedText(text: string): Promise<number[] | null> {
   const dimensions = Number(process.env.OPENAI_EMBEDDING_DIMENSIONS ?? 1536);
   try {
     const response = await client.embeddings.create({
-      model: process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-small",
+      model: process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-large",
       input: text,
       dimensions,
       encoding_format: "float"
