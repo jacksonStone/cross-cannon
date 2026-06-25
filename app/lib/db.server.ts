@@ -11,6 +11,11 @@ export type ScriptureResult = {
   score?: number;
 };
 
+export type IndexedEmbeddingConfig = {
+  model: string;
+  dimensions: number;
+};
+
 export function getDb() {
   if (!client) {
     client = createClient({
@@ -77,6 +82,8 @@ export async function ensureDatabase() {
     ON paragraph_verses(paragraph_id)
   `);
 
+  await ensureEmbeddingConfigTable(db);
+
   await db.execute(`
     CREATE VIRTUAL TABLE IF NOT EXISTS passages_fts
     USING fts5(reference, text, content='passages', content_rowid='rowid')
@@ -94,6 +101,55 @@ export async function ensureDatabase() {
   }
 
   schemaReady = true;
+}
+
+export async function getIndexedEmbeddingConfig() {
+  await ensureDatabase();
+
+  const response = await getDb().execute(`
+    SELECT model, dimensions
+    FROM scripture_embedding_config
+    WHERE id = 'active'
+  `);
+  const row = response.rows[0];
+
+  if (typeof row?.model !== "string") {
+    return null;
+  }
+
+  return {
+    model: row.model,
+    dimensions: Number(row.dimensions)
+  } satisfies IndexedEmbeddingConfig;
+}
+
+export async function setIndexedEmbeddingConfig(
+  db: Client,
+  config: IndexedEmbeddingConfig
+) {
+  await ensureEmbeddingConfigTable(db);
+  await db.execute({
+    sql: `
+      INSERT INTO scripture_embedding_config (id, model, dimensions, updated_at)
+      VALUES ('active', ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(id) DO UPDATE SET
+        model = excluded.model,
+        dimensions = excluded.dimensions,
+        updated_at = CURRENT_TIMESTAMP
+    `,
+    args: [config.model, config.dimensions]
+  });
+}
+
+async function ensureEmbeddingConfigTable(db: Client) {
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS scripture_embedding_config (
+      id TEXT PRIMARY KEY CHECK (id = 'active'),
+      model TEXT NOT NULL,
+      dimensions INTEGER NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 async function ensureParagraphSchema(db: Client) {

@@ -69,6 +69,11 @@ BIBLE_JSON_PATH=/home/ubuntu/cross-cannon-data/bible.json
 
 Use `file:./storage/crosscannon.db` for local SQLite/libSQL. For Turso, set `DATABASE_URL` to the Turso/libSQL URL and set `TURSO_AUTH_TOKEN`.
 
+The indexer writes the active embedding model and dimensions into the runtime
+database. Search reads that metadata before embedding user queries, so query
+vectors use the same model/dimension pair as the stored passage and verse
+vectors.
+
 ## Full Bible Index
 
 The source Bible JSON is Jackson's public repo:

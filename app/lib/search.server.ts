@@ -1,5 +1,12 @@
-import { ensureDatabase, getDb, normalizeVector, type ScriptureResult, vectorSql } from "./db.server";
-import { embedText } from "./embeddings.server";
+import {
+  ensureDatabase,
+  getDb,
+  getIndexedEmbeddingConfig,
+  normalizeVector,
+  type ScriptureResult,
+  vectorSql
+} from "./db.server";
+import { embedText, getDefaultEmbeddingConfig } from "./embeddings.server";
 
 export async function searchScripture(
   question: string,
@@ -8,7 +15,8 @@ export async function searchScripture(
 ): Promise<ScriptureResult[]> {
   await ensureDatabase();
 
-  const embedding = await embedText(question);
+  const embeddingConfig = await getIndexedEmbeddingConfig() ?? getDefaultEmbeddingConfig();
+  const embedding = await embedText(question, embeddingConfig);
 
   if (embedding) {
     const vectorResults = await searchVector(embedding, limit, books);

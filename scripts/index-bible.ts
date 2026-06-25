@@ -4,8 +4,18 @@ import path from "node:path";
 
 import { createClient, type Client } from "@libsql/client";
 
-import { ensureDatabase, getDb, normalizeVector, vectorSql } from "../app/lib/db.server";
-import { embedText } from "../app/lib/embeddings.server";
+import {
+  ensureDatabase,
+  getDb,
+  normalizeVector,
+  setIndexedEmbeddingConfig,
+  vectorSql
+} from "../app/lib/db.server";
+import {
+  embedText,
+  getDefaultEmbeddingConfig,
+  type EmbeddingConfig
+} from "../app/lib/embeddings.server";
 
 type PassageType = "paragraph";
 
@@ -45,6 +55,7 @@ type Options = {
 };
 
 const options = parseArgs(process.argv.slice(2));
+const embeddingConfig = getDefaultEmbeddingConfig();
 process.env.DATABASE_URL = options.runtimeDbUrl;
 
 if (options.archive) {
@@ -74,6 +85,7 @@ const jobsDb = createClient({ url: options.jobsDbUrl });
 await setBusyTimeout(runtimeDb);
 await setBusyTimeout(jobsDb);
 await ensureJobsDatabase(jobsDb);
+await setIndexedEmbeddingConfig(runtimeDb, embeddingConfig);
 
 if (options.rebuildIndexesOnly) {
   await rebuildFts(runtimeDb);
@@ -114,8 +126,8 @@ if (!jobId) {
       absoluteInputPath,
       sourceHash,
       options.runtimeDbUrl,
-      process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-large",
-      Number(process.env.OPENAI_EMBEDDING_DIMENSIONS ?? 1536),
+      embeddingConfig.model,
+      embeddingConfig.dimensions,
       options.passageType,
       options.book,
       passages.length
@@ -148,11 +160,11 @@ for (const passage of passages) {
     const hasExistingEmbedding = await passageHasEmbedding(runtimeDb, passage.id);
     const embedding = hasExistingEmbedding || options.skipParagraphEmbeddings
       ? null
-      : await embedText(embeddingInputText);
+      : await embedText(embeddingInputText, embeddingConfig);
     const normalizedEmbedding = embedding ? normalizeVector(embedding) : undefined;
 
     await upsertPassage(runtimeDb, passage, normalizedEmbedding);
-    const embeddedVerses = await upsertParagraphVerses(runtimeDb, passage);
+    const embeddedVerses = await upsertParagraphVerses(runtimeDb, passage, embeddingConfig);
     await markPassageStatus(jobsDb, activeJobId, passage, embeddingInputText, "indexed");
 
     indexedCount += 1;
@@ -559,7 +571,11 @@ async function upsertPassage(db: Client, passage: Passage, normalizedEmbedding: 
   });
 }
 
-async function upsertParagraphVerses(db: Client, passage: Passage) {
+async function upsertParagraphVerses(
+  db: Client,
+  passage: Passage,
+  embeddingConfig: EmbeddingConfig
+) {
   await db.execute({
     sql: "DELETE FROM paragraph_verses WHERE paragraph_id = ?",
     args: [passage.id]
@@ -568,7 +584,7 @@ async function upsertParagraphVerses(db: Client, passage: Passage) {
   let embeddedCount = 0;
 
   for (const verse of passage.verses) {
-    const embedding = await embedText(verse.text);
+    const embedding = await embedText(verse.text, embeddingConfig);
     const normalizedEmbedding = embedding ? normalizeVector(embedding) : null;
 
     await db.execute({
