@@ -8,29 +8,64 @@ import {
 } from "./db.server";
 import { embedText, getDefaultEmbeddingConfig } from "./embeddings.server";
 
+let vectorSearchTail = Promise.resolve();
+let passageEmbeddingCache: Promise<CachedPassageEmbedding[]> | null = null;
+
+type CachedPassageEmbedding = {
+  id: string;
+  reference: string;
+  book: string;
+  vector: Float32Array;
+};
+
 export async function searchScripture(
   question: string,
   limit = 10,
   books: string[] = []
 ): Promise<ScriptureResult[]> {
+  const trace = createSearchTrace(question, limit, books);
   await ensureDatabase();
+  trace.mark("ensureDatabase");
 
   const embeddingConfig = await getIndexedEmbeddingConfig() ?? getDefaultEmbeddingConfig();
+  trace.mark("embeddingConfig");
   const embedding = await embedText(question, embeddingConfig);
+  trace.mark("embedText");
 
   if (embedding) {
-    const vectorResults = await searchVector(embedding, limit, books);
-    if (vectorResults.length >= Math.min(4, limit)) {
-      return attachVerseHighlights(embedding, vectorResults);
+    const cachedResults = await searchCachedEmbeddings(embedding, limit, books);
+    trace.mark("searchCachedEmbeddings", { count: cachedResults.length });
+    if (cachedResults.length >= Math.min(4, limit)) {
+      const results = await attachVerseHighlights(embedding, cachedResults);
+      trace.finish("cached-vector", { count: results.length });
+      return results;
     }
 
-    const bruteForceResults = await searchStoredEmbeddings(embedding, limit, books);
+    const vectorResults = await runVectorSearchExclusive(
+      () => searchVector(embedding, limit, books),
+      () => trace.mark("searchVectorStart")
+    );
+    trace.mark("searchVector", { count: vectorResults.length });
+    if (vectorResults.length >= Math.min(4, limit)) {
+      const results = await attachVerseHighlights(embedding, vectorResults);
+      trace.finish("vector", { count: results.length });
+      return results;
+    }
+
+    const bruteForceResults = books.length > 0
+      ? []
+      : await searchStoredEmbeddings(embedding, limit, books);
+    trace.mark("searchStoredEmbeddings", { count: bruteForceResults.length });
     if (bruteForceResults.length >= Math.min(4, limit)) {
-      return attachVerseHighlights(embedding, bruteForceResults);
+      const results = await attachVerseHighlights(embedding, bruteForceResults);
+      trace.finish("stored-vector", { count: results.length });
+      return results;
     }
   }
 
-  return searchLexical(question, limit, books);
+  const results = await searchLexical(question, limit, books);
+  trace.finish("lexical", { count: results.length });
+  return results;
 }
 
 async function attachVerseHighlights(embedding: number[], results: ScriptureResult[]) {
@@ -137,8 +172,8 @@ async function searchVector(embedding: number[], limit: number, books: string[])
     const response = await db.execute({
       sql: `
         SELECT p.id, p.reference, p.result_type
-        FROM vector_top_k('passages_embedding_idx', vector32(?), ?)
-        JOIN passages p ON p.rowid = id
+        FROM vector_top_k('passages_embedding_idx', vector32(?), ?) AS v
+        JOIN passages p ON p.rowid = v.id
         WHERE p.text <> ''
           ${bookClause}
         LIMIT ?
@@ -154,8 +189,95 @@ async function searchVector(embedding: number[], limit: number, books: string[])
       type: "paragraph"
     })) satisfies ScriptureResult[];
   } catch {
+    if (process.env.SEARCH_TRACE === "1") {
+      console.info(
+        JSON.stringify({
+          type: "search-timing",
+          label: "searchVectorError",
+          limit,
+          bookCount: books.length
+        })
+      );
+    }
     return [];
   }
+}
+
+async function runVectorSearchExclusive<T>(
+  operation: () => Promise<T>,
+  onStart: () => void
+) {
+  const previous = vectorSearchTail;
+  let release = () => {};
+
+  vectorSearchTail = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  await previous.catch(() => undefined);
+  onStart();
+
+  try {
+    return await operation();
+  } finally {
+    release();
+  }
+}
+
+async function searchCachedEmbeddings(embedding: number[], limit: number, books: string[]) {
+  const query = normalizeVector(embedding);
+  const bookFilter = books.length > 0 ? new Set(books) : null;
+  const passages = await getPassageEmbeddingCache();
+  const topResults: ScriptureResult[] = [];
+
+  for (const passage of passages) {
+    if (bookFilter && !bookFilter.has(passage.book)) {
+      continue;
+    }
+
+    const score = cosineSimilarity(query, passage.vector);
+
+    if (!Number.isFinite(score)) {
+      continue;
+    }
+
+    insertTopResult(topResults, {
+      id: passage.id,
+      reference: passage.reference,
+      type: "paragraph",
+      score
+    }, limit);
+  }
+
+  return topResults;
+}
+
+async function getPassageEmbeddingCache() {
+  passageEmbeddingCache ??= loadPassageEmbeddingCache();
+  return passageEmbeddingCache;
+}
+
+async function loadPassageEmbeddingCache() {
+  const response = await getDb().execute(`
+    SELECT id, reference, book, embedding_json
+    FROM passages
+    WHERE embedding_json IS NOT NULL
+  `);
+
+  return response.rows.flatMap((row) => {
+    const parsed = parseEmbedding(String(row.embedding_json ?? "[]"));
+
+    if (parsed.length === 0) {
+      return [];
+    }
+
+    return {
+      id: String(row.id),
+      reference: String(row.reference),
+      book: String(row.book),
+      vector: Float32Array.from(parsed)
+    };
+  });
 }
 
 async function searchStoredEmbeddings(embedding: number[], limit: number, books: string[]) {
@@ -171,20 +293,25 @@ async function searchStoredEmbeddings(embedding: number[], limit: number, books:
     args: books
   });
 
-  return response.rows
-    .map((row) => {
-      const stored = parseEmbedding(String(row.embedding_json ?? "[]"));
+  const topResults: ScriptureResult[] = [];
 
-      return {
-        id: String(row.id),
-        reference: String(row.reference),
-        type: "paragraph" as const,
-        score: cosineSimilarity(query, normalizeVector(stored))
-      };
-    })
-    .filter((result) => Number.isFinite(result.score))
-    .sort((left, right) => (right.score ?? 0) - (left.score ?? 0))
-    .slice(0, limit);
+  for (const row of response.rows) {
+    const stored = parseEmbedding(String(row.embedding_json ?? "[]"));
+    const score = cosineSimilarity(query, normalizeVector(stored));
+
+    if (!Number.isFinite(score)) {
+      continue;
+    }
+
+    insertTopResult(topResults, {
+      id: String(row.id),
+      reference: String(row.reference),
+      type: "paragraph",
+      score
+    }, limit);
+  }
+
+  return topResults;
 }
 
 async function searchLexical(question: string, limit: number, books: string[]) {
@@ -289,7 +416,7 @@ function parseEmbedding(value: string) {
   }
 }
 
-function cosineSimilarity(left: number[], right: number[]) {
+function cosineSimilarity(left: ArrayLike<number>, right: ArrayLike<number>) {
   const length = Math.min(left.length, right.length);
   let sum = 0;
 
@@ -298,4 +425,66 @@ function cosineSimilarity(left: number[], right: number[]) {
   }
 
   return sum;
+}
+
+function insertTopResult(results: ScriptureResult[], result: ScriptureResult, limit: number) {
+  const score = result.score ?? Number.NEGATIVE_INFINITY;
+  const insertAt = results.findIndex(
+    (existing) => score > (existing.score ?? Number.NEGATIVE_INFINITY)
+  );
+
+  if (insertAt === -1) {
+    if (results.length < limit) {
+      results.push(result);
+    }
+    return;
+  }
+
+  results.splice(insertAt, 0, result);
+
+  if (results.length > limit) {
+    results.pop();
+  }
+}
+
+function createSearchTrace(question: string, limit: number, books: string[]) {
+  const enabled = process.env.SEARCH_TRACE === "1";
+  const start = performance.now();
+  let previous = start;
+
+  function elapsed(now: number) {
+    return Math.round((now - start) * 10) / 10;
+  }
+
+  function delta(now: number) {
+    return Math.round((now - previous) * 10) / 10;
+  }
+
+  function log(label: string, details: Record<string, unknown> = {}) {
+    if (!enabled) {
+      return;
+    }
+
+    const now = performance.now();
+    console.info(
+      JSON.stringify({
+        type: "search-timing",
+        label,
+        elapsedMs: elapsed(now),
+        deltaMs: delta(now),
+        limit,
+        bookCount: books.length,
+        queryLength: question.length,
+        ...details
+      })
+    );
+    previous = now;
+  }
+
+  return {
+    mark: log,
+    finish(label: string, details: Record<string, unknown> = {}) {
+      log("finish", { branch: label, ...details });
+    }
+  };
 }
