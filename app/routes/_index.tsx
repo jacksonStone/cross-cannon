@@ -246,9 +246,9 @@ export async function action({ request }: ActionFunctionArgs) {
     );
   }
 
-  if (!Number.isInteger(matchCount) || matchCount < 5 || matchCount > 20) {
+  if (!Number.isInteger(matchCount) || matchCount < 5 || matchCount > 40) {
     return json<ActionData>(
-      { error: "Choose between 5 and 20 matches." },
+      { error: "Choose between 5 and 40 matches." },
       { status: 400 }
     );
   }
@@ -308,6 +308,9 @@ export default function Index() {
   const submittingRef = useRef(false);
   const [exampleIndex, setExampleIndex] = useState(0);
   const [canon, setCanon] = useState<CanonMode>(actionData?.canon ?? "protestant");
+  const [showBookFilters, setShowBookFilters] = useState(
+    () => Boolean(actionData?.books?.length)
+  );
   const [passages, setPassages] = useState<BrowserPassage[]>([]);
   const [isScriptureReady, setIsScriptureReady] = useState(false);
   const isSearching = navigation.state === "submitting";
@@ -387,53 +390,80 @@ export default function Index() {
           }}
         >
           <label htmlFor="question">Search for passages about...</label>
-          <div className="search-row">
-            <textarea
-              id="question"
-              name="question"
-              rows={4}
-              minLength={3}
-              maxLength={500}
-              required
-              disabled={isSearching}
-              placeholder={SEARCH_EXAMPLES[exampleIndex]}
-              defaultValue={actionData?.question ?? ""}
-            />
-            <div className="search-controls">
-              <fieldset className="canon-picker" disabled={isSearching}>
-                <legend>Canon</legend>
-                <label>
+          <div className={`search-row${showBookFilters ? " has-book-filter" : ""}`}>
+            <div className="search-primary">
+              <textarea
+                id="question"
+                name="question"
+                rows={4}
+                minLength={3}
+                maxLength={500}
+                required
+                disabled={isSearching}
+                placeholder={SEARCH_EXAMPLES[exampleIndex]}
+                defaultValue={actionData?.question ?? ""}
+              />
+              <div className="search-compact-controls">
+                <fieldset className="canon-picker" disabled={isSearching}>
+                  <legend>Canon</legend>
+                  <label>
+                    <input
+                      checked={canon === "protestant"}
+                      name="canon"
+                      onChange={() => setCanon("protestant")}
+                      type="radio"
+                      value="protestant"
+                    />
+                    Protestant
+                  </label>
+                  <label>
+                    <input
+                      checked={canon === "catholic"}
+                      name="canon"
+                      onChange={() => setCanon("catholic")}
+                      type="radio"
+                      value="catholic"
+                    />
+                    Catholic
+                  </label>
+                  <label>
+                    <input
+                      checked={canon === "orthodox"}
+                      name="canon"
+                      onChange={() => setCanon("orthodox")}
+                      type="radio"
+                      value="orthodox"
+                    />
+                    Orthodox
+                  </label>
+                </fieldset>
+                <fieldset className="match-control" disabled={isSearching}>
+                  <legend>Matches</legend>
                   <input
-                    checked={canon === "protestant"}
-                    name="canon"
-                    onChange={() => setCanon("protestant")}
-                    type="radio"
-                    value="protestant"
+                    aria-label="Matches"
+                    id="matchCount"
+                    name="matchCount"
+                    type="number"
+                    min={5}
+                    max={40}
+                    step={1}
+                    defaultValue={actionData?.matchCount ?? 10}
                   />
-                  Protestant
-                </label>
-                <label>
-                  <input
-                    checked={canon === "catholic"}
-                    name="canon"
-                    onChange={() => setCanon("catholic")}
-                    type="radio"
-                    value="catholic"
-                  />
-                  Catholic
-                </label>
-                <label>
-                  <input
-                    checked={canon === "orthodox"}
-                    name="canon"
-                    onChange={() => setCanon("orthodox")}
-                    type="radio"
-                    value="orthodox"
-                  />
-                  Orthodox
-                </label>
-              </fieldset>
-              <fieldset className="book-picker" disabled={isSearching}>
+                </fieldset>
+                <button
+                  aria-expanded={showBookFilters}
+                  aria-controls="book-filter"
+                  className={`book-filter-toggle${showBookFilters ? " is-active" : ""}`}
+                  disabled={isSearching}
+                  onClick={() => setShowBookFilters((visible) => !visible)}
+                  type="button"
+                >
+                  Filter by book
+                </button>
+              </div>
+            </div>
+            {showBookFilters ? (
+              <fieldset className="book-picker" disabled={isSearching} id="book-filter">
                 <legend>Books</legend>
                 <p className="book-picker-hint">Leave blank to search every book in this canon.</p>
                 <div className="book-options">
@@ -450,19 +480,8 @@ export default function Index() {
                   ))}
                 </div>
               </fieldset>
-              <div className="field-control">
-                <label htmlFor="matchCount">Matches</label>
-                <input
-                  id="matchCount"
-                  name="matchCount"
-                  type="number"
-                  min={5}
-                  max={20}
-                  step={1}
-                  disabled={isSearching}
-                  defaultValue={actionData?.matchCount ?? 5}
-                />
-              </div>
+            ) : null}
+            <div className="search-actions">
               <button
                 className="search-button"
                 type="submit"

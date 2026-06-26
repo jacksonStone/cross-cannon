@@ -70,7 +70,8 @@ h1 {
 
 .search-band.is-searching textarea,
 .search-band.is-searching .book-picker,
-.search-band.is-searching .field-control {
+.search-band.is-searching .canon-picker,
+.search-band.is-searching .match-control {
   opacity: 0.68;
 }
 
@@ -87,19 +88,43 @@ h1 {
 
 .search-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 154px;
   gap: 14px;
   align-items: start;
 }
 
-.search-controls {
+.search-row.has-book-filter {
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 240px);
+}
+
+.search-primary {
   display: grid;
   gap: 8px;
 }
 
+.search-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.search-row.has-book-filter .search-actions {
+  grid-column: 1;
+}
+
+.search-row.has-book-filter .book-picker {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.search-compact-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: end;
+}
+
 .canon-picker {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   margin: 0;
   border: 1px solid var(--line);
@@ -119,9 +144,9 @@ h1 {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 24px;
+  min-height: 26px;
   color: var(--ink);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -134,21 +159,26 @@ h1 {
   accent-color: var(--accent);
 }
 
-.field-control {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
+.match-control {
+  display: grid;
+  width: 82px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 8px;
 }
 
-.field-control label {
-  font-size: 0.72rem;
-  line-height: 1;
+.match-control legend {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 textarea {
   width: 100%;
-  min-height: 132px;
+  min-height: 116px;
   resize: vertical;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -174,11 +204,28 @@ select {
   padding: 0 11px;
 }
 
-.field-control input:not([type="checkbox"]):not([type="radio"]) {
-  width: 58px;
+.match-control input:not([type="checkbox"]):not([type="radio"]) {
+  width: 100%;
   min-height: 34px;
   padding: 0 6px;
   text-align: center;
+}
+
+.book-filter-toggle {
+  width: auto;
+  min-width: 118px;
+  min-height: 52px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--accent);
+  padding: 0 12px;
+}
+
+.book-filter-toggle:hover,
+.book-filter-toggle.is-active {
+  border-color: rgba(143, 53, 38, 0.45);
+  background: rgba(143, 53, 38, 0.08);
+  color: var(--accent-dark);
 }
 
 input:not([type="checkbox"]):not([type="radio"]):focus,
@@ -214,7 +261,7 @@ select:focus {
 .book-options {
   display: grid;
   gap: 4px;
-  max-height: 132px;
+  max-height: 206px;
   overflow: auto;
   padding-right: 2px;
 }
@@ -428,21 +475,43 @@ button:disabled {
     padding-bottom: 22px;
   }
 
-  .search-row {
+  .search-row,
+  .search-row.has-book-filter {
     grid-template-columns: 1fr;
   }
 
-  .search-controls {
+  .search-compact-controls {
     grid-template-columns: minmax(0, 1fr) 104px;
     align-items: end;
   }
 
+  .book-filter-toggle {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 42px;
+  }
+
   .book-picker {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .search-row.has-book-filter .search-actions {
     grid-column: 1 / -1;
   }
 
-  .canon-picker {
+  .search-row.has-book-filter .book-picker {
     grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .canon-picker {
+    grid-template-columns: 1fr;
+    grid-column: 1 / -1;
+  }
+
+  textarea {
+    min-height: 132px;
   }
 
   button {

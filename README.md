@@ -67,7 +67,7 @@ curl -I http://127.0.0.1:3005/
 
 curl -X POST 'http://127.0.0.1:3005/?index' \
   -H 'Content-Type: application/x-www-form-urlencoded' \
-  --data 'question=fear and comfort&matchCount=5'
+  --data 'question=fear and comfort&matchCount=10'
 ```
 
 Production build/start locally:
