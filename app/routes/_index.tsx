@@ -12,6 +12,7 @@ import { getScriptureCacheInfo, type BrowserPassage } from "~/lib/scripture-cach
 type ActionData = {
   error?: string;
   question?: string;
+  canon?: CanonMode;
   books?: string[];
   matchCount?: number;
   results?: Array<{
@@ -26,6 +27,7 @@ type ActionData = {
 };
 
 const TRANSLATION_ABBREVIATION = "WEB";
+type CanonMode = "protestant" | "catholic" | "orthodox";
 const SEARCH_EXAMPLES = [
   "Hope after death",
   "greed and money problems",
@@ -34,7 +36,7 @@ const SEARCH_EXAMPLES = [
   "always learning",
   "the beauty of nature"
 ];
-const CANONICAL_BOOKS = [
+const PROTESTANT_BOOKS = [
   "Genesis",
   "Exodus",
   "Leviticus",
@@ -102,9 +104,85 @@ const CANONICAL_BOOKS = [
   "Jude",
   "Revelation"
 ];
+const CATHOLIC_DEUTEROCANONICAL_BOOKS = [
+  "Tobit",
+  "Judith",
+  "Wisdom",
+  "Sirach",
+  "Baruch",
+  "Daniel (Greek)",
+  "Esther (Greek)",
+  "1 Maccabees",
+  "2 Maccabees"
+];
+const CATHOLIC_BOOKS = [
+  ...PROTESTANT_BOOKS,
+  ...CATHOLIC_DEUTEROCANONICAL_BOOKS
+];
+const ORTHODOX_ADDITIONAL_BOOKS = [
+  "1 Esdras",
+  "2 Esdras",
+  "Prayer of Manasseh",
+  "Psalm 151",
+  "3 Maccabees",
+  "4 Maccabees"
+];
+const ORTHODOX_BOOKS = [
+  ...CATHOLIC_BOOKS,
+  ...ORTHODOX_ADDITIONAL_BOOKS
+];
 const CANONICAL_BOOK_ORDER = new Map(
-  CANONICAL_BOOKS.map((book, index) => [book, index])
+  [
+    "Genesis",
+    "Exodus",
+    "Leviticus",
+    "Numbers",
+    "Deuteronomy",
+    "Joshua",
+    "Judges",
+    "Ruth",
+    "1 Samuel",
+    "2 Samuel",
+    "1 Kings",
+    "2 Kings",
+    "1 Chronicles",
+    "2 Chronicles",
+    "1 Esdras",
+    "2 Esdras",
+    "Ezra",
+    "Nehemiah",
+    "Tobit",
+    "Judith",
+    "Esther",
+    "Esther (Greek)",
+    "1 Maccabees",
+    "2 Maccabees",
+    "3 Maccabees",
+    "4 Maccabees",
+    "Job",
+    "Psalms",
+    "Psalm 151",
+    "Proverbs",
+    "Ecclesiastes",
+    "Song of Songs",
+    "Wisdom",
+    "Sirach",
+    "Prayer of Manasseh",
+    "Isaiah",
+    "Jeremiah",
+    "Lamentations",
+    "Baruch",
+    "Ezekiel",
+    "Daniel",
+    "Daniel (Greek)",
+    ...PROTESTANT_BOOKS.slice(PROTESTANT_BOOKS.indexOf("Hosea"))
+  ].map((book, index) => [book, index])
 );
+const BOOKS_BY_CANON = {
+  protestant: new Set(PROTESTANT_BOOKS),
+  catholic: new Set(CATHOLIC_BOOKS),
+  orthodox: new Set(ORTHODOX_BOOKS)
+} satisfies Record<CanonMode, Set<string>>;
 const scriptureCacheLoads = new Map<string, Promise<BrowserPassage[]>>();
 const scriptureCacheData = new Map<string, BrowserPassage[]>();
 
@@ -147,6 +225,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const formData = await request.formData();
   const question = String(formData.get("question") ?? "").trim();
+  const canon = parseCanonMode(String(formData.get("canon") ?? ""));
   const selectedBooks = formData
     .getAll("books")
     .map((value) => String(value).trim())
@@ -176,22 +255,37 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const booksResponse = await getDb().execute("SELECT book FROM passages GROUP BY book");
   const indexedBooks = new Set(booksResponse.rows.map((row) => String(row.book)));
-  const books = Array.from(new Set(selectedBooks)).filter((book) => indexedBooks.has(book));
+  const canonBooks = BOOKS_BY_CANON[canon];
+  const books = Array.from(new Set(selectedBooks)).filter(
+    (book) => indexedBooks.has(book) && canonBooks.has(book)
+  );
 
   if (selectedBooks.length > 0 && books.length === 0) {
     return json<ActionData>(
-      { error: "Choose at least one indexed book." },
+      { error: "Choose at least one indexed book in the selected canon." },
       { status: 400 }
     );
   }
 
-  const results = withMatchStrength(await searchScripture(question, matchCount, books));
+  const searchBooks = books.length > 0
+    ? books
+    : Array.from(canonBooks).filter((book) => indexedBooks.has(book));
+  const results = withMatchStrength(await searchScripture(question, matchCount, searchBooks));
   return json<ActionData>({
     question,
+    canon,
     books,
     matchCount,
     results
   });
+}
+
+function parseCanonMode(value: string): CanonMode {
+  if (value === "catholic" || value === "orthodox") {
+    return value;
+  }
+
+  return "protestant";
 }
 
 function sortCanonicalBooks(books: string[]) {
@@ -213,6 +307,7 @@ export default function Index() {
   const navigation = useNavigation();
   const submittingRef = useRef(false);
   const [exampleIndex, setExampleIndex] = useState(0);
+  const [canon, setCanon] = useState<CanonMode>(actionData?.canon ?? "protestant");
   const [passages, setPassages] = useState<BrowserPassage[]>([]);
   const [isScriptureReady, setIsScriptureReady] = useState(false);
   const isSearching = navigation.state === "submitting";
@@ -221,6 +316,10 @@ export default function Index() {
   const passageMap = useMemo(
     () => new Map(passages.map((passage) => [passage.id, passage])),
     [passages]
+  );
+  const visibleBooks = useMemo(
+    () => books.filter((book) => BOOKS_BY_CANON[canon].has(book)),
+    [books, canon]
   );
 
   useEffect(() => {
@@ -301,11 +400,44 @@ export default function Index() {
               defaultValue={actionData?.question ?? ""}
             />
             <div className="search-controls">
+              <fieldset className="canon-picker" disabled={isSearching}>
+                <legend>Canon</legend>
+                <label>
+                  <input
+                    checked={canon === "protestant"}
+                    name="canon"
+                    onChange={() => setCanon("protestant")}
+                    type="radio"
+                    value="protestant"
+                  />
+                  Protestant
+                </label>
+                <label>
+                  <input
+                    checked={canon === "catholic"}
+                    name="canon"
+                    onChange={() => setCanon("catholic")}
+                    type="radio"
+                    value="catholic"
+                  />
+                  Catholic
+                </label>
+                <label>
+                  <input
+                    checked={canon === "orthodox"}
+                    name="canon"
+                    onChange={() => setCanon("orthodox")}
+                    type="radio"
+                    value="orthodox"
+                  />
+                  Orthodox
+                </label>
+              </fieldset>
               <fieldset className="book-picker" disabled={isSearching}>
                 <legend>Books</legend>
-                <p className="book-picker-hint">Leave blank to search all indexed books.</p>
+                <p className="book-picker-hint">Leave blank to search every book in this canon.</p>
                 <div className="book-options">
-                  {books.map((book) => (
+                  {visibleBooks.map((book) => (
                     <label className="book-option" key={book}>
                       <input
                         type="checkbox"
@@ -350,8 +482,8 @@ export default function Index() {
               {isSearching ? (
                 <p className="search-status" role="status">
                   {isSearchingAllBooks
-                    ? "Searching all indexed books. Results can take about 15 seconds..."
-                    : "Searching selected books. Results can take a couple seconds..."}
+                    ? "Searching the selected canon..."
+                    : "Searching selected books..."}
                 </p>
               ) : !isScriptureReady ? (
                 <p className="search-status" role="status">
@@ -427,6 +559,15 @@ export default function Index() {
           </div>
         )}
       </section>
+
+      <footer className="source-note">
+        Indexed text: Protestant, Catholic, and Orthodox canons of the World English Bible (WEB).
+        Protestant search is the default.{" "}
+        <a href="https://worldenglish.bible/" rel="noreferrer" target="_blank">
+          Read the WEB
+        </a>
+        .
+      </footer>
     </main>
   );
 }

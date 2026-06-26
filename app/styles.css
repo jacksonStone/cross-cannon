@@ -97,6 +97,43 @@ h1 {
   gap: 8px;
 }
 
+.canon-picker {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 8px;
+}
+
+.canon-picker legend {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.canon-picker label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.canon-picker input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
+
 .field-control {
   display: flex;
   align-items: center;
@@ -126,7 +163,7 @@ textarea:focus {
   border-color: var(--focus);
 }
 
-input:not([type="checkbox"]),
+input:not([type="checkbox"]):not([type="radio"]),
 select {
   width: 100%;
   min-height: 42px;
@@ -137,14 +174,14 @@ select {
   padding: 0 11px;
 }
 
-.field-control input:not([type="checkbox"]) {
+.field-control input:not([type="checkbox"]):not([type="radio"]) {
   width: 58px;
   min-height: 34px;
   padding: 0 6px;
   text-align: center;
 }
 
-input:not([type="checkbox"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):focus,
 select:focus {
   outline: 3px solid rgba(47, 111, 135, 0.18);
   border-color: var(--focus);
@@ -361,6 +398,26 @@ button:disabled {
   color: var(--muted);
 }
 
+.source-note {
+  margin-top: 34px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  padding-top: 16px;
+}
+
+.source-note a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.source-note a:hover {
+  color: var(--accent-dark);
+}
+
 @media (max-width: 700px) {
   .page-shell {
     width: min(100% - 24px, 1040px);
@@ -381,6 +438,10 @@ button:disabled {
   }
 
   .book-picker {
+    grid-column: 1 / -1;
+  }
+
+  .canon-picker {
     grid-column: 1 / -1;
   }
 

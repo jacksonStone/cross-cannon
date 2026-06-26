@@ -11,8 +11,8 @@ the browser loads the full passage text from a versioned static scripture cache.
 
 ## What The App Does
 
-1. The index route in `app/routes/_index.tsx` renders the search form, book
-   filters, match-count control, and results.
+1. The index route in `app/routes/_index.tsx` renders the search form, canon
+   selector, book filters, match-count control, and results.
 2. The loader ensures the database schema exists, reads indexed books from the
    `passages` table, and exposes the current scripture-cache URL.
 3. The action validates the query, selected books, and requested match count,
@@ -27,6 +27,11 @@ the browser loads the full passage text from a versioned static scripture cache.
 The current index shape is paragraph-only. The `paragraph_verses` table stores
 individual verse text and embeddings for highlight selection inside each
 returned paragraph.
+
+The UI defaults to the Protestant canon. Catholic mode searches the Protestant
+canon plus Tobit, Judith, Wisdom, Sirach, Baruch, Greek Daniel, Greek Esther,
+1 Maccabees, and 2 Maccabees. Orthodox mode adds 1 Esdras, 2 Esdras,
+3 Maccabees, 4 Maccabees, Prayer of Manasseh, and Psalm 151.
 
 ## Local Development
 
@@ -168,6 +173,40 @@ After indexing, rebuild the browser scripture cache and app bundle:
 npm run build
 ```
 
+To add or resume the Catholic deuterocanonical books without resetting the
+existing Protestant index, archive the DB first and then run the indexer per
+book with `--no-archive --skip-index-rebuild`; rebuild indexes once at the end:
+
+```bash
+for book in "Tobit" "Judith" "Wisdom" "Sirach" "Baruch" \
+  "Daniel (Greek)" "Esther (Greek)" "1 Maccabees" "2 Maccabees"; do
+  npm run index:bible -- data/bible.json \
+    --db storage/crosscannon.db \
+    --jobs-db storage/indexing-jobs.db \
+    --passage-type paragraph \
+    --book "$book" \
+    --no-archive \
+    --skip-index-rebuild
+done
+
+npm run index:bible -- data/bible.json \
+  --db storage/crosscannon.db \
+  --jobs-db storage/indexing-jobs.db \
+  --no-archive \
+  --rebuild-indexes-only
+```
+
+To add or resume the additional Orthodox books, use the same pattern for:
+
+```text
+1 Esdras
+2 Esdras
+Prayer of Manasseh
+Psalm 151
+3 Maccabees
+4 Maccabees
+```
+
 If `OPENAI_API_KEY` is blank, the importer still creates passages,
 `paragraph_verses`, and text-search tables, but no OpenAI embeddings are stored.
 That is fine for smoke testing. Real semantic search requires indexing with the
@@ -221,8 +260,10 @@ As of June 25, 2026, this checkout contains:
 - `data/bible.json`
 - `storage/crosscannon.db`
 - `storage/indexing-jobs.db`
-- generated scripture cache version `1a032205f7fd40af`
-- 6,984 cached paragraph passages
+- generated scripture cache version `6dca027513ce9a26`
+- 81 indexed books: Protestant, Catholic, and Orthodox canon options
+- generated scripture cache includes the Orthodox additions from `data/bible.json`
+- 8,360 cached paragraph passages
 
 Those local artifacts are large and operationally significant. Rebuild the cache
 with `npm run build` after changing the runtime database.
