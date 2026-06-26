@@ -70,7 +70,7 @@ h1 {
 
 .search-band.is-searching textarea,
 .search-band.is-searching .book-picker,
-.search-band.is-searching .canon-picker,
+.search-band.is-searching .canon-control,
 .search-band.is-searching .match-control {
   opacity: 0.68;
 }
@@ -122,46 +122,9 @@ h1 {
   align-items: end;
 }
 
-.canon-picker {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  padding: 8px;
-}
-
-.canon-picker legend {
-  padding: 0 4px;
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.canon-picker label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 26px;
-  color: var(--ink);
-  font-size: 0.74rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.canon-picker input {
-  width: 14px;
-  height: 14px;
-  margin: 0;
-  flex: 0 0 auto;
-  accent-color: var(--accent);
-}
-
+.canon-control,
 .match-control {
   display: grid;
-  width: 82px;
   margin: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -169,11 +132,20 @@ h1 {
   padding: 8px;
 }
 
+.canon-control legend,
 .match-control legend {
   padding: 0 4px;
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 700;
+}
+
+.match-control {
+  width: 82px;
+}
+
+.canon-control {
+  min-width: 162px;
 }
 
 textarea {
@@ -202,6 +174,11 @@ select {
   background: var(--panel);
   color: var(--ink);
   padding: 0 11px;
+}
+
+.canon-control select {
+  min-height: 34px;
+  padding-right: 28px;
 }
 
 .match-control input:not([type="checkbox"]):not([type="radio"]) {
@@ -505,8 +482,7 @@ button:disabled {
     grid-row: auto;
   }
 
-  .canon-picker {
-    grid-template-columns: 1fr;
+  .canon-control {
     grid-column: 1 / -1;
   }
 

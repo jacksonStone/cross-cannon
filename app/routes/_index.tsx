@@ -404,38 +404,18 @@ export default function Index() {
                 defaultValue={actionData?.question ?? ""}
               />
               <div className="search-compact-controls">
-                <fieldset className="canon-picker" disabled={isSearching}>
+                <fieldset className="canon-control" disabled={isSearching}>
                   <legend>Canon</legend>
-                  <label>
-                    <input
-                      checked={canon === "protestant"}
-                      name="canon"
-                      onChange={() => setCanon("protestant")}
-                      type="radio"
-                      value="protestant"
-                    />
-                    Protestant
-                  </label>
-                  <label>
-                    <input
-                      checked={canon === "catholic"}
-                      name="canon"
-                      onChange={() => setCanon("catholic")}
-                      type="radio"
-                      value="catholic"
-                    />
-                    Catholic
-                  </label>
-                  <label>
-                    <input
-                      checked={canon === "orthodox"}
-                      name="canon"
-                      onChange={() => setCanon("orthodox")}
-                      type="radio"
-                      value="orthodox"
-                    />
-                    Orthodox
-                  </label>
+                  <select
+                    aria-label="Canon"
+                    name="canon"
+                    onChange={(event) => setCanon(parseCanonMode(event.currentTarget.value))}
+                    value={canon}
+                  >
+                    <option value="protestant">Protestant</option>
+                    <option value="catholic">Catholic</option>
+                    <option value="orthodox">Orthodox</option>
+                  </select>
                 </fieldset>
                 <fieldset className="match-control" disabled={isSearching}>
                   <legend>Matches</legend>
