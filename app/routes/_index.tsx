@@ -27,6 +27,8 @@ type ActionData = {
 };
 
 const TRANSLATION_ABBREVIATION = "WEB";
+const DEFAULT_CANON: CanonMode = "protestant";
+const DEFAULT_MATCH_COUNT = 10;
 type CanonMode = "protestant" | "catholic" | "orthodox";
 const SEARCH_EXAMPLES = [
   "Hope after death",
@@ -307,10 +309,10 @@ export default function Index() {
   const navigation = useNavigation();
   const submittingRef = useRef(false);
   const [exampleIndex, setExampleIndex] = useState(0);
-  const [canon, setCanon] = useState<CanonMode>(actionData?.canon ?? "protestant");
-  const [showBookFilters, setShowBookFilters] = useState(
-    () => Boolean(actionData?.books?.length)
-  );
+  const [canon, setCanon] = useState<CanonMode>(actionData?.canon ?? DEFAULT_CANON);
+  const [matchCount, setMatchCount] = useState(actionData?.matchCount ?? DEFAULT_MATCH_COUNT);
+  const [selectedBooks, setSelectedBooks] = useState<string[]>(() => actionData?.books ?? []);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [passages, setPassages] = useState<BrowserPassage[]>([]);
   const [isScriptureReady, setIsScriptureReady] = useState(false);
   const isSearching = navigation.state === "submitting";
@@ -324,6 +326,13 @@ export default function Index() {
     () => books.filter((book) => BOOKS_BY_CANON[canon].has(book)),
     [books, canon]
   );
+  const selectedBooksForCanon = useMemo(
+    () => selectedBooks.filter((book) => BOOKS_BY_CANON[canon].has(book)),
+    [canon, selectedBooks]
+  );
+  const activeFilterCount = (canon === DEFAULT_CANON ? 0 : 1)
+    + (matchCount === DEFAULT_MATCH_COUNT ? 0 : 1)
+    + selectedBooksForCanon.length;
 
   useEffect(() => {
     if (navigation.state === "idle") {
@@ -362,6 +371,42 @@ export default function Index() {
     };
   }, [scriptureCacheUrl]);
 
+  useEffect(() => {
+    if (!isFilterModalOpen) {
+      return;
+    }
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsFilterModalOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isFilterModalOpen]);
+
+  function updateCanon(nextCanon: CanonMode) {
+    setCanon(nextCanon);
+    setSelectedBooks((currentBooks) =>
+      currentBooks.filter((book) => BOOKS_BY_CANON[nextCanon].has(book))
+    );
+  }
+
+  function toggleSelectedBook(book: string) {
+    setSelectedBooks((currentBooks) =>
+      currentBooks.includes(book)
+        ? currentBooks.filter((selectedBook) => selectedBook !== book)
+        : [...currentBooks, book]
+    );
+  }
+
+  function clearFilters() {
+    setCanon(DEFAULT_CANON);
+    setMatchCount(DEFAULT_MATCH_COUNT);
+    setSelectedBooks([]);
+  }
+
   return (
     <main className="page-shell">
       <data value={scriptureCacheKey} data-scripture-cache-key hidden />
@@ -390,7 +435,12 @@ export default function Index() {
           }}
         >
           <label htmlFor="question">Search for passages about...</label>
-          <div className={`search-row${showBookFilters ? " has-book-filter" : ""}`}>
+          <input type="hidden" name="canon" value={canon} />
+          <input type="hidden" name="matchCount" value={matchCount} />
+          {selectedBooksForCanon.map((book) => (
+            <input key={book} type="hidden" name="books" value={book} />
+          ))}
+          <div className="search-row">
             <div className="search-primary">
               <textarea
                 id="question"
@@ -403,65 +453,18 @@ export default function Index() {
                 placeholder={SEARCH_EXAMPLES[exampleIndex]}
                 defaultValue={actionData?.question ?? ""}
               />
-              <div className="search-compact-controls">
-                <fieldset className="canon-control" disabled={isSearching}>
-                  <legend>Canon</legend>
-                  <select
-                    aria-label="Canon"
-                    name="canon"
-                    onChange={(event) => setCanon(parseCanonMode(event.currentTarget.value))}
-                    value={canon}
-                  >
-                    <option value="protestant">Protestant</option>
-                    <option value="catholic">Catholic</option>
-                    <option value="orthodox">Orthodox</option>
-                  </select>
-                </fieldset>
-                <fieldset className="match-control" disabled={isSearching}>
-                  <legend>Matches</legend>
-                  <input
-                    aria-label="Matches"
-                    id="matchCount"
-                    name="matchCount"
-                    type="number"
-                    min={5}
-                    max={40}
-                    step={1}
-                    defaultValue={actionData?.matchCount ?? 10}
-                  />
-                </fieldset>
-                <button
-                  aria-expanded={showBookFilters}
-                  aria-controls="book-filter"
-                  className={`book-filter-toggle${showBookFilters ? " is-active" : ""}`}
-                  disabled={isSearching}
-                  onClick={() => setShowBookFilters((visible) => !visible)}
-                  type="button"
-                >
-                  Filter by book
-                </button>
-              </div>
             </div>
-            {showBookFilters ? (
-              <fieldset className="book-picker" disabled={isSearching} id="book-filter">
-                <legend>Books</legend>
-                <p className="book-picker-hint">Leave blank to search every book in this canon.</p>
-                <div className="book-options">
-                  {visibleBooks.map((book) => (
-                    <label className="book-option" key={book}>
-                      <input
-                        type="checkbox"
-                        name="books"
-                        value={book}
-                        defaultChecked={actionData?.books?.includes(book) ?? false}
-                      />
-                      {book}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-            ) : null}
             <div className="search-actions">
+              <button
+                aria-expanded={isFilterModalOpen}
+                aria-controls="filter-modal"
+                className={`filter-toggle${activeFilterCount > 0 ? " is-active" : ""}`}
+                disabled={isSearching}
+                onClick={() => setIsFilterModalOpen(true)}
+                type="button"
+              >
+                Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+              </button>
               <button
                 className="search-button"
                 type="submit"
@@ -491,6 +494,86 @@ export default function Index() {
               ) : null}
             </div>
           </div>
+          {isFilterModalOpen ? (
+            <div
+              className="filter-modal-backdrop"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setIsFilterModalOpen(false);
+                }
+              }}
+            >
+              <section
+                aria-labelledby="filter-modal-title"
+                aria-modal="true"
+                className="filter-modal"
+                id="filter-modal"
+                role="dialog"
+              >
+                <div className="filter-modal-header">
+                  <h2 id="filter-modal-title">Filters</h2>
+                  <button
+                    className="filter-modal-close"
+                    onClick={() => setIsFilterModalOpen(false)}
+                    type="button"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="filter-modal-body">
+                  <fieldset className="canon-control" disabled={isSearching}>
+                    <legend>Canon</legend>
+                    <select
+                      aria-label="Canon"
+                      onChange={(event) => updateCanon(parseCanonMode(event.currentTarget.value))}
+                      value={canon}
+                    >
+                      <option value="protestant">Protestant</option>
+                      <option value="catholic">Catholic</option>
+                      <option value="orthodox">Orthodox</option>
+                    </select>
+                  </fieldset>
+                  <fieldset className="match-control" disabled={isSearching}>
+                    <legend>Matches</legend>
+                    <input
+                      aria-label="Matches"
+                      type="number"
+                      min={5}
+                      max={40}
+                      step={1}
+                      value={matchCount}
+                      onChange={(event) => setMatchCount(Number(event.currentTarget.value))}
+                    />
+                  </fieldset>
+                  <fieldset className="book-picker" disabled={isSearching}>
+                    <legend>Books</legend>
+                    <p className="book-picker-hint">Leave blank to search every book in this canon.</p>
+                    <div className="book-options">
+                      {visibleBooks.map((book) => (
+                        <label className="book-option" key={book}>
+                          <input
+                            type="checkbox"
+                            value={book}
+                            checked={selectedBooksForCanon.includes(book)}
+                            onChange={() => toggleSelectedBook(book)}
+                          />
+                          {book}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                </div>
+                <div className="filter-modal-actions">
+                  <button className="secondary-button" onClick={clearFilters} type="button">
+                    Clear all
+                  </button>
+                  <button onClick={() => setIsFilterModalOpen(false)} type="button">
+                    Done
+                  </button>
+                </div>
+              </section>
+            </div>
+          ) : null}
         </Form>
       </section>
 

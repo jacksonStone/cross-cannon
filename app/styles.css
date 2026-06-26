@@ -88,12 +88,9 @@ h1 {
 
 .search-row {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
   gap: 14px;
   align-items: start;
-}
-
-.search-row.has-book-filter {
-  grid-template-columns: minmax(0, 1fr) minmax(190px, 240px);
 }
 
 .search-primary {
@@ -104,22 +101,6 @@ h1 {
 .search-actions {
   display: grid;
   gap: 8px;
-}
-
-.search-row.has-book-filter .search-actions {
-  grid-column: 1;
-}
-
-.search-row.has-book-filter .book-picker {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-}
-
-.search-compact-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 8px;
-  align-items: end;
 }
 
 .canon-control,
@@ -146,6 +127,11 @@ h1 {
 
 .canon-control {
   min-width: 162px;
+}
+
+.filter-modal .canon-control,
+.filter-modal .match-control {
+  width: 100%;
 }
 
 textarea {
@@ -188,18 +174,30 @@ select {
   text-align: center;
 }
 
-.book-filter-toggle {
-  width: auto;
-  min-width: 118px;
-  min-height: 52px;
+.filter-toggle {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--accent);
   padding: 0 12px;
 }
 
-.book-filter-toggle:hover,
-.book-filter-toggle.is-active {
+.filter-toggle:hover,
+.filter-toggle.is-active {
+  border-color: rgba(143, 53, 38, 0.45);
+  background: rgba(143, 53, 38, 0.08);
+  color: var(--accent-dark);
+}
+
+.secondary-button {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--accent);
+}
+
+.secondary-button:hover {
   border-color: rgba(143, 53, 38, 0.45);
   background: rgba(143, 53, 38, 0.08);
   color: var(--accent-dark);
@@ -238,7 +236,7 @@ select:focus {
 .book-options {
   display: grid;
   gap: 4px;
-  max-height: 206px;
+  max-height: min(42vh, 360px);
   overflow: auto;
   padding-right: 2px;
 }
@@ -309,6 +307,71 @@ button:disabled {
   color: var(--accent);
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.filter-modal-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(36, 33, 29, 0.34);
+  padding: 18px;
+}
+
+.filter-modal {
+  width: min(100%, 560px);
+  max-height: min(720px, calc(100vh - 36px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  box-shadow: 0 18px 60px rgba(36, 33, 29, 0.22);
+}
+
+.filter-modal-header,
+.filter-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px;
+}
+
+.filter-modal-header {
+  border-bottom: 1px solid var(--line);
+}
+
+.filter-modal-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.filter-modal-close {
+  width: auto;
+  min-width: 0;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--accent);
+  padding: 0 12px;
+}
+
+.filter-modal-body {
+  display: grid;
+  gap: 10px;
+  overflow: auto;
+  padding: 14px;
+}
+
+.filter-modal-actions {
+  border-top: 1px solid var(--line);
+}
+
+.filter-modal-actions button {
+  width: auto;
+  min-width: 112px;
 }
 
 @keyframes spin {
@@ -452,38 +515,16 @@ button:disabled {
     padding-bottom: 22px;
   }
 
-  .search-row,
-  .search-row.has-book-filter {
+  .search-row {
     grid-template-columns: 1fr;
   }
 
-  .search-compact-controls {
-    grid-template-columns: minmax(0, 1fr) 104px;
-    align-items: end;
-  }
-
-  .book-filter-toggle {
-    grid-column: 1 / -1;
-    width: 100%;
-    min-height: 42px;
-  }
-
-  .book-picker {
-    grid-column: 1 / -1;
-    grid-row: auto;
-  }
-
-  .search-row.has-book-filter .search-actions {
-    grid-column: 1 / -1;
-  }
-
-  .search-row.has-book-filter .book-picker {
-    grid-column: 1 / -1;
-    grid-row: auto;
+  .search-actions {
+    grid-template-columns: 1fr 1fr;
   }
 
   .canon-control {
-    grid-column: 1 / -1;
+    min-width: 0;
   }
 
   textarea {
@@ -491,7 +532,16 @@ button:disabled {
   }
 
   button {
-    grid-column: 1 / -1;
     min-height: 48px;
+  }
+
+  .filter-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filter-modal-actions button {
+    width: 100%;
+    min-width: 0;
   }
 }
