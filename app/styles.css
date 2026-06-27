@@ -80,6 +80,10 @@ h1 {
   padding: 0;
 }
 
+.passage-jump-launcher.mobile-header-jump {
+  display: none;
+}
+
 .passage-jump-backdrop {
   position: fixed;
   z-index: 30;
@@ -921,7 +925,21 @@ button:disabled {
   }
 
   .site-header {
+    align-items: center;
     padding-bottom: 12px;
+  }
+
+  .site-header > div {
+    min-width: 0;
+  }
+
+  .passage-jump-launcher.mobile-header-jump {
+    display: flex;
+    flex: 0 0 auto;
+  }
+
+  .passage-jump-launcher.search-form-jump {
+    display: none;
   }
 
   .search-row {

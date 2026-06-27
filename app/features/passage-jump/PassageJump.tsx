@@ -23,17 +23,21 @@ type BookOption = {
 };
 
 type PassageJumpProps = {
+  className?: string;
   filters?: StoredFilters;
   initialPassageId?: string;
   isScriptureReady: boolean;
   launcherVariant?: "block" | "inline";
+  label?: string;
   passages: BrowserPassage[];
 };
 
 export function PassageJump({
+  className,
   filters,
   initialPassageId,
   isScriptureReady,
+  label = "Jump to passage",
   launcherVariant = "block",
   passages
 }: PassageJumpProps) {
@@ -75,9 +79,11 @@ export function PassageJump({
   return (
     <>
       <section
-        className={`passage-jump-launcher${
-          launcherVariant === "inline" ? " is-inline" : ""
-        }`}
+        className={[
+          "passage-jump-launcher",
+          launcherVariant === "inline" ? "is-inline" : "",
+          className ?? ""
+        ].filter(Boolean).join(" ")}
         aria-label="Jump to passage"
       >
         <button
@@ -86,7 +92,7 @@ export function PassageJump({
           onClick={() => setIsOpen(true)}
           type="button"
         >
-          {isDisabled ? "Loading passages" : "Jump to passage"}
+          {isDisabled ? "Loading" : label}
         </button>
       </section>
 

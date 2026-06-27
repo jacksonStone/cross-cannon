@@ -141,6 +141,7 @@ export function SearchForm({
               />
             )}
             <PassageJump
+              className="search-form-jump"
               isScriptureReady={isScriptureReady}
               passages={passages}
             />
