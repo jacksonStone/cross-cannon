@@ -87,12 +87,12 @@ h1 {
   display: grid;
   place-items: center;
   background: rgba(36, 33, 29, 0.52);
-  padding: 18px;
+  padding: 24px;
 }
 
 .passage-jump-modal {
-  width: min(100%, 680px);
-  max-height: min(760px, calc(100vh - 36px));
+  width: min(100%, 920px);
+  max-height: min(860px, calc(100vh - 48px));
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   border: 1px solid var(--line);
@@ -108,7 +108,7 @@ h1 {
   justify-content: space-between;
   gap: 12px;
   border-bottom: 1px solid var(--line);
-  padding: 14px;
+  padding: 16px 18px;
 }
 
 .passage-jump-modal-header h2 {
@@ -119,9 +119,9 @@ h1 {
 
 .passage-jump-modal-body {
   display: grid;
-  gap: 12px;
+  gap: 16px;
   overflow: auto;
-  padding: 14px;
+  padding: 18px;
 }
 
 .passage-jump-book,
@@ -143,25 +143,23 @@ h1 {
 
 .passage-jump-options {
   display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: thin;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .passage-jump-options button,
 .passage-jump-verse {
   flex: 0 0 auto;
   width: auto;
-  min-width: 38px;
-  min-height: 36px;
+  min-width: 42px;
+  min-height: 40px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
   color: var(--accent);
   font-size: 0.84rem;
   font-weight: 800;
-  padding: 0 11px;
+  padding: 0 12px;
 }
 
 .passage-jump-options button:hover,
@@ -916,7 +914,7 @@ button:disabled {
   }
 
   .passage-jump-backdrop {
-    place-items: end center;
+    place-items: center;
     padding: 12px;
     padding-top: max(12px, env(safe-area-inset-top));
     padding-bottom: max(12px, env(safe-area-inset-bottom));
@@ -924,7 +922,7 @@ button:disabled {
 
   .passage-jump-modal {
     width: 100%;
-    max-height: min(760px, calc(100vh - 24px));
+    max-height: min(820px, calc(100vh - 24px));
   }
 
   .passage-jump-modal-header,
