@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Form, Link, useNavigation } from "@remix-run/react";
 
+import { PassageJump } from "~/features/passage-jump/PassageJump";
 import type { StoredFilters } from "~/features/search/types";
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
@@ -99,6 +100,13 @@ export function PassageReader({
           Search
         </Link>
       </header>
+
+      <PassageJump
+        filters={filters}
+        initialPassageId={initialPassageId}
+        isScriptureReady={isScriptureReady}
+        passages={passages}
+      />
 
       <nav className="reader-nav reader-nav-top" aria-label="Previous chapter">
         <button
