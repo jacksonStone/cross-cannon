@@ -33,24 +33,24 @@ textarea {
 .page-shell {
   width: min(1040px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 34px 0 56px;
+  padding: 18px 0 56px;
 }
 
 .site-header {
   display: flex;
   align-items: end;
   justify-content: space-between;
-  gap: 24px;
-  padding: 12px 0 28px;
+  gap: 16px;
+  padding: 4px 0 14px;
   border-bottom: 1px solid var(--line);
 }
 
 .eyebrow {
-  margin: 0 0 6px;
+  margin: 0 0 3px;
   color: var(--accent);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -58,14 +58,14 @@ h1 {
   max-width: 720px;
   margin: 0;
   font-family: "Source Serif 4", Georgia, serif;
-  font-size: clamp(2.3rem, 6vw, 4.8rem);
+  font-size: clamp(1.42rem, 3.2vw, 2.25rem);
   font-weight: 600;
   letter-spacing: 0;
-  line-height: 0.98;
+  line-height: 1.05;
 }
 
 .search-band {
-  padding: 28px 0 24px;
+  padding: 18px 0 22px;
 }
 
 .search-band.is-searching textarea,
@@ -724,11 +724,11 @@ button:disabled {
 @media (max-width: 700px) {
   .page-shell {
     width: min(100% - 24px, 1040px);
-    padding-top: 20px;
+    padding-top: 14px;
   }
 
   .site-header {
-    padding-bottom: 22px;
+    padding-bottom: 12px;
   }
 
   .search-row {

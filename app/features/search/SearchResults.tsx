@@ -12,11 +12,17 @@ const TRANSLATION_ABBREVIATION = "WEB";
 
 type SearchResultsProps = {
   actionData?: SearchActionData;
+  focusedPassageId: string | null;
   passages: BrowserPassage[];
   results?: SearchResult[];
 };
 
-export function SearchResults({ actionData, passages, results }: SearchResultsProps) {
+export function SearchResults({
+  actionData,
+  focusedPassageId,
+  passages,
+  results
+}: SearchResultsProps) {
   const navigation = useNavigation();
   const [contextPassageId, setContextPassageId] = useState<string | null>(null);
   const passageMap = useMemo(
@@ -33,7 +39,9 @@ export function SearchResults({ actionData, passages, results }: SearchResultsPr
   return (
     <>
       <section className="results" aria-live="polite">
-        {actionData?.mode === "similar" && actionData.similarSource ? (
+        {actionData?.mode === "similar"
+          && actionData.similarSource
+          && focusedPassageId === actionData.similarSource.id ? (
           <p className="results-context">
             Similar passages to {actionData.similarSource.reference}
           </p>

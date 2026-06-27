@@ -52,6 +52,7 @@ export default function Index() {
   const actionData = useActionData<typeof action>();
   const [passages, setPassages] = useState<BrowserPassage[]>([]);
   const [isScriptureReady, setIsScriptureReady] = useState(false);
+  const [focusedPassageId, setFocusedPassageId] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -76,6 +77,18 @@ export default function Index() {
     };
   }, [scriptureCacheUrl]);
 
+  useEffect(() => {
+    if (actionData?.mode === "similar" && actionData.similarSource) {
+      setFocusedPassageId(actionData.similarSource.id);
+      window.scrollTo({ top: 0, left: 0 });
+      return;
+    }
+
+    if (actionData?.mode === "theme") {
+      setFocusedPassageId(null);
+    }
+  }, [actionData?.mode, actionData?.similarSource?.id]);
+
   return (
     <main className="page-shell">
       <data value={scriptureCacheKey} data-scripture-cache-key hidden />
@@ -89,7 +102,9 @@ export default function Index() {
       <SearchForm
         actionData={actionData}
         books={books}
+        focusedPassageId={focusedPassageId}
         isScriptureReady={isScriptureReady}
+        onFocusedPassageChange={setFocusedPassageId}
         passages={passages}
       />
 
@@ -104,6 +119,7 @@ export default function Index() {
 
       <SearchResults
         actionData={actionData}
+        focusedPassageId={focusedPassageId}
         passages={passages}
         results={actionData?.results}
       />

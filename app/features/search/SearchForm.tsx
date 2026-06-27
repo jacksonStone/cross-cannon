@@ -20,23 +20,24 @@ const SEARCH_EXAMPLES = [
 type SearchFormProps = {
   actionData?: SearchActionData;
   books: string[];
+  focusedPassageId: string | null;
   isScriptureReady: boolean;
+  onFocusedPassageChange: (passageId: string | null) => void;
   passages: BrowserPassage[];
 };
 
 export function SearchForm({
   actionData,
   books,
+  focusedPassageId,
   isScriptureReady,
+  onFocusedPassageChange,
   passages
 }: SearchFormProps) {
   const navigation = useNavigation();
   const submittingRef = useRef(false);
   const [exampleIndex, setExampleIndex] = useState(0);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [focusedPassageId, setFocusedPassageId] = useState<string | null>(
-    actionData?.mode === "similar" ? actionData.similarSource?.id ?? null : null
-  );
   const isSearching = navigation.state === "submitting";
   const isSubmittingSimilar =
     isSearching && navigation.formData?.get("intent") === "similar-passage";
@@ -68,17 +69,6 @@ export function SearchForm({
       submittingRef.current = false;
     }
   }, [navigation.state]);
-
-  useEffect(() => {
-    if (actionData?.mode === "similar" && actionData.similarSource) {
-      setFocusedPassageId(actionData.similarSource.id);
-      return;
-    }
-
-    if (actionData?.mode === "theme") {
-      setFocusedPassageId(null);
-    }
-  }, [actionData?.mode, actionData?.similarSource?.id]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -130,7 +120,7 @@ export function SearchForm({
                   aria-label="Clear similar passage"
                   className="focused-passage-clear"
                   disabled={isSearching}
-                  onClick={() => setFocusedPassageId(null)}
+                  onClick={() => onFocusedPassageChange(null)}
                   type="button"
                 >
                   &times;
