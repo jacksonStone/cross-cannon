@@ -80,7 +80,9 @@ h1 {
   gap: 10px;
 }
 
-.search-form label {
+.search-form label,
+.search-form-label {
+  margin: 0;
   color: var(--muted);
   font-size: 0.9rem;
   font-weight: 700;
@@ -149,6 +151,63 @@ textarea {
 textarea:focus {
   outline: 3px solid rgba(47, 111, 135, 0.18);
   border-color: var(--focus);
+}
+
+.focused-passage {
+  position: relative;
+  min-height: 116px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 14px 42px 16px 16px;
+  box-shadow: 0 1px 0 rgba(36, 33, 29, 0.03);
+}
+
+.focused-passage-label {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.focused-passage h2 {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 0.94rem;
+  line-height: 1.2;
+}
+
+.focused-passage p:last-child {
+  max-width: 860px;
+  margin: 0;
+  color: var(--ink);
+  font-family: "Source Serif 4", Georgia, serif;
+  font-size: 1.1rem;
+  line-height: 1.58;
+}
+
+.focused-passage-clear {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  min-width: 0;
+  min-height: 28px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.focused-passage-clear:hover {
+  border-color: var(--line);
+  background: var(--soft);
+  color: var(--accent);
 }
 
 input:not([type="checkbox"]):not([type="radio"]),
@@ -567,35 +626,35 @@ button:disabled {
 
 .chapter-passages {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .chapter-passage {
   position: relative;
   display: grid;
-  gap: 5px;
-  padding-left: 14px;
+  gap: 3px;
+  padding-left: 11px;
 }
 
 .chapter-passage::before {
   position: absolute;
-  inset: 5px auto 6px 0;
-  width: 3px;
+  inset: 7px auto 7px 0;
+  width: 2px;
   border-radius: 999px;
-  background: rgba(143, 53, 38, 0.18);
+  background: rgba(143, 53, 38, 0.12);
   content: "";
 }
 
 .chapter-passage.is-selected::before {
-  width: 5px;
-  background: rgba(143, 53, 38, 0.72);
+  width: 3px;
+  background: rgba(143, 53, 38, 0.42);
 }
 
 .chapter-passage-reference {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
@@ -616,18 +675,9 @@ button:disabled {
 }
 
 .chapter-passage.is-selected .chapter-verse {
-  background: rgba(143, 53, 38, 0.08);
+  background: rgba(143, 53, 38, 0.04);
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
-}
-
-.chapter-verse sup {
-  margin-right: 3px;
-  color: var(--accent);
-  font-family: Inter, system-ui, sans-serif;
-  font-size: 0.62rem;
-  font-weight: 700;
-  line-height: 0;
 }
 
 .context-modal-actions {

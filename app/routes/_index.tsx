@@ -90,6 +90,7 @@ export default function Index() {
         actionData={actionData}
         books={books}
         isScriptureReady={isScriptureReady}
+        passages={passages}
       />
 
       {actionData?.error ? (

@@ -126,7 +126,6 @@ export function PassageContextModal({
                 <p className="chapter-text">
                   {chapterPassage.verses.map((verse, index) => (
                     <span className="chapter-verse" key={verse.number}>
-                      <sup>{verse.number}</sup>
                       {verse.text}
                       {index < chapterPassage.verses.length - 1 ? " " : ""}
                     </span>

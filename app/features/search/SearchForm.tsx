@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Form, useNavigation } from "@remix-run/react";
+
+import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
 import { FilterModal } from "./FilterModal";
 import type { SearchActionData } from "./types";
@@ -19,16 +21,36 @@ type SearchFormProps = {
   actionData?: SearchActionData;
   books: string[];
   isScriptureReady: boolean;
+  passages: BrowserPassage[];
 };
 
-export function SearchForm({ actionData, books, isScriptureReady }: SearchFormProps) {
+export function SearchForm({
+  actionData,
+  books,
+  isScriptureReady,
+  passages
+}: SearchFormProps) {
   const navigation = useNavigation();
   const submittingRef = useRef(false);
   const [exampleIndex, setExampleIndex] = useState(0);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [focusedPassageId, setFocusedPassageId] = useState<string | null>(
+    actionData?.mode === "similar" ? actionData.similarSource?.id ?? null : null
+  );
   const isSearching = navigation.state === "submitting";
+  const isSubmittingSimilar =
+    isSearching && navigation.formData?.get("intent") === "similar-passage";
   const isSearchingAllBooks =
     isSearching && (navigation.formData?.getAll("books").length ?? 0) === 0;
+  const passageMap = useMemo(
+    () => new Map(passages.map((passage) => [passage.id, passage])),
+    [passages]
+  );
+  const focusedPassage = focusedPassageId ? passageMap.get(focusedPassageId) : null;
+  const focusedReference = focusedPassage?.reference
+    ?? (focusedPassageId === actionData?.similarSource?.id
+      ? actionData.similarSource.reference
+      : null);
   const {
     activeFilterCount,
     canon,
@@ -46,6 +68,17 @@ export function SearchForm({ actionData, books, isScriptureReady }: SearchFormPr
       submittingRef.current = false;
     }
   }, [navigation.state]);
+
+  useEffect(() => {
+    if (actionData?.mode === "similar" && actionData.similarSource) {
+      setFocusedPassageId(actionData.similarSource.id);
+      return;
+    }
+
+    if (actionData?.mode === "theme") {
+      setFocusedPassageId(null);
+    }
+  }, [actionData?.mode, actionData?.similarSource?.id]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -73,7 +106,17 @@ export function SearchForm({ actionData, books, isScriptureReady }: SearchFormPr
           submittingRef.current = true;
         }}
       >
-        <label htmlFor="question">Search for passages about...</label>
+        {focusedPassageId ? (
+          <p className="search-form-label">Search from this passage</p>
+        ) : (
+          <label htmlFor="question">Search for passages about...</label>
+        )}
+        {focusedPassageId ? (
+          <>
+            <input type="hidden" name="intent" value="similar-passage" />
+            <input type="hidden" name="sourcePassageId" value={focusedPassageId} />
+          </>
+        ) : null}
         <input type="hidden" name="canon" value={canon} />
         <input type="hidden" name="matchCount" value={matchCount} />
         {selectedBooksForCanon.map((book) => (
@@ -81,17 +124,34 @@ export function SearchForm({ actionData, books, isScriptureReady }: SearchFormPr
         ))}
         <div className="search-row">
           <div className="search-primary">
-            <textarea
-              id="question"
-              name="question"
-              rows={4}
-              minLength={3}
-              maxLength={500}
-              required
-              disabled={isSearching}
-              placeholder={SEARCH_EXAMPLES[exampleIndex]}
-              defaultValue={actionData?.question ?? ""}
-            />
+            {focusedPassageId ? (
+              <div className="focused-passage">
+                <button
+                  aria-label="Clear similar passage"
+                  className="focused-passage-clear"
+                  disabled={isSearching}
+                  onClick={() => setFocusedPassageId(null)}
+                  type="button"
+                >
+                  &times;
+                </button>
+                <p className="focused-passage-label">Similar passages to</p>
+                <h2>{focusedReference ?? "Selected passage"}</h2>
+                <p>{focusedPassage?.text ?? "Passage text is loading."}</p>
+              </div>
+            ) : (
+              <textarea
+                id="question"
+                name="question"
+                rows={4}
+                minLength={3}
+                maxLength={500}
+                required
+                disabled={isSearching}
+                placeholder={SEARCH_EXAMPLES[exampleIndex]}
+                defaultValue={actionData?.question ?? ""}
+              />
+            )}
           </div>
           <div className="search-actions">
             <button
@@ -112,17 +172,21 @@ export function SearchForm({ actionData, books, isScriptureReady }: SearchFormPr
               {isSearching ? (
                 <>
                   <span className="button-spinner" aria-hidden="true" />
-                  Searching
+                  {isSubmittingSimilar ? "Finding" : "Searching"}
                 </>
               ) : !isScriptureReady ? (
                 "Loading text"
+              ) : focusedPassageId ? (
+                "Find similar"
               ) : (
                 "Search"
               )}
             </button>
             {isSearching ? (
               <p className="search-status" role="status">
-                {isSearchingAllBooks
+                {isSubmittingSimilar
+                  ? "Finding similar passages..."
+                  : isSearchingAllBooks
                   ? "Searching the selected canon..."
                   : "Searching selected books..."}
               </p>
