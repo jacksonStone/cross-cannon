@@ -547,6 +547,44 @@ button:disabled {
   padding: 22px 24px;
 }
 
+.chapter-passages {
+  display: grid;
+  gap: 18px;
+}
+
+.chapter-passage {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  padding-left: 14px;
+}
+
+.chapter-passage::before {
+  position: absolute;
+  inset: 5px auto 6px 0;
+  width: 3px;
+  border-radius: 999px;
+  background: rgba(143, 53, 38, 0.18);
+  content: "";
+}
+
+.chapter-passage.is-selected::before {
+  width: 5px;
+  background: rgba(143, 53, 38, 0.72);
+}
+
+.chapter-passage-reference {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chapter-passage.is-selected .chapter-passage-reference {
+  color: var(--accent);
+}
+
 .chapter-text {
   margin: 0;
   color: var(--ink);
@@ -559,8 +597,8 @@ button:disabled {
   border-radius: 4px;
 }
 
-.chapter-verse.is-selected {
-  background: rgba(143, 53, 38, 0.12);
+.chapter-passage.is-selected .chapter-verse {
+  background: rgba(143, 53, 38, 0.08);
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
@@ -696,6 +734,10 @@ button:disabled {
 
   .context-modal-body {
     padding: 18px 16px;
+  }
+
+  .chapter-passages {
+    gap: 16px;
   }
 
   .chapter-text {
