@@ -435,6 +435,24 @@ button:disabled {
   line-height: 1.62;
 }
 
+.context-button {
+  width: auto;
+  min-width: 0;
+  min-height: 34px;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--accent);
+  font-size: 0.82rem;
+  padding: 0 12px;
+}
+
+.context-button:hover {
+  border-color: rgba(143, 53, 38, 0.45);
+  background: rgba(143, 53, 38, 0.08);
+  color: var(--accent-dark);
+}
+
 .verse-highlight {
   background: linear-gradient(
     to top,
@@ -480,6 +498,95 @@ button:disabled {
 .match-dots span.is-active {
   border-color: var(--accent);
   background: var(--accent);
+}
+
+.context-modal-backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(36, 33, 29, 0.52);
+  padding: 18px;
+}
+
+.context-modal {
+  width: min(100%, 760px);
+  max-height: min(820px, calc(100vh - 36px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: 0 18px 60px rgba(36, 33, 29, 0.24);
+  overflow: hidden;
+}
+
+.context-modal-header,
+.context-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+}
+
+.context-modal-header {
+  border-bottom: 1px solid var(--line);
+}
+
+.context-modal-header h2 {
+  margin: 0;
+  font-family: "Source Serif 4", Georgia, serif;
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+
+.context-modal-body {
+  overflow: auto;
+  padding: 22px 24px;
+}
+
+.chapter-text {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Source Serif 4", Georgia, serif;
+  font-size: 1.22rem;
+  line-height: 1.72;
+}
+
+.chapter-verse {
+  border-radius: 4px;
+}
+
+.chapter-verse.is-selected {
+  background: rgba(143, 53, 38, 0.12);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.chapter-verse sup {
+  margin-right: 3px;
+  color: var(--accent);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 0;
+}
+
+.context-modal-actions {
+  border-top: 1px solid var(--line);
+}
+
+.context-modal-actions button {
+  width: auto;
+  min-width: 152px;
+}
+
+.context-modal-actions span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .empty-state {
@@ -568,5 +675,45 @@ button:disabled {
 
   .filter-modal-close {
     min-height: 40px;
+  }
+
+  .context-modal-backdrop {
+    place-items: end center;
+    padding: 12px;
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .context-modal {
+    width: 100%;
+    max-height: min(820px, calc(100vh - 24px));
+  }
+
+  .context-modal-header,
+  .context-modal-actions {
+    padding: 12px;
+  }
+
+  .context-modal-body {
+    padding: 18px 16px;
+  }
+
+  .chapter-text {
+    font-size: 1.14rem;
+  }
+
+  .context-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .context-modal-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .context-modal-actions span {
+    justify-self: center;
+    order: -1;
   }
 }
