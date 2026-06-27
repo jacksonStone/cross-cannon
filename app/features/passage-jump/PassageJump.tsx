@@ -42,89 +42,139 @@ export function PassageJump({
   );
   const [selectedBook, setSelectedBook] = useState("");
   const [selectedChapter, setSelectedChapter] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     setSelectedBook(initialSelection.book);
     setSelectedChapter(initialSelection.chapter);
   }, [initialSelection.book, initialSelection.chapter]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isOpen]);
+
   const book = jumpIndex.books.find((option) => option.name === selectedBook)
     ?? jumpIndex.books[0];
   const chapter = book?.chapters.find((option) => option.number === selectedChapter)
     ?? book?.chapters[0];
-
-  if (!isScriptureReady || jumpIndex.books.length === 0) {
-    return (
-      <section className="passage-jump" aria-label="Jump to passage">
-        <p className="passage-jump-title">Jump</p>
-        <p className="passage-jump-loading">Loading books...</p>
-      </section>
-    );
-  }
+  const isDisabled = !isScriptureReady || jumpIndex.books.length === 0;
 
   return (
-    <section className="passage-jump" aria-label="Jump to passage">
-      <div className="passage-jump-header">
-        <p className="passage-jump-title">Jump</p>
-        <label>
-          <span>Book</span>
-          <select
-            value={book.name}
-            onChange={(event) => {
-              const nextBook = jumpIndex.books.find(
-                (option) => option.name === event.target.value
-              );
+    <>
+      <section className="passage-jump-launcher" aria-label="Jump to passage">
+        <button
+          className="context-button"
+          disabled={isDisabled}
+          onClick={() => setIsOpen(true)}
+          type="button"
+        >
+          {isDisabled ? "Loading passages" : "Jump to passage"}
+        </button>
+      </section>
 
-              if (!nextBook) {
-                return;
-              }
-
-              setSelectedBook(nextBook.name);
-              setSelectedChapter(nextBook.chapters[0]?.number ?? 1);
-            }}
+      {isOpen && !isDisabled ? (
+        <div
+          className="passage-jump-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsOpen(false);
+            }
+          }}
+        >
+          <section
+            aria-labelledby="passage-jump-title"
+            aria-modal="true"
+            className="passage-jump-modal"
+            role="dialog"
           >
-            {jumpIndex.books.map((option) => (
-              <option key={option.name} value={option.name}>
-                {option.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+            <header className="passage-jump-modal-header">
+              <div>
+                <p className="eyebrow">Jump</p>
+                <h2 id="passage-jump-title">Choose a passage</h2>
+              </div>
+              <button
+                className="filter-modal-close"
+                onClick={() => setIsOpen(false)}
+                type="button"
+              >
+                Close
+              </button>
+            </header>
 
-      <div className="passage-jump-group" aria-label="Chapter">
-        <span>Chapter</span>
-        <div className="passage-jump-options">
-          {book.chapters.map((option) => (
-            <button
-              className={
-                option.number === chapter.number ? "is-selected" : undefined
-              }
-              key={option.number}
-              onClick={() => setSelectedChapter(option.number)}
-              type="button"
-            >
-              {option.number}
-            </button>
-          ))}
-        </div>
-      </div>
+            <div className="passage-jump-modal-body">
+              <label className="passage-jump-book">
+                <span>Book</span>
+                <select
+                  value={book.name}
+                  onChange={(event) => {
+                    const nextBook = jumpIndex.books.find(
+                      (option) => option.name === event.target.value
+                    );
 
-      <div className="passage-jump-group" aria-label="Verse">
-        <span>Verse</span>
-        <div className="passage-jump-options">
-          {chapter.verses.map((verse) => (
-            <Link
-              className="passage-jump-verse"
-              key={verse.number}
-              to={buildReaderUrl(verse.passageId, filters)}
-            >
-              {verse.number}
-            </Link>
-          ))}
+                    if (!nextBook) {
+                      return;
+                    }
+
+                    setSelectedBook(nextBook.name);
+                    setSelectedChapter(nextBook.chapters[0]?.number ?? 1);
+                  }}
+                >
+                  {jumpIndex.books.map((option) => (
+                    <option key={option.name} value={option.name}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="passage-jump-group" aria-label="Chapter">
+                <span>Chapter</span>
+                <div className="passage-jump-options">
+                  {book.chapters.map((option) => (
+                    <button
+                      className={
+                        option.number === chapter.number ? "is-selected" : undefined
+                      }
+                      key={option.number}
+                      onClick={() => setSelectedChapter(option.number)}
+                      type="button"
+                    >
+                      {option.number}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="passage-jump-group" aria-label="Verse">
+                <span>Verse</span>
+                <div className="passage-jump-options">
+                  {chapter.verses.map((verse) => (
+                    <Link
+                      className="passage-jump-verse"
+                      key={verse.number}
+                      to={buildReaderUrl(verse.passageId, filters)}
+                    >
+                      {verse.number}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-      </div>
-    </section>
+      ) : null}
+    </>
   );
 }
 

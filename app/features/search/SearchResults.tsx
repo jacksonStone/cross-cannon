@@ -35,6 +35,11 @@ export function SearchResults({
 
   return (
     <section className="results" aria-live="polite">
+        {actionData?.mode === "similar"
+          && actionData.similarSource
+          && focusedPassageId === actionData.similarSource.id ? (
+          <h2 className="results-heading">Similar passages</h2>
+        ) : null}
         {results?.length ? (
           results.map((result, index) => {
             const passage = passageMap.get(result.id);
