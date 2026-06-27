@@ -11,12 +11,14 @@ the browser loads the full passage text from a versioned static scripture cache.
 
 ## What The App Does
 
-1. The index route in `app/routes/_index.tsx` renders the search form, canon
-   selector, book filters, match-count control, and results.
-2. The loader ensures the database schema exists, reads indexed books from the
-   `passages` table, and exposes the current scripture-cache URL.
-3. The action validates the query, selected books, and requested match count,
-   then rate-limits each client IP to 5 searches per minute.
+1. The index route in `app/routes/_index.tsx` is intentionally thin. It wires
+   the route loader/action to search feature modules, loads the browser
+   scripture cache, and composes the form and results components.
+2. `app/features/search/search.server.ts` ensures the database schema exists,
+   reads indexed books from the `passages` table, validates search form data,
+   scopes searches by canon/books, and returns paragraph result metadata.
+3. The route action rate-limits each client IP to 5 searches per minute before
+   handing validated form data to the search feature module.
 4. `app/lib/search.server.ts` embeds the query with OpenAI when an API key is
    configured, searches paragraph passages by vector similarity, and falls back
    to stored-vector brute force or FTS/LIKE lexical search.
@@ -32,6 +34,33 @@ The UI defaults to the Protestant canon. Catholic mode searches the Protestant
 canon plus Tobit, Judith, Wisdom, Sirach, Baruch, Greek Daniel, Greek Esther,
 1 Maccabees, and 2 Maccabees. Orthodox mode adds 1 Esdras, 2 Esdras,
 3 Maccabees, 4 Maccabees, Prayer of Manasseh, and Psalm 151.
+
+## Project Navigation
+
+Start with these files when changing app behavior:
+
+```text
+app/routes/_index.tsx                         page composition, loader/action
+app/features/search/search.server.ts          server-side search form handling
+app/features/search/SearchForm.tsx            textarea, submit button, filters button
+app/features/search/FilterModal.tsx           canon/match/book filter modal
+app/features/search/useSearchFilters.ts       localStorage and filter state
+app/features/search/SearchResults.tsx         passage result cards
+app/features/search/canons.ts                 canon book lists and canonical sorting
+app/features/search/scripture-cache.client.ts browser-side passage text cache loader
+app/features/search/types.ts                  shared search feature types
+app/lib/search.server.ts                      embedding/vector/FTS search engine
+app/lib/scripture-cache.server.ts             static scripture cache metadata/routes
+```
+
+Keep route files small. If a future feature is about searching, filtering, or
+displaying passage results, prefer adding it under `app/features/search/`
+instead of growing `app/routes/_index.tsx`.
+
+For upcoming passage-specific features, `SearchResults.tsx` is the current
+attachment point for result-card UI, while any server-side related-passage
+lookup should live in a separate search feature server module unless it belongs
+inside the lower-level engine in `app/lib/search.server.ts`.
 
 ## Local Development
 
