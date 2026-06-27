@@ -29,11 +29,11 @@ export function PassageReader({
     ? chapterKey(initialLocation.book, initialLocation.chapter)
     : null;
   const [activeChapterKey, setActiveChapterKey] = useState(initialChapterKey);
-  const [selectedPassageId, setSelectedPassageId] = useState(initialPassageId);
+  const [selectedPassageId, setSelectedPassageId] = useState("");
 
   useEffect(() => {
     setActiveChapterKey(initialChapterKey);
-    setSelectedPassageId(initialPassageId);
+    setSelectedPassageId("");
   }, [initialChapterKey, initialPassageId]);
 
   useEffect(() => {
@@ -64,9 +64,6 @@ export function PassageReader({
     activeChapterIndex >= 0 && activeChapterIndex < orderedChapterKeys.length - 1
       ? orderedChapterKeys[activeChapterIndex + 1]
       : null;
-  const selectedPassage = activeChapter?.passages.find(
-    (passage) => passage.id === selectedPassageId
-  );
   const isSearchingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
 
@@ -103,7 +100,7 @@ export function PassageReader({
         </Link>
       </header>
 
-      <nav className="reader-nav" aria-label="Chapter navigation">
+      <nav className="reader-nav reader-nav-top" aria-label="Previous chapter">
         <button
           className="secondary-button"
           disabled={!previousChapterKey}
@@ -113,13 +110,6 @@ export function PassageReader({
           Previous chapter
         </button>
         <span title="World English Bible">{TRANSLATION_ABBREVIATION}</span>
-        <button
-          disabled={!nextChapterKey}
-          onClick={() => nextChapterKey && setActiveChapterKey(nextChapterKey)}
-          type="button"
-        >
-          Next chapter
-        </button>
       </nav>
 
       <div className="reader-passages">
@@ -173,14 +163,16 @@ export function PassageReader({
         })}
       </div>
 
-      {selectedPassage ? (
-        <aside className="reader-selection" aria-live="polite">
-          <span>{selectedPassage.reference}</span>
-          <button onClick={() => setSelectedPassageId("")} type="button">
-            Clear
-          </button>
-        </aside>
-      ) : null}
+      <nav className="reader-nav reader-nav-bottom" aria-label="Next chapter">
+        <span title="World English Bible">{TRANSLATION_ABBREVIATION}</span>
+        <button
+          disabled={!nextChapterKey}
+          onClick={() => nextChapterKey && setActiveChapterKey(nextChapterKey)}
+          type="button"
+        >
+          Next chapter
+        </button>
+      </nav>
     </section>
   );
 }

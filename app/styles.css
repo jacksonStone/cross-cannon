@@ -617,13 +617,16 @@ button:disabled {
 }
 
 .reader-nav {
-  position: sticky;
-  z-index: 5;
-  top: 0;
-  border-bottom: 1px solid var(--line);
-  background: rgba(251, 250, 247, 0.94);
   padding: 8px 0;
-  backdrop-filter: blur(8px);
+}
+
+.reader-nav-top {
+  border-bottom: 1px solid var(--line);
+}
+
+.reader-nav-bottom {
+  border-top: 1px solid var(--line);
+  justify-content: flex-end;
 }
 
 .reader-nav button {
@@ -648,7 +651,7 @@ button:disabled {
   display: grid;
   gap: 6px;
   padding-left: 12px;
-  scroll-margin-top: 74px;
+  scroll-margin-top: 18px;
 }
 
 .reader-passage::before {
@@ -728,37 +731,6 @@ button:disabled {
 
 .reader-passage-actions form {
   margin: 0;
-}
-
-.reader-selection {
-  position: sticky;
-  bottom: 12px;
-  justify-self: center;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 10px 30px rgba(36, 33, 29, 0.12);
-  padding: 7px 8px 7px 14px;
-}
-
-.reader-selection span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.reader-selection button {
-  width: auto;
-  min-width: 0;
-  min-height: 30px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--accent);
-  font-size: 0.78rem;
-  padding: 0 10px;
 }
 
 .reader-empty {
@@ -897,14 +869,11 @@ button:disabled {
 
   .reader-passage {
     padding-left: 9px;
-    scroll-margin-top: 150px;
+    scroll-margin-top: 12px;
   }
 
   .reader-passage-button {
     padding: 8px 8px;
   }
 
-  .reader-selection {
-    max-width: calc(100vw - 24px);
-  }
 }
