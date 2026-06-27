@@ -315,7 +315,7 @@ button:disabled {
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(36, 33, 29, 0.34);
+  background: rgba(36, 33, 29, 0.48);
   padding: 18px;
 }
 
@@ -326,8 +326,9 @@ button:disabled {
   grid-template-rows: auto minmax(0, 1fr) auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--bg);
+  background: var(--paper);
   box-shadow: 0 18px 60px rgba(36, 33, 29, 0.22);
+  overflow: hidden;
 }
 
 .filter-modal-header,
@@ -346,6 +347,7 @@ button:disabled {
 .filter-modal-header h2 {
   margin: 0;
   font-size: 1rem;
+  line-height: 1.2;
 }
 
 .filter-modal-close {
@@ -355,6 +357,7 @@ button:disabled {
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--accent);
+  font-size: 0.9rem;
   padding: 0 12px;
 }
 
@@ -543,5 +546,27 @@ button:disabled {
   .filter-modal-actions button {
     width: 100%;
     min-width: 0;
+  }
+
+  .filter-modal-backdrop {
+    place-items: end center;
+    padding: 12px;
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .filter-modal {
+    width: 100%;
+    max-height: min(720px, calc(100vh - 24px));
+  }
+
+  .filter-modal-header,
+  .filter-modal-body,
+  .filter-modal-actions {
+    padding: 12px;
+  }
+
+  .filter-modal-close {
+    min-height: 40px;
   }
 }

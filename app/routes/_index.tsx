@@ -29,7 +29,13 @@ type ActionData = {
 const TRANSLATION_ABBREVIATION = "WEB";
 const DEFAULT_CANON: CanonMode = "protestant";
 const DEFAULT_MATCH_COUNT = 10;
+const FILTER_STORAGE_KEY = "cross-cannon:filters:v1";
 type CanonMode = "protestant" | "catholic" | "orthodox";
+type StoredFilters = {
+  canon?: string;
+  matchCount?: number;
+  books?: string[];
+};
 const SEARCH_EXAMPLES = [
   "Hope after death",
   "greed and money problems",
@@ -313,6 +319,7 @@ export default function Index() {
   const [matchCount, setMatchCount] = useState(actionData?.matchCount ?? DEFAULT_MATCH_COUNT);
   const [selectedBooks, setSelectedBooks] = useState<string[]>(() => actionData?.books ?? []);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [hasLoadedStoredFilters, setHasLoadedStoredFilters] = useState(false);
   const [passages, setPassages] = useState<BrowserPassage[]>([]);
   const [isScriptureReady, setIsScriptureReady] = useState(false);
   const isSearching = navigation.state === "submitting";
@@ -330,8 +337,7 @@ export default function Index() {
     () => selectedBooks.filter((book) => BOOKS_BY_CANON[canon].has(book)),
     [canon, selectedBooks]
   );
-  const activeFilterCount = (canon === DEFAULT_CANON ? 0 : 1)
-    + (matchCount === DEFAULT_MATCH_COUNT ? 0 : 1)
+  const activeFilterCount = (matchCount === DEFAULT_MATCH_COUNT ? 0 : 1)
     + selectedBooksForCanon.length;
 
   useEffect(() => {
@@ -339,6 +345,68 @@ export default function Index() {
       submittingRef.current = false;
     }
   }, [navigation.state]);
+
+  useEffect(() => {
+    if (hasLoadedStoredFilters) {
+      return;
+    }
+
+    if (actionData) {
+      setHasLoadedStoredFilters(true);
+      return;
+    }
+
+    try {
+      const rawFilters = window.localStorage.getItem(FILTER_STORAGE_KEY);
+
+      if (!rawFilters) {
+        setHasLoadedStoredFilters(true);
+        return;
+      }
+
+      const parsedFilters = JSON.parse(rawFilters) as StoredFilters;
+      const storedCanon = parseCanonMode(String(parsedFilters.canon ?? ""));
+      const storedMatchCount = parsedFilters.matchCount;
+      const indexedBooks = new Set(books);
+
+      setCanon(storedCanon);
+
+      if (
+        typeof storedMatchCount === "number"
+        && Number.isInteger(storedMatchCount)
+        && storedMatchCount >= 5
+        && storedMatchCount <= 40
+      ) {
+        setMatchCount(storedMatchCount);
+      }
+
+      if (Array.isArray(parsedFilters.books)) {
+        setSelectedBooks(
+          parsedFilters.books
+            .map((book) => String(book))
+            .filter((book) => indexedBooks.has(book) && BOOKS_BY_CANON[storedCanon].has(book))
+        );
+      }
+    } catch {
+      window.localStorage.removeItem(FILTER_STORAGE_KEY);
+    } finally {
+      setHasLoadedStoredFilters(true);
+    }
+  }, [actionData, books, hasLoadedStoredFilters]);
+
+  useEffect(() => {
+    if (!hasLoadedStoredFilters) {
+      return;
+    }
+
+    const filters = {
+      canon,
+      matchCount,
+      books: selectedBooksForCanon
+    } satisfies StoredFilters;
+
+    window.localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(filters));
+  }, [canon, hasLoadedStoredFilters, matchCount, selectedBooksForCanon]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -402,7 +470,6 @@ export default function Index() {
   }
 
   function clearFilters() {
-    setCanon(DEFAULT_CANON);
     setMatchCount(DEFAULT_MATCH_COUNT);
     setSelectedBooks([]);
   }
