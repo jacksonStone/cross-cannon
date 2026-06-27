@@ -18,10 +18,23 @@ type CachedPassageEmbedding = {
   vector: Float32Array;
 };
 
+type SearchEmbeddingOptions = {
+  excludeIds?: string[];
+};
+
+type SimilarScriptureSearch = {
+  source: {
+    id: string;
+    reference: string;
+  };
+  results: ScriptureResult[];
+};
+
 export async function searchScripture(
   question: string,
   limit = 10,
-  books: string[] = []
+  books: string[] = [],
+  options: SearchEmbeddingOptions = {}
 ): Promise<ScriptureResult[]> {
   const trace = createSearchTrace(question, limit, books);
   await ensureDatabase();
@@ -33,7 +46,7 @@ export async function searchScripture(
   trace.mark("embedText");
 
   if (embedding) {
-    const cachedResults = await searchCachedEmbeddings(embedding, limit, books);
+    const cachedResults = await searchCachedEmbeddings(embedding, limit, books, options);
     trace.mark("searchCachedEmbeddings", { count: cachedResults.length });
     if (cachedResults.length >= Math.min(4, limit)) {
       const results = await attachVerseHighlights(embedding, cachedResults);
@@ -42,7 +55,7 @@ export async function searchScripture(
     }
 
     const vectorResults = await runVectorSearchExclusive(
-      () => searchVector(embedding, limit, books),
+      () => searchVector(embedding, limit, books, options),
       () => trace.mark("searchVectorStart")
     );
     trace.mark("searchVector", { count: vectorResults.length });
@@ -54,7 +67,7 @@ export async function searchScripture(
 
     const bruteForceResults = books.length > 0
       ? []
-      : await searchStoredEmbeddings(embedding, limit, books);
+      : await searchStoredEmbeddings(embedding, limit, books, options);
     trace.mark("searchStoredEmbeddings", { count: bruteForceResults.length });
     if (bruteForceResults.length >= Math.min(4, limit)) {
       const results = await attachVerseHighlights(embedding, bruteForceResults);
@@ -66,6 +79,83 @@ export async function searchScripture(
   const results = await searchLexical(question, limit, books);
   trace.finish("lexical", { count: results.length });
   return results;
+}
+
+export async function searchSimilarScripture(
+  passageId: string,
+  limit = 10,
+  books: string[] = []
+): Promise<SimilarScriptureSearch | null> {
+  const trace = createSearchTrace(`similar:${passageId}`, limit, books);
+  await ensureDatabase();
+  trace.mark("ensureDatabase");
+
+  const sourceResponse = await getDb().execute({
+    sql: `
+      SELECT id, reference, embedding_json
+      FROM passages
+      WHERE id = ?
+        AND embedding_json IS NOT NULL
+    `,
+    args: [passageId]
+  });
+  const source = sourceResponse.rows[0];
+
+  if (typeof source?.id !== "string" || typeof source.embedding_json !== "string") {
+    trace.finish("missing-source", { count: 0 });
+    return null;
+  }
+
+  const embedding = parseEmbedding(source.embedding_json);
+  if (embedding.length === 0) {
+    trace.finish("missing-embedding", { count: 0 });
+    return null;
+  }
+
+  const options = { excludeIds: [passageId] } satisfies SearchEmbeddingOptions;
+  const cachedResults = await searchCachedEmbeddings(embedding, limit, books, options);
+  trace.mark("searchCachedEmbeddings", { count: cachedResults.length });
+  if (cachedResults.length >= Math.min(4, limit)) {
+    const results = await attachVerseHighlights(embedding, cachedResults);
+    trace.finish("cached-vector", { count: results.length });
+    return {
+      source: {
+        id: String(source.id),
+        reference: String(source.reference)
+      },
+      results
+    };
+  }
+
+  const vectorResults = await runVectorSearchExclusive(
+    () => searchVector(embedding, limit, books, options),
+    () => trace.mark("searchVectorStart")
+  );
+  trace.mark("searchVector", { count: vectorResults.length });
+  if (vectorResults.length >= Math.min(4, limit)) {
+    const results = await attachVerseHighlights(embedding, vectorResults);
+    trace.finish("vector", { count: results.length });
+    return {
+      source: {
+        id: String(source.id),
+        reference: String(source.reference)
+      },
+      results
+    };
+  }
+
+  const storedResults = await searchStoredEmbeddings(embedding, limit, books, options);
+  trace.mark("searchStoredEmbeddings", { count: storedResults.length });
+  const results = await attachVerseHighlights(embedding, storedResults);
+  trace.finish("stored-vector", { count: results.length });
+
+  return {
+    source: {
+      id: String(source.id),
+      reference: String(source.reference)
+    },
+    results
+  };
 }
 
 async function attachVerseHighlights(embedding: number[], results: ScriptureResult[]) {
@@ -163,10 +253,19 @@ function getHighlightVerse(
   return bestVerse.score > paragraphScore ? bestVerse.verse : undefined;
 }
 
-async function searchVector(embedding: number[], limit: number, books: string[]) {
+async function searchVector(
+  embedding: number[],
+  limit: number,
+  books: string[],
+  options: SearchEmbeddingOptions = {}
+) {
   const db = getDb();
-  const candidateLimit = books.length ? Math.max(limit * 40, 300) : limit;
+  const excludeIds = options.excludeIds ?? [];
+  const candidateLimit = books.length || excludeIds.length
+    ? Math.max(limit * 40, 300)
+    : limit;
   const bookClause = books.length ? `AND p.book IN (${placeholders(books)})` : "";
+  const excludeClause = excludeIds.length ? `AND p.id NOT IN (${placeholders(excludeIds)})` : "";
 
   try {
     const response = await db.execute({
@@ -176,11 +275,16 @@ async function searchVector(embedding: number[], limit: number, books: string[])
         JOIN passages p ON p.rowid = v.id
         WHERE p.text <> ''
           ${bookClause}
+          ${excludeClause}
         LIMIT ?
       `,
-      args: books.length
-        ? [vectorSql(embedding), candidateLimit, ...books, limit]
-        : [vectorSql(embedding), candidateLimit, limit]
+      args: [
+        vectorSql(embedding),
+        candidateLimit,
+        ...books,
+        ...excludeIds,
+        limit
+      ]
     });
 
     return response.rows.map((row) => ({
@@ -224,13 +328,23 @@ async function runVectorSearchExclusive<T>(
   }
 }
 
-async function searchCachedEmbeddings(embedding: number[], limit: number, books: string[]) {
+async function searchCachedEmbeddings(
+  embedding: number[],
+  limit: number,
+  books: string[],
+  options: SearchEmbeddingOptions = {}
+) {
   const query = normalizeVector(embedding);
   const bookFilter = books.length > 0 ? new Set(books) : null;
+  const excludedIds = new Set(options.excludeIds ?? []);
   const passages = await getPassageEmbeddingCache();
   const topResults: ScriptureResult[] = [];
 
   for (const passage of passages) {
+    if (excludedIds.has(passage.id)) {
+      continue;
+    }
+
     if (bookFilter && !bookFilter.has(passage.book)) {
       continue;
     }
@@ -280,17 +394,24 @@ async function loadPassageEmbeddingCache() {
   });
 }
 
-async function searchStoredEmbeddings(embedding: number[], limit: number, books: string[]) {
+async function searchStoredEmbeddings(
+  embedding: number[],
+  limit: number,
+  books: string[],
+  options: SearchEmbeddingOptions = {}
+) {
   const db = getDb();
   const query = normalizeVector(embedding);
+  const excludeIds = options.excludeIds ?? [];
   const response = await db.execute({
     sql: `
       SELECT id, reference, result_type, embedding_json
       FROM passages
       WHERE embedding_json IS NOT NULL
         ${books.length ? `AND book IN (${placeholders(books)})` : ""}
+        ${excludeIds.length ? `AND id NOT IN (${placeholders(excludeIds)})` : ""}
     `,
-    args: books
+    args: [...books, ...excludeIds]
   });
 
   const topResults: ScriptureResult[] = [];

@@ -1,9 +1,10 @@
 import { json } from "@remix-run/node";
 
 import { ensureDatabase, getDb } from "~/lib/db.server";
-import { searchScripture } from "~/lib/search.server";
+import { searchScripture, searchSimilarScripture } from "~/lib/search.server";
 
 import { BOOKS_BY_CANON, DEFAULT_MATCH_COUNT, parseCanonMode, sortCanonicalBooks } from "./canons";
+import type { CanonMode } from "./types";
 import type { SearchActionData } from "./types";
 
 export async function getIndexedBooks() {
@@ -20,13 +21,18 @@ export async function getIndexedBooks() {
 }
 
 export async function handleSearchRequest(formData: FormData) {
+  const filters = await parseSearchFilters(formData);
+  const intent = String(formData.get("intent") ?? "theme");
+
+  if ("response" in filters) {
+    return filters.response;
+  }
+
+  if (intent === "similar-passage") {
+    return handleSimilarPassageSearch(formData, filters);
+  }
+
   const question = String(formData.get("question") ?? "").trim();
-  const canon = parseCanonMode(String(formData.get("canon") ?? ""));
-  const selectedBooks = formData
-    .getAll("books")
-    .map((value) => String(value).trim())
-    .filter(Boolean);
-  const matchCount = Number(formData.get("matchCount") ?? DEFAULT_MATCH_COUNT);
 
   if (question.length < 3) {
     return json<SearchActionData>(
@@ -42,11 +48,80 @@ export async function handleSearchRequest(formData: FormData) {
     );
   }
 
-  if (!Number.isInteger(matchCount) || matchCount < 5 || matchCount > 40) {
+  const results = withMatchStrength(
+    await searchScripture(question, filters.matchCount, filters.searchBooks)
+  );
+
+  return json<SearchActionData>({
+    mode: "theme",
+    question,
+    canon: filters.canon,
+    books: filters.books,
+    matchCount: filters.matchCount,
+    results
+  });
+}
+
+async function handleSimilarPassageSearch(
+  formData: FormData,
+  filters: ParsedSearchFilters
+) {
+  const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
+
+  if (!/^[a-f0-9]{24}$/.test(sourcePassageId)) {
     return json<SearchActionData>(
-      { error: "Choose between 5 and 40 matches." },
+      { error: "Choose a passage to search from." },
       { status: 400 }
     );
+  }
+
+  const similarSearch = await searchSimilarScripture(
+    sourcePassageId,
+    filters.matchCount,
+    filters.searchBooks
+  );
+
+  if (!similarSearch) {
+    return json<SearchActionData>(
+      { error: "That passage is not available for similarity search." },
+      { status: 400 }
+    );
+  }
+
+  return json<SearchActionData>({
+    mode: "similar",
+    canon: filters.canon,
+    books: filters.books,
+    matchCount: filters.matchCount,
+    similarSource: similarSearch.source,
+    results: withMatchStrength(similarSearch.results)
+  });
+}
+
+type ParsedSearchFilters = {
+  canon: CanonMode;
+  books: string[];
+  matchCount: number;
+  searchBooks: string[];
+};
+
+async function parseSearchFilters(formData: FormData): Promise<
+  ParsedSearchFilters | { response: ReturnType<typeof json<SearchActionData>> }
+> {
+  const canon = parseCanonMode(String(formData.get("canon") ?? ""));
+  const selectedBooks = formData
+    .getAll("books")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const matchCount = Number(formData.get("matchCount") ?? DEFAULT_MATCH_COUNT);
+
+  if (!Number.isInteger(matchCount) || matchCount < 5 || matchCount > 40) {
+    return {
+      response: json<SearchActionData>(
+        { error: "Choose between 5 and 40 matches." },
+        { status: 400 }
+      )
+    };
   }
 
   const booksResponse = await getDb().execute("SELECT book FROM passages GROUP BY book");
@@ -57,24 +132,22 @@ export async function handleSearchRequest(formData: FormData) {
   );
 
   if (selectedBooks.length > 0 && books.length === 0) {
-    return json<SearchActionData>(
-      { error: "Choose at least one indexed book in the selected canon." },
-      { status: 400 }
-    );
+    return {
+      response: json<SearchActionData>(
+        { error: "Choose at least one indexed book in the selected canon." },
+        { status: 400 }
+      )
+    };
   }
 
-  const searchBooks = books.length > 0
-    ? books
-    : Array.from(canonBooks).filter((book) => indexedBooks.has(book));
-  const results = withMatchStrength(await searchScripture(question, matchCount, searchBooks));
-
-  return json<SearchActionData>({
-    question,
+  return {
     canon,
     books,
     matchCount,
-    results
-  });
+    searchBooks: books.length > 0
+      ? books
+      : Array.from(canonBooks).filter((book) => indexedBooks.has(book))
+  };
 }
 
 function withMatchStrength<T extends { score?: number }>(results: T[]) {

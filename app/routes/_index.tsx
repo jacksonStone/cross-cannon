@@ -101,7 +101,11 @@ export default function Index() {
         </p>
       ) : null}
 
-      <SearchResults passages={passages} results={actionData?.results} />
+      <SearchResults
+        actionData={actionData}
+        passages={passages}
+        results={actionData?.results}
+      />
 
       <footer className="source-note">
         Indexed text: Protestant, Catholic, and Orthodox canons of the World English Bible (WEB).

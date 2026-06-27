@@ -1,31 +1,47 @@
 import { useMemo, useState } from "react";
 
+import { Form, useNavigation } from "@remix-run/react";
+
 import { PassageContextModal } from "~/features/passage-context/PassageContextModal";
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
-import type { SearchResult } from "./types";
+import { DEFAULT_CANON, DEFAULT_MATCH_COUNT } from "./canons";
+import type { SearchActionData, SearchResult } from "./types";
 
 const TRANSLATION_ABBREVIATION = "WEB";
 
 type SearchResultsProps = {
+  actionData?: SearchActionData;
   passages: BrowserPassage[];
   results?: SearchResult[];
 };
 
-export function SearchResults({ passages, results }: SearchResultsProps) {
+export function SearchResults({ actionData, passages, results }: SearchResultsProps) {
+  const navigation = useNavigation();
   const [contextPassageId, setContextPassageId] = useState<string | null>(null);
   const passageMap = useMemo(
     () => new Map(passages.map((passage) => [passage.id, passage])),
     [passages]
   );
   const contextPassage = contextPassageId ? passageMap.get(contextPassageId) : null;
+  const isSubmittingSimilar = navigation.state === "submitting"
+    && navigation.formData?.get("intent") === "similar-passage";
+  const submittingSimilarPassageId = isSubmittingSimilar
+    ? String(navigation.formData?.get("sourcePassageId") ?? "")
+    : null;
 
   return (
     <>
       <section className="results" aria-live="polite">
+        {actionData?.mode === "similar" && actionData.similarSource ? (
+          <p className="results-context">
+            Similar passages to {actionData.similarSource.reference}
+          </p>
+        ) : null}
         {results?.length ? (
           results.map((result, index) => {
             const passage = passageMap.get(result.id);
+            const isThisSimilarSearch = submittingSimilarPassageId === result.id;
 
             return (
               <article
@@ -68,14 +84,28 @@ export function SearchResults({ passages, results }: SearchResultsProps) {
                 ) : (
                   <p>{passage?.text ?? "Passage text is loading."}</p>
                 )}
-                <button
-                  className="context-button"
-                  disabled={!passage}
-                  onClick={() => passage && setContextPassageId(passage.id)}
-                  type="button"
-                >
-                  View in context
-                </button>
+                <div className="result-actions">
+                  <button
+                    className="context-button"
+                    disabled={!passage}
+                    onClick={() => passage && setContextPassageId(passage.id)}
+                    type="button"
+                  >
+                    View in context
+                  </button>
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="similar-passage" />
+                    <input type="hidden" name="sourcePassageId" value={result.id} />
+                    <SearchFilterInputs actionData={actionData} />
+                    <button
+                      className="context-button"
+                      disabled={!passage || isSubmittingSimilar}
+                      type="submit"
+                    >
+                      {isThisSimilarSearch ? "Finding similar" : "Similar passages"}
+                    </button>
+                  </Form>
+                </div>
               </article>
             );
           })
@@ -92,6 +122,22 @@ export function SearchResults({ passages, results }: SearchResultsProps) {
           onClose={() => setContextPassageId(null)}
         />
       ) : null}
+    </>
+  );
+}
+
+function SearchFilterInputs({ actionData }: { actionData?: SearchActionData }) {
+  const canon = actionData?.canon ?? DEFAULT_CANON;
+  const matchCount = actionData?.matchCount ?? DEFAULT_MATCH_COUNT;
+  const books = actionData?.books ?? [];
+
+  return (
+    <>
+      <input type="hidden" name="canon" value={canon} />
+      <input type="hidden" name="matchCount" value={matchCount} />
+      {books.map((book) => (
+        <input key={book} type="hidden" name="books" value={book} />
+      ))}
     </>
   );
 }

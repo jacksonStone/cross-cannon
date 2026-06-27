@@ -11,10 +11,15 @@ export type SearchResult = {
 
 export type SearchActionData = {
   error?: string;
+  mode?: "theme" | "similar";
   question?: string;
   canon?: CanonMode;
   books?: string[];
   matchCount?: number;
+  similarSource?: {
+    id: string;
+    reference: string;
+  };
   results?: SearchResult[];
   retryAfterSeconds?: number;
 };
