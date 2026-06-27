@@ -96,11 +96,9 @@ export function SearchForm({
           submittingRef.current = true;
         }}
       >
-        {focusedPassageId ? (
-          <p className="search-form-label">Search from this passage</p>
-        ) : (
+        {!focusedPassageId ? (
           <label htmlFor="question">Search for passages about...</label>
-        )}
+        ) : null}
         {focusedPassageId ? (
           <>
             <input type="hidden" name="intent" value="similar-passage" />
@@ -125,7 +123,6 @@ export function SearchForm({
                 >
                   &times;
                 </button>
-                <p className="focused-passage-label">Similar passages to</p>
                 <h2>{focusedReference ?? "Selected passage"}</h2>
                 <p>{focusedPassage?.text ?? "Passage text is loading."}</p>
               </div>

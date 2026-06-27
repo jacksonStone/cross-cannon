@@ -35,13 +35,6 @@ export function SearchResults({
 
   return (
     <section className="results" aria-live="polite">
-        {actionData?.mode === "similar"
-          && actionData.similarSource
-          && focusedPassageId === actionData.similarSource.id ? (
-          <p className="results-context">
-            Similar passages to {actionData.similarSource.reference}
-          </p>
-        ) : null}
         {results?.length ? (
           results.map((result, index) => {
             const passage = passageMap.get(result.id);
