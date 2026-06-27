@@ -26,6 +26,7 @@ type PassageJumpProps = {
   filters?: StoredFilters;
   initialPassageId?: string;
   isScriptureReady: boolean;
+  launcherVariant?: "block" | "inline";
   passages: BrowserPassage[];
 };
 
@@ -33,6 +34,7 @@ export function PassageJump({
   filters,
   initialPassageId,
   isScriptureReady,
+  launcherVariant = "block",
   passages
 }: PassageJumpProps) {
   const jumpIndex = useMemo(() => buildJumpIndex(passages), [passages]);
@@ -72,7 +74,12 @@ export function PassageJump({
 
   return (
     <>
-      <section className="passage-jump-launcher" aria-label="Jump to passage">
+      <section
+        className={`passage-jump-launcher${
+          launcherVariant === "inline" ? " is-inline" : ""
+        }`}
+        aria-label="Jump to passage"
+      >
         <button
           className="context-button"
           disabled={isDisabled}

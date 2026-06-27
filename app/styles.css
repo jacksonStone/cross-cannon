@@ -75,6 +75,11 @@ h1 {
   padding: 12px 0;
 }
 
+.passage-jump-launcher.is-inline {
+  border-bottom: 0;
+  padding: 0;
+}
+
 .passage-jump-backdrop {
   position: fixed;
   z-index: 30;
@@ -729,6 +734,13 @@ button:disabled {
   font-size: clamp(1.58rem, 3.6vw, 2.4rem);
 }
 
+.reader-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .reader-nav {
   padding: 8px 0;
 }
@@ -994,6 +1006,11 @@ button:disabled {
 
   .reader-header {
     align-items: flex-start;
+  }
+
+  .reader-header-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .reader-nav {

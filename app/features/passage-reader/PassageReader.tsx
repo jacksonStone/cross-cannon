@@ -96,17 +96,19 @@ export function PassageReader({
             {activeChapter.book} {activeChapter.chapter}
           </h1>
         </div>
-        <Link className="context-button" to="/">
-          Search
-        </Link>
+        <div className="reader-header-actions">
+          <PassageJump
+            filters={filters}
+            initialPassageId={initialPassageId}
+            isScriptureReady={isScriptureReady}
+            launcherVariant="inline"
+            passages={passages}
+          />
+          <Link className="context-button" to="/">
+            Search
+          </Link>
+        </div>
       </header>
-
-      <PassageJump
-        filters={filters}
-        initialPassageId={initialPassageId}
-        isScriptureReady={isScriptureReady}
-        passages={passages}
-      />
 
       <nav className="reader-nav reader-nav-top" aria-label="Previous chapter">
         <button

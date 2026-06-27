@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Form, useNavigation } from "@remix-run/react";
 
+import { PassageJump } from "~/features/passage-jump/PassageJump";
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
 import { FilterModal } from "./FilterModal";
@@ -139,6 +140,10 @@ export function SearchForm({
                 defaultValue={actionData?.question ?? ""}
               />
             )}
+            <PassageJump
+              isScriptureReady={isScriptureReady}
+              passages={passages}
+            />
           </div>
           <div className="search-actions">
             <button

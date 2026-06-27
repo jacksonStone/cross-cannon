@@ -4,7 +4,6 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useActionData, useLoaderData } from "@remix-run/react";
 
-import { PassageJump } from "~/features/passage-jump/PassageJump";
 import { SearchForm } from "~/features/search/SearchForm";
 import { SearchResults } from "~/features/search/SearchResults";
 import { loadScriptureCache } from "~/features/search/scripture-cache.client";
@@ -99,11 +98,6 @@ export default function Index() {
           <h1>Search Scripture by theme.</h1>
         </div>
       </header>
-
-      <PassageJump
-        isScriptureReady={isScriptureReady}
-        passages={passages}
-      />
 
       <SearchForm
         actionData={actionData}
