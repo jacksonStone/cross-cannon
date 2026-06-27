@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
-import { Form, useNavigation } from "@remix-run/react";
+import { Form, Link, useNavigation } from "@remix-run/react";
 
-import { PassageContextModal } from "~/features/passage-context/PassageContextModal";
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
 import { DEFAULT_CANON, DEFAULT_MATCH_COUNT } from "./canons";
@@ -24,12 +23,10 @@ export function SearchResults({
   results
 }: SearchResultsProps) {
   const navigation = useNavigation();
-  const [contextPassageId, setContextPassageId] = useState<string | null>(null);
   const passageMap = useMemo(
     () => new Map(passages.map((passage) => [passage.id, passage])),
     [passages]
   );
-  const contextPassage = contextPassageId ? passageMap.get(contextPassageId) : null;
   const isSubmittingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
   const submittingSimilarPassageId = isSubmittingSimilar
@@ -37,8 +34,7 @@ export function SearchResults({
     : null;
 
   return (
-    <>
-      <section className="results" aria-live="polite">
+    <section className="results" aria-live="polite">
         {actionData?.mode === "similar"
           && actionData.similarSource
           && focusedPassageId === actionData.similarSource.id ? (
@@ -93,14 +89,13 @@ export function SearchResults({
                   <p>{passage?.text ?? "Passage text is loading."}</p>
                 )}
                 <div className="result-actions">
-                  <button
+                  <Link
                     className="context-button"
-                    disabled={!passage}
-                    onClick={() => passage && setContextPassageId(passage.id)}
-                    type="button"
+                    aria-disabled={!passage}
+                    to={passage ? buildReaderUrl(passage.id, actionData) : "#"}
                   >
                     View in context
-                  </button>
+                  </Link>
                   <Form method="post">
                     <input type="hidden" name="intent" value="similar-passage" />
                     <input type="hidden" name="sourcePassageId" value={result.id} />
@@ -122,15 +117,7 @@ export function SearchResults({
             <p>Scripture results will appear here.</p>
           </div>
         )}
-      </section>
-      {contextPassage ? (
-        <PassageContextModal
-          passage={contextPassage}
-          passages={passages}
-          onClose={() => setContextPassageId(null)}
-        />
-      ) : null}
-    </>
+    </section>
   );
 }
 
@@ -148,4 +135,23 @@ function SearchFilterInputs({ actionData }: { actionData?: SearchActionData }) {
       ))}
     </>
   );
+}
+
+function buildReaderUrl(passageId: string, actionData?: SearchActionData) {
+  const searchParams = new URLSearchParams();
+
+  if (actionData?.canon) {
+    searchParams.set("canon", actionData.canon);
+  }
+
+  if (actionData?.matchCount) {
+    searchParams.set("matchCount", String(actionData.matchCount));
+  }
+
+  for (const book of actionData?.books ?? []) {
+    searchParams.append("books", book);
+  }
+
+  const query = searchParams.toString();
+  return `/reader/${passageId}${query ? `?${query}` : ""}`;
 }
