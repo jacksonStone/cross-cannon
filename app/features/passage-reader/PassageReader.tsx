@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Form, Link, useNavigation } from "@remix-run/react";
 
 import { PassageJump } from "~/features/passage-jump/PassageJump";
+import { sortCanonicalBooks } from "~/features/search/canons";
 import type { StoredFilters } from "~/features/search/types";
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
 import { buildChapterIndex, chapterKey } from "./chapter-index";
 
 const TRANSLATION_ABBREVIATION = "WEB";
+const HEADER_SCROLL_OFFSET = 118;
+const CHAPTER_WINDOW_RADIUS = 3;
+const ESTIMATED_CHAPTER_HEIGHT = 820;
 
 type PassageReaderProps = {
   backPassageId?: string | null;
@@ -34,49 +38,105 @@ export function PassageReader({
   passages
 }: PassageReaderProps) {
   const navigation = useNavigation();
+  const hasScrolledToInitialPassageRef = useRef(false);
+  const chapterHeightByKeyRef = useRef(new Map<string, number>());
+  const [, setMeasuredChapterVersion] = useState(0);
   const chapterIndex = useMemo(() => buildChapterIndex(passages), [passages]);
+  const orderedChapterEntries = useMemo(
+    () => {
+      const chapters = [...chapterIndex.chaptersByKey.values()];
+      const bookOrder = new Map(
+        sortCanonicalBooks([...new Set(chapters.map((chapter) => chapter.book))])
+          .map((book, index) => [book, index])
+      );
+
+      return chapters
+        .sort((left, right) => {
+          const leftBookOrder = bookOrder.get(left.book) ?? Number.MAX_SAFE_INTEGER;
+          const rightBookOrder = bookOrder.get(right.book) ?? Number.MAX_SAFE_INTEGER;
+
+          if (leftBookOrder !== rightBookOrder) {
+            return leftBookOrder - rightBookOrder;
+          }
+
+          return left.chapter - right.chapter;
+        })
+        .map((chapter) => ({
+          chapter,
+          key: chapterKey(chapter.book, chapter.chapter)
+        }));
+    },
+    [chapterIndex]
+  );
+  const renderedChapterKeys = useMemo(
+    () => orderedChapterEntries.map((entry) => entry.key),
+    [orderedChapterEntries]
+  );
   const initialLocation = chapterIndex.locationByPassageId.get(initialPassageId);
   const initialChapterKey = initialLocation
     ? chapterKey(initialLocation.book, initialLocation.chapter)
-    : null;
+    : orderedChapterEntries[0]?.key ?? null;
   const [activeChapterKey, setActiveChapterKey] = useState(initialChapterKey);
   const [selectedPassageId, setSelectedPassageId] = useState("");
   const activeChapter = activeChapterKey
     ? chapterIndex.chaptersByKey.get(activeChapterKey)
     : null;
-  const orderedChapterKeys = activeChapter
-    ? chapterIndex.orderedKeysByBook.get(activeChapter.book) ?? []
-    : [];
   const activeChapterIndex = activeChapterKey
-    ? orderedChapterKeys.indexOf(activeChapterKey)
+    ? renderedChapterKeys.indexOf(activeChapterKey)
     : -1;
-  const previousChapterKey = activeChapterIndex > 0
-    ? orderedChapterKeys[activeChapterIndex - 1]
-    : null;
-  const nextChapterKey =
-    activeChapterIndex >= 0 && activeChapterIndex < orderedChapterKeys.length - 1
-      ? orderedChapterKeys[activeChapterIndex + 1]
-      : null;
+  const safeActiveChapterIndex = activeChapterIndex >= 0 ? activeChapterIndex : 0;
+  const windowStartIndex = Math.max(
+    0,
+    safeActiveChapterIndex - CHAPTER_WINDOW_RADIUS
+  );
+  const windowEndIndex = Math.min(
+    orderedChapterEntries.length,
+    safeActiveChapterIndex + CHAPTER_WINDOW_RADIUS + 1
+  );
+  const renderedChapterEntriesInWindow = orderedChapterEntries.slice(
+    windowStartIndex,
+    windowEndIndex
+  );
+  const renderedWindowKey = renderedChapterEntriesInWindow
+    .map((entry) => entry.key)
+    .join("|");
+  const topSpacerHeight = sumChapterHeights(
+    orderedChapterEntries,
+    0,
+    windowStartIndex,
+    chapterHeightByKeyRef.current
+  );
+  const bottomSpacerHeight = sumChapterHeights(
+    orderedChapterEntries,
+    windowEndIndex,
+    orderedChapterEntries.length,
+    chapterHeightByKeyRef.current
+  );
+  const passageJumpInitialPassageId =
+    activeChapter?.passages[0]?.id ?? initialPassageId;
 
   useEffect(() => {
     setActiveChapterKey(initialChapterKey);
     setSelectedPassageId("");
+    hasScrolledToInitialPassageRef.current = false;
   }, [initialChapterKey, initialPassageId]);
 
   useEffect(() => {
-    if (!activeChapterKey) {
+    if (!activeChapterKey || hasScrolledToInitialPassageRef.current) {
       return;
     }
 
     window.requestAnimationFrame(() => {
       document.querySelector(".reader-passage.is-highlighted")?.scrollIntoView({
-        block: "start"
+        block: "start",
+        behavior: hasScrolledToInitialPassageRef.current ? "smooth" : "auto"
       });
+      hasScrolledToInitialPassageRef.current = true;
     });
   }, [activeChapterKey, initialPassageId]);
 
   useEffect(() => {
-    if (!activeChapter || !onLocationChange) {
+    if (orderedChapterEntries.length === 0) {
       return;
     }
 
@@ -94,7 +154,45 @@ export function PassageReader({
       const passageId = currentPassage?.dataset.passageId;
 
       if (passageId) {
-        onLocationChange(passageId);
+        onLocationChange?.(passageId);
+      }
+
+      const chapterElements = [
+        ...document.querySelectorAll<HTMLElement>(".reader-chapter")
+      ];
+      const firstChapter = chapterElements[0];
+      const lastChapter = chapterElements[chapterElements.length - 1];
+      const firstChapterRect = firstChapter?.getBoundingClientRect();
+      const lastChapterRect = lastChapter?.getBoundingClientRect();
+      const currentChapter = [...chapterElements]
+        .reverse()
+        .find((element) => element.getBoundingClientRect().top <= HEADER_SCROLL_OFFSET)
+        ?? chapterElements.find((element) => {
+          const rect = element.getBoundingClientRect();
+          return rect.bottom > HEADER_SCROLL_OFFSET;
+        });
+      let currentChapterKey = currentChapter?.dataset.chapterKey;
+
+      if (
+        lastChapterRect
+        && lastChapterRect.bottom < HEADER_SCROLL_OFFSET
+        && windowEndIndex < renderedChapterKeys.length
+      ) {
+        currentChapterKey = renderedChapterKeys[windowEndIndex];
+      } else if (
+        firstChapterRect
+        && firstChapterRect.top > HEADER_SCROLL_OFFSET
+        && windowStartIndex > 0
+      ) {
+        currentChapterKey = renderedChapterKeys[windowStartIndex - 1];
+      }
+
+      if (currentChapterKey) {
+        setActiveChapterKey((existingChapterKey) =>
+          existingChapterKey === currentChapterKey
+            ? existingChapterKey
+            : currentChapterKey
+        );
       }
     };
 
@@ -113,7 +211,40 @@ export function PassageReader({
         window.cancelAnimationFrame(frame);
       }
     };
-  }, [activeChapter, activeChapterKey, onLocationChange]);
+  }, [
+    onLocationChange,
+    orderedChapterEntries.length,
+    renderedChapterKeys,
+    windowEndIndex,
+    windowStartIndex
+  ]);
+
+  useEffect(() => {
+    let didMeasure = false;
+
+    document.querySelectorAll<HTMLElement>(".reader-chapter").forEach((element) => {
+      const key = element.dataset.chapterKey;
+
+      if (!key) {
+        return;
+      }
+
+      const measuredHeight = element.getBoundingClientRect().height;
+      const previousHeight = chapterHeightByKeyRef.current.get(key);
+
+      if (
+        measuredHeight > 0
+        && (!previousHeight || Math.abs(previousHeight - measuredHeight) > 1)
+      ) {
+        chapterHeightByKeyRef.current.set(key, measuredHeight);
+        didMeasure = true;
+      }
+    });
+
+    if (didMeasure) {
+      setMeasuredChapterVersion((version) => version + 1);
+    }
+  }, [renderedWindowKey, selectedPassageId]);
 
   const isSearchingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
@@ -149,7 +280,7 @@ export function PassageReader({
         <div className="reader-header-actions">
           <PassageJump
             filters={filters}
-            initialPassageId={initialPassageId}
+            initialPassageId={passageJumpInitialPassageId}
             isScriptureReady={isScriptureReady}
             label="Jump"
             launcherVariant="inline"
@@ -173,82 +304,113 @@ export function PassageReader({
         </div>
       </header>
 
-      <nav className="reader-nav reader-nav-top" aria-label="Previous chapter">
-        <button
-          className="secondary-button"
-          disabled={!previousChapterKey}
-          onClick={() => previousChapterKey && setActiveChapterKey(previousChapterKey)}
-          type="button"
-        >
-          Previous chapter
-        </button>
-        <span title="World English Bible">{TRANSLATION_ABBREVIATION}</span>
-      </nav>
-
       <div className="reader-passages">
-        {activeChapter.passages.map((passage) => {
-          const isInitialPassage = passage.id === initialPassageId;
-          const isSelected = passage.id === selectedPassageId;
-
+        {topSpacerHeight > 0 ? (
+          <div
+            aria-hidden="true"
+            className="reader-chapter-spacer"
+            style={{ height: topSpacerHeight }}
+          />
+        ) : null}
+        {renderedChapterEntriesInWindow.map(({ chapter, key: currentChapterKey }) => {
           return (
-            <article
-              className={[
-                "reader-passage",
-                isInitialPassage ? "is-highlighted" : "",
-                isSelected ? "is-selected" : ""
-              ].filter(Boolean).join(" ")}
-              data-passage-id={passage.id}
-              key={passage.id}
+            <section
+              className="reader-chapter"
+              data-chapter-key={currentChapterKey}
+              key={currentChapterKey}
             >
-              <button
-                aria-expanded={isSelected}
-                className="reader-passage-button"
-                onClick={() => setSelectedPassageId(isSelected ? "" : passage.id)}
-                type="button"
-              >
-                <span className="reader-passage-reference">{passage.reference}</span>
-                <span className="reader-passage-text">
-                  {passage.verses.map((verse, index) => (
-                    <span className="reader-verse" key={verse.number}>
-                      {verse.text}
-                      {index < passage.verses.length - 1 ? " " : ""}
-                    </span>
-                  ))}
-                </span>
-              </button>
-              {isSelected ? (
-                <div className="reader-passage-actions">
-                  <Form action="/?index" method="post">
-                    <input type="hidden" name="intent" value="similar-passage" />
-                    <input type="hidden" name="sourcePassageId" value={passage.id} />
-                    <SearchFilterInputs filters={filters} />
-                    <button
-                      className="context-button"
-                      disabled={isSearchingSimilar}
-                      type="submit"
+              <h2 className="reader-chapter-heading">
+                {chapter.book} {chapter.chapter}
+                <span title="World English Bible">{TRANSLATION_ABBREVIATION}</span>
+              </h2>
+              <div className="reader-chapter-passages">
+                {chapter.passages.map((passage) => {
+                  const isInitialPassage = passage.id === initialPassageId;
+                  const isSelected = passage.id === selectedPassageId;
+
+                  return (
+                    <article
+                      className={[
+                        "reader-passage",
+                        isInitialPassage ? "is-highlighted" : "",
+                        isSelected ? "is-selected" : ""
+                      ].filter(Boolean).join(" ")}
+                      data-passage-id={passage.id}
+                      key={passage.id}
                     >
-                      {isSearchingSimilar ? "Finding similar" : "Similar passages"}
-                    </button>
-                  </Form>
-                </div>
-              ) : null}
-            </article>
+                      <button
+                        aria-expanded={isSelected}
+                        className="reader-passage-button"
+                        onClick={() => setSelectedPassageId(isSelected ? "" : passage.id)}
+                        type="button"
+                      >
+                        <span className="reader-passage-reference">
+                          {passage.reference}
+                        </span>
+                        <span className="reader-passage-text">
+                          {passage.verses.map((verse, index) => (
+                            <span className="reader-verse" key={verse.number}>
+                              {verse.text}
+                              {index < passage.verses.length - 1 ? " " : ""}
+                            </span>
+                          ))}
+                        </span>
+                      </button>
+                      {isSelected ? (
+                        <div className="reader-passage-actions">
+                          <Form action="/?index" method="post">
+                            <input
+                              type="hidden"
+                              name="intent"
+                              value="similar-passage"
+                            />
+                            <input
+                              type="hidden"
+                              name="sourcePassageId"
+                              value={passage.id}
+                            />
+                            <SearchFilterInputs filters={filters} />
+                            <button
+                              className="context-button"
+                              disabled={isSearchingSimilar}
+                              type="submit"
+                            >
+                              {isSearchingSimilar ? "Finding similar" : "Similar passages"}
+                            </button>
+                          </Form>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
           );
         })}
+        {bottomSpacerHeight > 0 ? (
+          <div
+            aria-hidden="true"
+            className="reader-chapter-spacer"
+            style={{ height: bottomSpacerHeight }}
+          />
+        ) : null}
       </div>
-
-      <nav className="reader-nav reader-nav-bottom" aria-label="Next chapter">
-        <span title="World English Bible">{TRANSLATION_ABBREVIATION}</span>
-        <button
-          disabled={!nextChapterKey}
-          onClick={() => nextChapterKey && setActiveChapterKey(nextChapterKey)}
-          type="button"
-        >
-          Next chapter
-        </button>
-      </nav>
     </section>
   );
+}
+
+function sumChapterHeights(
+  entries: Array<{ key: string }>,
+  startIndex: number,
+  endIndex: number,
+  measuredHeights: Map<string, number>
+) {
+  return entries
+    .slice(startIndex, endIndex)
+    .reduce(
+      (sum, entry) => sum + (measuredHeights.get(entry.key) ?? ESTIMATED_CHAPTER_HEIGHT),
+      0
+    );
 }
 
 function SearchFilterInputs({ filters }: { filters: StoredFilters }) {
