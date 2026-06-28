@@ -9,6 +9,7 @@ import {
   getDb,
   normalizeVector,
   setIndexedEmbeddingConfig,
+  syncPassageAudioFile,
   vectorSql
 } from "../app/lib/db.server";
 import {
@@ -413,6 +414,7 @@ async function resetRuntimeDatabase(db: Client) {
   await db.execute("DROP INDEX IF EXISTS passages_embedding_idx_shadow_idx");
   await db.execute("DROP TABLE IF EXISTS passages_embedding_idx_shadow");
   await db.execute("DROP TABLE IF EXISTS passages_fts");
+  await db.execute("DELETE FROM passage_audio_files");
   await db.execute("DELETE FROM paragraph_verses");
   await db.execute("DELETE FROM passages");
   await db.execute(`
@@ -569,6 +571,7 @@ async function upsertPassage(db: Client, passage: Passage, normalizedEmbedding: 
       passage.sourceHash
     ]
   });
+  await syncPassageAudioFile(db, passage.id);
 }
 
 async function upsertParagraphVerses(
