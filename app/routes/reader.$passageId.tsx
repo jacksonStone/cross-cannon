@@ -1,13 +1,11 @@
-import { useEffect, useState } from "react";
-
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
 import { PassageReader } from "~/features/passage-reader/PassageReader";
-import { loadScriptureCache } from "~/features/search/scripture-cache.client";
 import type { StoredFilters } from "~/features/search/types";
-import { getScriptureCacheInfo, type BrowserPassage } from "~/lib/scripture-cache.server";
+import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
+import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";
 
 export const meta: MetaFunction = () => [
   { title: "Reader | Cross Canon" },
@@ -32,31 +30,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 export default function ReaderRoute() {
   const { filters, passageId, scriptureCacheKey, scriptureCacheUrl } =
     useLoaderData<typeof loader>();
-  const [passages, setPassages] = useState<BrowserPassage[]>([]);
-  const [isScriptureReady, setIsScriptureReady] = useState(false);
-
-  useEffect(() => {
-    let ignore = false;
-
-    setIsScriptureReady(false);
-    loadScriptureCache(scriptureCacheUrl)
-      .then((loadedPassages) => {
-        if (!ignore) {
-          setPassages(loadedPassages);
-          setIsScriptureReady(true);
-        }
-      })
-      .catch(() => {
-        if (!ignore) {
-          setPassages([]);
-          setIsScriptureReady(false);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [scriptureCacheUrl]);
+  const scriptureLibrary = useScriptureLibrary({ scriptureCacheUrl });
 
   return (
     <main className="reader-shell">
@@ -64,8 +38,9 @@ export default function ReaderRoute() {
       <PassageReader
         filters={filters}
         initialPassageId={passageId}
-        isScriptureReady={isScriptureReady}
-        passages={passages}
+        isFullScriptureReady={scriptureLibrary.isFullCacheReady}
+        isScriptureReady={scriptureLibrary.isReaderReady}
+        passages={scriptureLibrary.passages}
       />
     </main>
   );

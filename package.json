@@ -8,6 +8,8 @@
     "dev": "remix vite:dev --host 127.0.0.1 --port 3005",
     "start": "NODE_ENV=production remix-serve ./build/server/index.js",
     "typecheck": "tsc --noEmit",
+    "verify": "scripts/verify.sh",
+    "verify-prod": "scripts/verify-prod.sh",
     "index:bible": "node --import tsx scripts/index-bible.ts",
     "index:genesis": "node --import tsx scripts/index-bible.ts data/bible.json --reset --passage-type paragraph --book Genesis",
     "smoke:index": "EMBEDDING_PROVIDER=mock node --import tsx scripts/index-bible.ts data/sample-bible.json --reset --limit 10 --passage-type paragraph"

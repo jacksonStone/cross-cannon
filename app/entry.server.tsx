@@ -12,26 +12,7 @@ import { warmPassageEmbeddingCache } from "./lib/search.server";
 
 const ABORT_DELAY = 5_000;
 
-void warmPassageEmbeddingCache()
-  .then((count) => {
-    console.info(`Warmed ${count} passage embeddings`);
-  })
-  .catch((error: unknown) => {
-    console.error("Failed to warm passage embedding cache", error);
-  });
-
-void Promise.all([
-  getIndexedBooks(),
-  getDefaultReaderStartupPassages()
-])
-  .then(([books, passages]) => {
-    console.info(
-      `Warmed reader startup cache: ${books.length} books, ${passages.length} passages`
-    );
-  })
-  .catch((error: unknown) => {
-    console.error("Failed to warm reader startup cache", error);
-  });
+let hasStartedWarmups = false;
 
 export default function handleRequest(
   request: Request,
@@ -40,9 +21,40 @@ export default function handleRequest(
   remixContext: EntryContext,
   _loadContext: AppLoadContext
 ) {
+  startRuntimeWarmups();
+
   return isbot(request.headers.get("user-agent"))
     ? handleBotRequest(request, responseStatusCode, responseHeaders, remixContext)
     : handleBrowserRequest(request, responseStatusCode, responseHeaders, remixContext);
+}
+
+function startRuntimeWarmups() {
+  if (hasStartedWarmups) {
+    return;
+  }
+
+  hasStartedWarmups = true;
+
+  void warmPassageEmbeddingCache()
+    .then((count) => {
+      console.info(`Warmed ${count} passage embeddings`);
+    })
+    .catch((error: unknown) => {
+      console.error("Failed to warm passage embedding cache", error);
+    });
+
+  void Promise.all([
+    getIndexedBooks(),
+    getDefaultReaderStartupPassages()
+  ])
+    .then(([books, passages]) => {
+      console.info(
+        `Warmed reader startup cache: ${books.length} books, ${passages.length} passages`
+      );
+    })
+    .catch((error: unknown) => {
+      console.error("Failed to warm reader startup cache", error);
+    });
 }
 
 function handleBotRequest(

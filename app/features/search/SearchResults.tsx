@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Form, Link, useNavigation } from "@remix-run/react";
 
-import type { BrowserPassage } from "~/lib/scripture-cache.server";
+import type { PassageLookup } from "~/features/scripture/useScriptureLibrary";
 
 import { DEFAULT_CANON, DEFAULT_MATCH_COUNT } from "./canons";
 import type { SearchActionData, SearchResult } from "./types";
@@ -14,7 +14,7 @@ type SearchResultsProps = {
   contextActionLabel?: string;
   focusedPassageId: string | null;
   onJumpToPassage?: (passageId: string) => void;
-  passages: BrowserPassage[];
+  passageLookup: PassageLookup;
   results?: SearchResult[];
 };
 
@@ -23,15 +23,11 @@ export function SearchResults({
   contextActionLabel = "View in context",
   focusedPassageId,
   onJumpToPassage,
-  passages,
+  passageLookup,
   results
 }: SearchResultsProps) {
   const navigation = useNavigation();
   const [selectedResultId, setSelectedResultId] = useState("");
-  const passageMap = useMemo(
-    () => new Map(passages.map((passage) => [passage.id, passage])),
-    [passages]
-  );
   const isSubmittingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
   const submittingSimilarPassageId = isSubmittingSimilar
@@ -51,7 +47,7 @@ export function SearchResults({
         ) : null}
         {results?.length ? (
           results.map((result, index) => {
-            const passage = passageMap.get(result.id);
+            const passage = passageLookup.get(result.id);
             const isThisSimilarSearch = submittingSimilarPassageId === result.id;
             const isSelected = selectedResultId === result.id;
 

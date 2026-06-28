@@ -25,6 +25,7 @@ const INITIAL_PREVIOUS_CHAPTERS = 10;
 const INITIAL_NEXT_CHAPTERS = 24;
 const CHAPTER_WINDOW_EXPAND_COUNT = 10;
 const CHAPTER_WINDOW_EDGE_PX = 2200;
+const INITIAL_SCROLL_MAX_FRAMES = 8;
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -79,6 +80,7 @@ const DEFAULT_READER_SETTINGS = createPresetReaderSettings("default", "paper");
 type PassageReaderProps = {
   filters: StoredFilters;
   initialPassageId: string;
+  isFullScriptureReady?: boolean;
   isScriptureReady: boolean;
   onJumpToPassage?: (passageId: string) => void;
   onLocationChange?: (passageId: string) => void;
@@ -89,6 +91,7 @@ type PassageReaderProps = {
 export function PassageReader({
   filters,
   initialPassageId,
+  isFullScriptureReady = false,
   isScriptureReady,
   onJumpToPassage,
   onLocationChange,
@@ -224,7 +227,7 @@ export function PassageReader({
 
       if (!initialPassage) {
         window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-        return;
+        return false;
       }
 
       const top = initialPassage.getBoundingClientRect().top
@@ -236,13 +239,14 @@ export function PassageReader({
         left: 0,
         top: Math.max(0, top)
       });
+
+      return true;
     };
 
-    scrollToInitialPassage();
-
-    let settleFrame = 0;
-    let settleTimeout = 0;
+    let frame = 0;
+    let frameCount = 0;
     let didCancel = false;
+    let fontsSettled = document.fonts === undefined;
 
     const finishInitialScroll = () => {
       if (didCancel) {
@@ -253,26 +257,45 @@ export function PassageReader({
       hasScrolledToInitialPassageRef.current = true;
     };
 
-    settleFrame = window.requestAnimationFrame(() => {
-      scrollToInitialPassage();
+    const scheduleScroll = () => {
+      if (!frame && !hasScrolledToInitialPassageRef.current) {
+        frame = window.requestAnimationFrame(runScroll);
+      }
+    };
 
-      settleFrame = window.requestAnimationFrame(() => {
-        scrollToInitialPassage();
+    const runScroll = () => {
+      frame = 0;
+      frameCount += 1;
+
+      const foundTarget = scrollToInitialPassage();
+
+      if (
+        (foundTarget && fontsSettled && frameCount >= 2)
+        || frameCount >= INITIAL_SCROLL_MAX_FRAMES
+      ) {
+        finishInitialScroll();
+        return;
+      }
+
+      scheduleScroll();
+    };
+
+    scheduleScroll();
+    void document.fonts?.ready
+      .then(() => {
+        fontsSettled = true;
+        scheduleScroll();
+      })
+      .catch(() => {
+        fontsSettled = true;
+        scheduleScroll();
       });
-    });
-
-    settleTimeout = window.setTimeout(finishInitialScroll, 180);
-    void document.fonts?.ready.then(finishInitialScroll).catch(finishInitialScroll);
 
     return () => {
       didCancel = true;
 
-      if (settleFrame) {
-        window.cancelAnimationFrame(settleFrame);
-      }
-
-      if (settleTimeout) {
-        window.clearTimeout(settleTimeout);
+      if (frame) {
+        window.cancelAnimationFrame(frame);
       }
     };
   }, [initialPassageId, isScriptureReady, renderedChapterEntries.length]);
@@ -561,7 +584,7 @@ export function PassageReader({
           <PassageJump
             filters={filters}
             initialPassageId={passageJumpInitialPassageId}
-            isScriptureReady={isScriptureReady}
+            isScriptureReady={isFullScriptureReady}
             label="Jump"
             launcherVariant="inline"
             onJumpToPassage={onJumpToPassage}

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Form, useNavigation } from "@remix-run/react";
 
 import { PassageJump } from "~/features/passage-jump/PassageJump";
+import type { PassageLookup } from "~/features/scripture/useScriptureLibrary";
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
 import { FilterModal } from "./FilterModal";
@@ -24,6 +25,7 @@ type SearchFormProps = {
   focusedPassageId: string | null;
   isScriptureReady: boolean;
   onFocusedPassageChange: (passageId: string | null) => void;
+  passageLookup: PassageLookup;
   passages: BrowserPassage[];
   showJump?: boolean;
 };
@@ -34,6 +36,7 @@ export function SearchForm({
   focusedPassageId,
   isScriptureReady,
   onFocusedPassageChange,
+  passageLookup,
   passages,
   showJump = true
 }: SearchFormProps) {
@@ -46,11 +49,7 @@ export function SearchForm({
     isSearching && navigation.formData?.get("intent") === "similar-passage";
   const isSearchingAllBooks =
     isSearching && (navigation.formData?.getAll("books").length ?? 0) === 0;
-  const passageMap = useMemo(
-    () => new Map(passages.map((passage) => [passage.id, passage])),
-    [passages]
-  );
-  const focusedPassage = focusedPassageId ? passageMap.get(focusedPassageId) : null;
+  const focusedPassage = focusedPassageId ? passageLookup.get(focusedPassageId) : null;
   const focusedReference = focusedPassage?.reference
     ?? (focusedPassageId === actionData?.similarSource?.id
       ? actionData.similarSource.reference

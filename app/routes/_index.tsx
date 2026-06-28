@@ -7,9 +7,9 @@ import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
 import { PassageReader } from "~/features/passage-reader/PassageReader";
 import { SearchForm } from "~/features/search/SearchForm";
 import { SearchResults } from "~/features/search/SearchResults";
-import { loadScriptureCache } from "~/features/search/scripture-cache.client";
 import { getIndexedBooks, handleSearchRequest } from "~/features/search/search.server";
 import type { SearchActionData } from "~/features/search/types";
+import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import {
   getDefaultReaderStartupPassages,
@@ -63,13 +63,21 @@ export default function Index() {
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
-  const [passages, setPassages] = useState<BrowserPassage[]>([]);
-  const [isScriptureReady, setIsScriptureReady] = useState(false);
   const [focusedPassageId, setFocusedPassageId] = useState<string | null>(null);
+  const [hasReadSavedReaderPassage, setHasReadSavedReaderPassage] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [readerPassageId, setReaderPassageId] = useState("");
-  const didApplyStartupPassagesRef = useRef(false);
+  const [savedReaderPassageId, setSavedReaderPassageId] = useState<string | null>(null);
   const lastVisiblePassageIdRef = useRef("");
+  const useStartupPassages =
+    hasReadSavedReaderPassage
+    && !savedReaderPassageId
+    && startupPassages.length > 0;
+  const scriptureLibrary = useScriptureLibrary({
+    scriptureCacheUrl,
+    startupPassages,
+    useStartupPassages
+  });
 
   useEffect(() => {
     if (!("scrollRestoration" in window.history)) {
@@ -84,65 +92,46 @@ export default function Index() {
     };
   }, []);
 
-  useEffect(() => {
-    let ignore = false;
-    const savedPassageId = window.localStorage.getItem(READER_POSITION_STORAGE_KEY);
-
-    if (savedPassageId || startupPassages.length === 0) {
-      setIsScriptureReady(false);
-    }
-
-    loadScriptureCache(scriptureCacheUrl)
-      .then((loadedPassages) => {
-        if (!ignore) {
-          const rememberedPassage = savedPassageId
-            ? loadedPassages.find((passage) => passage.id === savedPassageId)
-            : null;
-          const initialPassageId =
-            rememberedPassage?.id ?? findDefaultReaderPassageId(loadedPassages);
-
-          setPassages(loadedPassages);
-          setReaderPassageId(initialPassageId);
-          lastVisiblePassageIdRef.current = initialPassageId;
-          setIsScriptureReady(true);
-        }
-      })
-      .catch(() => {
-        if (!ignore) {
-          setPassages([]);
-          setIsScriptureReady(false);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [scriptureCacheUrl, startupPassages.length]);
-
   useBrowserLayoutEffect(() => {
-    if (didApplyStartupPassagesRef.current || startupPassages.length === 0) {
-      return;
-    }
-
-    didApplyStartupPassagesRef.current = true;
-
     const savedPassageId = window.localStorage.getItem(READER_POSITION_STORAGE_KEY);
 
-    if (savedPassageId) {
+    setSavedReaderPassageId(savedPassageId);
+    setHasReadSavedReaderPassage(true);
+  }, []);
+
+  useEffect(() => {
+    if (!scriptureLibrary.isReaderReady) {
       return;
     }
 
-    const initialPassageId = findDefaultReaderPassageId(startupPassages);
+    if (
+      readerPassageId
+      && scriptureLibrary.passageLookup.has(readerPassageId)
+    ) {
+      return;
+    }
+
+    const rememberedPassage =
+      savedReaderPassageId && scriptureLibrary.isFullCacheReady
+        ? scriptureLibrary.passageLookup.get(savedReaderPassageId)
+        : null;
+    const initialPassageId =
+      rememberedPassage?.id ?? findDefaultReaderPassageId(scriptureLibrary.passages);
 
     if (!initialPassageId) {
       return;
     }
 
-    setPassages(startupPassages);
     setReaderPassageId(initialPassageId);
     lastVisiblePassageIdRef.current = initialPassageId;
-    setIsScriptureReady(true);
-  }, [startupPassages]);
+  }, [
+    readerPassageId,
+    savedReaderPassageId,
+    scriptureLibrary.isFullCacheReady,
+    scriptureLibrary.isReaderReady,
+    scriptureLibrary.passageLookup,
+    scriptureLibrary.passages
+  ]);
 
   useEffect(() => {
     if (
@@ -208,11 +197,12 @@ export default function Index() {
       <PassageReader
         filters={{}}
         initialPassageId={readerPassageId}
-        isScriptureReady={isScriptureReady && Boolean(readerPassageId)}
+        isFullScriptureReady={scriptureLibrary.isFullCacheReady}
+        isScriptureReady={scriptureLibrary.isReaderReady && Boolean(readerPassageId)}
         onJumpToPassage={jumpToReaderPassage}
         onLocationChange={rememberReaderLocation}
         onOpenSearch={() => setIsSearchOpen(true)}
-        passages={passages}
+        passages={scriptureLibrary.passages}
       />
 
       {isSearchOpen ? (
@@ -249,9 +239,10 @@ export default function Index() {
                 actionData={actionData}
                 books={books}
                 focusedPassageId={focusedPassageId}
-                isScriptureReady={isScriptureReady}
+                isScriptureReady={scriptureLibrary.isFullCacheReady}
                 onFocusedPassageChange={setFocusedPassageId}
-                passages={passages}
+                passageLookup={scriptureLibrary.passageLookup}
+                passages={scriptureLibrary.passages}
                 showJump={false}
               />
 
@@ -269,7 +260,7 @@ export default function Index() {
                 contextActionLabel="Jump to"
                 focusedPassageId={focusedPassageId}
                 onJumpToPassage={jumpToReaderPassage}
-                passages={passages}
+                passageLookup={scriptureLibrary.passageLookup}
                 results={actionData?.results}
               />
             </div>

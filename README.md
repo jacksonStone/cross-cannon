@@ -56,8 +56,8 @@ app/features/search/FilterModal.tsx           canon/match/book filter modal
 app/features/search/useSearchFilters.ts       localStorage and filter state
 app/features/search/SearchResults.tsx         passage result cards
 app/features/search/canons.ts                 canon book lists and canonical sorting
-app/features/search/scripture-cache.client.ts browser-side passage text cache loader
 app/features/search/types.ts                  shared search feature types
+app/features/scripture/                       browser scripture cache resource and lookup helpers
 app/lib/search.server.ts                      embedding/vector/FTS search engine
 app/lib/scripture-cache.server.ts             static scripture cache metadata/routes
 app/entry.server.tsx                          production startup cache warmers
@@ -100,6 +100,27 @@ http://127.0.0.1:3005
 calling OpenAI or building the full Bible index.
 
 Useful checks:
+
+```bash
+npm run verify
+npm run verify-prod
+```
+
+`npm run verify` is the one-shot local verification command. It typechecks,
+builds the scripture cache and Remix app, starts the production server, waits
+for it to respond, smoke-checks the homepage, smoke-checks a search POST, and
+then stops the server process. Use `VERIFY_PORT=<port>` if port `3005` is
+already in use.
+
+`npm run verify-prod` smoke-checks production without building or starting
+anything locally. It checks the remote `cross-cannon` systemd service over SSH,
+checks the production homepage, and submits a real search POST against
+`https://www.crosscanon.com`. It expects `EC2_PEM_PATH` and `EC2_PUBLIC_IP` for
+the remote service check. Use `PROD_URL=<url>` to point it at another deployed
+host, `VERIFY_PROD_SERVICE=<service>` for another systemd unit, or
+`VERIFY_PROD_SKIP_REMOTE=1` for public HTTP checks only.
+
+Manual smoke checks against a running dev or production server:
 
 ```bash
 curl -I http://127.0.0.1:3005/
