@@ -101,7 +101,7 @@ export function PassageJump({
       {isOpen && !isDisabled ? (
         <div
           className="passage-jump-backdrop"
-          onMouseDown={(event) => {
+          onPointerDown={(event) => {
             if (event.target === event.currentTarget) {
               setIsOpen(false);
             }
@@ -111,6 +111,7 @@ export function PassageJump({
             aria-labelledby="passage-jump-title"
             aria-modal="true"
             className="passage-jump-modal"
+            onPointerDown={(event) => event.stopPropagation()}
             role="dialog"
           >
             <header className="passage-jump-modal-header">

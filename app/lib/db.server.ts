@@ -82,6 +82,9 @@ export async function ensureDatabase() {
     ON paragraph_verses(paragraph_id)
   `);
 
+  await ensureEmbeddingBlobColumn(db, "passages");
+  await ensureEmbeddingBlobColumn(db, "paragraph_verses");
+  await backfillEmbeddingBlobs(db);
   await ensureEmbeddingConfigTable(db);
 
   await db.execute(`
@@ -152,6 +155,40 @@ async function ensureEmbeddingConfigTable(db: Client) {
   `);
 }
 
+async function ensureEmbeddingBlobColumn(db: Client, tableName: "passages" | "paragraph_verses") {
+  const response = await db.execute(`PRAGMA table_info(${tableName})`);
+  const hasEmbeddingColumn = response.rows.some((row) => row.name === "embedding");
+
+  if (hasEmbeddingColumn) {
+    return;
+  }
+
+  await db.execute(`ALTER TABLE ${tableName} ADD COLUMN embedding F32_BLOB(1536)`);
+}
+
+async function backfillEmbeddingBlobs(db: Client) {
+  for (const tableName of ["passages", "paragraph_verses"] as const) {
+    const missingResponse = await db.execute(`
+      SELECT COUNT(*) AS count
+      FROM ${tableName}
+      WHERE embedding IS NULL
+        AND embedding_json IS NOT NULL
+    `);
+    const missingCount = Number(missingResponse.rows[0]?.count ?? 0);
+
+    if (missingCount === 0) {
+      continue;
+    }
+
+    await db.execute(`
+      UPDATE ${tableName}
+      SET embedding = vector32(embedding_json)
+      WHERE embedding IS NULL
+        AND embedding_json IS NOT NULL
+    `);
+  }
+}
+
 async function ensureParagraphSchema(db: Client) {
   const response = await db.execute(`
     SELECT sql
@@ -200,16 +237,22 @@ async function dropSearchIndexes(db: Client) {
   }
 }
 
-export function normalizeVector(vector: number[]) {
-  const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+export function normalizeVector(vector: ArrayLike<number>) {
+  let normSquared = 0;
 
-  if (!norm) {
-    return vector;
+  for (let index = 0; index < vector.length; index += 1) {
+    normSquared += vector[index] * vector[index];
   }
 
-  return vector.map((value) => value / norm);
+  const norm = Math.sqrt(normSquared);
+
+  if (!norm) {
+    return Array.from(vector);
+  }
+
+  return Array.from(vector, (value) => value / norm);
 }
 
-export function vectorSql(vector: number[]) {
-  return `[${vector.map((value) => Number(value.toFixed(8))).join(",")}]`;
+export function vectorSql(vector: ArrayLike<number>) {
+  return `[${Array.from(vector, (value) => Number(value.toFixed(8))).join(",")}]`;
 }

@@ -6,7 +6,17 @@ import { RemixServer } from "@remix-run/react";
 import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 
+import { warmPassageEmbeddingCache } from "./lib/search.server";
+
 const ABORT_DELAY = 5_000;
+
+void warmPassageEmbeddingCache()
+  .then((count) => {
+    console.info(`Warmed ${count} passage embeddings`);
+  })
+  .catch((error: unknown) => {
+    console.error("Failed to warm passage embedding cache", error);
+  });
 
 export default function handleRequest(
   request: Request,

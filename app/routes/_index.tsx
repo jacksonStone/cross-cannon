@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useActionData, useLoaderData } from "@remix-run/react";
+import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
 
 import { PassageReader } from "~/features/passage-reader/PassageReader";
 import { SearchForm } from "~/features/search/SearchForm";
@@ -53,12 +53,12 @@ export async function action({ request }: ActionFunctionArgs) {
 export default function Index() {
   const { books, scriptureCacheKey, scriptureCacheUrl } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
   const [passages, setPassages] = useState<BrowserPassage[]>([]);
   const [isScriptureReady, setIsScriptureReady] = useState(false);
   const [focusedPassageId, setFocusedPassageId] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [readerPassageId, setReaderPassageId] = useState("");
-  const [readerBackPassageId, setReaderBackPassageId] = useState<string | null>(null);
   const lastVisiblePassageIdRef = useRef("");
 
   useEffect(() => {
@@ -94,6 +94,21 @@ export default function Index() {
   }, [scriptureCacheUrl]);
 
   useEffect(() => {
+    if (
+      navigation.state === "submitting"
+      && navigation.formData?.get("intent") === "similar-passage"
+    ) {
+      const sourcePassageId = String(navigation.formData.get("sourcePassageId") ?? "");
+
+      if (sourcePassageId) {
+        setFocusedPassageId(sourcePassageId);
+      }
+
+      setIsSearchOpen(true);
+    }
+  }, [navigation.formData, navigation.state]);
+
+  useEffect(() => {
     if (actionData?.mode === "similar" && actionData.similarSource) {
       setFocusedPassageId(actionData.similarSource.id);
       setIsSearchOpen(true);
@@ -127,37 +142,18 @@ export default function Index() {
   }, []);
 
   const jumpToReaderPassage = useCallback((passageId: string) => {
-    const previousPassageId = lastVisiblePassageIdRef.current || readerPassageId;
-
-    if (previousPassageId && previousPassageId !== passageId) {
-      setReaderBackPassageId(previousPassageId);
-    }
-
     setReaderPassageId(passageId);
     rememberReaderLocation(passageId);
     setIsSearchOpen(false);
-  }, [readerPassageId, rememberReaderLocation]);
-
-  const jumpBackInReader = useCallback(() => {
-    if (!readerBackPassageId) {
-      return;
-    }
-
-    const previousPassageId = readerPassageId;
-    setReaderPassageId(readerBackPassageId);
-    setReaderBackPassageId(previousPassageId || null);
-    rememberReaderLocation(readerBackPassageId);
-  }, [readerBackPassageId, readerPassageId, rememberReaderLocation]);
+  }, [rememberReaderLocation]);
 
   return (
     <main className="reader-shell">
       <data value={scriptureCacheKey} data-scripture-cache-key hidden />
       <PassageReader
-        backPassageId={readerBackPassageId}
         filters={{}}
         initialPassageId={readerPassageId}
         isScriptureReady={isScriptureReady}
-        onBack={jumpBackInReader}
         onJumpToPassage={jumpToReaderPassage}
         onLocationChange={rememberReaderLocation}
         onOpenSearch={() => setIsSearchOpen(true)}

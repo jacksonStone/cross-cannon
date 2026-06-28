@@ -18,6 +18,11 @@ type CachedPassageEmbedding = {
   vector: Float32Array;
 };
 
+type StoredEmbeddingRow = {
+  embedding?: unknown;
+  embedding_json?: unknown;
+};
+
 type SearchEmbeddingOptions = {
   excludeIds?: string[];
 };
@@ -92,22 +97,22 @@ export async function searchSimilarScripture(
 
   const sourceResponse = await getDb().execute({
     sql: `
-      SELECT id, reference, embedding_json
+      SELECT id, reference, embedding, embedding_json
       FROM passages
       WHERE id = ?
-        AND embedding_json IS NOT NULL
+        AND (embedding IS NOT NULL OR embedding_json IS NOT NULL)
     `,
     args: [passageId]
   });
   const source = sourceResponse.rows[0];
 
-  if (typeof source?.id !== "string" || typeof source.embedding_json !== "string") {
+  if (typeof source?.id !== "string") {
     trace.finish("missing-source", { count: 0 });
     return null;
   }
 
-  const embedding = parseEmbedding(source.embedding_json);
-  if (embedding.length === 0) {
+  const embedding = readStoredEmbedding(source as StoredEmbeddingRow);
+  if (!embedding) {
     trace.finish("missing-embedding", { count: 0 });
     return null;
   }
@@ -158,7 +163,16 @@ export async function searchSimilarScripture(
   };
 }
 
-async function attachVerseHighlights(embedding: number[], results: ScriptureResult[]) {
+export async function warmPassageEmbeddingCache() {
+  const passages = await getPassageEmbeddingCache();
+
+  return passages.length;
+}
+
+async function attachVerseHighlights(
+  embedding: ArrayLike<number>,
+  results: ScriptureResult[]
+) {
   if (results.length === 0) {
     return results;
   }
@@ -182,18 +196,23 @@ async function attachVerseHighlights(embedding: number[], results: ScriptureResu
     if (missingParagraphScores.length > 0) {
       const paragraphResponse = await db.execute({
         sql: `
-          SELECT id, embedding_json
+          SELECT id, embedding, embedding_json
           FROM passages
           WHERE id IN (${placeholders(missingParagraphScores)})
-            AND embedding_json IS NOT NULL
+            AND (embedding IS NOT NULL OR embedding_json IS NOT NULL)
         `,
         args: missingParagraphScores
       });
 
       for (const row of paragraphResponse.rows) {
         const id = String(row.id);
-        const stored = parseEmbedding(String(row.embedding_json ?? "[]"));
-        const score = cosineSimilarity(query, normalizeVector(stored));
+        const stored = readStoredEmbedding(row as StoredEmbeddingRow);
+
+        if (!stored) {
+          continue;
+        }
+
+        const score = cosineSimilarity(query, stored);
 
         if (Number.isFinite(score)) {
           paragraphScores.set(id, score);
@@ -203,10 +222,10 @@ async function attachVerseHighlights(embedding: number[], results: ScriptureResu
 
     const verseResponse = await db.execute({
       sql: `
-        SELECT paragraph_id, verse, embedding_json
+        SELECT paragraph_id, verse, embedding, embedding_json
         FROM paragraph_verses
         WHERE paragraph_id IN (${placeholders(paragraphIds)})
-          AND embedding_json IS NOT NULL
+          AND (embedding IS NOT NULL OR embedding_json IS NOT NULL)
       `,
       args: paragraphIds
     });
@@ -215,8 +234,13 @@ async function attachVerseHighlights(embedding: number[], results: ScriptureResu
     for (const row of verseResponse.rows) {
       const paragraphId = String(row.paragraph_id);
       const verse = Number(row.verse);
-      const stored = parseEmbedding(String(row.embedding_json ?? "[]"));
-      const score = cosineSimilarity(query, normalizeVector(stored));
+      const stored = readStoredEmbedding(row as StoredEmbeddingRow);
+
+      if (!stored) {
+        continue;
+      }
+
+      const score = cosineSimilarity(query, stored);
       const current = bestByParagraph.get(paragraphId);
 
       if (Number.isFinite(score) && (!current || score > current.score)) {
@@ -254,7 +278,7 @@ function getHighlightVerse(
 }
 
 async function searchVector(
-  embedding: number[],
+  embedding: ArrayLike<number>,
   limit: number,
   books: string[],
   options: SearchEmbeddingOptions = {}
@@ -329,7 +353,7 @@ async function runVectorSearchExclusive<T>(
 }
 
 async function searchCachedEmbeddings(
-  embedding: number[],
+  embedding: ArrayLike<number>,
   limit: number,
   books: string[],
   options: SearchEmbeddingOptions = {}
@@ -373,15 +397,15 @@ async function getPassageEmbeddingCache() {
 
 async function loadPassageEmbeddingCache() {
   const response = await getDb().execute(`
-    SELECT id, reference, book, embedding_json
+    SELECT id, reference, book, embedding, embedding_json
     FROM passages
-    WHERE embedding_json IS NOT NULL
+    WHERE embedding IS NOT NULL OR embedding_json IS NOT NULL
   `);
 
   return response.rows.flatMap((row) => {
-    const parsed = parseEmbedding(String(row.embedding_json ?? "[]"));
+    const vector = readStoredEmbedding(row as StoredEmbeddingRow);
 
-    if (parsed.length === 0) {
+    if (!vector) {
       return [];
     }
 
@@ -389,13 +413,13 @@ async function loadPassageEmbeddingCache() {
       id: String(row.id),
       reference: String(row.reference),
       book: String(row.book),
-      vector: Float32Array.from(parsed)
+      vector
     };
   });
 }
 
 async function searchStoredEmbeddings(
-  embedding: number[],
+  embedding: ArrayLike<number>,
   limit: number,
   books: string[],
   options: SearchEmbeddingOptions = {}
@@ -405,9 +429,9 @@ async function searchStoredEmbeddings(
   const excludeIds = options.excludeIds ?? [];
   const response = await db.execute({
     sql: `
-      SELECT id, reference, result_type, embedding_json
+      SELECT id, reference, result_type, embedding, embedding_json
       FROM passages
-      WHERE embedding_json IS NOT NULL
+      WHERE (embedding IS NOT NULL OR embedding_json IS NOT NULL)
         ${books.length ? `AND book IN (${placeholders(books)})` : ""}
         ${excludeIds.length ? `AND id NOT IN (${placeholders(excludeIds)})` : ""}
     `,
@@ -417,8 +441,13 @@ async function searchStoredEmbeddings(
   const topResults: ScriptureResult[] = [];
 
   for (const row of response.rows) {
-    const stored = parseEmbedding(String(row.embedding_json ?? "[]"));
-    const score = cosineSimilarity(query, normalizeVector(stored));
+    const stored = readStoredEmbedding(row as StoredEmbeddingRow);
+
+    if (!stored) {
+      continue;
+    }
+
+    const score = cosineSimilarity(query, stored);
 
     if (!Number.isFinite(score)) {
       continue;
@@ -535,6 +564,40 @@ function parseEmbedding(value: string) {
   } catch {
     return [];
   }
+}
+
+function readStoredEmbedding(row: StoredEmbeddingRow) {
+  const vector = readEmbeddingBlob(row.embedding);
+
+  if (vector) {
+    return vector;
+  }
+
+  if (typeof row.embedding_json !== "string") {
+    return null;
+  }
+
+  const parsed = parseEmbedding(row.embedding_json);
+
+  return parsed.length ? Float32Array.from(normalizeVector(parsed)) : null;
+}
+
+function readEmbeddingBlob(value: unknown) {
+  if (value instanceof ArrayBuffer) {
+    return value.byteLength % Float32Array.BYTES_PER_ELEMENT === 0
+      ? new Float32Array(value)
+      : null;
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    const view = value as ArrayBufferView;
+
+    return view.byteLength % Float32Array.BYTES_PER_ELEMENT === 0
+      ? new Float32Array(view.buffer, view.byteOffset, view.byteLength / Float32Array.BYTES_PER_ELEMENT)
+      : null;
+  }
+
+  return null;
 }
 
 function cosineSimilarity(left: ArrayLike<number>, right: ArrayLike<number>) {

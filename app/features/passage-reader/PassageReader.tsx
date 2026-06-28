@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 
 import { Form, Link, useNavigation } from "@remix-run/react";
 
@@ -11,15 +17,61 @@ import { buildChapterIndex, chapterKey } from "./chapter-index";
 
 const TRANSLATION_ABBREVIATION = "WEB";
 const HEADER_SCROLL_OFFSET = 118;
-const CHAPTER_WINDOW_RADIUS = 3;
+const CHAPTER_WINDOW_RADIUS = 6;
 const ESTIMATED_CHAPTER_HEIGHT = 820;
+const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
+
+const READER_PRESETS = {
+  default: {
+    label: "Default",
+    fontScale: 1,
+    lineHeight: 1.72,
+    contentWidth: 820
+  },
+  compact: {
+    label: "Compact",
+    fontScale: 0.94,
+    lineHeight: 1.54,
+    contentWidth: 880
+  },
+  open: {
+    label: "Open",
+    fontScale: 1.07,
+    lineHeight: 1.86,
+    contentWidth: 760
+  },
+  relaxed: {
+    label: "Relaxed",
+    fontScale: 1.14,
+    lineHeight: 1.96,
+    contentWidth: 700
+  }
+} as const;
+
+const READER_THEMES = {
+  paper: "Paper",
+  sepia: "Sepia",
+  dark: "Dark",
+  contrast: "Contrast"
+} as const;
+
+type ReaderPreset = keyof typeof READER_PRESETS;
+type ReaderTheme = keyof typeof READER_THEMES;
+
+type ReaderSettings = {
+  contentWidth: number;
+  fontScale: number;
+  lineHeight: number;
+  preset: ReaderPreset | "custom";
+  theme: ReaderTheme;
+};
+
+const DEFAULT_READER_SETTINGS = createPresetReaderSettings("default", "paper");
 
 type PassageReaderProps = {
-  backPassageId?: string | null;
   filters: StoredFilters;
   initialPassageId: string;
   isScriptureReady: boolean;
-  onBack?: () => void;
   onJumpToPassage?: (passageId: string) => void;
   onLocationChange?: (passageId: string) => void;
   onOpenSearch?: () => void;
@@ -27,11 +79,9 @@ type PassageReaderProps = {
 };
 
 export function PassageReader({
-  backPassageId,
   filters,
   initialPassageId,
   isScriptureReady,
-  onBack,
   onJumpToPassage,
   onLocationChange,
   onOpenSearch,
@@ -40,7 +90,11 @@ export function PassageReader({
   const navigation = useNavigation();
   const hasScrolledToInitialPassageRef = useRef(false);
   const chapterHeightByKeyRef = useRef(new Map<string, number>());
+  const settingsRef = useRef<HTMLDivElement | null>(null);
   const [, setMeasuredChapterVersion] = useState(0);
+  const [readerSettings, setReaderSettings] = useState(DEFAULT_READER_SETTINGS);
+  const [hasLoadedReaderSettings, setHasLoadedReaderSettings] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const chapterIndex = useMemo(() => buildChapterIndex(passages), [passages]);
   const orderedChapterEntries = useMemo(
     () => {
@@ -131,9 +185,13 @@ export function PassageReader({
         ...document.querySelectorAll<HTMLElement>(".reader-passage")
       ].find((element) => element.dataset.passageId === initialPassageId);
 
-      targetPassage?.scrollIntoView({
+      if (!targetPassage) {
+        return;
+      }
+
+      targetPassage.scrollIntoView({
         block: "start",
-        behavior: hasScrolledToInitialPassageRef.current ? "smooth" : "auto"
+        behavior: "auto"
       });
       hasScrolledToInitialPassageRef.current = true;
     });
@@ -192,11 +250,13 @@ export function PassageReader({
       }
 
       if (currentChapterKey) {
-        setActiveChapterKey((existingChapterKey) =>
-          existingChapterKey === currentChapterKey
-            ? existingChapterKey
-            : currentChapterKey
-        );
+        setActiveChapterKey((existingChapterKey) => {
+          if (existingChapterKey === currentChapterKey) {
+            return existingChapterKey;
+          }
+
+          return currentChapterKey;
+        });
       }
     };
 
@@ -252,6 +312,52 @@ export function PassageReader({
 
   const isSearchingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
+  const readerStyle = {
+    "--reader-content-width": `${readerSettings.contentWidth}px`,
+    "--reader-font-scale": readerSettings.fontScale,
+    "--reader-line-height": readerSettings.lineHeight
+  } as CSSProperties;
+
+  useEffect(() => {
+    const savedSettings = readSavedReaderSettings();
+
+    if (savedSettings) {
+      setReaderSettings(savedSettings);
+    }
+
+    setHasLoadedReaderSettings(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedReaderSettings) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      READER_SETTINGS_STORAGE_KEY,
+      JSON.stringify(readerSettings)
+    );
+  }, [hasLoadedReaderSettings, readerSettings]);
+
+  useEffect(() => {
+    if (!isSettingsOpen) {
+      return;
+    }
+
+    const closeOnPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+
+      if (
+        target instanceof Node
+        && !settingsRef.current?.contains(target)
+      ) {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", closeOnPointerDown);
+    return () => window.removeEventListener("pointerdown", closeOnPointerDown);
+  }, [isSettingsOpen]);
 
   if (!isScriptureReady) {
     return (
@@ -273,7 +379,11 @@ export function PassageReader({
   }
 
   return (
-    <section className="reader-page" aria-labelledby="reader-title">
+    <section
+      className={`reader-page reader-theme-${readerSettings.theme}`}
+      aria-labelledby="reader-title"
+      style={readerStyle}
+    >
       <header className="reader-header">
         <div className="reader-header-title">
           <h1 id="reader-title">
@@ -290,11 +400,6 @@ export function PassageReader({
             onJumpToPassage={onJumpToPassage}
             passages={passages}
           />
-          {backPassageId && onBack ? (
-            <button className="context-button" onClick={onBack} type="button">
-              Back
-            </button>
-          ) : null}
           {onOpenSearch ? (
             <button className="context-button" onClick={onOpenSearch} type="button">
               Search
@@ -304,6 +409,23 @@ export function PassageReader({
               Search
             </Link>
           )}
+          <div className="reader-settings" ref={settingsRef}>
+            <button
+              aria-expanded={isSettingsOpen}
+              aria-haspopup="dialog"
+              className="context-button reader-settings-trigger"
+              onClick={() => setIsSettingsOpen((isOpen) => !isOpen)}
+              type="button"
+            >
+              Aa
+            </button>
+            {isSettingsOpen ? (
+              <ReaderSettingsPanel
+                onChange={setReaderSettings}
+                settings={readerSettings}
+              />
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -398,6 +520,195 @@ export function PassageReader({
       </div>
     </section>
   );
+}
+
+function ReaderSettingsPanel({
+  onChange,
+  settings
+}: {
+  onChange: (settings: ReaderSettings) => void;
+  settings: ReaderSettings;
+}) {
+  return (
+    <section
+      aria-label="Reader settings"
+      className="reader-settings-panel"
+      role="dialog"
+    >
+      <div className="reader-setting-group">
+        <span>Preset</span>
+        <div className="reader-segmented-control">
+          {Object.entries(READER_PRESETS).map(([preset, config]) => (
+            <button
+              className={settings.preset === preset ? "is-active" : ""}
+              key={preset}
+              onClick={() => {
+                onChange(createPresetReaderSettings(preset as ReaderPreset, settings.theme));
+              }}
+              type="button"
+            >
+              {config.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="reader-setting-group">
+        <span>Theme</span>
+        <div className="reader-swatch-grid">
+          {Object.entries(READER_THEMES).map(([theme, label]) => (
+            <div className="reader-theme-option" key={theme}>
+              <button
+                aria-label={label}
+                className={[
+                  "reader-theme-swatch",
+                  `reader-theme-swatch-${theme}`,
+                  settings.theme === theme ? "is-active" : ""
+                ].filter(Boolean).join(" ")}
+                onClick={() => {
+                  onChange({
+                    ...settings,
+                    preset: settings.preset,
+                    theme: theme as ReaderTheme
+                  });
+                }}
+                title={label}
+                type="button"
+              />
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <ReaderRange
+        label="Text"
+        max={1.35}
+        min={0.86}
+        onChange={(fontScale) => onChange({ ...settings, fontScale, preset: "custom" })}
+        step={0.01}
+        value={settings.fontScale}
+        valueLabel={`${Math.round(settings.fontScale * 100)}%`}
+      />
+      <ReaderRange
+        label="Spacing"
+        max={2.08}
+        min={1.42}
+        onChange={(lineHeight) => onChange({ ...settings, lineHeight, preset: "custom" })}
+        step={0.01}
+        value={settings.lineHeight}
+        valueLabel={settings.lineHeight.toFixed(2)}
+      />
+      <ReaderRange
+        label="Width"
+        max={880}
+        min={620}
+        onChange={(contentWidth) => onChange({ ...settings, contentWidth, preset: "custom" })}
+        step={10}
+        value={settings.contentWidth}
+        valueLabel={`${settings.contentWidth}px`}
+      />
+    </section>
+  );
+}
+
+function ReaderRange({
+  label,
+  max,
+  min,
+  onChange,
+  step,
+  value,
+  valueLabel
+}: {
+  label: string;
+  max: number;
+  min: number;
+  onChange: (value: number) => void;
+  step: number;
+  value: number;
+  valueLabel: string;
+}) {
+  return (
+    <label className="reader-range">
+      <span>
+        {label}
+        <strong>{valueLabel}</strong>
+      </span>
+      <input
+        max={max}
+        min={min}
+        onChange={(event) => onChange(Number(event.currentTarget.value))}
+        step={step}
+        type="range"
+        value={value}
+      />
+    </label>
+  );
+}
+
+function readSavedReaderSettings() {
+  try {
+    const savedSettings = window.localStorage.getItem(READER_SETTINGS_STORAGE_KEY);
+
+    if (!savedSettings) {
+      return null;
+    }
+
+    const parsedSettings = JSON.parse(savedSettings) as Partial<ReaderSettings>;
+
+    if (!parsedSettings || typeof parsedSettings !== "object") {
+      return null;
+    }
+
+    return {
+      ...DEFAULT_READER_SETTINGS,
+      contentWidth: clampNumber(parsedSettings.contentWidth, 620, 880),
+      fontScale: clampNumber(parsedSettings.fontScale, 0.86, 1.35),
+      lineHeight: clampNumber(parsedSettings.lineHeight, 1.42, 2.08),
+      preset: isReaderPreset(parsedSettings.preset)
+        ? parsedSettings.preset
+        : parsedSettings.preset === "custom"
+          ? "custom"
+          : DEFAULT_READER_SETTINGS.preset,
+      theme: isReaderTheme(parsedSettings.theme)
+        ? parsedSettings.theme
+        : DEFAULT_READER_SETTINGS.theme
+    };
+  } catch {
+    return null;
+  }
+}
+
+function createPresetReaderSettings(
+  preset: ReaderPreset,
+  theme: ReaderTheme
+): ReaderSettings {
+  const { contentWidth, fontScale, lineHeight } = READER_PRESETS[preset];
+
+  return {
+    contentWidth,
+    fontScale,
+    lineHeight,
+    preset,
+    theme
+  };
+}
+
+function clampNumber(value: unknown, min: number, max: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return min;
+  }
+
+  return Math.min(max, Math.max(min, value));
+}
+
+function isReaderPreset(value: unknown): value is ReaderPreset {
+  return typeof value === "string" && value in READER_PRESETS;
+}
+
+function isReaderTheme(value: unknown): value is ReaderTheme {
+  return typeof value === "string" && value in READER_THEMES;
 }
 
 function sumChapterHeights(
