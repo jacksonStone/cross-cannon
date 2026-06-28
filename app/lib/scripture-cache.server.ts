@@ -7,6 +7,7 @@ import { ensureDatabase, getDb } from "./db.server";
 let defaultReaderStartupPassagesPromise: Promise<BrowserPassage[]> | null = null;
 
 export type BrowserPassage = {
+  audioUrl?: string;
   id: string;
   reference: string;
   text: string;
@@ -18,12 +19,16 @@ export type BrowserPassage = {
 };
 
 export async function getScriptureCacheVersion() {
+  await ensureDatabase();
+
   const response = await getDb().execute(`
     SELECT
       (SELECT COUNT(*) FROM passages) AS passage_count,
       (SELECT COUNT(*) FROM paragraph_verses) AS verse_count,
+      (SELECT COUNT(*) FROM passage_audio_files) AS audio_count,
       (SELECT COALESCE(MAX(id), '') FROM passages) AS max_passage_id,
-      (SELECT COALESCE(MAX(source_hash), '') FROM paragraph_verses) AS max_verse_hash
+      (SELECT COALESCE(MAX(source_hash), '') FROM paragraph_verses) AS max_verse_hash,
+      (SELECT COALESCE(MAX(updated_at), '') FROM passage_audio_files) AS max_audio_updated_at
   `);
   const row = response.rows[0];
 
@@ -31,8 +36,10 @@ export async function getScriptureCacheVersion() {
     .update([
       row?.passage_count,
       row?.verse_count,
+      row?.audio_count,
       row?.max_passage_id,
-      row?.max_verse_hash
+      row?.max_verse_hash,
+      row?.max_audio_updated_at
     ].join("-"))
     .digest("hex")
     .slice(0, 16);
@@ -66,10 +73,12 @@ export async function getScriptureCacheInfo() {
 
 export async function buildScriptureCachePayload() {
   const response = await getDb().execute(`
-    SELECT id, reference, text, result_type
-    FROM passages
-    WHERE text <> ''
-    ORDER BY book, chapter, verse_start IS NULL, verse_start
+    SELECT p.id, p.reference, p.text, p.result_type, paf.audio_url
+    FROM passages p
+    LEFT JOIN passage_audio_files paf
+      ON paf.passage_id = p.id
+    WHERE p.text <> ''
+    ORDER BY p.book, p.chapter, p.verse_start IS NULL, p.verse_start
   `);
   const versesResponse = await getDb().execute(`
     SELECT paragraph_id, verse, text
@@ -90,6 +99,7 @@ export async function buildScriptureCachePayload() {
 
   return {
     passages: response.rows.map((row) => ({
+      audioUrl: typeof row.audio_url === "string" ? row.audio_url : undefined,
       id: String(row.id),
       reference: String(row.reference),
       text: String(row.text),
@@ -113,12 +123,14 @@ async function readDefaultReaderStartupPassages() {
 
   const passagesResponse = await getDb().execute({
     sql: `
-      SELECT id, reference, text, result_type
-      FROM passages
-      WHERE text <> ''
-        AND book = ?
-        AND chapter = ?
-      ORDER BY chapter, verse_start IS NULL, verse_start
+      SELECT p.id, p.reference, p.text, p.result_type, paf.audio_url
+      FROM passages p
+      LEFT JOIN passage_audio_files paf
+        ON paf.passage_id = p.id
+      WHERE p.text <> ''
+        AND p.book = ?
+        AND p.chapter = ?
+      ORDER BY p.chapter, p.verse_start IS NULL, p.verse_start
     `,
     args: ["Genesis", 1]
   });
@@ -145,6 +157,7 @@ async function readDefaultReaderStartupPassages() {
   }
 
   return passagesResponse.rows.map((row) => ({
+    audioUrl: typeof row.audio_url === "string" ? row.audio_url : undefined,
     id: String(row.id),
     reference: String(row.reference),
     text: String(row.text),

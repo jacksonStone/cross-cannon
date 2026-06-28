@@ -1,5 +1,8 @@
-const AUDIO_BASE_URL = "https://audiotreasure.com/content/WEBD_AT";
+const AUDIO_BASE_URL = "/audio/WEBD_AT";
 const AUDIO_SOURCE = "AudioTreasure WEB";
+const AUDIO_FILE_VERSIONS: Record<string, string> = {
+  "55_2Timothy_01.mp3": "processed-20260628"
+};
 
 type AudioBook = {
   book: string;
@@ -100,6 +103,7 @@ export function buildAudioChapterFiles() {
     for (let chapter = 1; chapter <= audioBook.chapters; chapter += 1) {
       const fileName = getFileName(audioBook, chapter);
       const filePath = `/content/WEBD_AT/${fileName}`;
+      const version = AUDIO_FILE_VERSIONS[fileName];
 
       rows.push({
         book: audioBook.book,
@@ -107,7 +111,7 @@ export function buildAudioChapterFiles() {
         source: AUDIO_SOURCE,
         fileName,
         filePath,
-        audioUrl: `${AUDIO_BASE_URL}/${fileName}`
+        audioUrl: `${AUDIO_BASE_URL}/${fileName}${version ? `?v=${version}` : ""}`
       });
     }
   }

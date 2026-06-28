@@ -14,6 +14,7 @@ export type ChapterPassage = PassageLocation & {
 };
 
 export type ChapterContext = {
+  audioUrl?: string;
   book: string;
   chapter: number;
   passages: ChapterPassage[];
@@ -29,6 +30,7 @@ export function buildChapterIndex(passages: BrowserPassage[]): ChapterIndex {
   const chapterBuilders = new Map<
     string,
     {
+      audioUrl?: string;
       book: string;
       chapter: number;
       passages: ChapterPassage[];
@@ -47,11 +49,13 @@ export function buildChapterIndex(passages: BrowserPassage[]): ChapterIndex {
 
     const key = chapterKey(location.book, location.chapter);
     const chapter = chapterBuilders.get(key) ?? {
+      audioUrl: passage.audioUrl,
       book: location.book,
       chapter: location.chapter,
       passages: []
     };
 
+    chapter.audioUrl ??= passage.audioUrl;
     chapter.passages.push({
       ...location,
       id: passage.id,
@@ -66,6 +70,7 @@ export function buildChapterIndex(passages: BrowserPassage[]): ChapterIndex {
 
   for (const [key, chapter] of chapterBuilders) {
     chaptersByKey.set(key, {
+      audioUrl: chapter.audioUrl,
       book: chapter.book,
       chapter: chapter.chapter,
       passages: chapter.passages.sort(

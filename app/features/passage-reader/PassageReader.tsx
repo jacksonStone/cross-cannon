@@ -1,5 +1,6 @@
 import {
   type CSSProperties,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -96,12 +97,14 @@ export function PassageReader({
 }: PassageReaderProps) {
   const navigation = useNavigation();
   const canReportLocationRef = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasScrolledToInitialPassageRef = useRef(false);
   const lastReportedPassageIdRef = useRef("");
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const [readerSettings, setReaderSettings] = useState(DEFAULT_READER_SETTINGS);
   const [hasLoadedReaderSettings, setHasLoadedReaderSettings] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
   const [renderedRange, setRenderedRange] = useState({
     endIndex: -1,
     startIndex: 0
@@ -168,6 +171,29 @@ export function PassageReader({
   );
   const passageJumpInitialPassageId =
     activeChapter?.passages[0]?.id ?? initialPassageId;
+  const activeAudioUrl = activeChapter?.audioUrl ?? null;
+  const isActiveChapterPlaying = Boolean(
+    activeAudioUrl && playingAudioUrl === activeAudioUrl
+  );
+
+  const toggleActiveChapterAudio = useCallback(() => {
+    const audio = audioRef.current;
+
+    if (!audio || !activeAudioUrl) {
+      return;
+    }
+
+    if (isActiveChapterPlaying) {
+      audio.pause();
+      setPlayingAudioUrl(null);
+      return;
+    }
+
+    audio.src = activeAudioUrl;
+    void audio.play()
+      .then(() => setPlayingAudioUrl(activeAudioUrl))
+      .catch(() => setPlayingAudioUrl(null));
+  }, [activeAudioUrl, isActiveChapterPlaying]);
 
   useBrowserLayoutEffect(() => {
     const nextRange = getInitialRenderedRange(
@@ -520,6 +546,12 @@ export function PassageReader({
       style={readerStyle}
     >
       <header className="reader-header">
+        <audio
+          ref={audioRef}
+          onEnded={() => setPlayingAudioUrl(null)}
+          onPause={() => setPlayingAudioUrl(null)}
+          preload="none"
+        />
         <div className="reader-header-title">
           <h1 id="reader-title">
             {activeChapter.book} {activeChapter.chapter}
@@ -535,13 +567,42 @@ export function PassageReader({
             onJumpToPassage={onJumpToPassage}
             passages={passages}
           />
+          <button
+            aria-label={
+              activeAudioUrl
+                ? `${isActiveChapterPlaying ? "Pause" : "Play"} ${activeChapter.book} ${activeChapter.chapter} audio`
+                : `Audio unavailable for ${activeChapter.book} ${activeChapter.chapter}`
+            }
+            className="context-button reader-icon-button"
+            disabled={!activeAudioUrl}
+            onClick={toggleActiveChapterAudio}
+            title={
+              activeAudioUrl
+                ? `${isActiveChapterPlaying ? "Pause" : "Play"} audio`
+                : "Audio unavailable"
+            }
+            type="button"
+          >
+            {isActiveChapterPlaying ? "❚❚" : "🔊"}
+          </button>
           {onOpenSearch ? (
-            <button className="context-button" onClick={onOpenSearch} type="button">
-              Search
+            <button
+              aria-label="Search"
+              className="context-button reader-icon-button"
+              onClick={onOpenSearch}
+              title="Search"
+              type="button"
+            >
+              🔍
             </button>
           ) : (
-            <Link className="context-button" to="/">
-              Search
+            <Link
+              aria-label="Search"
+              className="context-button reader-icon-button"
+              title="Search"
+              to="/"
+            >
+              🔍
             </Link>
           )}
           <div className="reader-settings" ref={settingsRef}>

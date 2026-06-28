@@ -1,6 +1,7 @@
 import { createWriteStream } from "node:fs";
 import { mkdir, rename, stat, unlink } from "node:fs/promises";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
 import { ensureDatabase, getDb } from "../app/lib/db.server";
@@ -25,7 +26,7 @@ let downloaded = 0;
 let skipped = 0;
 let failed = 0;
 
-for (const row of response.rows as AudioRow[]) {
+for (const row of response.rows as unknown as AudioRow[]) {
   const audioUrl = String(row.audio_url);
   const fileName = String(row.audio_file_name);
   const destination = path.join(outputDir, fileName);
@@ -71,6 +72,9 @@ async function downloadFile(audioUrl: string, destination: string) {
     throw new Error(`HTTP ${response.status} ${response.statusText}`);
   }
 
-  await pipeline(response.body, createWriteStream(tempPath));
+  await pipeline(
+    Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]),
+    createWriteStream(tempPath)
+  );
   await rename(tempPath, destination);
 }

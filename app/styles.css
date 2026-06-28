@@ -863,6 +863,15 @@ button:disabled {
   min-width: max-content;
 }
 
+.reader-icon-button {
+  justify-content: center;
+  width: 42px;
+  min-width: 42px;
+  padding-right: 0;
+  padding-left: 0;
+  font-size: 1rem;
+}
+
 .reader-page .context-button {
   border-color: var(--reader-line);
   background: var(--reader-panel);
@@ -1401,6 +1410,13 @@ button:disabled {
   .reader-header-actions .context-button {
     min-height: 42px;
     padding: 8px 12px;
+  }
+
+  .reader-header-actions .reader-icon-button {
+    width: 42px;
+    min-width: 42px;
+    padding-right: 0;
+    padding-left: 0;
   }
 
   .search-modal-backdrop {

@@ -10,6 +10,8 @@ storage/*.db
 storage/*.db-*
 storage/archive/
 storage/audio/
+storage/audio-originals/
+storage/audio-processed/
 storage/audio-trim-test/
 storage/verse-index/
 scripture-cache/
