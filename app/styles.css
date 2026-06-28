@@ -932,6 +932,13 @@ button:disabled {
   text-align: left;
 }
 
+.reader-passage-button:hover,
+.reader-passage-button:focus,
+.reader-passage-button:active {
+  background: transparent;
+  color: var(--ink);
+}
+
 .reader-passage.is-selected .reader-passage-button {
   background: rgba(143, 53, 38, 0.05);
 }
