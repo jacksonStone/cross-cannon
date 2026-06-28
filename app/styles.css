@@ -757,14 +757,23 @@ button:disabled {
   border-bottom: 1px solid var(--line);
   background: rgba(251, 250, 247, 0.96);
   backdrop-filter: blur(8px);
+  padding-top: 8px;
   padding-bottom: 12px;
 }
 
+.reader-header-title {
+  min-width: 0;
+}
+
 .reader-header h1 {
-  font-size: clamp(1.58rem, 3.6vw, 2.4rem);
+  overflow: hidden;
+  font-size: clamp(1.45rem, 3.4vw, 2.25rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reader-header-actions {
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -904,11 +913,6 @@ button:disabled {
   content: "";
 }
 
-.reader-passage.is-highlighted::before {
-  width: 3px;
-  background: rgba(143, 53, 38, 0.5);
-}
-
 .reader-passage.is-selected::before {
   width: 4px;
   background: var(--accent);
@@ -928,7 +932,6 @@ button:disabled {
   text-align: left;
 }
 
-.reader-passage-button:hover,
 .reader-passage.is-selected .reader-passage-button {
   background: rgba(143, 53, 38, 0.05);
 }
@@ -941,7 +944,6 @@ button:disabled {
   text-transform: uppercase;
 }
 
-.reader-passage.is-highlighted .reader-passage-reference,
 .reader-passage.is-selected .reader-passage-reference {
   color: var(--accent);
 }
@@ -958,7 +960,7 @@ button:disabled {
   border-radius: 4px;
 }
 
-.reader-passage.is-highlighted .reader-verse {
+.reader-passage.is-selected .reader-verse {
   background: rgba(143, 53, 38, 0.045);
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
@@ -1135,13 +1137,22 @@ button:disabled {
   }
 
   .reader-header {
-    align-items: flex-start;
-    padding-top: 8px;
+    align-items: center;
+    gap: 8px;
   }
 
   .reader-header-actions {
-    width: 100%;
-    justify-content: flex-start;
+    width: auto;
+    justify-content: flex-end;
+  }
+
+  .reader-header h1 {
+    font-size: clamp(1.35rem, 7vw, 1.85rem);
+  }
+
+  .reader-header-actions .context-button {
+    min-height: 42px;
+    padding: 8px 12px;
   }
 
   .search-modal-backdrop {

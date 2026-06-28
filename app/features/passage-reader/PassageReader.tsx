@@ -127,7 +127,11 @@ export function PassageReader({
     }
 
     window.requestAnimationFrame(() => {
-      document.querySelector(".reader-passage.is-highlighted")?.scrollIntoView({
+      const targetPassage = [
+        ...document.querySelectorAll<HTMLElement>(".reader-passage")
+      ].find((element) => element.dataset.passageId === initialPassageId);
+
+      targetPassage?.scrollIntoView({
         block: "start",
         behavior: hasScrolledToInitialPassageRef.current ? "smooth" : "auto"
       });
@@ -271,8 +275,7 @@ export function PassageReader({
   return (
     <section className="reader-page" aria-labelledby="reader-title">
       <header className="reader-header">
-        <div>
-          <p className="eyebrow">Reader</p>
+        <div className="reader-header-title">
           <h1 id="reader-title">
             {activeChapter.book} {activeChapter.chapter}
           </h1>
@@ -325,14 +328,12 @@ export function PassageReader({
               </h2>
               <div className="reader-chapter-passages">
                 {chapter.passages.map((passage) => {
-                  const isInitialPassage = passage.id === initialPassageId;
                   const isSelected = passage.id === selectedPassageId;
 
                   return (
                     <article
                       className={[
                         "reader-passage",
-                        isInitialPassage ? "is-highlighted" : "",
                         isSelected ? "is-selected" : ""
                       ].filter(Boolean).join(" ")}
                       data-passage-id={passage.id}
