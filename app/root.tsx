@@ -3,8 +3,7 @@ import {
   Links,
   Meta,
   Outlet,
-  Scripts,
-  ScrollRestoration
+  Scripts
 } from "@remix-run/react";
 
 import stylesheet from "./styles.css?url";
@@ -57,7 +56,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
-        <ScrollRestoration />
         <Scripts />
       </body>
     </html>

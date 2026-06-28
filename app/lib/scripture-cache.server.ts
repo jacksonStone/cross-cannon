@@ -2,7 +2,9 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { getDb } from "./db.server";
+import { ensureDatabase, getDb } from "./db.server";
+
+let defaultReaderStartupPassagesPromise: Promise<BrowserPassage[]> | null = null;
 
 export type BrowserPassage = {
   id: string;
@@ -95,4 +97,58 @@ export async function buildScriptureCachePayload() {
       verses: versesByParagraph.get(String(row.id)) ?? []
     })) satisfies BrowserPassage[]
   };
+}
+
+export async function getDefaultReaderStartupPassages() {
+  defaultReaderStartupPassagesPromise ??= readDefaultReaderStartupPassages()
+    .catch((error: unknown) => {
+      defaultReaderStartupPassagesPromise = null;
+      throw error;
+    });
+  return defaultReaderStartupPassagesPromise;
+}
+
+async function readDefaultReaderStartupPassages() {
+  await ensureDatabase();
+
+  const passagesResponse = await getDb().execute({
+    sql: `
+      SELECT id, reference, text, result_type
+      FROM passages
+      WHERE text <> ''
+        AND book = ?
+        AND chapter = ?
+      ORDER BY chapter, verse_start IS NULL, verse_start
+    `,
+    args: ["Genesis", 1]
+  });
+  const versesResponse = await getDb().execute({
+    sql: `
+      SELECT paragraph_id, verse, text
+      FROM paragraph_verses
+      WHERE book = ?
+        AND chapter = ?
+      ORDER BY chapter, verse
+    `,
+    args: ["Genesis", 1]
+  });
+  const versesByParagraph = new Map<string, BrowserPassage["verses"]>();
+
+  for (const row of versesResponse.rows) {
+    const paragraphId = String(row.paragraph_id);
+    const verses = versesByParagraph.get(paragraphId) ?? [];
+    verses.push({
+      number: Number(row.verse),
+      text: String(row.text)
+    });
+    versesByParagraph.set(paragraphId, verses);
+  }
+
+  return passagesResponse.rows.map((row) => ({
+    id: String(row.id),
+    reference: String(row.reference),
+    text: String(row.text),
+    type: "paragraph",
+    verses: versesByParagraph.get(String(row.id)) ?? []
+  })) satisfies BrowserPassage[];
 }

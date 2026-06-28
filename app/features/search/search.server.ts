@@ -7,7 +7,17 @@ import { BOOKS_BY_CANON, DEFAULT_MATCH_COUNT, parseCanonMode, sortCanonicalBooks
 import type { CanonMode } from "./types";
 import type { SearchActionData } from "./types";
 
+let indexedBooksPromise: Promise<string[]> | null = null;
+
 export async function getIndexedBooks() {
+  indexedBooksPromise ??= readIndexedBooks().catch((error: unknown) => {
+    indexedBooksPromise = null;
+    throw error;
+  });
+  return indexedBooksPromise;
+}
+
+async function readIndexedBooks() {
   await ensureDatabase();
 
   const booksResponse = await getDb().execute(`

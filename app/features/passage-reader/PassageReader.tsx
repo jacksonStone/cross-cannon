@@ -1,6 +1,7 @@
 import {
   type CSSProperties,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState
@@ -17,9 +18,15 @@ import { buildChapterIndex, chapterKey } from "./chapter-index";
 
 const TRANSLATION_ABBREVIATION = "WEB";
 const HEADER_SCROLL_OFFSET = 118;
-const CHAPTER_WINDOW_RADIUS = 6;
-const ESTIMATED_CHAPTER_HEIGHT = 820;
+const READING_ANCHOR_RATIO = 0.38;
+const MIN_READING_ANCHOR_OFFSET = 220;
+const INITIAL_PREVIOUS_CHAPTERS = 10;
+const INITIAL_NEXT_CHAPTERS = 24;
+const CHAPTER_WINDOW_EXPAND_COUNT = 10;
+const CHAPTER_WINDOW_EDGE_PX = 2200;
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
+const useBrowserLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const READER_PRESETS = {
   default: {
@@ -88,13 +95,21 @@ export function PassageReader({
   passages
 }: PassageReaderProps) {
   const navigation = useNavigation();
+  const canReportLocationRef = useRef(false);
   const hasScrolledToInitialPassageRef = useRef(false);
-  const chapterHeightByKeyRef = useRef(new Map<string, number>());
+  const lastReportedPassageIdRef = useRef("");
   const settingsRef = useRef<HTMLDivElement | null>(null);
-  const [, setMeasuredChapterVersion] = useState(0);
   const [readerSettings, setReaderSettings] = useState(DEFAULT_READER_SETTINGS);
   const [hasLoadedReaderSettings, setHasLoadedReaderSettings] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [renderedRange, setRenderedRange] = useState({
+    endIndex: -1,
+    startIndex: 0
+  });
+  const prependSnapshotRef = useRef<{
+    scrollHeight: number;
+    scrollY: number;
+  } | null>(null);
   const chapterIndex = useMemo(() => buildChapterIndex(passages), [passages]);
   const orderedChapterEntries = useMemo(
     () => {
@@ -135,67 +150,238 @@ export function PassageReader({
   const activeChapter = activeChapterKey
     ? chapterIndex.chaptersByKey.get(activeChapterKey)
     : null;
-  const activeChapterIndex = activeChapterKey
-    ? renderedChapterKeys.indexOf(activeChapterKey)
+  const initialChapterIndex = initialChapterKey
+    ? renderedChapterKeys.indexOf(initialChapterKey)
     : -1;
-  const safeActiveChapterIndex = activeChapterIndex >= 0 ? activeChapterIndex : 0;
-  const windowStartIndex = Math.max(
-    0,
-    safeActiveChapterIndex - CHAPTER_WINDOW_RADIUS
-  );
-  const windowEndIndex = Math.min(
-    orderedChapterEntries.length,
-    safeActiveChapterIndex + CHAPTER_WINDOW_RADIUS + 1
-  );
-  const renderedChapterEntriesInWindow = orderedChapterEntries.slice(
-    windowStartIndex,
-    windowEndIndex
-  );
-  const renderedWindowKey = renderedChapterEntriesInWindow
-    .map((entry) => entry.key)
-    .join("|");
-  const topSpacerHeight = sumChapterHeights(
-    orderedChapterEntries,
-    0,
-    windowStartIndex,
-    chapterHeightByKeyRef.current
-  );
-  const bottomSpacerHeight = sumChapterHeights(
-    orderedChapterEntries,
-    windowEndIndex,
-    orderedChapterEntries.length,
-    chapterHeightByKeyRef.current
+  const renderedChapterEntries = useMemo(
+    () => {
+      if (renderedRange.endIndex < renderedRange.startIndex) {
+        return [];
+      }
+
+      return orderedChapterEntries.slice(
+        Math.max(0, renderedRange.startIndex),
+        renderedRange.endIndex + 1
+      );
+    },
+    [orderedChapterEntries, renderedRange.endIndex, renderedRange.startIndex]
   );
   const passageJumpInitialPassageId =
     activeChapter?.passages[0]?.id ?? initialPassageId;
 
-  useEffect(() => {
+  useBrowserLayoutEffect(() => {
+    const nextRange = getInitialRenderedRange(
+      initialChapterIndex,
+      orderedChapterEntries.length
+    );
+
+    setRenderedRange(nextRange);
     setActiveChapterKey(initialChapterKey);
     setSelectedPassageId("");
+    prependSnapshotRef.current = null;
+    canReportLocationRef.current = false;
+    lastReportedPassageIdRef.current = initialPassageId;
     hasScrolledToInitialPassageRef.current = false;
-  }, [initialChapterKey, initialPassageId]);
+  }, [initialChapterIndex, initialChapterKey, initialPassageId, orderedChapterEntries.length]);
 
-  useEffect(() => {
-    if (!activeChapterKey || hasScrolledToInitialPassageRef.current) {
+  useBrowserLayoutEffect(() => {
+    if (!isScriptureReady || renderedChapterEntries.length === 0) {
       return;
     }
 
-    window.requestAnimationFrame(() => {
-      const targetPassage = [
-        ...document.querySelectorAll<HTMLElement>(".reader-passage")
-      ].find((element) => element.dataset.passageId === initialPassageId);
+    if (hasScrolledToInitialPassageRef.current) {
+      return;
+    }
 
-      if (!targetPassage) {
+    const scrollToInitialPassage = () => {
+      const initialPassage = findRenderedPassageElement(initialPassageId);
+
+      if (!initialPassage) {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
         return;
       }
 
-      targetPassage.scrollIntoView({
-        block: "start",
-        behavior: "auto"
+      const top = initialPassage.getBoundingClientRect().top
+        + window.scrollY
+        - HEADER_SCROLL_OFFSET;
+
+      window.scrollTo({
+        behavior: "auto",
+        left: 0,
+        top: Math.max(0, top)
       });
+    };
+
+    scrollToInitialPassage();
+
+    let settleFrame = 0;
+    let settleTimeout = 0;
+    let didCancel = false;
+
+    const finishInitialScroll = () => {
+      if (didCancel) {
+        return;
+      }
+
+      scrollToInitialPassage();
       hasScrolledToInitialPassageRef.current = true;
+    };
+
+    settleFrame = window.requestAnimationFrame(() => {
+      scrollToInitialPassage();
+
+      settleFrame = window.requestAnimationFrame(() => {
+        scrollToInitialPassage();
+      });
     });
-  }, [activeChapterKey, initialPassageId]);
+
+    settleTimeout = window.setTimeout(finishInitialScroll, 180);
+    void document.fonts?.ready.then(finishInitialScroll).catch(finishInitialScroll);
+
+    return () => {
+      didCancel = true;
+
+      if (settleFrame) {
+        window.cancelAnimationFrame(settleFrame);
+      }
+
+      if (settleTimeout) {
+        window.clearTimeout(settleTimeout);
+      }
+    };
+  }, [initialPassageId, isScriptureReady, renderedChapterEntries.length]);
+
+  useBrowserLayoutEffect(() => {
+    const snapshot = prependSnapshotRef.current;
+
+    if (!snapshot) {
+      return;
+    }
+
+    prependSnapshotRef.current = null;
+
+    const nextScrollHeight = document.documentElement.scrollHeight;
+    const addedHeight = nextScrollHeight - snapshot.scrollHeight;
+
+    if (addedHeight > 0) {
+      window.scrollTo({
+        behavior: "auto",
+        left: 0,
+        top: snapshot.scrollY + addedHeight
+      });
+    }
+  }, [renderedRange.startIndex]);
+
+  useEffect(() => {
+    if (!isScriptureReady || orderedChapterEntries.length === 0) {
+      return;
+    }
+
+    let frame = 0;
+
+    const expandRenderedWindow = () => {
+      frame = 0;
+
+      const distanceToTop = window.scrollY;
+      const distanceToBottom = document.documentElement.scrollHeight
+        - (window.scrollY + window.innerHeight);
+
+      if (distanceToTop < CHAPTER_WINDOW_EDGE_PX) {
+        setRenderedRange((range) => {
+          if (range.startIndex <= 0) {
+            return range;
+          }
+
+          const nextStartIndex = Math.max(
+            0,
+            range.startIndex - CHAPTER_WINDOW_EXPAND_COUNT
+          );
+
+          if (nextStartIndex === range.startIndex) {
+            return range;
+          }
+
+          prependSnapshotRef.current = {
+            scrollHeight: document.documentElement.scrollHeight,
+            scrollY: window.scrollY
+          };
+
+          return {
+            ...range,
+            startIndex: nextStartIndex
+          };
+        });
+      }
+
+      if (distanceToBottom < CHAPTER_WINDOW_EDGE_PX) {
+        setRenderedRange((range) => {
+          if (range.endIndex >= orderedChapterEntries.length - 1) {
+            return range;
+          }
+
+          return {
+            ...range,
+            endIndex: Math.min(
+              orderedChapterEntries.length - 1,
+              range.endIndex + CHAPTER_WINDOW_EXPAND_COUNT
+            )
+          };
+        });
+      }
+    };
+
+    const scheduleExpand = () => {
+      if (!frame) {
+        frame = window.requestAnimationFrame(expandRenderedWindow);
+      }
+    };
+
+    window.addEventListener("scroll", scheduleExpand, { passive: true });
+    window.addEventListener("resize", scheduleExpand);
+    window.requestAnimationFrame(expandRenderedWindow);
+
+    return () => {
+      window.removeEventListener("scroll", scheduleExpand);
+      window.removeEventListener("resize", scheduleExpand);
+
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, [isScriptureReady, orderedChapterEntries.length]);
+
+  useEffect(() => {
+    if (!isScriptureReady) {
+      return;
+    }
+
+    const enableLocationReporting = () => {
+      canReportLocationRef.current = true;
+    };
+    const enableLocationReportingFromKey = (event: KeyboardEvent) => {
+      if (
+        event.key === "ArrowDown"
+        || event.key === "ArrowUp"
+        || event.key === "PageDown"
+        || event.key === "PageUp"
+        || event.key === " "
+        || event.key === "Home"
+        || event.key === "End"
+      ) {
+        enableLocationReporting();
+      }
+    };
+
+    window.addEventListener("wheel", enableLocationReporting, { passive: true });
+    window.addEventListener("touchmove", enableLocationReporting, { passive: true });
+    window.addEventListener("keydown", enableLocationReportingFromKey);
+
+    return () => {
+      window.removeEventListener("wheel", enableLocationReporting);
+      window.removeEventListener("touchmove", enableLocationReporting);
+      window.removeEventListener("keydown", enableLocationReportingFromKey);
+    };
+  }, [isScriptureReady]);
 
   useEffect(() => {
     if (orderedChapterEntries.length === 0) {
@@ -206,48 +392,27 @@ export function PassageReader({
 
     const updateLocation = () => {
       frame = 0;
+
+      if (!hasScrolledToInitialPassageRef.current || !canReportLocationRef.current) {
+        return;
+      }
+
       const passageElements = [
         ...document.querySelectorAll<HTMLElement>(".reader-passage")
       ];
-      const currentPassage = passageElements.find((element) => {
-        const rect = element.getBoundingClientRect();
-        return rect.bottom > 120;
-      }) ?? passageElements[0];
+      const currentPassage = findElementAtReadingAnchor(passageElements);
       const passageId = currentPassage?.dataset.passageId;
 
-      if (passageId) {
+      if (passageId && passageId !== lastReportedPassageIdRef.current) {
+        lastReportedPassageIdRef.current = passageId;
         onLocationChange?.(passageId);
       }
 
       const chapterElements = [
         ...document.querySelectorAll<HTMLElement>(".reader-chapter")
       ];
-      const firstChapter = chapterElements[0];
-      const lastChapter = chapterElements[chapterElements.length - 1];
-      const firstChapterRect = firstChapter?.getBoundingClientRect();
-      const lastChapterRect = lastChapter?.getBoundingClientRect();
-      const currentChapter = [...chapterElements]
-        .reverse()
-        .find((element) => element.getBoundingClientRect().top <= HEADER_SCROLL_OFFSET)
-        ?? chapterElements.find((element) => {
-          const rect = element.getBoundingClientRect();
-          return rect.bottom > HEADER_SCROLL_OFFSET;
-        });
-      let currentChapterKey = currentChapter?.dataset.chapterKey;
-
-      if (
-        lastChapterRect
-        && lastChapterRect.bottom < HEADER_SCROLL_OFFSET
-        && windowEndIndex < renderedChapterKeys.length
-      ) {
-        currentChapterKey = renderedChapterKeys[windowEndIndex];
-      } else if (
-        firstChapterRect
-        && firstChapterRect.top > HEADER_SCROLL_OFFSET
-        && windowStartIndex > 0
-      ) {
-        currentChapterKey = renderedChapterKeys[windowStartIndex - 1];
-      }
+      const currentChapter = findElementAtReadingAnchor(chapterElements);
+      const currentChapterKey = currentChapter?.dataset.chapterKey;
 
       if (currentChapterKey) {
         setActiveChapterKey((existingChapterKey) => {
@@ -277,38 +442,8 @@ export function PassageReader({
     };
   }, [
     onLocationChange,
-    orderedChapterEntries.length,
-    renderedChapterKeys,
-    windowEndIndex,
-    windowStartIndex
+    orderedChapterEntries.length
   ]);
-
-  useEffect(() => {
-    let didMeasure = false;
-
-    document.querySelectorAll<HTMLElement>(".reader-chapter").forEach((element) => {
-      const key = element.dataset.chapterKey;
-
-      if (!key) {
-        return;
-      }
-
-      const measuredHeight = element.getBoundingClientRect().height;
-      const previousHeight = chapterHeightByKeyRef.current.get(key);
-
-      if (
-        measuredHeight > 0
-        && (!previousHeight || Math.abs(previousHeight - measuredHeight) > 1)
-      ) {
-        chapterHeightByKeyRef.current.set(key, measuredHeight);
-        didMeasure = true;
-      }
-    });
-
-    if (didMeasure) {
-      setMeasuredChapterVersion((version) => version + 1);
-    }
-  }, [renderedWindowKey, selectedPassageId]);
 
   const isSearchingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
@@ -430,14 +565,7 @@ export function PassageReader({
       </header>
 
       <div className="reader-passages">
-        {topSpacerHeight > 0 ? (
-          <div
-            aria-hidden="true"
-            className="reader-chapter-spacer"
-            style={{ height: topSpacerHeight }}
-          />
-        ) : null}
-        {renderedChapterEntriesInWindow.map(({ chapter, key: currentChapterKey }) => {
+        {renderedChapterEntries.map(({ chapter, key: currentChapterKey }) => {
           return (
             <section
               className="reader-chapter"
@@ -510,13 +638,6 @@ export function PassageReader({
             </section>
           );
         })}
-        {bottomSpacerHeight > 0 ? (
-          <div
-            aria-hidden="true"
-            className="reader-chapter-spacer"
-            style={{ height: bottomSpacerHeight }}
-          />
-        ) : null}
       </div>
     </section>
   );
@@ -680,6 +801,50 @@ function readSavedReaderSettings() {
   }
 }
 
+function getInitialRenderedRange(initialChapterIndex: number, chapterCount: number) {
+  if (chapterCount <= 0) {
+    return {
+      endIndex: -1,
+      startIndex: 0
+    };
+  }
+
+  const safeInitialChapterIndex = initialChapterIndex >= 0 ? initialChapterIndex : 0;
+
+  return {
+    endIndex: Math.min(
+      chapterCount - 1,
+      safeInitialChapterIndex + INITIAL_NEXT_CHAPTERS
+    ),
+    startIndex: Math.max(
+      0,
+      safeInitialChapterIndex - INITIAL_PREVIOUS_CHAPTERS
+    )
+  };
+}
+
+function findRenderedPassageElement(passageId: string) {
+  return [...document.querySelectorAll<HTMLElement>(".reader-passage")]
+    .find((element) => element.dataset.passageId === passageId);
+}
+
+function findElementAtReadingAnchor(elements: HTMLElement[]) {
+  const anchorY = getReadingAnchorY();
+
+  return elements.find((element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.top <= anchorY && rect.bottom >= anchorY;
+  }) ?? elements.find((element) => element.getBoundingClientRect().top > anchorY)
+    ?? elements[elements.length - 1];
+}
+
+function getReadingAnchorY() {
+  return Math.max(
+    HEADER_SCROLL_OFFSET + 40,
+    Math.min(window.innerHeight * READING_ANCHOR_RATIO, MIN_READING_ANCHOR_OFFSET)
+  );
+}
+
 function createPresetReaderSettings(
   preset: ReaderPreset,
   theme: ReaderTheme
@@ -709,20 +874,6 @@ function isReaderPreset(value: unknown): value is ReaderPreset {
 
 function isReaderTheme(value: unknown): value is ReaderTheme {
   return typeof value === "string" && value in READER_THEMES;
-}
-
-function sumChapterHeights(
-  entries: Array<{ key: string }>,
-  startIndex: number,
-  endIndex: number,
-  measuredHeights: Map<string, number>
-) {
-  return entries
-    .slice(startIndex, endIndex)
-    .reduce(
-      (sum, entry) => sum + (measuredHeights.get(entry.key) ?? ESTIMATED_CHAPTER_HEIGHT),
-      0
-    );
 }
 
 function SearchFilterInputs({ filters }: { filters: StoredFilters }) {

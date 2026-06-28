@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -11,18 +11,26 @@ import { loadScriptureCache } from "~/features/search/scripture-cache.client";
 import { getIndexedBooks, handleSearchRequest } from "~/features/search/search.server";
 import type { SearchActionData } from "~/features/search/types";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
-import { getScriptureCacheInfo, type BrowserPassage } from "~/lib/scripture-cache.server";
+import {
+  getDefaultReaderStartupPassages,
+  getScriptureCacheInfo,
+  type BrowserPassage
+} from "~/lib/scripture-cache.server";
 
 const READER_POSITION_STORAGE_KEY = "cross-cannon:reader-position:v1";
+const useBrowserLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 export async function loader({}: LoaderFunctionArgs) {
-  const [books, scriptureCache] = await Promise.all([
+  const [books, scriptureCache, startupPassages] = await Promise.all([
     getIndexedBooks(),
-    getScriptureCacheInfo()
+    getScriptureCacheInfo(),
+    getDefaultReaderStartupPassages()
   ]);
 
   return json({
     books,
+    startupPassages,
     scriptureCacheKey: scriptureCache.version,
     scriptureCacheUrl: scriptureCache.url
   });
@@ -51,7 +59,8 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Index() {
-  const { books, scriptureCacheKey, scriptureCacheUrl } = useLoaderData<typeof loader>();
+  const { books, scriptureCacheKey, scriptureCacheUrl, startupPassages } =
+    useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const [passages, setPassages] = useState<BrowserPassage[]>([]);
@@ -59,16 +68,33 @@ export default function Index() {
   const [focusedPassageId, setFocusedPassageId] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [readerPassageId, setReaderPassageId] = useState("");
+  const didApplyStartupPassagesRef = useRef(false);
   const lastVisiblePassageIdRef = useRef("");
 
   useEffect(() => {
-    let ignore = false;
+    if (!("scrollRestoration" in window.history)) {
+      return;
+    }
 
-    setIsScriptureReady(false);
+    const previousScrollRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+
+    return () => {
+      window.history.scrollRestoration = previousScrollRestoration;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+    const savedPassageId = window.localStorage.getItem(READER_POSITION_STORAGE_KEY);
+
+    if (savedPassageId || startupPassages.length === 0) {
+      setIsScriptureReady(false);
+    }
+
     loadScriptureCache(scriptureCacheUrl)
       .then((loadedPassages) => {
         if (!ignore) {
-          const savedPassageId = window.localStorage.getItem(READER_POSITION_STORAGE_KEY);
           const rememberedPassage = savedPassageId
             ? loadedPassages.find((passage) => passage.id === savedPassageId)
             : null;
@@ -91,7 +117,32 @@ export default function Index() {
     return () => {
       ignore = true;
     };
-  }, [scriptureCacheUrl]);
+  }, [scriptureCacheUrl, startupPassages.length]);
+
+  useBrowserLayoutEffect(() => {
+    if (didApplyStartupPassagesRef.current || startupPassages.length === 0) {
+      return;
+    }
+
+    didApplyStartupPassagesRef.current = true;
+
+    const savedPassageId = window.localStorage.getItem(READER_POSITION_STORAGE_KEY);
+
+    if (savedPassageId) {
+      return;
+    }
+
+    const initialPassageId = findDefaultReaderPassageId(startupPassages);
+
+    if (!initialPassageId) {
+      return;
+    }
+
+    setPassages(startupPassages);
+    setReaderPassageId(initialPassageId);
+    lastVisiblePassageIdRef.current = initialPassageId;
+    setIsScriptureReady(true);
+  }, [startupPassages]);
 
   useEffect(() => {
     if (
@@ -137,6 +188,10 @@ export default function Index() {
   }, [isSearchOpen]);
 
   const rememberReaderLocation = useCallback((passageId: string) => {
+    if (lastVisiblePassageIdRef.current === passageId) {
+      return;
+    }
+
     lastVisiblePassageIdRef.current = passageId;
     window.localStorage.setItem(READER_POSITION_STORAGE_KEY, passageId);
   }, []);
@@ -153,7 +208,7 @@ export default function Index() {
       <PassageReader
         filters={{}}
         initialPassageId={readerPassageId}
-        isScriptureReady={isScriptureReady}
+        isScriptureReady={isScriptureReady && Boolean(readerPassageId)}
         onJumpToPassage={jumpToReaderPassage}
         onLocationChange={rememberReaderLocation}
         onOpenSearch={() => setIsSearchOpen(true)}
