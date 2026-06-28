@@ -25,6 +25,7 @@ type SearchFormProps = {
   isScriptureReady: boolean;
   onFocusedPassageChange: (passageId: string | null) => void;
   passages: BrowserPassage[];
+  showJump?: boolean;
 };
 
 export function SearchForm({
@@ -33,7 +34,8 @@ export function SearchForm({
   focusedPassageId,
   isScriptureReady,
   onFocusedPassageChange,
-  passages
+  passages,
+  showJump = true
 }: SearchFormProps) {
   const navigation = useNavigation();
   const submittingRef = useRef(false);
@@ -140,11 +142,13 @@ export function SearchForm({
                 defaultValue={actionData?.question ?? ""}
               />
             )}
-            <PassageJump
-              className="search-form-jump"
-              isScriptureReady={isScriptureReady}
-              passages={passages}
-            />
+            {showJump ? (
+              <PassageJump
+                className="search-form-jump"
+                isScriptureReady={isScriptureReady}
+                passages={passages}
+              />
+            ) : null}
           </div>
           <div className="search-actions">
             <button

@@ -751,7 +751,12 @@ button:disabled {
 }
 
 .reader-header {
+  position: sticky;
+  z-index: 10;
+  top: 0;
   border-bottom: 1px solid var(--line);
+  background: rgba(251, 250, 247, 0.96);
+  backdrop-filter: blur(8px);
   padding-bottom: 12px;
 }
 
@@ -764,6 +769,52 @@ button:disabled {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.search-modal-backdrop {
+  position: fixed;
+  z-index: 35;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(36, 33, 29, 0.52);
+  padding: 24px;
+}
+
+.search-modal {
+  width: min(100%, 960px);
+  max-height: min(880px, calc(100vh - 48px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: 0 18px 60px rgba(36, 33, 29, 0.24);
+  overflow: hidden;
+}
+
+.search-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 16px 18px;
+}
+
+.search-modal-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.search-modal-body {
+  overflow: auto;
+  padding: 18px;
+}
+
+.search-modal-body .search-band {
+  padding: 0 0 18px;
 }
 
 .reader-nav {
@@ -801,7 +852,7 @@ button:disabled {
   display: grid;
   gap: 6px;
   padding-left: 12px;
-  scroll-margin-top: 18px;
+  scroll-margin-top: 96px;
 }
 
 .reader-passage::before {
@@ -1045,11 +1096,28 @@ button:disabled {
 
   .reader-header {
     align-items: flex-start;
+    padding-top: 8px;
   }
 
   .reader-header-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .search-modal-backdrop {
+    padding: 12px;
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .search-modal {
+    width: 100%;
+    max-height: min(840px, calc(100vh - 24px));
+  }
+
+  .search-modal-header,
+  .search-modal-body {
+    padding: 12px;
   }
 
   .reader-nav {
@@ -1069,7 +1137,7 @@ button:disabled {
 
   .reader-passage {
     padding-left: 9px;
-    scroll-margin-top: 12px;
+    scroll-margin-top: 128px;
   }
 
   .reader-passage-button {

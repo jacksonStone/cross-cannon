@@ -11,16 +11,26 @@ import { buildChapterIndex, chapterKey } from "./chapter-index";
 const TRANSLATION_ABBREVIATION = "WEB";
 
 type PassageReaderProps = {
+  backPassageId?: string | null;
   filters: StoredFilters;
   initialPassageId: string;
   isScriptureReady: boolean;
+  onBack?: () => void;
+  onJumpToPassage?: (passageId: string) => void;
+  onLocationChange?: (passageId: string) => void;
+  onOpenSearch?: () => void;
   passages: BrowserPassage[];
 };
 
 export function PassageReader({
+  backPassageId,
   filters,
   initialPassageId,
   isScriptureReady,
+  onBack,
+  onJumpToPassage,
+  onLocationChange,
+  onOpenSearch,
   passages
 }: PassageReaderProps) {
   const navigation = useNavigation();
@@ -31,6 +41,22 @@ export function PassageReader({
     : null;
   const [activeChapterKey, setActiveChapterKey] = useState(initialChapterKey);
   const [selectedPassageId, setSelectedPassageId] = useState("");
+  const activeChapter = activeChapterKey
+    ? chapterIndex.chaptersByKey.get(activeChapterKey)
+    : null;
+  const orderedChapterKeys = activeChapter
+    ? chapterIndex.orderedKeysByBook.get(activeChapter.book) ?? []
+    : [];
+  const activeChapterIndex = activeChapterKey
+    ? orderedChapterKeys.indexOf(activeChapterKey)
+    : -1;
+  const previousChapterKey = activeChapterIndex > 0
+    ? orderedChapterKeys[activeChapterIndex - 1]
+    : null;
+  const nextChapterKey =
+    activeChapterIndex >= 0 && activeChapterIndex < orderedChapterKeys.length - 1
+      ? orderedChapterKeys[activeChapterIndex + 1]
+      : null;
 
   useEffect(() => {
     setActiveChapterKey(initialChapterKey);
@@ -49,22 +75,46 @@ export function PassageReader({
     });
   }, [activeChapterKey, initialPassageId]);
 
-  const activeChapter = activeChapterKey
-    ? chapterIndex.chaptersByKey.get(activeChapterKey)
-    : null;
-  const orderedChapterKeys = activeChapter
-    ? chapterIndex.orderedKeysByBook.get(activeChapter.book) ?? []
-    : [];
-  const activeChapterIndex = activeChapterKey
-    ? orderedChapterKeys.indexOf(activeChapterKey)
-    : -1;
-  const previousChapterKey = activeChapterIndex > 0
-    ? orderedChapterKeys[activeChapterIndex - 1]
-    : null;
-  const nextChapterKey =
-    activeChapterIndex >= 0 && activeChapterIndex < orderedChapterKeys.length - 1
-      ? orderedChapterKeys[activeChapterIndex + 1]
-      : null;
+  useEffect(() => {
+    if (!activeChapter || !onLocationChange) {
+      return;
+    }
+
+    let frame = 0;
+
+    const updateLocation = () => {
+      frame = 0;
+      const passageElements = [
+        ...document.querySelectorAll<HTMLElement>(".reader-passage")
+      ];
+      const currentPassage = passageElements.find((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.bottom > 120;
+      }) ?? passageElements[0];
+      const passageId = currentPassage?.dataset.passageId;
+
+      if (passageId) {
+        onLocationChange(passageId);
+      }
+    };
+
+    const scheduleUpdate = () => {
+      if (!frame) {
+        frame = window.requestAnimationFrame(updateLocation);
+      }
+    };
+
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.requestAnimationFrame(updateLocation);
+
+    return () => {
+      window.removeEventListener("scroll", scheduleUpdate);
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, [activeChapter, activeChapterKey, onLocationChange]);
+
   const isSearchingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
 
@@ -81,7 +131,7 @@ export function PassageReader({
       <section className="reader-empty">
         <p>This passage could not be found.</p>
         <Link className="context-button" to="/">
-          Back to search
+          Back to reader
         </Link>
       </section>
     );
@@ -101,12 +151,25 @@ export function PassageReader({
             filters={filters}
             initialPassageId={initialPassageId}
             isScriptureReady={isScriptureReady}
+            label="Jump"
             launcherVariant="inline"
+            onJumpToPassage={onJumpToPassage}
             passages={passages}
           />
-          <Link className="context-button" to="/">
-            Search
-          </Link>
+          {backPassageId && onBack ? (
+            <button className="context-button" onClick={onBack} type="button">
+              Back
+            </button>
+          ) : null}
+          {onOpenSearch ? (
+            <button className="context-button" onClick={onOpenSearch} type="button">
+              Search
+            </button>
+          ) : (
+            <Link className="context-button" to="/">
+              Search
+            </Link>
+          )}
         </div>
       </header>
 
@@ -134,6 +197,7 @@ export function PassageReader({
                 isInitialPassage ? "is-highlighted" : "",
                 isSelected ? "is-selected" : ""
               ].filter(Boolean).join(" ")}
+              data-passage-id={passage.id}
               key={passage.id}
             >
               <button

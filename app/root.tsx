@@ -25,12 +25,12 @@ export const meta: MetaFunction = () => [
   { title: "Cross Canon" },
   {
     name: "description",
-    content: "Find related Scripture passages from a question."
+    content: "Read Scripture and search related passages by theme."
   },
   { property: "og:title", content: "Cross Canon" },
   {
     property: "og:description",
-    content: "Search Scripture by theme. Related passages. No commentary."
+    content: "Read Scripture and search related passages by theme."
   },
   { property: "og:image", content: "https://www.crosscanon.com/og-image.png" },
   { property: "og:image:width", content: "1200" },
@@ -41,7 +41,7 @@ export const meta: MetaFunction = () => [
   { name: "twitter:title", content: "Cross Canon" },
   {
     name: "twitter:description",
-    content: "Search Scripture by theme. Related passages. No commentary."
+    content: "Read Scripture and search related passages by theme."
   },
   { name: "twitter:image", content: "https://www.crosscanon.com/og-image.png" }
 ];

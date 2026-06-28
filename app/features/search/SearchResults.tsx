@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Form, Link, useNavigation } from "@remix-run/react";
 
@@ -11,14 +11,18 @@ const TRANSLATION_ABBREVIATION = "WEB";
 
 type SearchResultsProps = {
   actionData?: SearchActionData;
+  contextActionLabel?: string;
   focusedPassageId: string | null;
+  onJumpToPassage?: (passageId: string) => void;
   passages: BrowserPassage[];
   results?: SearchResult[];
 };
 
 export function SearchResults({
   actionData,
+  contextActionLabel = "View in context",
   focusedPassageId,
+  onJumpToPassage,
   passages,
   results
 }: SearchResultsProps) {
@@ -33,6 +37,10 @@ export function SearchResults({
   const submittingSimilarPassageId = isSubmittingSimilar
     ? String(navigation.formData?.get("sourcePassageId") ?? "")
     : null;
+
+  useEffect(() => {
+    setSelectedResultId("");
+  }, [actionData?.mode, actionData?.question, actionData?.similarSource?.id, results]);
 
   return (
     <section className="results" aria-live="polite">
@@ -103,13 +111,24 @@ export function SearchResults({
                 </button>
                 {isSelected ? (
                   <div className="result-actions">
-                    <Link
-                      className="context-button"
-                      aria-disabled={!passage}
-                      to={passage ? buildReaderUrl(passage.id, actionData) : "#"}
-                    >
-                      View in context
-                    </Link>
+                    {onJumpToPassage ? (
+                      <button
+                        className="context-button"
+                        disabled={!passage}
+                        onClick={() => passage && onJumpToPassage(passage.id)}
+                        type="button"
+                      >
+                        {contextActionLabel}
+                      </button>
+                    ) : (
+                      <Link
+                        className="context-button"
+                        aria-disabled={!passage}
+                        to={passage ? buildReaderUrl(passage.id, actionData) : "#"}
+                      >
+                        {contextActionLabel}
+                      </Link>
+                    )}
                     <Form method="post">
                       <input type="hidden" name="intent" value="similar-passage" />
                       <input type="hidden" name="sourcePassageId" value={result.id} />

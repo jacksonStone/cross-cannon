@@ -29,6 +29,7 @@ type PassageJumpProps = {
   isScriptureReady: boolean;
   launcherVariant?: "block" | "inline";
   label?: string;
+  onJumpToPassage?: (passageId: string) => void;
   passages: BrowserPassage[];
 };
 
@@ -39,6 +40,7 @@ export function PassageJump({
   isScriptureReady,
   label = "Jump to passage",
   launcherVariant = "block",
+  onJumpToPassage,
   passages
 }: PassageJumpProps) {
   const jumpIndex = useMemo(() => buildJumpIndex(passages), [passages]);
@@ -173,13 +175,27 @@ export function PassageJump({
                 <span>Verse</span>
                 <div className="passage-jump-options">
                   {chapter.verses.map((verse) => (
-                    <Link
-                      className="passage-jump-verse"
-                      key={verse.number}
-                      to={buildReaderUrl(verse.passageId, filters)}
-                    >
-                      {verse.number}
-                    </Link>
+                    onJumpToPassage ? (
+                      <button
+                        className="passage-jump-verse"
+                        key={verse.number}
+                        onClick={() => {
+                          setIsOpen(false);
+                          onJumpToPassage(verse.passageId);
+                        }}
+                        type="button"
+                      >
+                        {verse.number}
+                      </button>
+                    ) : (
+                      <Link
+                        className="passage-jump-verse"
+                        key={verse.number}
+                        to={buildReaderUrl(verse.passageId, filters)}
+                      >
+                        {verse.number}
+                      </Link>
+                    )
                   ))}
                 </div>
               </div>
