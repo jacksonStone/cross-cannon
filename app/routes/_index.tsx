@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -12,25 +12,20 @@ import type { SearchActionData } from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import {
-  getDefaultReaderStartupPassages,
   getScriptureCacheInfo,
   type BrowserPassage
 } from "~/lib/scripture-cache.server";
 
 const READER_POSITION_STORAGE_KEY = "cross-cannon:reader-position:v1";
-const useBrowserLayoutEffect =
-  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 export async function loader({}: LoaderFunctionArgs) {
-  const [books, scriptureCache, startupPassages] = await Promise.all([
+  const [books, scriptureCache] = await Promise.all([
     getIndexedBooks(),
-    getScriptureCacheInfo(),
-    getDefaultReaderStartupPassages()
+    getScriptureCacheInfo()
   ]);
 
   return json({
     books,
-    startupPassages,
     scriptureCacheKey: scriptureCache.version,
     scriptureCacheUrl: scriptureCache.url
   });
@@ -59,24 +54,23 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Index() {
-  const { books, scriptureCacheKey, scriptureCacheUrl, startupPassages } =
+  const { books, scriptureCacheKey, scriptureCacheUrl } =
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const [focusedPassageId, setFocusedPassageId] = useState<string | null>(null);
-  const [hasReadSavedReaderPassage, setHasReadSavedReaderPassage] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [readerPassageId, setReaderPassageId] = useState("");
-  const [savedReaderPassageId, setSavedReaderPassageId] = useState<string | null>(null);
+  const savedReaderPassageId = useMemo(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    return window.localStorage.getItem(READER_POSITION_STORAGE_KEY);
+  }, []);
   const lastVisiblePassageIdRef = useRef("");
-  const useStartupPassages =
-    hasReadSavedReaderPassage
-    && !savedReaderPassageId
-    && startupPassages.length > 0;
   const scriptureLibrary = useScriptureLibrary({
-    scriptureCacheUrl,
-    startupPassages,
-    useStartupPassages
+    scriptureCacheUrl
   });
 
   useEffect(() => {
@@ -92,15 +86,8 @@ export default function Index() {
     };
   }, []);
 
-  useBrowserLayoutEffect(() => {
-    const savedPassageId = window.localStorage.getItem(READER_POSITION_STORAGE_KEY);
-
-    setSavedReaderPassageId(savedPassageId);
-    setHasReadSavedReaderPassage(true);
-  }, []);
-
   useEffect(() => {
-    if (!scriptureLibrary.isReaderReady) {
+    if (!scriptureLibrary.isReady) {
       return;
     }
 
@@ -112,7 +99,7 @@ export default function Index() {
     }
 
     const rememberedPassage =
-      savedReaderPassageId && scriptureLibrary.isFullCacheReady
+      savedReaderPassageId
         ? scriptureLibrary.passageLookup.get(savedReaderPassageId)
         : null;
     const initialPassageId =
@@ -127,8 +114,7 @@ export default function Index() {
   }, [
     readerPassageId,
     savedReaderPassageId,
-    scriptureLibrary.isFullCacheReady,
-    scriptureLibrary.isReaderReady,
+    scriptureLibrary.isReady,
     scriptureLibrary.passageLookup,
     scriptureLibrary.passages
   ]);
@@ -197,8 +183,7 @@ export default function Index() {
       <PassageReader
         filters={{}}
         initialPassageId={readerPassageId}
-        isFullScriptureReady={scriptureLibrary.isFullCacheReady}
-        isScriptureReady={scriptureLibrary.isReaderReady && Boolean(readerPassageId)}
+        isScriptureReady={scriptureLibrary.isReady && Boolean(readerPassageId)}
         onJumpToPassage={jumpToReaderPassage}
         onLocationChange={rememberReaderLocation}
         onOpenSearch={() => setIsSearchOpen(true)}
@@ -239,7 +224,7 @@ export default function Index() {
                 actionData={actionData}
                 books={books}
                 focusedPassageId={focusedPassageId}
-                isScriptureReady={scriptureLibrary.isFullCacheReady}
+                isScriptureReady={scriptureLibrary.isReady}
                 onFocusedPassageChange={setFocusedPassageId}
                 passageLookup={scriptureLibrary.passageLookup}
                 passages={scriptureLibrary.passages}

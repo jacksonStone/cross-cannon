@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cross Cannon Architecture</title>
+    <style>
+      body {
+        color: #17202a;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+        margin: 0;
+        background: #f7f7f4;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 20px 56px;
+      }
+
+      h1,
+      h2 {
+        line-height: 1.15;
+      }
+
+      section {
+        margin-top: 28px;
+        padding: 20px;
+        border: 1px solid #d8d5ca;
+        background: #fff;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      }
+
+      .mermaid {
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Cross Cannon Architecture</h1>
+      <p>
+        Open this file in a browser to render the Mermaid diagrams. The same
+        diagrams are available in <code>docs/architecture.md</code> for GitHub
+        or Markdown preview rendering.
+      </p>
+
+      <section>
+        <h2>Runtime Architecture</h2>
+        <pre class="mermaid">
+flowchart TD
+  User["Browser User"] --> Root["Index Route /"]
+  User --> ReaderRoute["Reader Route /reader/:passageId"]
+  Root --> Loader[Index loader]
+  Root --> Action[Index action]
+  ReaderRoute --> ReaderLoader[Reader loader]
+  Loader --> IndexedBooks[getIndexedBooks]
+  Loader --> CacheInfo[getScriptureCacheInfo]
+  ReaderLoader --> CacheInfo
+  Root --> ScriptureLibrary[useScriptureLibrary]
+  ReaderRoute --> ScriptureLibrary
+  ScriptureLibrary --> BrowserCache["/scripture-cache/:version.json"]
+  BrowserCache --> FullPassageCache["Full browser passage cache"]
+  ScriptureLibrary --> PassageLookup["Shared passageLookup Map"]
+  Root --> PassageReader[PassageReader]
+  Root --> SearchModal[Search modal]
+  ReaderRoute --> PassageReader
+  SearchModal --> SearchForm[SearchForm]
+  SearchModal --> SearchResults[SearchResults]
+  PassageReader --> PassageJump[PassageJump]
+  SearchForm --> PassageJump
+  SearchForm --> Action
+  SearchResults --> PassageLookup
+  SearchForm --> PassageLookup
+  PassageReader --> ChapterIndex[buildChapterIndex]
+  PassageJump --> JumpIndex[buildJumpIndex]
+  Action --> RateLimit[rateLimit by client IP]
+  RateLimit --> SearchServer[handleSearchRequest]
+  SearchServer --> Filters[parseSearchFilters]
+  SearchServer --> SearchEngine["app/lib/search.server.ts"]
+  SearchEngine --> OpenAI["OpenAI embeddings if configured"]
+  SearchEngine --> DB[("SQLite / libSQL passage index")]
+  SearchEngine --> FTS["FTS lexical fallback"]
+  SearchEngine --> Vector["Vector similarity / cached embeddings"]
+  DB --> IndexedBooks
+  DB --> StartupPassages
+  DB --> CacheBuild[buildScriptureCachePayload]
+  CacheBuild --> StaticCache["scripture-cache manifest/json/gzip"]
+        </pre>
+      </section>
+
+      <section>
+        <h2>Scripture Readiness</h2>
+        <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Loading
+  Loading --> Ready: immutable cache loaded
+  Loading --> Error: cache request fails
+  note right of Ready
+    Reader, search, jump modal,
+    result text, similar passage actions,
+    and passage lookup all use the same
+    complete scripture cache.
+  end note
+        </pre>
+      </section>
+
+      <section>
+        <h2>Search Flow</h2>
+        <pre class="mermaid">
+sequenceDiagram
+  participant User
+  participant SearchForm
+  participant IndexAction as / action
+  participant SearchServer as search.server.ts
+  participant SearchEngine as search.server engine
+  participant DB as SQLite/libSQL
+  participant OpenAI
+  participant UI as SearchResults
+  User->>SearchForm: Submit theme query or similar passage
+  SearchForm->>IndexAction: POST /?index form data
+  IndexAction->>IndexAction: rateLimit(client IP)
+  IndexAction->>SearchServer: handleSearchRequest(formData)
+  SearchServer->>SearchServer: parse canon/books/matchCount
+  SearchServer->>DB: validate indexed books
+  alt Theme search
+    SearchServer->>SearchEngine: searchScripture(question, limit, books)
+    SearchEngine->>OpenAI: embed query if API key configured
+    SearchEngine->>DB: vector search / cached embeddings / FTS fallback
+  else Similar passage search
+    SearchServer->>SearchEngine: searchSimilarScripture(sourcePassageId)
+    SearchEngine->>DB: load source embedding + neighbors
+  end
+  SearchEngine-->>SearchServer: passage IDs + score metadata
+  SearchServer-->>IndexAction: SearchActionData JSON
+  IndexAction-->>UI: results metadata
+  UI->>UI: join IDs to full passage text via passageLookup
+        </pre>
+      </section>
+
+      <section>
+        <h2>Reader Flow</h2>
+        <pre class="mermaid">
+flowchart TD
+  InitialPassage[readerPassageId] --> PassageReader
+  PassageReader --> ChapterIndex["buildChapterIndex(passages)"]
+  ChapterIndex --> Chapters[Chapter windows]
+  Chapters --> RenderedRange[Rendered chapter range]
+  RenderedRange --> InitialScroll[Initial scroll settling]
+  InitialScroll --> RAF[bounded requestAnimationFrame loop]
+  InitialScroll --> Fonts[document.fonts.ready if available]
+  UserScroll[User scrolls] --> ExpandWindow[Expand rendered chapter window]
+  ExpandWindow --> Prepend[Preserve scroll when prepending chapters]
+  ExpandWindow --> Append[Append next chapters near bottom]
+  UserPosition[Reading anchor] --> LocationReport[onLocationChange]
+  LocationReport --> LocalStorage[remember reader position]
+  PassageReader --> Audio[Chapter audio button]
+  PassageReader --> PassageActions[Similar passages action]
+  PassageReader --> PassageJump[Jump modal]
+        </pre>
+      </section>
+
+      <section>
+        <h2>Build, Deploy, And Verification</h2>
+        <pre class="mermaid">
+flowchart LR
+  Dev[Local workspace] --> Verify[npm run verify]
+  Verify --> Typecheck[tsc --noEmit]
+  Verify --> Build[npm run build]
+  Verify --> LocalServer[Start production server locally]
+  Verify --> LocalSmoke["HEAD / + POST search"]
+  Verify --> StopServer[Stop local server]
+  Build --> CacheScript["scripts/build-scripture-cache.ts"]
+  CacheScript --> DB[("Local active DB")]
+  CacheScript --> CacheArtifacts["scripture-cache/*.json + *.gz + manifest"]
+  Build --> RemixBuild["remix vite:build"]
+  RemixBuild --> BuildDir["build/client + build/server"]
+  Dev --> Deploy["./deploy.sh"]
+  Deploy --> Package["Zip build/public/scripts/cache/package files"]
+  Package --> SCP[SCP to Ubuntu box]
+  SCP --> Remote["/home/ubuntu/cross-cannon"]
+  Remote --> PreserveStorage["Preserve remote storage/"]
+  Remote --> NpmCi[npm ci --omit=dev]
+  NpmCi --> Restart[systemctl restart cross-cannon]
+  Restart --> VerifyProd[npm run verify-prod]
+  VerifyProd --> Systemd[SSH systemctl is-active + journalctl]
+  VerifyProd --> LiveHead["HEAD https://www.crosscanon.com/"]
+  VerifyProd --> LivePost[POST production search]
+        </pre>
+      </section>
+    </main>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "base",
+        themeVariables: {
+          primaryColor: "#f9f6ee",
+          primaryTextColor: "#17202a",
+          primaryBorderColor: "#80796a",
+          lineColor: "#52616b",
+          secondaryColor: "#e7f0f4",
+          tertiaryColor: "#eef3ec"
+        }
+      });
+    </script>
+  </body>
+</html>

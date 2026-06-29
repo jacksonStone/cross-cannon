@@ -1,0 +1,48 @@
+flowchart TD
+  User["Browser User"] --> Root["Index Route /"]
+  User --> ReaderRoute["Reader Route /reader/:passageId"]
+
+  Root --> Loader[Index loader]
+  Root --> Action[Index action]
+  ReaderRoute --> ReaderLoader[Reader loader]
+
+  Loader --> IndexedBooks[getIndexedBooks]
+  Loader --> CacheInfo[getScriptureCacheInfo]
+  ReaderLoader --> CacheInfo
+
+  Root --> ScriptureLibrary[useScriptureLibrary]
+  ReaderRoute --> ScriptureLibrary
+
+  ScriptureLibrary --> BrowserCache["/scripture-cache/:version.json"]
+  BrowserCache --> FullPassageCache["Full browser passage cache"]
+  ScriptureLibrary --> PassageLookup["Shared passageLookup Map"]
+
+  Root --> PassageReader[PassageReader]
+  Root --> SearchModal[Search modal]
+  ReaderRoute --> PassageReader
+
+  SearchModal --> SearchForm[SearchForm]
+  SearchModal --> SearchResults[SearchResults]
+  PassageReader --> PassageJump[PassageJump]
+  SearchForm --> PassageJump
+
+  SearchForm --> Action
+  SearchResults --> PassageLookup
+  SearchForm --> PassageLookup
+  PassageReader --> ChapterIndex[buildChapterIndex]
+  PassageJump --> JumpIndex[buildJumpIndex]
+
+  Action --> RateLimit[rateLimit by client IP]
+  RateLimit --> SearchServer[handleSearchRequest]
+  SearchServer --> Filters[parseSearchFilters]
+  SearchServer --> SearchEngine["app/lib/search.server.ts"]
+
+  SearchEngine --> OpenAI["OpenAI embeddings if configured"]
+  SearchEngine --> DB[("SQLite / libSQL passage index")]
+  SearchEngine --> FTS["FTS lexical fallback"]
+  SearchEngine --> Vector["Vector similarity / cached embeddings"]
+
+  DB --> IndexedBooks
+  DB --> StartupPassages
+  DB --> CacheBuild[buildScriptureCachePayload]
+  CacheBuild --> StaticCache["scripture-cache manifest/json/gzip"]

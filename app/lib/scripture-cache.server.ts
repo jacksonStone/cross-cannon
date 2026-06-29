@@ -4,8 +4,6 @@ import path from "node:path";
 
 import { ensureDatabase, getDb } from "./db.server";
 
-let defaultReaderStartupPassagesPromise: Promise<BrowserPassage[]> | null = null;
-
 export type BrowserPassage = {
   audioUrl?: string;
   id: string;
@@ -107,61 +105,4 @@ export async function buildScriptureCachePayload() {
       verses: versesByParagraph.get(String(row.id)) ?? []
     })) satisfies BrowserPassage[]
   };
-}
-
-export async function getDefaultReaderStartupPassages() {
-  defaultReaderStartupPassagesPromise ??= readDefaultReaderStartupPassages()
-    .catch((error: unknown) => {
-      defaultReaderStartupPassagesPromise = null;
-      throw error;
-    });
-  return defaultReaderStartupPassagesPromise;
-}
-
-async function readDefaultReaderStartupPassages() {
-  await ensureDatabase();
-
-  const passagesResponse = await getDb().execute({
-    sql: `
-      SELECT p.id, p.reference, p.text, p.result_type, paf.audio_url
-      FROM passages p
-      LEFT JOIN passage_audio_files paf
-        ON paf.passage_id = p.id
-      WHERE p.text <> ''
-        AND p.book = ?
-        AND p.chapter = ?
-      ORDER BY p.chapter, p.verse_start IS NULL, p.verse_start
-    `,
-    args: ["Genesis", 1]
-  });
-  const versesResponse = await getDb().execute({
-    sql: `
-      SELECT paragraph_id, verse, text
-      FROM paragraph_verses
-      WHERE book = ?
-        AND chapter = ?
-      ORDER BY chapter, verse
-    `,
-    args: ["Genesis", 1]
-  });
-  const versesByParagraph = new Map<string, BrowserPassage["verses"]>();
-
-  for (const row of versesResponse.rows) {
-    const paragraphId = String(row.paragraph_id);
-    const verses = versesByParagraph.get(paragraphId) ?? [];
-    verses.push({
-      number: Number(row.verse),
-      text: String(row.text)
-    });
-    versesByParagraph.set(paragraphId, verses);
-  }
-
-  return passagesResponse.rows.map((row) => ({
-    audioUrl: typeof row.audio_url === "string" ? row.audio_url : undefined,
-    id: String(row.id),
-    reference: String(row.reference),
-    text: String(row.text),
-    type: "paragraph",
-    verses: versesByParagraph.get(String(row.id)) ?? []
-  })) satisfies BrowserPassage[];
 }

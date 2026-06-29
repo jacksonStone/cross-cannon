@@ -1,0 +1,26 @@
+flowchart LR
+  Dev[Local workspace] --> Verify[npm run verify]
+  Verify --> Typecheck[tsc --noEmit]
+  Verify --> Build[npm run build]
+  Verify --> LocalServer[Start production server locally]
+  Verify --> LocalSmoke["HEAD / + POST search"]
+  Verify --> StopServer[Stop local server]
+
+  Build --> CacheScript["scripts/build-scripture-cache.ts"]
+  CacheScript --> DB[("Local active DB")]
+  CacheScript --> CacheArtifacts["scripture-cache/*.json + *.gz + manifest"]
+  Build --> RemixBuild["remix vite:build"]
+  RemixBuild --> BuildDir["build/client + build/server"]
+
+  Dev --> Deploy["./deploy.sh"]
+  Deploy --> Package["Zip build/public/scripts/cache/package files"]
+  Package --> SCP[SCP to Ubuntu box]
+  SCP --> Remote["/home/ubuntu/cross-cannon"]
+  Remote --> PreserveStorage["Preserve remote storage/"]
+  Remote --> NpmCi[npm ci --omit=dev]
+  NpmCi --> Restart[systemctl restart cross-cannon]
+
+  Restart --> VerifyProd[npm run verify-prod]
+  VerifyProd --> Systemd[SSH systemctl is-active + journalctl]
+  VerifyProd --> LiveHead["HEAD https://www.crosscanon.com/"]
+  VerifyProd --> LivePost[POST production search]

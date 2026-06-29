@@ -8,6 +8,7 @@
     "dev": "remix vite:dev --host 127.0.0.1 --port 3005",
     "start": "NODE_ENV=production remix-serve ./build/server/index.js",
     "typecheck": "tsc --noEmit",
+    "render:architecture": "node scripts/render-architecture.mjs",
     "verify": "scripts/verify.sh",
     "verify-prod": "scripts/verify-prod.sh",
     "index:bible": "node --import tsx scripts/index-bible.ts",
@@ -25,10 +26,12 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.15.0",
     "@remix-run/dev": "2.16.0",
     "@types/node": "^22.10.7",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "pngjs": "^7.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vite": "^5.4.11"

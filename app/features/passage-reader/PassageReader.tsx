@@ -80,7 +80,6 @@ const DEFAULT_READER_SETTINGS = createPresetReaderSettings("default", "paper");
 type PassageReaderProps = {
   filters: StoredFilters;
   initialPassageId: string;
-  isFullScriptureReady?: boolean;
   isScriptureReady: boolean;
   onJumpToPassage?: (passageId: string) => void;
   onLocationChange?: (passageId: string) => void;
@@ -91,7 +90,6 @@ type PassageReaderProps = {
 export function PassageReader({
   filters,
   initialPassageId,
-  isFullScriptureReady = false,
   isScriptureReady,
   onJumpToPassage,
   onLocationChange,
@@ -584,7 +582,7 @@ export function PassageReader({
           <PassageJump
             filters={filters}
             initialPassageId={passageJumpInitialPassageId}
-            isScriptureReady={isFullScriptureReady}
+            isScriptureReady={isScriptureReady}
             label="Jump"
             launcherVariant="inline"
             onJumpToPassage={onJumpToPassage}

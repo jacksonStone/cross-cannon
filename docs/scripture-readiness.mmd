@@ -1,0 +1,11 @@
+stateDiagram-v2
+  [*] --> Loading
+  Loading --> Ready: immutable cache loaded
+  Loading --> Error: cache request fails
+
+  note right of Ready
+    Reader, search, jump modal,
+    result text, similar passage actions,
+    and passage lookup all use the same
+    complete scripture cache.
+  end note

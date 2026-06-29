@@ -38,8 +38,7 @@ export default function ReaderRoute() {
       <PassageReader
         filters={filters}
         initialPassageId={passageId}
-        isFullScriptureReady={scriptureLibrary.isFullCacheReady}
-        isScriptureReady={scriptureLibrary.isReaderReady}
+        isScriptureReady={scriptureLibrary.isReady}
         passages={scriptureLibrary.passages}
       />
     </main>

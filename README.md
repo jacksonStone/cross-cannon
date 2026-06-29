@@ -12,9 +12,9 @@ the browser loads the full passage text from a versioned static scripture cache.
 ## What The App Does
 
 1. The index route in `app/routes/_index.tsx` is intentionally thin. It wires
-   the route loader/action to search feature modules, preloads the Genesis 1
-   reader startup payload for first-time visitors, loads the browser scripture
-   cache, and composes the reader, search form, and results components.
+   the route loader/action to search feature modules, loads the browser
+   scripture cache, and composes the reader, search form, and results
+   components.
 2. `app/features/search/search.server.ts` ensures the database schema exists,
    reads and caches indexed books from the `passages` table, validates search
    form data, scopes searches by canon/books, and returns paragraph result
@@ -60,7 +60,7 @@ app/features/search/types.ts                  shared search feature types
 app/features/scripture/                       browser scripture cache resource and lookup helpers
 app/lib/search.server.ts                      embedding/vector/FTS search engine
 app/lib/scripture-cache.server.ts             static scripture cache metadata/routes
-app/entry.server.tsx                          production startup cache warmers
+app/entry.server.tsx                          production cache warmers
 ```
 
 Keep route files small. If a future feature is about searching, filtering, or
@@ -149,10 +149,9 @@ scripture-cache/manifest.json
 The cache route serves these artifacts with long-lived immutable cache headers
 and gzip when the browser accepts it.
 
-On production startup, `app/entry.server.tsx` warms both the passage embedding
-cache and the small reader startup cache. After those warmups complete, the
-first homepage request can render the reader shell quickly while the browser
-continues loading the full immutable scripture cache in the background.
+On production startup, `app/entry.server.tsx` warms the passage embedding cache
+and indexed-books cache. The browser loads the full immutable scripture cache
+before enabling reader and search controls that need passage text.
 
 ## Environment
 

@@ -7,7 +7,6 @@ import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 
 import { getIndexedBooks } from "./features/search/search.server";
-import { getDefaultReaderStartupPassages } from "./lib/scripture-cache.server";
 import { warmPassageEmbeddingCache } from "./lib/search.server";
 
 const ABORT_DELAY = 5_000;
@@ -43,17 +42,12 @@ function startRuntimeWarmups() {
       console.error("Failed to warm passage embedding cache", error);
     });
 
-  void Promise.all([
-    getIndexedBooks(),
-    getDefaultReaderStartupPassages()
-  ])
-    .then(([books, passages]) => {
-      console.info(
-        `Warmed reader startup cache: ${books.length} books, ${passages.length} passages`
-      );
+  void getIndexedBooks()
+    .then((books) => {
+      console.info(`Warmed indexed books cache: ${books.length} books`);
     })
     .catch((error: unknown) => {
-      console.error("Failed to warm reader startup cache", error);
+      console.error("Failed to warm indexed books cache", error);
     });
 }
 

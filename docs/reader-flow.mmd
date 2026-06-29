@@ -1,0 +1,20 @@
+flowchart TD
+  InitialPassage[readerPassageId] --> PassageReader
+  PassageReader --> ChapterIndex["buildChapterIndex(passages)"]
+  ChapterIndex --> Chapters[Chapter windows]
+  Chapters --> RenderedRange[Rendered chapter range]
+
+  RenderedRange --> InitialScroll[Initial scroll settling]
+  InitialScroll --> RAF[bounded requestAnimationFrame loop]
+  InitialScroll --> Fonts[document.fonts.ready if available]
+
+  UserScroll[User scrolls] --> ExpandWindow[Expand rendered chapter window]
+  ExpandWindow --> Prepend[Preserve scroll when prepending chapters]
+  ExpandWindow --> Append[Append next chapters near bottom]
+
+  UserPosition[Reading anchor] --> LocationReport[onLocationChange]
+  LocationReport --> LocalStorage[remember reader position]
+
+  PassageReader --> Audio[Chapter audio button]
+  PassageReader --> PassageActions[Similar passages action]
+  PassageReader --> PassageJump[Jump modal]
