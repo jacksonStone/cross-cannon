@@ -543,8 +543,40 @@ export function PassageReader({
 
   if (!isScriptureReady) {
     return (
-      <section className="reader-empty">
-        <p>Loading Scripture...</p>
+      <section
+        className={`reader-page reader-theme-${readerSettings.theme} reader-loading`}
+        aria-busy="true"
+        aria-labelledby="reader-loading-title"
+        style={readerStyle}
+      >
+        <header className="reader-header reader-loading-header">
+          <div className="reader-header-title">
+            <h1 id="reader-loading-title">Loading Scripture</h1>
+          </div>
+          <div className="reader-loading-meter" aria-hidden="true">
+            <span />
+          </div>
+        </header>
+
+        <div className="reader-loading-passages" aria-hidden="true">
+          <div className="reader-loading-chapter-heading">
+            <span />
+            <span />
+          </div>
+          <div className="reader-loading-lines">
+            <span className="reader-loading-line is-wide" />
+            <span className="reader-loading-line" />
+            <span className="reader-loading-line is-medium" />
+            <span className="reader-loading-line is-wide" />
+            <span className="reader-loading-line is-short" />
+          </div>
+          <div className="reader-loading-lines">
+            <span className="reader-loading-line is-medium" />
+            <span className="reader-loading-line is-wide" />
+            <span className="reader-loading-line" />
+            <span className="reader-loading-line is-short" />
+          </div>
+        </div>
       </section>
     );
   }
