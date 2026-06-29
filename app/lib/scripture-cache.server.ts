@@ -18,27 +18,12 @@ export type BrowserPassage = {
 
 export async function getScriptureCacheVersion() {
   await ensureDatabase();
+  return getScriptureCachePayloadVersion(await buildScriptureCachePayload());
+}
 
-  const response = await getDb().execute(`
-    SELECT
-      (SELECT COUNT(*) FROM passages) AS passage_count,
-      (SELECT COUNT(*) FROM paragraph_verses) AS verse_count,
-      (SELECT COUNT(*) FROM passage_audio_files) AS audio_count,
-      (SELECT COALESCE(MAX(id), '') FROM passages) AS max_passage_id,
-      (SELECT COALESCE(MAX(source_hash), '') FROM paragraph_verses) AS max_verse_hash,
-      (SELECT COALESCE(MAX(updated_at), '') FROM passage_audio_files) AS max_audio_updated_at
-  `);
-  const row = response.rows[0];
-
+export function getScriptureCachePayloadVersion(payload: { passages: BrowserPassage[] }) {
   return createHash("sha256")
-    .update([
-      row?.passage_count,
-      row?.verse_count,
-      row?.audio_count,
-      row?.max_passage_id,
-      row?.max_verse_hash,
-      row?.max_audio_updated_at
-    ].join("-"))
+    .update(JSON.stringify(payload))
     .digest("hex")
     .slice(0, 16);
 }

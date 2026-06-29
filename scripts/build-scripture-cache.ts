@@ -5,16 +5,16 @@ import path from "node:path";
 import { ensureDatabase } from "../app/lib/db.server";
 import {
   buildScriptureCachePayload,
-  getScriptureCacheVersion
+  getScriptureCachePayloadVersion
 } from "../app/lib/scripture-cache.server";
 
 const cacheDir = path.join(process.cwd(), "scripture-cache");
 
 await ensureDatabase();
 
-const version = await getScriptureCacheVersion();
 const payload = await buildScriptureCachePayload();
 const body = JSON.stringify(payload);
+const version = getScriptureCachePayloadVersion(payload);
 const gzippedBody = gzipSync(body);
 
 await rm(cacheDir, { force: true, recursive: true });
