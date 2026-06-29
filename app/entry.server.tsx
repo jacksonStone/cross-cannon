@@ -7,7 +7,6 @@ import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 
 import { getIndexedBooks } from "./features/search/search.server";
-import { warmPassageEmbeddingCache } from "./lib/search.server";
 
 const ABORT_DELAY = 5_000;
 
@@ -33,14 +32,6 @@ function startRuntimeWarmups() {
   }
 
   hasStartedWarmups = true;
-
-  void warmPassageEmbeddingCache()
-    .then((count) => {
-      console.info(`Warmed ${count} passage embeddings`);
-    })
-    .catch((error: unknown) => {
-      console.error("Failed to warm passage embedding cache", error);
-    });
 
   void getIndexedBooks()
     .then((books) => {

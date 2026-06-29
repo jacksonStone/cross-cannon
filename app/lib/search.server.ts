@@ -9,14 +9,6 @@ import {
 import { embedText, getDefaultEmbeddingConfig } from "./embeddings.server";
 
 let vectorSearchTail = Promise.resolve();
-let passageEmbeddingCache: Promise<CachedPassageEmbedding[]> | null = null;
-
-type CachedPassageEmbedding = {
-  id: string;
-  reference: string;
-  book: string;
-  vector: Float32Array;
-};
 
 type StoredEmbeddingRow = {
   embedding?: unknown;
@@ -51,14 +43,6 @@ export async function searchScripture(
   trace.mark("embedText");
 
   if (embedding) {
-    const cachedResults = await searchCachedEmbeddings(embedding, limit, books, options);
-    trace.mark("searchCachedEmbeddings", { count: cachedResults.length });
-    if (cachedResults.length >= Math.min(4, limit)) {
-      const results = await attachVerseHighlights(embedding, cachedResults);
-      trace.finish("cached-vector", { count: results.length });
-      return results;
-    }
-
     const vectorResults = await runVectorSearchExclusive(
       () => searchVector(embedding, limit, books, options),
       () => trace.mark("searchVectorStart")
@@ -118,20 +102,6 @@ export async function searchSimilarScripture(
   }
 
   const options = { excludeIds: [passageId] } satisfies SearchEmbeddingOptions;
-  const cachedResults = await searchCachedEmbeddings(embedding, limit, books, options);
-  trace.mark("searchCachedEmbeddings", { count: cachedResults.length });
-  if (cachedResults.length >= Math.min(4, limit)) {
-    const results = await attachVerseHighlights(embedding, cachedResults);
-    trace.finish("cached-vector", { count: results.length });
-    return {
-      source: {
-        id: String(source.id),
-        reference: String(source.reference)
-      },
-      results
-    };
-  }
-
   const vectorResults = await runVectorSearchExclusive(
     () => searchVector(embedding, limit, books, options),
     () => trace.mark("searchVectorStart")
@@ -161,12 +131,6 @@ export async function searchSimilarScripture(
     },
     results
   };
-}
-
-export async function warmPassageEmbeddingCache() {
-  const passages = await getPassageEmbeddingCache();
-
-  return passages.length;
 }
 
 async function attachVerseHighlights(
@@ -350,72 +314,6 @@ async function runVectorSearchExclusive<T>(
   } finally {
     release();
   }
-}
-
-async function searchCachedEmbeddings(
-  embedding: ArrayLike<number>,
-  limit: number,
-  books: string[],
-  options: SearchEmbeddingOptions = {}
-) {
-  const query = normalizeVector(embedding);
-  const bookFilter = books.length > 0 ? new Set(books) : null;
-  const excludedIds = new Set(options.excludeIds ?? []);
-  const passages = await getPassageEmbeddingCache();
-  const topResults: ScriptureResult[] = [];
-
-  for (const passage of passages) {
-    if (excludedIds.has(passage.id)) {
-      continue;
-    }
-
-    if (bookFilter && !bookFilter.has(passage.book)) {
-      continue;
-    }
-
-    const score = cosineSimilarity(query, passage.vector);
-
-    if (!Number.isFinite(score)) {
-      continue;
-    }
-
-    insertTopResult(topResults, {
-      id: passage.id,
-      reference: passage.reference,
-      type: "paragraph",
-      score
-    }, limit);
-  }
-
-  return topResults;
-}
-
-async function getPassageEmbeddingCache() {
-  passageEmbeddingCache ??= loadPassageEmbeddingCache();
-  return passageEmbeddingCache;
-}
-
-async function loadPassageEmbeddingCache() {
-  const response = await getDb().execute(`
-    SELECT id, reference, book, embedding, embedding_json
-    FROM passages
-    WHERE embedding IS NOT NULL OR embedding_json IS NOT NULL
-  `);
-
-  return response.rows.flatMap((row) => {
-    const vector = readStoredEmbedding(row as StoredEmbeddingRow);
-
-    if (!vector) {
-      return [];
-    }
-
-    return {
-      id: String(row.id),
-      reference: String(row.reference),
-      book: String(row.book),
-      vector
-    };
-  });
 }
 
 async function searchStoredEmbeddings(
