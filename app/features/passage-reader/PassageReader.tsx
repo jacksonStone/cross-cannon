@@ -105,6 +105,7 @@ export function PassageReader({
   const [readerSettings, setReaderSettings] = useState(DEFAULT_READER_SETTINGS);
   const [hasLoadedReaderSettings, setHasLoadedReaderSettings] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isReaderToolsOpen, setIsReaderToolsOpen] = useState(false);
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
   const [renderedRange, setRenderedRange] = useState({
     endIndex: -1,
@@ -170,9 +171,9 @@ export function PassageReader({
     },
     [orderedChapterEntries, renderedRange.endIndex, renderedRange.startIndex]
   );
+  const activeAudioUrl = activeChapter?.audioUrl ?? null;
   const passageJumpInitialPassageId =
     activeChapter?.passages[0]?.id ?? initialPassageId;
-  const activeAudioUrl = activeChapter?.audioUrl ?? null;
   const isActiveChapterPlaying = Boolean(
     activeAudioUrl && playingAudioUrl === activeAudioUrl
   );
@@ -610,72 +611,105 @@ export function PassageReader({
             {activeChapter.book} {activeChapter.chapter}
           </h1>
         </div>
-        <div className="reader-header-actions">
-          <PassageJump
-            filters={filters}
-            initialPassageId={passageJumpInitialPassageId}
-            isScriptureReady={isScriptureReady}
-            label="Jump"
-            launcherVariant="inline"
-            onJumpToPassage={onJumpToPassage}
-            passages={passages}
-          />
+        {!isReaderToolsOpen ? (
           <button
-            aria-label={
-              activeAudioUrl
-                ? `${isActiveChapterPlaying ? "Pause" : "Play"} ${activeChapter.book} ${activeChapter.chapter} audio`
-                : `Audio unavailable for ${activeChapter.book} ${activeChapter.chapter}`
-            }
-            className="context-button reader-icon-button"
-            disabled={!activeAudioUrl}
-            onClick={toggleActiveChapterAudio}
-            title={
-              activeAudioUrl
-                ? `${isActiveChapterPlaying ? "Pause" : "Play"} audio`
-                : "Audio unavailable"
-            }
+            aria-expanded={false}
+            aria-label="Open reader tools"
+            className="context-button reader-icon-button reader-tools-trigger"
+            onClick={() => setIsReaderToolsOpen(true)}
+            title="Open reader tools"
             type="button"
           >
-            {isActiveChapterPlaying ? "❚❚" : "🔊"}
+            ⋮
           </button>
-          {onOpenSearch ? (
+        ) : (
+          <div className="reader-header-actions">
             <button
-              aria-label="Search"
-              className="context-button reader-icon-button"
-              onClick={onOpenSearch}
-              title="Search"
+              aria-label="Close reader tools"
+              className="context-button reader-icon-button reader-tools-close"
+              onClick={() => {
+                setIsReaderToolsOpen(false);
+                setIsSettingsOpen(false);
+              }}
+              title="Close reader tools"
               type="button"
             >
-              🔍
+              ×
             </button>
-          ) : (
-            <Link
-              aria-label="Search"
-              className="context-button reader-icon-button"
-              title="Search"
-              to="/"
-            >
-              🔍
-            </Link>
-          )}
-          <div className="reader-settings" ref={settingsRef}>
             <button
-              aria-expanded={isSettingsOpen}
-              aria-haspopup="dialog"
-              className="context-button reader-settings-trigger"
-              onClick={() => setIsSettingsOpen((isOpen) => !isOpen)}
+              aria-label={
+                activeAudioUrl
+                  ? `${isActiveChapterPlaying ? "Pause" : "Play"} ${activeChapter.book} ${activeChapter.chapter} audio`
+                  : `Audio unavailable for ${activeChapter.book} ${activeChapter.chapter}`
+              }
+              className="context-button reader-icon-button"
+              disabled={!activeAudioUrl}
+              onClick={toggleActiveChapterAudio}
+              title={
+                activeAudioUrl
+                  ? `${isActiveChapterPlaying ? "Pause" : "Play"} audio`
+                  : "Audio unavailable"
+              }
               type="button"
             >
-              Aa
+              {isActiveChapterPlaying ? "❚❚" : "🔊"}
             </button>
-            {isSettingsOpen ? (
-              <ReaderSettingsPanel
-                onChange={setReaderSettings}
-                settings={readerSettings}
-              />
-            ) : null}
+            {onOpenSearch ? (
+              <button
+                aria-label="Search"
+                className="context-button reader-icon-button"
+                onClick={() => {
+                  setIsReaderToolsOpen(false);
+                  setIsSettingsOpen(false);
+                  onOpenSearch();
+                }}
+                title="Search"
+                type="button"
+              >
+                🔍
+              </button>
+            ) : (
+              <Link
+                aria-label="Search"
+                className="context-button reader-icon-button"
+                title="Search"
+                to="/"
+              >
+                🔍
+              </Link>
+            )}
+            <PassageJump
+              filters={filters}
+              initialPassageId={passageJumpInitialPassageId}
+              isScriptureReady={isScriptureReady}
+              label="Jump"
+              launcherVariant="inline"
+              onJumpToPassage={(passageId) => {
+                setIsReaderToolsOpen(false);
+                setIsSettingsOpen(false);
+                onJumpToPassage?.(passageId);
+              }}
+              passages={passages}
+            />
+            <div className="reader-settings" ref={settingsRef}>
+              <button
+                aria-expanded={isSettingsOpen}
+                aria-haspopup="dialog"
+                className="context-button reader-settings-trigger"
+                onClick={() => setIsSettingsOpen((isOpen) => !isOpen)}
+                type="button"
+              >
+                Aa
+              </button>
+              {isSettingsOpen ? (
+                <ReaderSettingsPanel
+                  onChange={setReaderSettings}
+                  settings={readerSettings}
+                />
+              ) : null}
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       <div className="reader-passages">

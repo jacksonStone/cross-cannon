@@ -24,6 +24,8 @@ type SearchFormProps = {
   books: string[];
   focusedPassageId: string | null;
   isScriptureReady: boolean;
+  jumpInitialPassageId?: string;
+  onJumpToPassage?: (passageId: string) => void;
   onFocusedPassageChange: (passageId: string | null) => void;
   passageLookup: PassageLookup;
   passages: BrowserPassage[];
@@ -35,6 +37,8 @@ export function SearchForm({
   books,
   focusedPassageId,
   isScriptureReady,
+  jumpInitialPassageId,
+  onJumpToPassage,
   onFocusedPassageChange,
   passageLookup,
   passages,
@@ -98,9 +102,6 @@ export function SearchForm({
           submittingRef.current = true;
         }}
       >
-        {!focusedPassageId ? (
-          <label htmlFor="question">Search for passages about...</label>
-        ) : null}
         {focusedPassageId ? (
           <>
             <input type="hidden" name="intent" value="similar-passage" />
@@ -112,6 +113,20 @@ export function SearchForm({
         {selectedBooksForCanon.map((book) => (
           <input key={book} type="hidden" name="books" value={book} />
         ))}
+        {showJump ? (
+          <PassageJump
+            className="search-form-jump"
+            initialPassageId={jumpInitialPassageId}
+            isScriptureReady={isScriptureReady}
+            label="Jump to specific passage"
+            launcherVariant="inline"
+            onJumpToPassage={onJumpToPassage}
+            passages={passages}
+          />
+        ) : null}
+        {!focusedPassageId ? (
+          <label htmlFor="question">Search for passages about...</label>
+        ) : null}
         <div className="search-row">
           <div className="search-primary">
             {focusedPassageId ? (
@@ -141,13 +156,6 @@ export function SearchForm({
                 defaultValue={actionData?.question ?? ""}
               />
             )}
-            {showJump ? (
-              <PassageJump
-                className="search-form-jump"
-                isScriptureReady={isScriptureReady}
-                passages={passages}
-              />
-            ) : null}
           </div>
           <div className="search-actions">
             <button

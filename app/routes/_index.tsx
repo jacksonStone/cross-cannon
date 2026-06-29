@@ -225,10 +225,11 @@ export default function Index() {
                 books={books}
                 focusedPassageId={focusedPassageId}
                 isScriptureReady={scriptureLibrary.isReady}
+                jumpInitialPassageId={readerPassageId}
                 onFocusedPassageChange={setFocusedPassageId}
+                onJumpToPassage={jumpToReaderPassage}
                 passageLookup={scriptureLibrary.passageLookup}
                 passages={scriptureLibrary.passages}
-                showJump={false}
               />
 
               {actionData?.error ? (

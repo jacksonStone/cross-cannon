@@ -106,6 +106,10 @@ npm run verify
 npm run verify-prod
 ```
 
+For UI changes, capture relevant desktop and mobile screenshots before deploy
+and share them for preview. Save preview artifacts under `docs/screenshots/`
+and embed them with markdown image links so they render directly in chat.
+
 `npm run verify` is the one-shot local verification command. It typechecks,
 builds the scripture cache and Remix app, starts the production server, waits
 for it to respond, smoke-checks the homepage, smoke-checks a search POST, and
