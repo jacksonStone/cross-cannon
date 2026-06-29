@@ -15,8 +15,13 @@ import {
   getScriptureCacheInfo,
   type BrowserPassage
 } from "~/lib/scripture-cache.server";
+import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 const READER_POSITION_STORAGE_KEY = "cross-cannon:reader-position:v1";
+const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
+const READER_THEMES = ["paper", "sepia", "dark", "contrast"] as const;
+
+type ReaderTheme = typeof READER_THEMES[number];
 
 export async function loader({}: LoaderFunctionArgs) {
   const [books, scriptureCache] = await Promise.all([
@@ -61,6 +66,7 @@ export default function Index() {
   const [focusedPassageId, setFocusedPassageId] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [readerPassageId, setReaderPassageId] = useState("");
+  const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
   const savedReaderPassageId = useMemo(() => {
     if (typeof window === "undefined") {
       return null;
@@ -72,6 +78,12 @@ export default function Index() {
   const scriptureLibrary = useScriptureLibrary({
     scriptureCacheUrl
   });
+
+  useModalScrollLock(isSearchOpen);
+
+  useEffect(() => {
+    setReaderTheme(readSavedReaderTheme());
+  }, []);
 
   useEffect(() => {
     if (!("scrollRestoration" in window.history)) {
@@ -177,6 +189,12 @@ export default function Index() {
     setIsSearchOpen(false);
   }, [rememberReaderLocation]);
 
+  const updateReaderTheme = useCallback((theme: string) => {
+    if (isReaderTheme(theme)) {
+      setReaderTheme(theme);
+    }
+  }, []);
+
   return (
     <main className="reader-shell">
       <data value={scriptureCacheKey} data-scripture-cache-key hidden />
@@ -187,13 +205,16 @@ export default function Index() {
         onJumpToPassage={jumpToReaderPassage}
         onLocationChange={rememberReaderLocation}
         onOpenSearch={() => setIsSearchOpen(true)}
+        onThemeChange={updateReaderTheme}
         passages={scriptureLibrary.passages}
       />
 
       {isSearchOpen ? (
         <div
-          className="search-modal-backdrop"
-          onMouseDown={(event) => {
+          className={`search-modal-backdrop reader-theme-${readerTheme}`}
+          onClick={(event) => {
+            event.stopPropagation();
+
             if (event.target === event.currentTarget) {
               setIsSearchOpen(false);
             }
@@ -203,6 +224,8 @@ export default function Index() {
             aria-labelledby="search-modal-title"
             aria-modal="true"
             className="search-modal"
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
             role="dialog"
           >
             <header className="search-modal-header">
@@ -261,4 +284,27 @@ function findDefaultReaderPassageId(passages: BrowserPassage[]) {
   return passages.find((passage) => passage.reference.startsWith("Genesis "))?.id
     ?? passages[0]?.id
     ?? "";
+}
+
+function readSavedReaderTheme(): ReaderTheme {
+  if (typeof window === "undefined") {
+    return "paper";
+  }
+
+  try {
+    const savedSettings = window.localStorage.getItem(READER_SETTINGS_STORAGE_KEY);
+
+    if (!savedSettings) {
+      return "paper";
+    }
+
+    const parsedSettings = JSON.parse(savedSettings) as { theme?: unknown };
+    return isReaderTheme(parsedSettings.theme) ? parsedSettings.theme : "paper";
+  } catch {
+    return "paper";
+  }
+}
+
+function isReaderTheme(value: unknown): value is ReaderTheme {
+  return typeof value === "string" && READER_THEMES.includes(value as ReaderTheme);
 }

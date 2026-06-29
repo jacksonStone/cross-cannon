@@ -26,6 +26,8 @@ const INITIAL_NEXT_CHAPTERS = 24;
 const CHAPTER_WINDOW_EXPAND_COUNT = 10;
 const CHAPTER_WINDOW_EDGE_PX = 2200;
 const INITIAL_SCROLL_MAX_FRAMES = 8;
+const TOP_EDGE_SCROLL_RESTORE_PX = 32;
+const TOP_EDGE_SCROLL_MIN_DELTA_PX = 640;
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -84,6 +86,7 @@ type PassageReaderProps = {
   onJumpToPassage?: (passageId: string) => void;
   onLocationChange?: (passageId: string) => void;
   onOpenSearch?: () => void;
+  onThemeChange?: (theme: ReaderTheme) => void;
   passages: BrowserPassage[];
 };
 
@@ -94,6 +97,7 @@ export function PassageReader({
   onJumpToPassage,
   onLocationChange,
   onOpenSearch,
+  onThemeChange,
   passages
 }: PassageReaderProps) {
   const navigation = useNavigation();
@@ -101,6 +105,8 @@ export function PassageReader({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasScrolledToInitialPassageRef = useRef(false);
   const lastReportedPassageIdRef = useRef("");
+  const lastScrollYRef = useRef(0);
+  const isRestoringTopEdgeScrollRef = useRef(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const [readerSettings, setReaderSettings] = useState(DEFAULT_READER_SETTINGS);
   const [hasLoadedReaderSettings, setHasLoadedReaderSettings] = useState(false);
@@ -111,6 +117,7 @@ export function PassageReader({
     endIndex: -1,
     startIndex: 0
   });
+
   const prependSnapshotRef = useRef<{
     scrollHeight: number;
     scrollY: number;
@@ -321,6 +328,63 @@ export function PassageReader({
   }, [renderedRange.startIndex]);
 
   useEffect(() => {
+    if (!isScriptureReady) {
+      return;
+    }
+
+    lastScrollYRef.current = window.scrollY;
+
+    const restoreAccidentalTopEdgeScroll = (event: Event) => {
+      const currentScrollY = window.scrollY;
+      const previousScrollY = lastScrollYRef.current;
+      const minJumpDistance = Math.max(
+        TOP_EDGE_SCROLL_MIN_DELTA_PX,
+        window.innerHeight * 0.75
+      );
+      const isAbruptTopEdgeScroll =
+        hasScrolledToInitialPassageRef.current
+        && canReportLocationRef.current
+        && !isRestoringTopEdgeScrollRef.current
+        && currentScrollY <= TOP_EDGE_SCROLL_RESTORE_PX
+        && previousScrollY - currentScrollY >= minJumpDistance;
+
+      if (isAbruptTopEdgeScroll) {
+        event.stopImmediatePropagation();
+        isRestoringTopEdgeScrollRef.current = true;
+        canReportLocationRef.current = false;
+
+        window.requestAnimationFrame(() => {
+          window.scrollTo({
+            behavior: "auto",
+            left: 0,
+            top: previousScrollY
+          });
+          lastScrollYRef.current = previousScrollY;
+
+          window.requestAnimationFrame(() => {
+            isRestoringTopEdgeScrollRef.current = false;
+          });
+        });
+        return;
+      }
+
+      if (!isRestoringTopEdgeScrollRef.current) {
+        lastScrollYRef.current = currentScrollY;
+      }
+    };
+
+    window.addEventListener("scroll", restoreAccidentalTopEdgeScroll, {
+      capture: true
+    });
+
+    return () => {
+      window.removeEventListener("scroll", restoreAccidentalTopEdgeScroll, {
+        capture: true
+      });
+    };
+  }, [isScriptureReady]);
+
+  useEffect(() => {
     if (!isScriptureReady || orderedChapterEntries.length === 0) {
       return;
     }
@@ -523,23 +587,51 @@ export function PassageReader({
   }, [hasLoadedReaderSettings, readerSettings]);
 
   useEffect(() => {
+    if (!hasLoadedReaderSettings) {
+      return;
+    }
+
+    onThemeChange?.(readerSettings.theme);
+  }, [hasLoadedReaderSettings, onThemeChange, readerSettings.theme]);
+
+  useEffect(() => {
     if (!isSettingsOpen) {
       return;
     }
 
-    const closeOnPointerDown = (event: PointerEvent) => {
+    const closeOnOutsideClick = (event: MouseEvent) => {
       const target = event.target;
 
+      if (!(target instanceof Element)) {
+        return;
+      }
+
       if (
-        target instanceof Node
-        && !settingsRef.current?.contains(target)
+        settingsRef.current?.contains(target)
+        || target.closest(".reader-header-actions")
       ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setIsSettingsOpen(false);
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         setIsSettingsOpen(false);
       }
     };
 
-    window.addEventListener("pointerdown", closeOnPointerDown);
-    return () => window.removeEventListener("pointerdown", closeOnPointerDown);
+    window.addEventListener("click", closeOnOutsideClick, { capture: true });
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      window.removeEventListener("click", closeOnOutsideClick, { capture: true });
+      window.removeEventListener("keydown", closeOnEscape);
+    };
   }, [isSettingsOpen]);
 
   if (!isScriptureReady) {
@@ -693,10 +785,12 @@ export function PassageReader({
             />
             <div className="reader-settings" ref={settingsRef}>
               <button
+                aria-label="Reader text settings"
                 aria-expanded={isSettingsOpen}
                 aria-haspopup="dialog"
                 className="context-button reader-settings-trigger"
                 onClick={() => setIsSettingsOpen((isOpen) => !isOpen)}
+                title="Reader text settings"
                 type="button"
               >
                 Aa
@@ -802,6 +896,10 @@ function ReaderSettingsPanel({
     <section
       aria-label="Reader settings"
       className="reader-settings-panel"
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+      onTouchMove={(event) => event.stopPropagation()}
+      onWheel={(event) => event.stopPropagation()}
       role="dialog"
     >
       <div className="reader-setting-group">

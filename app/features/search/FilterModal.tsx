@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 
+import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
+
 import { parseCanonMode } from "./canons";
 import type { CanonMode } from "./types";
 
@@ -30,6 +32,8 @@ export function FilterModal({
   onMatchCountChange,
   onToggleBook
 }: FilterModalProps) {
+  useModalScrollLock(isOpen);
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -52,7 +56,9 @@ export function FilterModal({
   return (
     <div
       className="filter-modal-backdrop"
-      onMouseDown={(event) => {
+      onClick={(event) => {
+        event.stopPropagation();
+
         if (event.target === event.currentTarget) {
           onClose();
         }
@@ -63,6 +69,8 @@ export function FilterModal({
         aria-modal="true"
         className="filter-modal"
         id="filter-modal"
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
         role="dialog"
       >
         <div className="filter-modal-header">

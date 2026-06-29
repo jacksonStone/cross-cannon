@@ -5,6 +5,7 @@ import { Link } from "@remix-run/react";
 import { parsePassageLocation } from "~/features/passage-reader/chapter-index";
 import { sortCanonicalBooks } from "~/features/search/canons";
 import type { StoredFilters } from "~/features/search/types";
+import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
 type VerseTarget = {
@@ -78,6 +79,8 @@ export function PassageJump({
     ?? book?.chapters[0];
   const isDisabled = !isScriptureReady || jumpIndex.books.length === 0;
 
+  useModalScrollLock(isOpen && !isDisabled);
+
   return (
     <>
       <section
@@ -101,7 +104,9 @@ export function PassageJump({
       {isOpen && !isDisabled ? (
         <div
           className="passage-jump-backdrop"
-          onPointerDown={(event) => {
+          onClick={(event) => {
+            event.stopPropagation();
+
             if (event.target === event.currentTarget) {
               setIsOpen(false);
             }
@@ -111,6 +116,7 @@ export function PassageJump({
             aria-labelledby="passage-jump-title"
             aria-modal="true"
             className="passage-jump-modal"
+            onClick={(event) => event.stopPropagation()}
             onPointerDown={(event) => event.stopPropagation()}
             role="dialog"
           >
