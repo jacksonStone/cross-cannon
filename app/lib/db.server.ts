@@ -21,8 +21,7 @@ export type IndexedEmbeddingConfig = {
 export function getDb() {
   if (!client) {
     client = createClient({
-      url: process.env.DATABASE_URL ?? "file:./storage/crosscannon.db",
-      authToken: process.env.TURSO_AUTH_TOKEN
+      url: process.env.DATABASE_URL ?? "file:./storage/crosscannon.db"
     });
   }
 

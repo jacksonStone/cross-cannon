@@ -104,6 +104,7 @@ Useful checks:
 ```bash
 npm run verify
 npm run verify-prod
+npm run ship
 ```
 
 For UI changes, capture relevant desktop and mobile screenshots before deploy
@@ -123,6 +124,9 @@ checks the production homepage, and submits a real search POST against
 the remote service check. Use `PROD_URL=<url>` to point it at another deployed
 host, `VERIFY_PROD_SERVICE=<service>` for another systemd unit, or
 `VERIFY_PROD_SKIP_REMOTE=1` for public HTTP checks only.
+
+`npm run ship` is the standard release path: it runs `npm run verify`, then
+`./deploy.sh`, then `npm run verify-prod`.
 
 Manual smoke checks against a running dev or production server:
 
@@ -153,9 +157,9 @@ scripture-cache/manifest.json
 The cache route serves these artifacts with long-lived immutable cache headers
 and gzip when the browser accepts it.
 
-On production startup, `app/entry.server.tsx` warms the passage embedding cache
-and indexed-books cache. The browser loads the full immutable scripture cache
-before enabling reader and search controls that need passage text.
+On production startup, `app/entry.server.tsx` warms the indexed-books cache.
+The browser loads the full immutable scripture cache before enabling reader and
+search controls that need passage text.
 
 ## Environment
 
@@ -164,7 +168,6 @@ Common runtime variables:
 ```text
 PORT=3005
 DATABASE_URL=file:./storage/crosscannon.db
-TURSO_AUTH_TOKEN=
 OPENAI_API_KEY=
 OPENAI_EMBEDDING_MODEL=text-embedding-3-large
 OPENAI_EMBEDDING_DIMENSIONS=1536
@@ -178,8 +181,7 @@ INDEXING_JOBS_DATABASE_URL=file:./storage/indexing-jobs.db
 EMBEDDING_PROVIDER=mock
 ```
 
-Use `file:./storage/crosscannon.db` for local SQLite/libSQL. For Turso, set
-`DATABASE_URL` to the Turso/libSQL URL and set `TURSO_AUTH_TOKEN`.
+Use `file:./storage/crosscannon.db` for the local SQLite database.
 
 The indexer stores the active embedding model and dimensions in
 `scripture_embedding_config`. Runtime search reads that metadata before
