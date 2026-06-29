@@ -521,11 +521,11 @@ async function markPassageStatus(
 
 async function passageHasEmbedding(db: Client, passageId: string) {
   const response = await db.execute({
-    sql: "SELECT embedding_json FROM passages WHERE id = ?",
+    sql: "SELECT embedding FROM passages WHERE id = ?",
     args: [passageId]
   });
 
-  return typeof response.rows[0]?.embedding_json === "string";
+  return response.rows[0]?.embedding !== null && response.rows[0]?.embedding !== undefined;
 }
 
 async function upsertPassage(db: Client, passage: Passage, normalizedEmbedding: number[] | undefined) {
@@ -541,10 +541,9 @@ async function upsertPassage(db: Client, passage: Passage, normalizedEmbedding: 
         reference,
         text,
         embedding,
-        embedding_json,
         source_hash
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${normalizedEmbedding ? "vector32(?)" : "NULL"}, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${normalizedEmbedding ? "vector32(?)" : "NULL"}, ?)
       ON CONFLICT(id) DO UPDATE SET
         result_type = excluded.result_type,
         book = excluded.book,
@@ -554,7 +553,6 @@ async function upsertPassage(db: Client, passage: Passage, normalizedEmbedding: 
         reference = excluded.reference,
         text = excluded.text,
         embedding = COALESCE(excluded.embedding, passages.embedding),
-        embedding_json = COALESCE(excluded.embedding_json, passages.embedding_json),
         source_hash = excluded.source_hash
     `,
     args: [
@@ -567,7 +565,6 @@ async function upsertPassage(db: Client, passage: Passage, normalizedEmbedding: 
       passage.reference,
       passage.text,
       ...(normalizedEmbedding ? [vectorSql(normalizedEmbedding)] : []),
-      normalizedEmbedding ? JSON.stringify(normalizedEmbedding) : null,
       passage.sourceHash
     ]
   });
@@ -600,10 +597,9 @@ async function upsertParagraphVerses(
           reference,
           text,
           embedding,
-          embedding_json,
           source_hash
         )
-        VALUES (?, ?, ?, ?, ?, ?, ${normalizedEmbedding ? "vector32(?)" : "NULL"}, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ${normalizedEmbedding ? "vector32(?)" : "NULL"}, ?)
       `,
       args: [
         passage.id,
@@ -613,7 +609,6 @@ async function upsertParagraphVerses(
         `${verse.book} ${verse.chapter}:${verse.verse}`,
         verse.text.trim(),
         ...(normalizedEmbedding ? [vectorSql(normalizedEmbedding)] : []),
-        normalizedEmbedding ? JSON.stringify(normalizedEmbedding) : null,
         stableId(`${verse.book}-${verse.chapter}-${verse.verse}-${verse.text}`)
       ]
     });

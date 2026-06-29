@@ -12,7 +12,6 @@ let vectorSearchTail = Promise.resolve();
 
 type StoredEmbeddingRow = {
   embedding?: unknown;
-  embedding_json?: unknown;
 };
 
 type SearchEmbeddingOptions = {
@@ -81,10 +80,10 @@ export async function searchSimilarScripture(
 
   const sourceResponse = await getDb().execute({
     sql: `
-      SELECT id, reference, embedding, embedding_json
+      SELECT id, reference, embedding
       FROM passages
       WHERE id = ?
-        AND (embedding IS NOT NULL OR embedding_json IS NOT NULL)
+        AND embedding IS NOT NULL
     `,
     args: [passageId]
   });
@@ -160,10 +159,10 @@ async function attachVerseHighlights(
     if (missingParagraphScores.length > 0) {
       const paragraphResponse = await db.execute({
         sql: `
-          SELECT id, embedding, embedding_json
+          SELECT id, embedding
           FROM passages
           WHERE id IN (${placeholders(missingParagraphScores)})
-            AND (embedding IS NOT NULL OR embedding_json IS NOT NULL)
+            AND embedding IS NOT NULL
         `,
         args: missingParagraphScores
       });
@@ -186,10 +185,10 @@ async function attachVerseHighlights(
 
     const verseResponse = await db.execute({
       sql: `
-        SELECT paragraph_id, verse, embedding, embedding_json
+        SELECT paragraph_id, verse, embedding
         FROM paragraph_verses
         WHERE paragraph_id IN (${placeholders(paragraphIds)})
-          AND (embedding IS NOT NULL OR embedding_json IS NOT NULL)
+          AND embedding IS NOT NULL
       `,
       args: paragraphIds
     });
@@ -327,9 +326,9 @@ async function searchStoredEmbeddings(
   const excludeIds = options.excludeIds ?? [];
   const response = await db.execute({
     sql: `
-      SELECT id, reference, result_type, embedding, embedding_json
+      SELECT id, reference, result_type, embedding
       FROM passages
-      WHERE (embedding IS NOT NULL OR embedding_json IS NOT NULL)
+      WHERE embedding IS NOT NULL
         ${books.length ? `AND book IN (${placeholders(books)})` : ""}
         ${excludeIds.length ? `AND id NOT IN (${placeholders(excludeIds)})` : ""}
     `,
@@ -455,15 +454,6 @@ function toFtsQuery(input: string) {
     .join(" OR ");
 }
 
-function parseEmbedding(value: string) {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.map(Number) : [];
-  } catch {
-    return [];
-  }
-}
-
 function readStoredEmbedding(row: StoredEmbeddingRow) {
   const vector = readEmbeddingBlob(row.embedding);
 
@@ -471,13 +461,7 @@ function readStoredEmbedding(row: StoredEmbeddingRow) {
     return vector;
   }
 
-  if (typeof row.embedding_json !== "string") {
-    return null;
-  }
-
-  const parsed = parseEmbedding(row.embedding_json);
-
-  return parsed.length ? Float32Array.from(normalizeVector(parsed)) : null;
+  return null;
 }
 
 function readEmbeddingBlob(value: unknown) {
