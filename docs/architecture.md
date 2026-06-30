@@ -164,11 +164,13 @@ flowchart LR
   Verify --> LocalSmoke["HEAD / + POST search"]
   Verify --> StopServer[Stop local server]
 
-  Build --> CacheScript["scripts/build-scripture-cache.ts"]
-  CacheScript --> DB[("Local active DB")]
-  CacheScript --> CacheArtifacts["scripture-cache/*.json + *.gz + manifest"]
   Build --> RemixBuild["remix vite:build"]
   RemixBuild --> BuildDir["build/client + build/server"]
+
+  Dev --> UpdateDbCache["npm run update-db:scripture-cache"]
+  UpdateDbCache --> CacheScript["scripts/build-scripture-cache.ts"]
+  CacheScript --> DB[("Local active DB")]
+  CacheScript --> CacheArtifacts["scripture-cache/*.json + *.gz + manifest"]
 
   Dev --> Deploy["./deploy.sh"]
   Deploy --> Package["Zip build/public/scripts/cache/package files"]
@@ -177,6 +179,7 @@ flowchart LR
   Remote --> PreserveStorage["Preserve remote storage/"]
   Remote --> NpmCi[npm ci --omit=dev]
   NpmCi --> Restart[systemctl restart cross-cannon]
+  Restart --> RuntimeDbGuard["DB maintenance skipped unless CROSS_CANNON_UPDATE_DB=1"]
 
   Restart --> VerifyProd[npm run verify-prod]
   VerifyProd --> Systemd[SSH systemctl is-active + journalctl]

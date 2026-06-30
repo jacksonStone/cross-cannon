@@ -4,6 +4,7 @@ import { buildAudioChapterFiles } from "./audio-chapters.server";
 
 let client: Client | null = null;
 let schemaReady = false;
+const UPDATE_DB_ENV = "CROSS_CANNON_UPDATE_DB";
 
 export type ScriptureResult = {
   id: string;
@@ -30,6 +31,11 @@ export function getDb() {
 
 export async function ensureDatabase() {
   if (schemaReady) {
+    return;
+  }
+
+  if (shouldSkipDatabaseMaintenance()) {
+    schemaReady = true;
     return;
   }
 
@@ -105,6 +111,10 @@ export async function ensureDatabase() {
   }
 
   schemaReady = true;
+}
+
+function shouldSkipDatabaseMaintenance() {
+  return process.env.NODE_ENV === "production" && process.env[UPDATE_DB_ENV] !== "1";
 }
 
 export async function getIndexedEmbeddingConfig() {

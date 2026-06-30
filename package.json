@@ -4,14 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node --import tsx scripts/build-scripture-cache.ts && remix vite:build",
+    "build": "remix vite:build",
+    "update-db:scripture-cache": "CROSS_CANNON_UPDATE_DB=1 node --import tsx scripts/build-scripture-cache.ts",
     "dev": "remix vite:dev --host 127.0.0.1 --port 3005",
     "start": "NODE_ENV=production remix-serve ./build/server/index.js",
     "typecheck": "tsc --noEmit",
     "render:architecture": "node scripts/render-architecture.mjs",
     "verify": "scripts/verify.sh",
     "verify-prod": "scripts/verify-prod.sh",
-    "ship": "npm run verify && ./deploy.sh && npm run verify-prod",
+    "ship": "CROSS_CANNON_UPDATE_DB=0 npm run verify && CROSS_CANNON_UPDATE_DB=0 ./deploy.sh && npm run verify-prod",
     "index:bible": "node --import tsx scripts/index-bible.ts",
     "index:genesis": "node --import tsx scripts/index-bible.ts data/bible.json --reset --passage-type paragraph --book Genesis",
     "smoke:index": "EMBEDDING_PROVIDER=mock node --import tsx scripts/index-bible.ts data/sample-bible.json --reset --limit 10 --passage-type paragraph"

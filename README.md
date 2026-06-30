@@ -112,10 +112,10 @@ and share them for preview. Save preview artifacts under `docs/screenshots/`
 and embed them with markdown image links so they render directly in chat.
 
 `npm run verify` is the one-shot local verification command. It typechecks,
-builds the scripture cache and Remix app, starts the production server, waits
-for it to respond, smoke-checks the homepage, smoke-checks a search POST, and
-then stops the server process. Use `VERIFY_PORT=<port>` if port `3005` is
-already in use.
+builds the Remix app using the existing scripture cache artifacts, starts the
+production server, waits for it to respond, smoke-checks the homepage,
+smoke-checks a search POST, and then stops the server process. Use
+`VERIFY_PORT=<port>` if port `3005` is already in use.
 
 `npm run verify-prod` smoke-checks production without building or starting
 anything locally. It checks the remote `cross-cannon` systemd service over SSH,
@@ -145,8 +145,19 @@ npm run build
 PORT=3005 npm run start
 ```
 
-`npm run build` runs `scripts/build-scripture-cache.ts` before the Remix build.
-That script reads the active database and writes:
+`npm run build` only builds the Remix app. It does not rebuild the browser
+scripture cache and should not be used as an implicit database update step.
+Production runtime database maintenance is also disabled unless
+`CROSS_CANNON_UPDATE_DB=1` is set.
+
+To explicitly refresh the browser scripture cache from the active database, run:
+
+```bash
+npm run update-db:scripture-cache
+```
+
+That command sets `CROSS_CANNON_UPDATE_DB=1`, reads the active database, and
+writes:
 
 ```text
 scripture-cache/<version>.json
@@ -237,9 +248,11 @@ INDEXING_JOBS_DB=storage/indexing-jobs.db \
 scripts/index-remaining-books.sh
 ```
 
-After indexing, rebuild the browser scripture cache and app bundle:
+After indexing, explicitly rebuild the browser scripture cache, then rebuild the
+app bundle:
 
 ```bash
+npm run update-db:scripture-cache
 npm run build
 ```
 
@@ -277,10 +290,10 @@ Psalm 151
 4 Maccabees
 ```
 
-If `OPENAI_API_KEY` is blank, the importer still creates passages,
-`paragraph_verses`, and text-search tables, but no OpenAI embeddings are stored.
-That is fine for smoke testing. Real semantic search requires indexing with the
-same embedding configuration used at runtime.
+If `OPENAI_API_KEY` is blank, the importer still creates passages and
+`paragraph_verses`, but no OpenAI embeddings are stored. That is fine for smoke
+testing. Real semantic search requires indexing with the same embedding
+configuration used at runtime.
 
 Supported Bible JSON shapes:
 
@@ -316,6 +329,9 @@ PORT=3005
 `/home/ubuntu/cross-cannon/storage` directory during deploys, so the production
 database must already exist on the server or be copied there separately.
 
+Normal deploys and `npm run ship` do not opt into production database
+maintenance. Set `CROSS_CANNON_UPDATE_DB=1` only for an explicit DB update task.
+
 Required deploy environment variables on the machine running `deploy.sh`:
 
 ```text
@@ -336,4 +352,4 @@ As of June 25, 2026, this checkout contains:
 - 8,360 cached paragraph passages
 
 Those local artifacts are large and operationally significant. Rebuild the cache
-with `npm run build` after changing the runtime database.
+with `npm run update-db:scripture-cache` after changing the runtime database.

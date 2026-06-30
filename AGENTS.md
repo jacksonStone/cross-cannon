@@ -30,16 +30,24 @@ production:
 npm run ship
 ```
 
-`npm run verify` typechecks, builds the scripture cache and Remix app, starts
-the production server locally, checks the homepage, and runs a search POST
-smoke test.
+`npm run verify` typechecks, builds the Remix app from existing scripture cache
+artifacts, starts the production server locally, checks the homepage, and runs a
+search POST smoke test.
 
 `npm run verify-prod` checks the remote service over SSH, checks the production
 homepage, and runs a production search POST smoke test. It expects
 `EC2_PEM_PATH` and `EC2_PUBLIC_IP`, unless `VERIFY_PROD_SKIP_REMOTE=1` is set.
 
-`./deploy.sh` builds, packages, copies, installs production dependencies, and
-restarts the remote service. It preserves the remote `storage` directory.
+`./deploy.sh` builds the Remix app from existing scripture cache artifacts,
+packages, copies, installs production dependencies, and restarts the remote
+service. It preserves the remote `storage` directory.
+
+Do not refresh scripture cache artifacts or perform database-update work as part
+of `npm run ship`, `npm run verify`, or `./deploy.sh`. Use an explicit
+database-named command, such as `npm run update-db:scripture-cache`, when the
+user asks to update DB-backed artifacts. Production runtime database maintenance
+is disabled unless `CROSS_CANNON_UPDATE_DB=1` is set for an explicit DB update
+task.
 
 ## Before Deploying UI Changes
 
