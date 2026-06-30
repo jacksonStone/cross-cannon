@@ -12,7 +12,7 @@
     "render:architecture": "node scripts/render-architecture.mjs",
     "verify": "scripts/verify.sh",
     "verify-prod": "scripts/verify-prod.sh",
-    "ship": "CROSS_CANNON_UPDATE_DB=0 npm run verify && CROSS_CANNON_UPDATE_DB=0 ./deploy.sh && npm run verify-prod",
+    "ship": "CROSS_CANNON_UPDATE_DB=0 npm run verify && CROSS_CANNON_UPDATE_DB=0 ./deploy.sh && sleep 4 && npm run verify-prod",
     "index:bible": "node --import tsx scripts/index-bible.ts",
     "index:genesis": "node --import tsx scripts/index-bible.ts data/bible.json --reset --passage-type paragraph --book Genesis",
     "smoke:index": "EMBEDDING_PROVIDER=mock node --import tsx scripts/index-bible.ts data/sample-bible.json --reset --limit 10 --passage-type paragraph"
