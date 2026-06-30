@@ -9,6 +9,7 @@ import {
 import { embedText, getDefaultEmbeddingConfig } from "./embeddings.server";
 
 let vectorSearchTail = Promise.resolve();
+const EXACT_BOOK_SEARCH_LIMIT = 12;
 
 type StoredEmbeddingRow = {
   embedding?: unknown;
@@ -42,6 +43,19 @@ export async function searchScripture(
   trace.mark("embedText");
 
   if (embedding) {
+    if (shouldSearchBooksExactly(books)) {
+      const bookResults = await searchBookEmbeddingsExact(embedding, limit, books, options);
+      trace.mark("searchBookEmbeddingsExact", { count: bookResults.length });
+      if (bookResults.length > 0) {
+        const results = await attachVerseHighlights(embedding, bookResults);
+        trace.finish("book-vector-exact", { count: results.length });
+        return results;
+      }
+
+      trace.finish("no-vector-results", { count: 0 });
+      return [];
+    }
+
     const vectorResults = await runVectorSearchExclusive(
       () => searchVector(embedding, limit, books, options),
       () => trace.mark("searchVectorStart")
@@ -53,20 +67,12 @@ export async function searchScripture(
       return results;
     }
 
-    const bruteForceResults = books.length > 0
-      ? []
-      : await searchStoredEmbeddings(embedding, limit, books, options);
-    trace.mark("searchStoredEmbeddings", { count: bruteForceResults.length });
-    if (bruteForceResults.length >= Math.min(4, limit)) {
-      const results = await attachVerseHighlights(embedding, bruteForceResults);
-      trace.finish("stored-vector", { count: results.length });
-      return results;
-    }
+    trace.finish("no-vector-results", { count: 0 });
+    return [];
   }
 
-  const results = await searchLexical(question, limit, books);
-  trace.finish("lexical", { count: results.length });
-  return results;
+  trace.finish("no-vector-results", { count: 0 });
+  return [];
 }
 
 export async function searchSimilarScripture(
@@ -101,6 +107,23 @@ export async function searchSimilarScripture(
   }
 
   const options = { excludeIds: [passageId] } satisfies SearchEmbeddingOptions;
+  if (shouldSearchBooksExactly(books)) {
+    const bookResults = await searchBookEmbeddingsExact(embedding, limit, books, options);
+    trace.mark("searchBookEmbeddingsExact", { count: bookResults.length });
+    const results = await attachVerseHighlights(embedding, bookResults);
+    trace.finish(bookResults.length > 0 ? "book-vector-exact" : "no-vector-results", {
+      count: results.length
+    });
+
+    return {
+      source: {
+        id: String(source.id),
+        reference: String(source.reference)
+      },
+      results
+    };
+  }
+
   const vectorResults = await runVectorSearchExclusive(
     () => searchVector(embedding, limit, books, options),
     () => trace.mark("searchVectorStart")
@@ -118,17 +141,13 @@ export async function searchSimilarScripture(
     };
   }
 
-  const storedResults = await searchStoredEmbeddings(embedding, limit, books, options);
-  trace.mark("searchStoredEmbeddings", { count: storedResults.length });
-  const results = await attachVerseHighlights(embedding, storedResults);
-  trace.finish("stored-vector", { count: results.length });
-
+  trace.finish("no-vector-results", { count: 0 });
   return {
     source: {
       id: String(source.id),
       reference: String(source.reference)
     },
-    results
+    results: []
   };
 }
 
@@ -248,16 +267,14 @@ async function searchVector(
 ) {
   const db = getDb();
   const excludeIds = options.excludeIds ?? [];
-  const candidateLimit = books.length || excludeIds.length
-    ? Math.max(limit * 40, 300)
-    : limit;
+  const candidateLimit = Math.max(limit * 40, 300);
   const bookClause = books.length ? `AND p.book IN (${placeholders(books)})` : "";
   const excludeClause = excludeIds.length ? `AND p.id NOT IN (${placeholders(excludeIds)})` : "";
 
   try {
     const response = await db.execute({
       sql: `
-        SELECT p.id, p.reference, p.result_type
+        SELECT p.id, p.reference, p.result_type, p.embedding
         FROM vector_top_k('passages_embedding_idx', vector32(?), ?) AS v
         JOIN passages p ON p.rowid = v.id
         WHERE p.text <> ''
@@ -274,11 +291,33 @@ async function searchVector(
       ]
     });
 
-    return response.rows.map((row) => ({
-      id: String(row.id),
-      reference: String(row.reference),
-      type: "paragraph"
-    })) satisfies ScriptureResult[];
+    const query = normalizeVector(embedding);
+    const results: ScriptureResult[] = [];
+
+    for (const row of response.rows) {
+      const stored = readStoredEmbedding(row as StoredEmbeddingRow);
+
+      if (!stored) {
+        continue;
+      }
+
+      const score = cosineSimilarity(query, stored);
+
+      if (!Number.isFinite(score)) {
+        continue;
+      }
+
+      results.push({
+        id: String(row.id),
+        reference: String(row.reference),
+        type: "paragraph",
+        score
+      });
+    }
+
+    return results
+      .sort((left, right) => (right.score ?? 0) - (left.score ?? 0))
+      .slice(0, limit);
   } catch {
     if (process.env.SEARCH_TRACE === "1") {
       console.info(
@@ -292,6 +331,57 @@ async function searchVector(
     }
     return [];
   }
+}
+
+async function searchBookEmbeddingsExact(
+  embedding: ArrayLike<number>,
+  limit: number,
+  books: string[],
+  options: SearchEmbeddingOptions = {}
+) {
+  const db = getDb();
+  const query = normalizeVector(embedding);
+  const excludeIds = options.excludeIds ?? [];
+  const response = await db.execute({
+    sql: `
+      SELECT id, reference, result_type, embedding
+      FROM passages
+      WHERE embedding IS NOT NULL
+        AND book IN (${placeholders(books)})
+        ${excludeIds.length ? `AND id NOT IN (${placeholders(excludeIds)})` : ""}
+    `,
+    args: [...books, ...excludeIds]
+  });
+  const results: ScriptureResult[] = [];
+
+  for (const row of response.rows) {
+    const stored = readStoredEmbedding(row as StoredEmbeddingRow);
+
+    if (!stored) {
+      continue;
+    }
+
+    const score = cosineSimilarity(query, stored);
+
+    if (!Number.isFinite(score)) {
+      continue;
+    }
+
+    results.push({
+      id: String(row.id),
+      reference: String(row.reference),
+      type: "paragraph",
+      score
+    });
+  }
+
+  return results
+    .sort((left, right) => (right.score ?? 0) - (left.score ?? 0))
+    .slice(0, limit);
+}
+
+function shouldSearchBooksExactly(books: string[]) {
+  return books.length > 0 && books.length <= EXACT_BOOK_SEARCH_LIMIT;
 }
 
 async function runVectorSearchExclusive<T>(
@@ -315,143 +405,8 @@ async function runVectorSearchExclusive<T>(
   }
 }
 
-async function searchStoredEmbeddings(
-  embedding: ArrayLike<number>,
-  limit: number,
-  books: string[],
-  options: SearchEmbeddingOptions = {}
-) {
-  const db = getDb();
-  const query = normalizeVector(embedding);
-  const excludeIds = options.excludeIds ?? [];
-  const response = await db.execute({
-    sql: `
-      SELECT id, reference, result_type, embedding
-      FROM passages
-      WHERE embedding IS NOT NULL
-        ${books.length ? `AND book IN (${placeholders(books)})` : ""}
-        ${excludeIds.length ? `AND id NOT IN (${placeholders(excludeIds)})` : ""}
-    `,
-    args: [...books, ...excludeIds]
-  });
-
-  const topResults: ScriptureResult[] = [];
-
-  for (const row of response.rows) {
-    const stored = readStoredEmbedding(row as StoredEmbeddingRow);
-
-    if (!stored) {
-      continue;
-    }
-
-    const score = cosineSimilarity(query, stored);
-
-    if (!Number.isFinite(score)) {
-      continue;
-    }
-
-    insertTopResult(topResults, {
-      id: String(row.id),
-      reference: String(row.reference),
-      type: "paragraph",
-      score
-    }, limit);
-  }
-
-  return topResults;
-}
-
-async function searchLexical(question: string, limit: number, books: string[]) {
-  const db = getDb();
-  const ftsQuery = toFtsQuery(question);
-  const bookClause = books.length ? `AND p.book IN (${placeholders(books)})` : "";
-
-  if (ftsQuery) {
-    try {
-      const response = await db.execute({
-        sql: `
-          SELECT p.id, p.reference, p.result_type
-          FROM passages_fts
-          JOIN passages p ON passages_fts.rowid = p.rowid
-          WHERE passages_fts MATCH ?
-            ${bookClause}
-          ORDER BY bm25(passages_fts)
-          LIMIT ?
-        `,
-        args: books.length ? [ftsQuery, ...books, limit] : [ftsQuery, limit]
-      });
-
-      if (response.rows.length > 0) {
-        return response.rows.map((row) => ({
-          id: String(row.id),
-          reference: String(row.reference),
-          type: "paragraph"
-        })) satisfies ScriptureResult[];
-      }
-    } catch {
-      // Fall through to LIKE search for malformed FTS input or local SQLite gaps.
-    }
-  }
-
-  const terms = extractTerms(question).slice(0, 5);
-  if (terms.length === 0) {
-    return [];
-  }
-
-  const where = terms.map(() => "LOWER(text || ' ' || reference) LIKE ?").join(" OR ");
-  const response = await db.execute({
-    sql: `
-      SELECT id, reference, result_type
-      FROM passages
-      WHERE (${where})
-        ${books.length ? `AND book IN (${placeholders(books)})` : ""}
-      LIMIT ?
-    `,
-    args: books.length
-      ? [...terms.map((term) => `%${term}%`), ...books, limit]
-      : [...terms.map((term) => `%${term}%`), limit]
-  });
-
-  return response.rows.map((row) => ({
-    id: String(row.id),
-    reference: String(row.reference),
-    type: "paragraph"
-  })) satisfies ScriptureResult[];
-}
-
 function placeholders(values: unknown[]) {
   return values.map(() => "?").join(", ");
-}
-
-function extractTerms(input: string) {
-  const stopWords = new Set([
-    "about",
-    "does",
-    "what",
-    "where",
-    "when",
-    "which",
-    "scripture",
-    "bible",
-    "verse",
-    "verses",
-    "chapter",
-    "chapters",
-    "the",
-    "and",
-    "for",
-    "with"
-  ]);
-
-  return Array.from(new Set(input.toLowerCase().match(/[a-z0-9]+/g) ?? []))
-    .filter((term) => term.length > 2 && !stopWords.has(term));
-}
-
-function toFtsQuery(input: string) {
-  return extractTerms(input)
-    .slice(0, 8)
-    .map((term) => `"${term.replaceAll('"', '""')}"`)
-    .join(" OR ");
 }
 
 function readStoredEmbedding(row: StoredEmbeddingRow) {
@@ -491,26 +446,6 @@ function cosineSimilarity(left: ArrayLike<number>, right: ArrayLike<number>) {
   }
 
   return sum;
-}
-
-function insertTopResult(results: ScriptureResult[], result: ScriptureResult, limit: number) {
-  const score = result.score ?? Number.NEGATIVE_INFINITY;
-  const insertAt = results.findIndex(
-    (existing) => score > (existing.score ?? Number.NEGATIVE_INFINITY)
-  );
-
-  if (insertAt === -1) {
-    if (results.length < limit) {
-      results.push(result);
-    }
-    return;
-  }
-
-  results.splice(insertAt, 0, result);
-
-  if (results.length > limit) {
-    results.pop();
-  }
 }
 
 function createSearchTrace(question: string, limit: number, books: string[]) {

@@ -22,8 +22,8 @@ the browser loads the full passage text from a versioned static scripture cache.
 3. The route action rate-limits each client IP to 5 searches per minute before
    handing validated form data to the search feature module.
 4. `app/lib/search.server.ts` embeds the query with OpenAI when an API key is
-   configured, searches paragraph passages by vector similarity, and falls back
-   to stored-vector brute force or FTS/LIKE lexical search.
+   configured, searches broad result sets through the persisted vector index,
+   and scores small selected-book searches exactly within those books.
 5. Search responses contain passage metadata only. The UI joins result IDs to
    text loaded from `/scripture-cache/<version>.json`, highlighting the best
    verse when verse embeddings indicate a stronger match than the full paragraph.
@@ -58,7 +58,7 @@ app/features/search/SearchResults.tsx         passage result cards
 app/features/search/canons.ts                 canon book lists and canonical sorting
 app/features/search/types.ts                  shared search feature types
 app/features/scripture/                       browser scripture cache resource and lookup helpers
-app/lib/search.server.ts                      embedding/vector/FTS search engine
+app/lib/search.server.ts                      embedding/vector search engine
 app/lib/scripture-cache.server.ts             static scripture cache metadata/routes
 app/entry.server.tsx                          production cache warmers
 ```
@@ -223,8 +223,8 @@ Useful indexer flags:
 --db <path-or-file-url>     runtime DB path
 --jobs-db <path-or-file-url> indexing jobs DB path
 --no-archive                skip local DB archive copies
---skip-index-rebuild        skip final FTS/vector index rebuild
---rebuild-indexes-only      rebuild FTS/vector indexes and exit
+--skip-index-rebuild        skip final vector index rebuild
+--rebuild-indexes-only      rebuild vector indexes and exit
 ```
 
 For a parallel book-by-book run:

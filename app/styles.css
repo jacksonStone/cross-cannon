@@ -784,9 +784,12 @@ button:disabled {
 }
 
 .reader-shell {
-  width: min(880px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 16px 0 64px;
+  width: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 16px max(16px, calc((100% - 880px) / 2)) 64px;
 }
 
 .reader-page {
@@ -1620,8 +1623,7 @@ button:disabled {
   }
 
   .reader-shell {
-    width: min(100% - 24px, 880px);
-    padding-top: 12px;
+    padding: 12px 12px 64px;
   }
 
   .reader-header {

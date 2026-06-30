@@ -89,7 +89,6 @@ await ensureJobsDatabase(jobsDb);
 await setIndexedEmbeddingConfig(runtimeDb, embeddingConfig);
 
 if (options.rebuildIndexesOnly) {
-  await rebuildFts(runtimeDb);
   await rebuildVectorIndex(runtimeDb);
   console.log(`Rebuilt search indexes for ${options.runtimeDbUrl}`);
   process.exit(0);
@@ -186,7 +185,6 @@ for (const passage of passages) {
 }
 
 if (!options.skipIndexRebuild) {
-  await rebuildFts(runtimeDb);
   await rebuildVectorIndex(runtimeDb);
 }
 
@@ -417,10 +415,6 @@ async function resetRuntimeDatabase(db: Client) {
   await db.execute("DELETE FROM passage_audio_files");
   await db.execute("DELETE FROM paragraph_verses");
   await db.execute("DELETE FROM passages");
-  await db.execute(`
-    CREATE VIRTUAL TABLE IF NOT EXISTS passages_fts
-    USING fts5(reference, text, content='passages', content_rowid='rowid')
-  `);
 }
 
 async function findActiveJob(db: Client, sourceHash: string, options: Options) {
@@ -621,10 +615,6 @@ async function upsertParagraphVerses(
   return embeddedCount;
 }
 
-async function rebuildFts(db: Client) {
-  await db.execute("INSERT INTO passages_fts(passages_fts) VALUES('rebuild')");
-}
-
 async function rebuildVectorIndex(db: Client) {
   try {
     await db.execute("DROP INDEX IF EXISTS passages_embedding_idx");
@@ -634,7 +624,7 @@ async function rebuildVectorIndex(db: Client) {
     `);
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
-      console.warn("Vector index rebuild unavailable; stored-vector fallback remains enabled.");
+      console.warn("Vector index rebuild unavailable; semantic search requires a rebuilt vector index.");
     }
   }
 }

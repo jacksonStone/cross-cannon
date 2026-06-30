@@ -46,7 +46,6 @@ export async function ensureDatabase() {
       reference TEXT NOT NULL,
       text TEXT NOT NULL,
       embedding F32_BLOB(1536),
-      embedding_json TEXT,
       source_hash TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
@@ -58,6 +57,11 @@ export async function ensureDatabase() {
   `);
 
   await db.execute(`
+    CREATE INDEX IF NOT EXISTS passages_book_idx
+    ON passages(book)
+  `);
+
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS paragraph_verses (
       paragraph_id TEXT NOT NULL,
       book TEXT NOT NULL,
@@ -66,7 +70,6 @@ export async function ensureDatabase() {
       reference TEXT NOT NULL,
       text TEXT NOT NULL,
       embedding F32_BLOB(1536),
-      embedding_json TEXT,
       source_hash TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (paragraph_id, verse)
@@ -85,14 +88,10 @@ export async function ensureDatabase() {
 
   await ensureEmbeddingBlobColumn(db, "passages");
   await ensureEmbeddingBlobColumn(db, "paragraph_verses");
-  await backfillEmbeddingBlobs(db);
+  await dropLegacyEmbeddingJsonColumns(db);
+  await dropLegacyTextSearchIndex(db);
   await ensureEmbeddingConfigTable(db);
   await ensureAudioSchema(db);
-
-  await db.execute(`
-    CREATE VIRTUAL TABLE IF NOT EXISTS passages_fts
-    USING fts5(reference, text, content='passages', content_rowid='rowid')
-  `);
 
   try {
     await db.execute(`
@@ -101,7 +100,7 @@ export async function ensureDatabase() {
     `);
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
-      console.warn("Vector index unavailable; lexical and brute-force search remain enabled.");
+      console.warn("Vector index unavailable; semantic search requires a rebuilt vector index.");
     }
   }
 
@@ -309,8 +308,21 @@ async function ensureEmbeddingBlobColumn(db: Client, tableName: "passages" | "pa
   await db.execute(`ALTER TABLE ${tableName} ADD COLUMN embedding F32_BLOB(1536)`);
 }
 
-async function backfillEmbeddingBlobs(db: Client) {
+async function dropLegacyEmbeddingJsonColumns(db: Client) {
+  let droppedColumn = false;
+
   for (const tableName of ["passages", "paragraph_verses"] as const) {
+    const tableInfo = await db.execute(`PRAGMA table_info(${tableName})`);
+    const hasEmbeddingJsonColumn = tableInfo.rows.some((row) => row.name === "embedding_json");
+
+    if (!hasEmbeddingJsonColumn) {
+      continue;
+    }
+
+    if (!droppedColumn) {
+      await dropSearchIndexes(db);
+    }
+
     const missingResponse = await db.execute(`
       SELECT COUNT(*) AS count
       FROM ${tableName}
@@ -329,6 +341,9 @@ async function backfillEmbeddingBlobs(db: Client) {
       WHERE embedding IS NULL
         AND embedding_json IS NOT NULL
     `);
+
+    await db.execute(`ALTER TABLE ${tableName} DROP COLUMN embedding_json`);
+    droppedColumn = true;
   }
 }
 
@@ -345,7 +360,6 @@ async function ensureParagraphSchema(db: Client) {
   }
 
   await dropSearchIndexes(db);
-  await db.execute("DROP TABLE IF EXISTS passages_fts");
   await db.execute("ALTER TABLE passages RENAME TO passages_old");
   await db.execute(`
     CREATE TABLE passages (
@@ -358,12 +372,19 @@ async function ensureParagraphSchema(db: Client) {
       reference TEXT NOT NULL,
       text TEXT NOT NULL,
       embedding F32_BLOB(1536),
-      embedding_json TEXT,
       source_hash TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
   await db.execute("DROP TABLE passages_old");
+}
+
+async function dropLegacyTextSearchIndex(db: Client) {
+  try {
+    await db.execute("DROP TABLE IF EXISTS passages_fts");
+  } catch {
+    // Older local DBs may not have FTS support available in every runtime.
+  }
 }
 
 async function dropSearchIndexes(db: Client) {

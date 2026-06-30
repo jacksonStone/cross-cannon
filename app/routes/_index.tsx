@@ -196,7 +196,7 @@ export default function Index() {
   }, []);
 
   return (
-    <main className="reader-shell">
+    <main className={`reader-shell reader-theme-${readerTheme}`}>
       <data value={scriptureCacheKey} data-scripture-cache-key hidden />
       <PassageReader
         filters={{}}
