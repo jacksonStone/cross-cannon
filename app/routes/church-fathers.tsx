@@ -261,6 +261,7 @@ export default function ChurchFathersReaderRoute() {
   const [exampleIndex, setExampleIndex] = useState(0);
   const hasScrolledToSelectionRef = useRef(false);
   const lastReportedChapterIdRef = useRef("");
+  const pendingProgrammaticChapterIdRef = useRef<string | null>(null);
 
   useModalScrollLock(isSearchOpen || isJumpOpen);
 
@@ -365,6 +366,7 @@ export default function ChurchFathersReaderRoute() {
 
     setActiveChapterId(nextChapterId);
     setSelectedPassage("");
+    pendingProgrammaticChapterIdRef.current = nextChapterId;
     hasScrolledToSelectionRef.current = false;
     updateUrl(nextChapterId, "");
   }, [activeChapterId, bookIndex, chapterById, chapters]);
@@ -452,6 +454,18 @@ export default function ChurchFathersReaderRoute() {
       const currentChapter = findElementAtReadingAnchor(chapterElements);
       const chapterId = currentChapter?.dataset.chapterId;
 
+      if (
+        chapterId
+        && pendingProgrammaticChapterIdRef.current
+        && chapterId !== pendingProgrammaticChapterIdRef.current
+      ) {
+        return;
+      }
+
+      if (chapterId && chapterId === pendingProgrammaticChapterIdRef.current) {
+        pendingProgrammaticChapterIdRef.current = null;
+      }
+
       if (chapterId && chapterId !== lastReportedChapterIdRef.current) {
         lastReportedChapterIdRef.current = chapterId;
         window.localStorage.setItem(READER_POSITION_STORAGE_KEY, chapterId);
@@ -491,11 +505,17 @@ export default function ChurchFathersReaderRoute() {
     }
 
     hasScrolledToSelectionRef.current = true;
+    lastReportedChapterIdRef.current = activeChapterId;
     window.scrollTo({
       behavior: "auto",
       left: 0,
       top: Math.max(0, target.getBoundingClientRect().top + window.scrollY - HEADER_SCROLL_OFFSET)
     });
+    window.setTimeout(() => {
+      if (pendingProgrammaticChapterIdRef.current === activeChapterId) {
+        pendingProgrammaticChapterIdRef.current = null;
+      }
+    }, 250);
   }, [activeChapterId, loadedChapters, selectedPassage]);
 
   useEffect(() => {
@@ -535,6 +555,8 @@ export default function ChurchFathersReaderRoute() {
     }
 
     hasScrolledToSelectionRef.current = false;
+    pendingProgrammaticChapterIdRef.current = chapterId;
+    lastReportedChapterIdRef.current = chapterId;
     setActiveChapterId(chapterId);
     setSelectedPassage(passageRange);
     window.localStorage.setItem(READER_POSITION_STORAGE_KEY, chapterId);
@@ -1002,12 +1024,6 @@ function ChapterJump({
   const bookChapters = selectedBook
     ? chapters.filter((entry) => entry.book.id === selectedBook.id)
     : [];
-
-  useEffect(() => {
-    if (activeEntry?.book.id) {
-      setSelectedBookId(activeEntry.book.id);
-    }
-  }, [activeEntry?.book.id]);
 
   return (
     <div
