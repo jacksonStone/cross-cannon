@@ -770,6 +770,14 @@ export function PassageReader({
                 🔍
               </Link>
             )}
+            <Link
+              aria-label="Early Christian works"
+              className="context-button reader-icon-button"
+              title="Early Christian works"
+              to="/church-fathers"
+            >
+              ✣
+            </Link>
             <PassageJump
               filters={filters}
               initialPassageId={passageJumpInitialPassageId}

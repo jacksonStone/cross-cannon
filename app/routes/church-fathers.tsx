@@ -1,9 +1,43 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 
-import type { MetaFunction } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+
+import {
+  searchEarlyChristianWorks,
+  searchSimilarEarlyChristianPassages,
+  type EarlyChristianSearchResult,
+  type EarlyChristianSimilarSource
+} from "~/lib/early-christian-search.server";
+import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
+import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 const MANIFEST_URL = "/church-fathers-preview/manifest.json";
-const STATUS_FILTERS = ["all", "orthodox", "noncanonical"] as const;
+const READER_POSITION_STORAGE_KEY = "cross-cannon:church-fathers-position:v1";
+const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
+const READER_THEMES = ["paper", "sepia", "dark", "contrast"] as const;
+const CHAPTER_WINDOW_BEFORE = 5;
+const CHAPTER_WINDOW_AFTER = 10;
+const HEADER_SCROLL_OFFSET = 118;
+const READING_ANCHOR_RATIO = 0.38;
+const SEARCH_EXAMPLES = [
+  "repentance and mercy",
+  "the resurrection of the body",
+  "patience in suffering",
+  "the unity of the church",
+  "the incarnation",
+  "prayer and fasting"
+];
+
+type ReaderTheme = typeof READER_THEMES[number];
 
 type WorkClassification = {
   bucket: string;
@@ -61,8 +95,6 @@ type PreviewManifest = {
   bookCount: number;
   bookIndexPath: string;
   chapterCount: number;
-  classificationCounts: Record<string, number>;
-  contentKindCounts: Record<string, number>;
   generatedAt: string;
   source: string;
 };
@@ -91,38 +123,168 @@ type ChapterAsset = {
   }>;
 };
 
-type Selection = {
-  bookId: string;
-  chapterId: string;
+type ChapterEntry = {
+  book: BookSummary;
+  chapter: ChapterSummary;
+  index: number;
 };
 
-type StatusFilter = (typeof STATUS_FILTERS)[number];
+type ReaderPassage = {
+  key: string;
+  rangeLabel: string;
+  reference: string;
+  text: string;
+  verseEnd: number;
+  verseStart: number;
+};
+
+type ChurchFathersActionData = {
+  error?: string;
+  matchCount?: number;
+  mode?: "theme" | "similar";
+  question?: string;
+  results?: EarlyChristianSearchResult[];
+  retryAfterSeconds?: number;
+  similarSource?: EarlyChristianSimilarSource;
+};
 
 export const meta: MetaFunction = () => [
-  { title: "Church Fathers Preview | Cross Canon" },
+  { title: "Early Christian Reader | Cross Canon" },
   {
     name: "description",
-    content: "Preview parsed public-domain Church Fathers texts."
+    content: "Read and search early Christian works in chapter context."
   }
 ];
 
-export default function ChurchFathersPreview() {
+export async function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+
+  return json({
+    initialChapterId: url.searchParams.get("chapter") ?? "",
+    initialPassageRange: url.searchParams.get("passage") ?? "",
+    manifestUrl: MANIFEST_URL
+  });
+}
+
+export async function action({ request }: ActionFunctionArgs) {
+  const ip = getClientIp(request);
+  const limit = rateLimit(ip);
+
+  if (!limit.allowed) {
+    return json<ChurchFathersActionData>(
+      {
+        error: "Rate limit reached. Try again in a moment.",
+        retryAfterSeconds: limit.retryAfterSeconds
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(limit.retryAfterSeconds)
+        }
+      }
+    );
+  }
+
+  const formData = await request.formData();
+  const intent = String(formData.get("intent") ?? "theme");
+  const matchCount = parseMatchCount(formData);
+
+  if ("response" in matchCount) {
+    return matchCount.response;
+  }
+
+  if (intent === "similar-passage") {
+    const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
+    const similar = await searchSimilarEarlyChristianPassages(sourcePassageId, matchCount.value);
+
+    if (!similar) {
+      return json<ChurchFathersActionData>(
+        { error: "Choose an indexed passage to search from." },
+        { status: 400 }
+      );
+    }
+
+    return json<ChurchFathersActionData>({
+      matchCount: matchCount.value,
+      mode: "similar",
+      results: similar.results,
+      similarSource: similar.source
+    });
+  }
+
+  const question = String(formData.get("question") ?? "").trim();
+
+  if (question.length < 3) {
+    return json<ChurchFathersActionData>(
+      { error: "Enter a longer question." },
+      { status: 400 }
+    );
+  }
+
+  if (question.length > 500) {
+    return json<ChurchFathersActionData>(
+      { error: "Keep the question under 500 characters." },
+      { status: 400 }
+    );
+  }
+
+  return json<ChurchFathersActionData>({
+    matchCount: matchCount.value,
+    mode: "theme",
+    question,
+    results: await searchEarlyChristianWorks(question, matchCount.value)
+  });
+}
+
+export default function ChurchFathersReaderRoute() {
+  const { initialChapterId, initialPassageRange, manifestUrl } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
   const [manifest, setManifest] = useState<PreviewManifest | null>(null);
-  const [manifestError, setManifestError] = useState<string | null>(null);
   const [bookIndex, setBookIndex] = useState<BookIndex | null>(null);
-  const [bookIndexError, setBookIndexError] = useState<string | null>(null);
-  const [selection, setSelection] = useState<Selection>(readInitialSelection());
-  const [chapter, setChapter] = useState<ChapterAsset | null>(null);
-  const [chapterError, setChapterError] = useState<string | null>(null);
-  const [bookQuery, setBookQuery] = useState("");
-  const [chapterQuery, setChapterQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [showJson, setShowJson] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadedChapters, setLoadedChapters] = useState<Map<string, ChapterAsset>>(() => new Map());
+  const [activeChapterId, setActiveChapterId] = useState(initialChapterId);
+  const [selectedPassage, setSelectedPassage] = useState(initialPassageRange);
+  const [focusedPassageKey, setFocusedPassageKey] = useState<string | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const [isJumpOpen, setIsJumpOpen] = useState(false);
+  const [exampleIndex, setExampleIndex] = useState(0);
+  const hasScrolledToSelectionRef = useRef(false);
+  const lastReportedChapterIdRef = useRef("");
+
+  useModalScrollLock(isSearchOpen || isJumpOpen);
+
+  const chapters = useMemo(() => flattenChapters(bookIndex), [bookIndex]);
+  const chapterById = useMemo(
+    () => new Map(chapters.map((entry) => [entry.chapter.id, entry])),
+    [chapters]
+  );
+  const activeEntry = activeChapterId ? chapterById.get(activeChapterId) : undefined;
+  const activeIndex = activeEntry?.index ?? 0;
+  const renderedEntries = useMemo(
+    () => chapters.slice(
+      Math.max(0, activeIndex - CHAPTER_WINDOW_BEFORE),
+      Math.min(chapters.length, activeIndex + CHAPTER_WINDOW_AFTER + 1)
+    ),
+    [activeIndex, chapters]
+  );
+  const isReady = Boolean(bookIndex && activeEntry);
+  const focusedPassage = focusedPassageKey
+    ? findLoadedPassage(loadedChapters, focusedPassageKey)
+    : null;
+  const isSearching = navigation.state === "submitting";
+
+  useEffect(() => {
+    setReaderTheme(readSavedReaderTheme());
+  }, []);
 
   useEffect(() => {
     let ignore = false;
 
-    fetch(MANIFEST_URL)
+    fetch(manifestUrl)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Failed to load manifest: ${response.status}`);
@@ -137,14 +299,14 @@ export default function ChurchFathersPreview() {
       })
       .catch((error: unknown) => {
         if (!ignore) {
-          setManifestError(error instanceof Error ? error.message : String(error));
+          setLoadError(error instanceof Error ? error.message : String(error));
         }
       });
 
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [manifestUrl]);
 
   useEffect(() => {
     if (!manifest) {
@@ -152,13 +314,11 @@ export default function ChurchFathersPreview() {
     }
 
     let ignore = false;
-    setBookIndex(null);
-    setBookIndexError(null);
 
     fetch(manifest.bookIndexPath)
       .then((response) => {
         if (!response.ok) {
-          throw new Error(`Failed to load book index: ${response.status}`);
+          throw new Error(`Failed to load work index: ${response.status}`);
         }
 
         return response.json() as Promise<BookIndex>;
@@ -170,7 +330,7 @@ export default function ChurchFathersPreview() {
       })
       .catch((error: unknown) => {
         if (!ignore) {
-          setBookIndexError(error instanceof Error ? error.message : String(error));
+          setLoadError(error instanceof Error ? error.message : String(error));
         }
       });
 
@@ -179,486 +339,919 @@ export default function ChurchFathersPreview() {
     };
   }, [manifest?.bookIndexPath]);
 
-  const selectedBook = useMemo(
-    () => findById(bookIndex?.books ?? [], selection.bookId) ?? bookIndex?.books[0],
-    [bookIndex?.books, selection.bookId]
-  );
-  const selectedChapter = useMemo(
-    () => findById(selectedBook?.chapters ?? [], selection.chapterId) ?? selectedBook?.chapters[0],
-    [selectedBook?.chapters, selection.chapterId]
-  );
-  const filteredBooks = useMemo(
-    () => (bookIndex?.books ?? []).filter((book) => {
-      const matchesStatus = statusFilter === "all" || book.classification.doctrinalStatus === statusFilter;
-      return matchesStatus && bookMatchesQuery(book, bookQuery);
-    }),
-    [bookIndex?.books, bookQuery, statusFilter]
-  );
-  const filteredChapters = useMemo(
-    () => (selectedBook?.chapters ?? []).filter((chapterOption) => chapterMatchesQuery(chapterOption, chapterQuery)),
-    [chapterQuery, selectedBook?.chapters]
-  );
-  const previousChapter = useMemo(
-    () => previousChapterFromBook(selectedBook, selectedChapter),
-    [selectedBook, selectedChapter]
-  );
-  const nextChapter = useMemo(
-    () => nextChapterFromBook(selectedBook, selectedChapter),
-    [selectedBook, selectedChapter]
-  );
+  useEffect(() => {
+    if (!bookIndex || activeChapterId) {
+      return;
+    }
+
+    const rememberedChapterId = window.localStorage.getItem(READER_POSITION_STORAGE_KEY);
+    const rememberedChapter = rememberedChapterId ? chapterById.get(rememberedChapterId) : undefined;
+    const nextChapterId = rememberedChapter?.chapter.id ?? chapters[0]?.chapter.id ?? "";
+
+    setActiveChapterId(nextChapterId);
+  }, [activeChapterId, bookIndex, chapterById, chapters]);
 
   useEffect(() => {
-    if (!selectedChapter) {
-      setChapter(null);
+    if (!bookIndex || renderedEntries.length === 0) {
       return;
     }
 
     let ignore = false;
-    setChapter(null);
-    setChapterError(null);
+    const missingEntries = renderedEntries.filter((entry) => !loadedChapters.has(entry.chapter.id));
 
-    fetch(selectedChapter.assetPath)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to load chapter: ${response.status}`);
+    if (missingEntries.length === 0) {
+      return;
+    }
+
+    Promise.all(
+      missingEntries.map((entry) => fetch(entry.chapter.assetPath)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Failed to load chapter: ${response.status}`);
+          }
+
+          return response.json() as Promise<ChapterAsset>;
+        }))
+    )
+      .then((assets) => {
+        if (ignore) {
+          return;
         }
 
-        return response.json() as Promise<ChapterAsset>;
-      })
-      .then((loadedChapter) => {
-        if (!ignore) {
-          setChapter(loadedChapter);
-        }
+        setLoadedChapters((current) => {
+          const next = new Map(current);
+
+          for (const asset of assets) {
+            next.set(asset.id, asset);
+          }
+
+          return next;
+        });
       })
       .catch((error: unknown) => {
         if (!ignore) {
-          setChapterError(error instanceof Error ? error.message : String(error));
+          setLoadError(error instanceof Error ? error.message : String(error));
         }
       });
 
     return () => {
       ignore = true;
     };
-  }, [selectedChapter?.assetPath]);
+  }, [bookIndex, loadedChapters, renderedEntries]);
 
-  function updateSelection(nextSelection: Selection) {
-    setShowJson(false);
-    setSelection(nextSelection);
-    const params = new URLSearchParams();
-    if (nextSelection.bookId) {
-      params.set("book", nextSelection.bookId);
-    }
-    if (nextSelection.chapterId) {
-      params.set("chapter", nextSelection.chapterId);
-    }
-    window.history.replaceState(null, "", `/church-fathers?${params.toString()}`);
-  }
-
-  function openChapter(chapterOption: ChapterSummary) {
-    if (!selectedBook) {
+  useEffect(() => {
+    if (!isSearchOpen) {
       return;
     }
 
-    updateSelection({
-      bookId: selectedBook.id,
-      chapterId: chapterOption.id
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsSearchOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
+    let frame = 0;
+
+    const updateLocation = () => {
+      frame = 0;
+      const chapterElements = [
+        ...document.querySelectorAll<HTMLElement>(".ec-reader-chapter")
+      ];
+      const currentChapter = findElementAtReadingAnchor(chapterElements);
+      const chapterId = currentChapter?.dataset.chapterId;
+
+      if (chapterId && chapterId !== lastReportedChapterIdRef.current) {
+        lastReportedChapterIdRef.current = chapterId;
+        window.localStorage.setItem(READER_POSITION_STORAGE_KEY, chapterId);
+        setActiveChapterId(chapterId);
+        updateUrl(chapterId, selectedPassage);
+      }
+    };
+
+    const scheduleUpdate = () => {
+      if (!frame) {
+        frame = window.requestAnimationFrame(updateLocation);
+      }
+    };
+
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", scheduleUpdate);
+
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, [isReady, selectedPassage]);
+
+  useEffect(() => {
+    if (!activeChapterId || hasScrolledToSelectionRef.current) {
+      return;
+    }
+
+    const target = selectedPassage
+      ? document.querySelector<HTMLElement>(`[data-passage-range="${cssEscape(selectedPassage)}"]`)
+      : document.querySelector<HTMLElement>(`[data-chapter-id="${cssEscape(activeChapterId)}"]`);
+
+    if (!target) {
+      return;
+    }
+
+    hasScrolledToSelectionRef.current = true;
+    window.scrollTo({
+      behavior: "auto",
+      left: 0,
+      top: Math.max(0, target.getBoundingClientRect().top + window.scrollY - HEADER_SCROLL_OFFSET)
     });
-  }
+  }, [activeChapterId, loadedChapters, selectedPassage]);
 
-  function openBook(book: BookSummary) {
-    const nextChapter = book.chapters[0];
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setExampleIndex((index) => (index + 1) % SEARCH_EXAMPLES.length);
+    }, 2800);
 
-    if (nextChapter) {
-      setChapterQuery("");
-      updateSelection({
-        bookId: book.id,
-        chapterId: nextChapter.id
-      });
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (
+      navigation.state === "submitting"
+      && navigation.formData?.get("intent") === "similar-passage"
+    ) {
+      setFocusedPassageKey(String(navigation.formData.get("sourcePassageId") ?? ""));
+      setIsSearchOpen(true);
     }
-  }
+  }, [navigation.formData, navigation.state]);
 
-  function openRandomChapter() {
-    const books = filteredBooks.length ? filteredBooks : bookIndex?.books ?? [];
-    const book = books[Math.floor(Math.random() * books.length)];
-    const randomChapter = book?.chapters[Math.floor(Math.random() * book.chapters.length)];
-
-    if (book && randomChapter) {
-      updateSelection({
-        bookId: book.id,
-        chapterId: randomChapter.id
-      });
+  useEffect(() => {
+    if (actionData?.mode === "similar" && actionData.similarSource) {
+      setFocusedPassageKey(actionData.similarSource.id);
+      setIsSearchOpen(true);
+      return;
     }
-  }
 
-  if (manifestError || bookIndexError) {
+    if (actionData?.mode === "theme") {
+      setFocusedPassageKey(null);
+      setIsSearchOpen(true);
+    }
+  }, [actionData?.mode, actionData?.similarSource?.id]);
+
+  const openChapter = useCallback((chapterId: string, passageRange = "") => {
+    if (!chapterById.has(chapterId)) {
+      return;
+    }
+
+    hasScrolledToSelectionRef.current = false;
+    setActiveChapterId(chapterId);
+    setSelectedPassage(passageRange);
+    window.localStorage.setItem(READER_POSITION_STORAGE_KEY, chapterId);
+    updateUrl(chapterId, passageRange);
+  }, [chapterById]);
+
+  const openResult = useCallback((result: EarlyChristianSearchResult) => {
+    const passageRange = rangeFromResult(result);
+
+    openChapter(result.chapterId, passageRange);
+    setIsSearchOpen(false);
+  }, [openChapter]);
+
+  if (loadError) {
     return (
-      <main className="fathers-preview">
-        <section className="fathers-error" role="alert">
-          <h1>Church Fathers preview unavailable</h1>
-          <p>{manifestError ?? bookIndexError}</p>
-          <p>Run `npm run build:church-fathers-preview` to generate static assets.</p>
+      <main className={`reader-shell reader-theme-${readerTheme}`}>
+        <section className="reader-empty" role="alert">
+          <p>Early Christian reader unavailable: {loadError}</p>
         </section>
       </main>
     );
   }
 
-  if (!manifest || !bookIndex || !selectedBook || !selectedChapter) {
+  if (!bookIndex || !activeEntry) {
     return (
-      <main className="fathers-preview">
-        <section className="fathers-loading" aria-busy="true">
-          <h1>Loading Church Fathers preview</h1>
+      <main className={`reader-shell reader-theme-${readerTheme}`}>
+        <section
+          aria-busy="true"
+          aria-labelledby="reader-loading-title"
+          className={`reader-page reader-theme-${readerTheme} reader-loading`}
+          style={readerStyle()}
+        >
+          <header className="reader-header reader-loading-header">
+            <div className="reader-header-title">
+              <h1 id="reader-loading-title">Loading Early Christian Reader</h1>
+            </div>
+            <div className="reader-loading-meter" aria-hidden="true">
+              <span />
+            </div>
+          </header>
         </section>
       </main>
     );
   }
 
   return (
-    <main className="fathers-preview">
-      <header className="fathers-preview-header">
-        <div>
-          <p className="eyebrow">Preview</p>
-          <h1>Church Fathers playground</h1>
-          <div className="fathers-stat-row" aria-label="Corpus summary">
-            <span>{formatCount(manifest.bookCount)} works</span>
-            <span>{formatCount(manifest.chapterCount)} chapters</span>
-            <span>{formatGeneratedAt(manifest.generatedAt)}</span>
-            <span>{manifest.source}</span>
+    <main className={`reader-shell reader-theme-${readerTheme}`}>
+      <section
+        aria-labelledby="reader-title"
+        className={`reader-page reader-theme-${readerTheme}`}
+        style={readerStyle()}
+      >
+        <header className="reader-header">
+          <div className="reader-header-title">
+            <p className="eyebrow">Early Christian Works</p>
+            <h1 id="reader-title">
+              {activeEntry.book.name} {activeEntry.chapter.chapter}
+            </h1>
           </div>
-        </div>
-        <a className="context-button" href={selectedBook.metadata.source.sourceUrl}>
-          Source XML
-        </a>
-      </header>
-
-      <section className="fathers-picker" aria-label="Church Fathers controls">
-        <form
-          className="fathers-picker-form fathers-picker-form-flat"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const formData = new FormData(event.currentTarget);
-            updateSelection({
-              bookId: String(formData.get("book")),
-              chapterId: String(formData.get("chapter"))
-            });
-          }}
-        >
-          <label>
-            <span>Status</span>
-            <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+          {!isToolsOpen ? (
+            <button
+              aria-expanded={false}
+              aria-label="Open reader tools"
+              className="context-button reader-icon-button reader-tools-trigger"
+              onClick={() => setIsToolsOpen(true)}
+              title="Open reader tools"
+              type="button"
             >
-              {STATUS_FILTERS.map((status) => (
-                <option key={status} value={status}>
-                  {status === "all" ? "All included" : status}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Work</span>
-            <select
-              name="book"
-              value={selectedBook.id}
-              onChange={(event) => {
-                const nextBook = findById(bookIndex.books, event.target.value);
+              ⋮
+            </button>
+          ) : (
+            <div className="reader-header-actions">
+              <button
+                aria-label="Close reader tools"
+                className="context-button reader-icon-button reader-tools-close"
+                onClick={() => {
+                  setIsToolsOpen(false);
+                  setIsJumpOpen(false);
+                }}
+                title="Close reader tools"
+                type="button"
+              >
+                ×
+              </button>
+              <button
+                aria-label="Search"
+                className="context-button reader-icon-button"
+                onClick={() => {
+                  setIsToolsOpen(false);
+                  setIsSearchOpen(true);
+                }}
+                title="Search"
+                type="button"
+              >
+                🔍
+              </button>
+              <section className="passage-jump-launcher is-inline" aria-label="Jump">
+                <button
+                  className="context-button"
+                  onClick={() => {
+                    setIsToolsOpen(false);
+                    setIsJumpOpen(true);
+                  }}
+                  type="button"
+                >
+                  Jump
+                </button>
+              </section>
+            </div>
+          )}
+        </header>
 
-                if (nextBook) {
-                  openBook(nextBook);
-                }
-              }}
-            >
-              {bookIndex.books.map((book) => (
-                <option key={book.id} value={book.id}>
-                  {book.name}{book.author ? ` - ${book.author}` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Chapter</span>
-            <select name="chapter" value={selectedChapter.id} onChange={(event) => {
-              updateSelection({
-                bookId: selectedBook.id,
-                chapterId: event.target.value
-              });
-            }}>
-              {selectedBook.chapters.map((chapterOption) => (
-                <option key={chapterOption.id} value={chapterOption.id}>
-                  {chapterLabel(chapterOption)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="context-button" type="submit">
-            Open
-          </button>
-        </form>
-        <div className="fathers-search-row">
-          <label>
-            <span>Works</span>
-            <input
-              placeholder="Augustine, Clement, homilies..."
-              type="search"
-              value={bookQuery}
-              onChange={(event) => setBookQuery(event.target.value)}
-            />
-          </label>
-          <label>
-            <span>Chapters</span>
-            <input
-              placeholder="Trinity, resurrection, repentance..."
-              type="search"
-              value={chapterQuery}
-              onChange={(event) => setChapterQuery(event.target.value)}
-            />
-          </label>
-          <button className="context-button" onClick={openRandomChapter} type="button">
-            Random
-          </button>
+        <div className="reader-passages">
+          {renderedEntries.map((entry) => {
+            const chapter = loadedChapters.get(entry.chapter.id);
+
+            return (
+              <section
+                className="reader-chapter ec-reader-chapter"
+                data-chapter-id={entry.chapter.id}
+                key={entry.chapter.id}
+              >
+                <h2 className="reader-chapter-heading">
+                  {entry.book.name} {entry.chapter.chapter}
+                  <span>{entry.book.author ?? entry.book.metadata.source.id.toUpperCase()}</span>
+                </h2>
+                {chapter ? (
+                  <>
+                    <p className="ec-chapter-title">{chapter.title}</p>
+                    <div className="reader-chapter-passages">
+                      {groupChapterPassages(chapter).map((passage) => {
+                        const isSelected = selectedPassage === passage.rangeLabel;
+
+                        return (
+                          <article
+                            className={[
+                              "reader-passage",
+                              isSelected ? "is-selected" : ""
+                            ].filter(Boolean).join(" ")}
+                            data-passage-key={passage.key}
+                            data-passage-range={passage.rangeLabel}
+                            key={passage.key}
+                          >
+                            <button
+                              aria-expanded={isSelected}
+                              className="reader-passage-button"
+                              onClick={() => {
+                                const nextRange = isSelected ? "" : passage.rangeLabel;
+                                setSelectedPassage(nextRange);
+                                updateUrl(chapter.id, nextRange);
+                              }}
+                              type="button"
+                            >
+                              <span className="reader-passage-reference">
+                                {passage.rangeLabel}
+                              </span>
+                              <span className="reader-passage-text">
+                                <span
+                                  className={isSelected ? "reader-verse verse-highlight" : "reader-verse"}
+                                >
+                                  {passage.text}
+                                </span>
+                              </span>
+                            </button>
+                            {isSelected ? (
+                              <div className="reader-passage-actions">
+                                <Form method="post">
+                                  <input type="hidden" name="intent" value="similar-passage" />
+                                  <input type="hidden" name="sourcePassageId" value={passage.key} />
+                                  <button
+                                    className="context-button"
+                                    disabled={isSearching}
+                                    type="submit"
+                                  >
+                                    {isSearching ? "Finding similar" : "Similar passages"}
+                                  </button>
+                                </Form>
+                              </div>
+                            ) : null}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <div className="reader-loading-lines" aria-hidden="true">
+                    <span className="reader-loading-line is-wide" />
+                    <span className="reader-loading-line" />
+                    <span className="reader-loading-line is-medium" />
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       </section>
 
-      <div className="fathers-preview-layout">
-        <aside className="fathers-sidebar" aria-label="Church Fathers work navigation">
-          <section>
-            <h2>Works</h2>
-            <p className="fathers-sidebar-meta">
-              {filteredBooks.length} of {bookIndex.books.length} works
-            </p>
-            <ol className="fathers-work-list">
-              {filteredBooks.map((book) => (
-                <li key={book.id}>
-                  <button
-                    className={book.id === selectedBook.id ? "is-active" : undefined}
-                    onClick={() => openBook(book)}
-                    type="button"
-                  >
-                    <span>{book.name}</span>
-                    <small>
-                      {book.author ? `${book.author} - ` : ""}
-                      {book.metadata.authorshipDateRange ? `${book.metadata.authorshipDateRange} - ` : ""}
-                      {book.classification.doctrinalStatus} - {book.chapters.length} chapters
-                    </small>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          </section>
+      {isSearchOpen ? (
+        <div
+          className={`search-modal-backdrop reader-theme-${readerTheme}`}
+          onClick={(event) => {
+            event.stopPropagation();
 
-          <section>
-            <h2>Chapters</h2>
-            <p className="fathers-sidebar-meta">
-              {filteredChapters.length} of {selectedBook.chapters.length} chapters
-            </p>
-            <ol className="fathers-chapter-list">
-              {filteredChapters.map((chapterOption) => (
-                <li key={chapterOption.id}>
-                  <button
-                    className={chapterOption.id === selectedChapter.id ? "is-active" : undefined}
-                    onClick={() => openChapter(chapterOption)}
-                    type="button"
-                  >
-                    <span>{chapterOption.chapter}. {chapterOption.title}</span>
-                    <small>{chapterOption.verseCount} sentences</small>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          </section>
-        </aside>
+            if (event.target === event.currentTarget) {
+              setIsSearchOpen(false);
+            }
+          }}
+        >
+          <section
+            aria-labelledby="search-modal-title"
+            aria-modal="true"
+            className="search-modal"
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <header className="search-modal-header">
+              <div>
+                <p className="eyebrow">Search</p>
+                <h2 id="search-modal-title">Find chapters</h2>
+              </div>
+              <button
+                className="filter-modal-close"
+                onClick={() => setIsSearchOpen(false)}
+                type="button"
+              >
+                Close
+              </button>
+            </header>
 
-        <article className="fathers-reader">
-          {chapterError ? (
-            <section className="fathers-error" role="alert">
-              <h2>Chapter unavailable</h2>
-              <p>{chapterError}</p>
-            </section>
-          ) : !chapter ? (
-            <section className="fathers-loading" aria-busy="true">
-              <h2>Loading chapter</h2>
-            </section>
-          ) : (
-            <>
-              <header>
-                <p className="eyebrow">{chapter.metadata.source.provider}</p>
-                <h2>{chapter.book}</h2>
-                <ClassificationNotice classification={chapter.classification} />
-                <dl className="fathers-metadata">
-                  {chapter.metadata.author ? (
+            <div className="search-modal-body">
+              <section
+                aria-busy={isSearching}
+                aria-label="Early Christian search"
+                className={`search-band${isSearching ? " is-searching" : ""}`}
+              >
+                <Form method="post" className="search-form">
+                  {focusedPassageKey ? (
                     <>
-                      <dt>Author</dt>
-                      <dd>{chapter.metadata.author}</dd>
+                      <input type="hidden" name="intent" value="similar-passage" />
+                      <input type="hidden" name="sourcePassageId" value={focusedPassageKey} />
                     </>
                   ) : null}
-                  {chapter.metadata.authorshipDateRange ? (
-                    <>
-                      <dt>Date hint</dt>
-                      <dd>{chapter.metadata.authorshipDateRange}</dd>
-                    </>
+                  <input type="hidden" name="matchCount" value={actionData?.matchCount ?? 10} />
+                  {!focusedPassageKey ? (
+                    <label htmlFor="question">Search early Christian works for...</label>
                   ) : null}
-                  <dt>Source</dt>
-                  <dd>
-                    <a href={chapter.metadata.ccel.sourceUrl}>
-                      {chapter.metadata.ccel.id.toUpperCase()} - {chapter.metadata.ccel.title}
-                    </a>
-                  </dd>
-                </dl>
-                {chapter.originalBook ? (
-                  <p className="fathers-book-label">{chapter.originalBook}</p>
-                ) : null}
-                <h3>{chapter.chapter}. {chapter.title}</h3>
-                <div className="fathers-reader-actions" aria-label="Reader actions">
-                  <button
-                    className="context-button"
-                    disabled={!previousChapter}
-                    onClick={() => previousChapter ? openChapter(previousChapter) : undefined}
-                    type="button"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    className="context-button"
-                    disabled={!nextChapter}
-                    onClick={() => nextChapter ? openChapter(nextChapter) : undefined}
-                    type="button"
-                  >
-                    Next
-                  </button>
-                  <button
-                    className="context-button"
-                    onClick={() => setShowJson((current) => !current)}
-                    type="button"
-                  >
-                    JSON
-                  </button>
-                  <a className="context-button" href={selectedChapter.assetPath}>
-                    Raw asset
-                  </a>
-                </div>
-              </header>
+                  <div className="search-row">
+                    <div className="search-primary">
+                      {focusedPassageKey ? (
+                        <div className="focused-passage">
+                          <button
+                            aria-label="Clear similar passage"
+                            className="focused-passage-clear"
+                            disabled={isSearching}
+                            onClick={() => setFocusedPassageKey(null)}
+                            type="button"
+                          >
+                            &times;
+                          </button>
+                          <h2>
+                            {actionData?.similarSource?.reference
+                              ?? focusedPassage?.reference
+                              ?? "Selected passage"}
+                          </h2>
+                          <p>
+                            {actionData?.similarSource?.text
+                              ?? focusedPassage?.text
+                              ?? "Passage text is loading."}
+                          </p>
+                        </div>
+                      ) : (
+                        <textarea
+                          defaultValue={actionData?.question ?? ""}
+                          disabled={isSearching}
+                          id="question"
+                          maxLength={500}
+                          minLength={3}
+                          name="question"
+                          placeholder={SEARCH_EXAMPLES[exampleIndex]}
+                          required
+                          rows={4}
+                        />
+                      )}
+                    </div>
+                    <div className="search-actions">
+                      <button
+                        className="search-button"
+                        disabled={isSearching || !isReady}
+                        type="submit"
+                      >
+                        {isSearching ? (
+                          <>
+                            <span className="button-spinner" aria-hidden="true" />
+                            Searching
+                          </>
+                        ) : focusedPassageKey ? (
+                          "Find similar"
+                        ) : (
+                          "Search"
+                        )}
+                      </button>
+                      {isSearching ? (
+                        <p className="search-status" role="status">
+                          Searching early Christian works...
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </Form>
+              </section>
 
-              {showJson ? (
-                <pre className="fathers-json-preview">
-                  {JSON.stringify(chapter, null, 2)}
-                </pre>
-              ) : (
-                <ol className="fathers-verses">
-                  {chapter.verses.map((verse) => (
-                    <li key={verse.verse}>
-                      <span className="fathers-verse-number">{verse.verse}</span>
-                      <span>{verse.text}</span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </>
-          )}
-        </article>
-      </div>
+              {actionData?.error ? (
+                <p className="notice" role="alert">
+                  {actionData.error}
+                  {actionData.retryAfterSeconds
+                    ? ` ${actionData.retryAfterSeconds} seconds remaining.`
+                    : ""}
+                </p>
+              ) : null}
+
+              <EarlyChristianSearchResults
+                isSearching={isSearching}
+                onOpenResult={openResult}
+                results={actionData?.results}
+              />
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {isJumpOpen ? (
+        <ChapterJump
+          activeChapterId={activeEntry.chapter.id}
+          chapters={chapters}
+          onClose={() => setIsJumpOpen(false)}
+          onJump={(chapterId) => {
+            setIsJumpOpen(false);
+            openChapter(chapterId);
+          }}
+        />
+      ) : null}
     </main>
   );
 }
 
-function ClassificationNotice({ classification }: { classification: WorkClassification }) {
+function EarlyChristianSearchResults({
+  isSearching,
+  onOpenResult,
+  results
+}: {
+  isSearching: boolean;
+  onOpenResult: (result: EarlyChristianSearchResult) => void;
+  results?: EarlyChristianSearchResult[];
+}) {
+  const [selectedResult, setSelectedResult] = useState("");
+
+  useEffect(() => {
+    setSelectedResult("");
+  }, [results]);
+
   return (
-    <section className={`fathers-classification ${statusClass(classification.doctrinalStatus)}`}>
-      <div className="fathers-classification-header">
-        <span>{classification.bucket}</span>
-        <span>{classification.canonicalStatus}</span>
-      </div>
-      <p>{classification.cautionReason}</p>
-      <div className="fathers-labels" aria-label="Classification labels">
-        {classification.labels.map((label) => (
-          <span key={label}>{label}</span>
-        ))}
-      </div>
+    <section className="results ec-results" aria-live="polite">
+      {results?.length ? (
+        results.map((result, index) => {
+          const isSelected = selectedResult === result.chapterId;
+
+          return (
+            <article
+              className={[
+                "scripture-result",
+                `match-level-${result.matchStrength}`,
+                isSelected ? "is-selected" : ""
+              ].filter(Boolean).join(" ")}
+              key={`${result.chapterId}-${index}`}
+            >
+              <button
+                aria-expanded={isSelected}
+                className="scripture-result-button"
+                onClick={() => setSelectedResult(isSelected ? "" : result.chapterId)}
+                type="button"
+              >
+                <span className="result-meta">
+                  <span>{result.chapterReference}</span>
+                  <span>{result.author ?? result.source.toUpperCase()}</span>
+                  <span
+                    aria-label={`${result.matchStrength} of 4 match strength`}
+                    className="match-dots"
+                    title={`${result.matchStrength} of 4 match strength`}
+                  >
+                    {[1, 2, 3, 4].map((level) => (
+                      <span
+                        aria-hidden="true"
+                        className={level <= result.matchStrength ? "is-active" : undefined}
+                        key={level}
+                      />
+                    ))}
+                  </span>
+                </span>
+                <span className="scripture-result-text">
+                  {result.highlightPassage.rangeLabel ? (
+                    <>
+                      <span className="result-range-label">
+                        {result.highlightPassage.rangeLabel}.
+                      </span>{" "}
+                    </>
+                  ) : null}
+                  {result.highlightPassage.text}
+                </span>
+              </button>
+              {isSelected ? (
+                <div className="result-actions">
+                  <button
+                    className="context-button"
+                    onClick={() => onOpenResult(result)}
+                    type="button"
+                  >
+                    Jump to
+                  </button>
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="similar-passage" />
+                    <input
+                      type="hidden"
+                      name="sourcePassageId"
+                      value={result.highlightPassage.id}
+                    />
+                    <button
+                      className="context-button"
+                      disabled={isSearching}
+                      type="submit"
+                    >
+                      {isSearching ? "Finding similar" : "Similar passages"}
+                    </button>
+                  </Form>
+                </div>
+              ) : null}
+            </article>
+          );
+        })
+      ) : (
+        <div className="empty-state">
+          <p>Early Christian results will appear here.</p>
+        </div>
+      )}
     </section>
   );
 }
 
-function readInitialSelection(): Selection {
-  const params = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
+function ChapterJump({
+  activeChapterId,
+  chapters,
+  onClose,
+  onJump
+}: {
+  activeChapterId: string;
+  chapters: ChapterEntry[];
+  onClose: () => void;
+  onJump: (chapterId: string) => void;
+}) {
+  const activeEntry = chapters.find((entry) => entry.chapter.id === activeChapterId)
+    ?? chapters[0];
+  const [selectedBookId, setSelectedBookId] = useState(activeEntry?.book.id ?? "");
+  const selectedBook = chapters.find((entry) => entry.book.id === selectedBookId)?.book
+    ?? activeEntry?.book;
+  const bookChapters = selectedBook
+    ? chapters.filter((entry) => entry.book.id === selectedBook.id)
+    : [];
+
+  return (
+    <div
+      className="passage-jump-backdrop"
+      onClick={(event) => {
+        event.stopPropagation();
+
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        aria-labelledby="passage-jump-title"
+        aria-modal="true"
+        className="passage-jump-modal ec-jump-modal"
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <header className="passage-jump-modal-header">
+          <div>
+            <p className="eyebrow">Jump</p>
+            <h2 id="passage-jump-title">Choose a work</h2>
+          </div>
+          <button className="filter-modal-close" onClick={onClose} type="button">
+            Close
+          </button>
+        </header>
+
+        <div className="passage-jump-modal-body">
+          <label className="passage-jump-book">
+            <span>Work</span>
+            <select
+              value={selectedBook?.id ?? ""}
+              onChange={(event) => setSelectedBookId(event.target.value)}
+            >
+              {dedupeBooks(chapters).map((book) => (
+                <option key={book.id} value={book.id}>
+                  {book.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="passage-jump-group" aria-label="Chapter">
+            <span>Chapter</span>
+            <div className="passage-jump-options">
+              {bookChapters.map((entry) => (
+                <button
+                  className={entry.chapter.id === activeChapterId ? "is-selected" : undefined}
+                  key={entry.chapter.id}
+                  onClick={() => onJump(entry.chapter.id)}
+                  title={entry.chapter.title}
+                  type="button"
+                >
+                  {entry.chapter.chapter}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function flattenChapters(bookIndex: BookIndex | null): ChapterEntry[] {
+  if (!bookIndex) {
+    return [];
+  }
+
+  const entries: ChapterEntry[] = [];
+
+  for (const book of bookIndex.books) {
+    for (const chapter of book.chapters) {
+      entries.push({
+        book,
+        chapter,
+        index: entries.length
+      });
+    }
+  }
+
+  return entries;
+}
+
+function groupChapterPassages(chapter: ChapterAsset): ReaderPassage[] {
+  const passages: ReaderPassage[] = [];
+  let current: ChapterAsset["verses"] = [];
+
+  for (const verse of chapter.verses) {
+    current.push(verse);
+
+    if (current.length >= 3) {
+      passages.push(buildReaderPassage(chapter, current));
+      current = [];
+    }
+  }
+
+  if (current.length > 0) {
+    if (passages.length > 0 && current.length < 3) {
+      const previous = passages.pop();
+      const previousVerses = previous
+        ? chapter.verses.filter((verse) => (
+          verse.verse >= previous.verseStart && verse.verse <= previous.verseEnd
+        ))
+        : [];
+      passages.push(buildReaderPassage(chapter, [...previousVerses, ...current]));
+    } else {
+      passages.push(buildReaderPassage(chapter, current));
+    }
+  }
+
+  return passages;
+}
+
+function buildReaderPassage(chapter: ChapterAsset, verses: ChapterAsset["verses"]): ReaderPassage {
+  const first = verses[0];
+  const last = verses[verses.length - 1];
+  const rangeLabel = last.verse === first.verse
+    ? String(first.verse)
+    : `${first.verse}-${last.verse}`;
 
   return {
-    bookId: params.get("book") ?? params.get("work") ?? "",
-    chapterId: params.get("chapter") ?? ""
+    key: `${chapter.id}:${first.verse}-${last.verse}`,
+    rangeLabel,
+    reference: `${chapter.book} ${chapter.chapter}:${rangeLabel}`,
+    text: verses.map((verse) => verse.text.trim()).join(" "),
+    verseEnd: last.verse,
+    verseStart: first.verse
   };
 }
 
-function findById<T extends { id: string }>(items: T[], id: string | null) {
-  return id ? items.find((item) => item.id === id) : undefined;
-}
+function findLoadedPassage(chapters: Map<string, ChapterAsset>, key: string) {
+  const rangeMatch = key.match(/^(.+):(\d+)-(\d+)$/);
 
-function chapterLabel(chapter: ChapterSummary) {
-  return `${chapter.chapter}. ${chapter.title}`;
-}
-
-function bookMatchesQuery(book: BookSummary, query: string) {
-  const normalizedQuery = normalizeQuery(query);
-
-  if (!normalizedQuery) {
-    return true;
+  if (!rangeMatch) {
+    return null;
   }
 
-  return normalizeQuery([
-    book.author,
-    book.name,
-    book.book,
-    book.metadata.authorshipDateRange,
-    book.metadata.source.id,
-    book.metadata.source.title,
-    book.classification.bucket,
-    book.classification.doctrinalStatus
-  ].filter(Boolean).join(" ")).includes(normalizedQuery);
-}
+  const [, chapterId, verseStart, verseEnd] = rangeMatch;
+  const chapter = chapters.get(chapterId);
 
-function chapterMatchesQuery(chapter: ChapterSummary, query: string) {
-  const normalizedQuery = normalizeQuery(query);
-
-  if (!normalizedQuery) {
-    return true;
+  if (!chapter) {
+    return null;
   }
 
-  return normalizeQuery(chapter.title).includes(normalizedQuery);
+  return groupChapterPassages(chapter).find((passage) => (
+    passage.verseStart === Number(verseStart) && passage.verseEnd === Number(verseEnd)
+  )) ?? null;
 }
 
-function previousChapterFromBook(book: BookSummary | undefined, chapter: ChapterSummary | undefined) {
-  if (!book || !chapter) {
-    return undefined;
+function findElementAtReadingAnchor(elements: HTMLElement[]) {
+  if (elements.length === 0) {
+    return null;
   }
 
-  const currentIndex = book.chapters.findIndex((chapterOption) => chapterOption.id === chapter.id);
-  return currentIndex > 0 ? book.chapters[currentIndex - 1] : undefined;
-}
+  const anchorY = Math.max(220, window.innerHeight * READING_ANCHOR_RATIO);
+  let bestElement = elements[0];
+  let bestDistance = Number.POSITIVE_INFINITY;
 
-function nextChapterFromBook(book: BookSummary | undefined, chapter: ChapterSummary | undefined) {
-  if (!book || !chapter) {
-    return undefined;
+  for (const element of elements) {
+    const rect = element.getBoundingClientRect();
+
+    if (rect.bottom < 0 || rect.top > window.innerHeight) {
+      continue;
+    }
+
+    const distance = Math.abs(rect.top - anchorY);
+
+    if (distance < bestDistance) {
+      bestElement = element;
+      bestDistance = distance;
+    }
   }
 
-  const currentIndex = book.chapters.findIndex((chapterOption) => chapterOption.id === chapter.id);
-  return currentIndex >= 0 ? book.chapters[currentIndex + 1] : undefined;
+  return bestElement;
 }
 
-function normalizeQuery(value: string) {
-  return value.trim().toLowerCase();
-}
+function rangeFromResult(result: EarlyChristianSearchResult) {
+  const start = result.highlightPassage.verseStart;
+  const end = result.highlightPassage.verseEnd;
 
-function formatCount(value: number) {
-  return value.toLocaleString();
-}
-
-function formatGeneratedAt(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
+  if (!start) {
+    return "";
   }
 
-  return date.toLocaleString();
+  return end && end !== start ? `${start}-${end}` : String(start);
 }
 
-function statusClass(status: string) {
-  return `is-${status.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+function updateUrl(chapterId: string, passageRange = "") {
+  const params = new URLSearchParams();
+
+  if (chapterId) {
+    params.set("chapter", chapterId);
+  }
+
+  if (passageRange) {
+    params.set("passage", passageRange);
+  }
+
+  window.history.replaceState(null, "", `/church-fathers?${params.toString()}`);
+}
+
+function dedupeBooks(chapters: ChapterEntry[]) {
+  const seen = new Set<string>();
+  const books: BookSummary[] = [];
+
+  for (const entry of chapters) {
+    if (seen.has(entry.book.id)) {
+      continue;
+    }
+
+    seen.add(entry.book.id);
+    books.push(entry.book);
+  }
+
+  return books;
+}
+
+function parseMatchCount(formData: FormData):
+  | { value: number }
+  | { response: ReturnType<typeof json<ChurchFathersActionData>> } {
+  const matchCount = Number(formData.get("matchCount") ?? 10);
+
+  if (!Number.isInteger(matchCount) || matchCount < 5 || matchCount > 40) {
+    return {
+      response: json<ChurchFathersActionData>(
+        { error: "Choose between 5 and 40 matches." },
+        { status: 400 }
+      )
+    };
+  }
+
+  return { value: matchCount };
+}
+
+function readSavedReaderTheme(): ReaderTheme {
+  if (typeof window === "undefined") {
+    return "paper";
+  }
+
+  try {
+    const savedSettings = window.localStorage.getItem(READER_SETTINGS_STORAGE_KEY);
+
+    if (!savedSettings) {
+      return "paper";
+    }
+
+    const parsedSettings = JSON.parse(savedSettings) as { theme?: unknown };
+    return isReaderTheme(parsedSettings.theme) ? parsedSettings.theme : "paper";
+  } catch {
+    return "paper";
+  }
+}
+
+function isReaderTheme(value: unknown): value is ReaderTheme {
+  return typeof value === "string" && READER_THEMES.includes(value as ReaderTheme);
+}
+
+function readerStyle() {
+  return {
+    "--reader-content-width": "820px",
+    "--reader-font-scale": 1,
+    "--reader-line-height": 1.72
+  } as CSSProperties;
+}
+
+function cssEscape(value: string) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(value);
+  }
+
+  return value.replace(/["\\]/g, "\\$&");
 }

@@ -151,6 +151,17 @@ h1 {
   min-height: 38px;
 }
 
+.ec-jump-modal .passage-jump-book select {
+  width: 100%;
+  max-width: 100%;
+}
+
+.ec-jump-modal .passage-jump-options {
+  max-height: min(42vh, 420px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
 .passage-jump-options {
   display: flex;
   flex-wrap: wrap;
@@ -680,6 +691,17 @@ button:disabled {
   font-family: "Source Serif 4", Georgia, serif;
   font-size: clamp(1.1rem, 2.4vw, 1.34rem);
   line-height: 1.62;
+}
+
+.result-range-label {
+  background: var(--accent-surface);
+  border-radius: 4px;
+  color: var(--accent-dark);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  white-space: nowrap;
 }
 
 .results-context {
@@ -1225,6 +1247,16 @@ button:disabled {
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.62rem;
   font-weight: 700;
+}
+
+.ec-chapter-title {
+  max-width: var(--reader-content-width);
+  margin: -4px 0 8px;
+  color: var(--reader-muted);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 .reader-chapter-passages {

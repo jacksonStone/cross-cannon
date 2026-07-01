@@ -561,6 +561,8 @@ async function resetRuntimeDatabase(db: Client) {
     "DROP INDEX IF EXISTS early_christian_chapters_embedding_idx",
     "DROP INDEX IF EXISTS early_christian_chapters_embedding_idx_shadow_idx",
     "DROP TABLE IF EXISTS early_christian_chapters_embedding_idx_shadow",
+    "DELETE FROM libsql_vector_meta_shadow WHERE name = 'passages_embedding_idx'",
+    "DELETE FROM libsql_vector_meta_shadow WHERE name = 'early_christian_chapters_embedding_idx'",
     "DELETE FROM early_christian_passage_metadata",
     "DELETE FROM early_christian_chapters",
     "DELETE FROM early_christian_works",
@@ -960,12 +962,25 @@ async function rebuildVectorIndex(db: Client) {
     await db.execute("DROP INDEX IF EXISTS early_christian_chapters_embedding_idx");
     await db.execute("DROP INDEX IF EXISTS early_christian_chapters_embedding_idx_shadow_idx");
     await db.execute("DROP TABLE IF EXISTS early_christian_chapters_embedding_idx_shadow");
+    await dropVectorIndexMetadata(db, "passages_embedding_idx");
+    await dropVectorIndexMetadata(db, "early_christian_chapters_embedding_idx");
     await db.execute(`
       CREATE INDEX IF NOT EXISTS early_christian_chapters_embedding_idx
       ON early_christian_chapters(libsql_vector_idx(embedding))
     `);
   } catch {
     console.warn("Chapter vector index rebuild unavailable; exact vector scan query can still verify results.");
+  }
+}
+
+async function dropVectorIndexMetadata(db: Client, indexName: string) {
+  try {
+    await db.execute({
+      sql: "DELETE FROM libsql_vector_meta_shadow WHERE name = ?",
+      args: [indexName]
+    });
+  } catch {
+    // Older SQLite/libSQL states may not have vector metadata yet.
   }
 }
 

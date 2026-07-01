@@ -401,7 +401,8 @@ async function dropSearchIndexes(db: Client) {
   for (const sql of [
     "DROP INDEX IF EXISTS passages_embedding_idx",
     "DROP INDEX IF EXISTS passages_embedding_idx_shadow_idx",
-    "DROP TABLE IF EXISTS passages_embedding_idx_shadow"
+    "DROP TABLE IF EXISTS passages_embedding_idx_shadow",
+    "DELETE FROM libsql_vector_meta_shadow WHERE name = 'passages_embedding_idx'"
   ]) {
     try {
       await db.execute(sql);

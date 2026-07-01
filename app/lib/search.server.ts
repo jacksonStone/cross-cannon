@@ -67,6 +67,14 @@ export async function searchScripture(
       return results;
     }
 
+    const exactResults = await searchEmbeddingsExact(embedding, limit, books, options);
+    trace.mark("searchEmbeddingsExactFallback", { count: exactResults.length });
+    if (exactResults.length > 0) {
+      const results = await attachVerseHighlights(embedding, exactResults);
+      trace.finish("vector-exact-fallback", { count: results.length });
+      return results;
+    }
+
     trace.finish("no-vector-results", { count: 0 });
     return [];
   }
@@ -132,6 +140,20 @@ export async function searchSimilarScripture(
   if (vectorResults.length >= Math.min(4, limit)) {
     const results = await attachVerseHighlights(embedding, vectorResults);
     trace.finish("vector", { count: results.length });
+    return {
+      source: {
+        id: String(source.id),
+        reference: String(source.reference)
+      },
+      results
+    };
+  }
+
+  const exactResults = await searchEmbeddingsExact(embedding, limit, books, options);
+  trace.mark("searchEmbeddingsExactFallback", { count: exactResults.length });
+  if (exactResults.length > 0) {
+    const results = await attachVerseHighlights(embedding, exactResults);
+    trace.finish("vector-exact-fallback", { count: results.length });
     return {
       source: {
         id: String(source.id),
@@ -339,16 +361,27 @@ async function searchBookEmbeddingsExact(
   books: string[],
   options: SearchEmbeddingOptions = {}
 ) {
+  return searchEmbeddingsExact(embedding, limit, books, options);
+}
+
+async function searchEmbeddingsExact(
+  embedding: ArrayLike<number>,
+  limit: number,
+  books: string[] = [],
+  options: SearchEmbeddingOptions = {}
+) {
   const db = getDb();
   const query = normalizeVector(embedding);
   const excludeIds = options.excludeIds ?? [];
+  const bookClause = books.length ? `AND book IN (${placeholders(books)})` : "";
+  const excludeClause = excludeIds.length ? `AND id NOT IN (${placeholders(excludeIds)})` : "";
   const response = await db.execute({
     sql: `
       SELECT id, reference, result_type, embedding
       FROM passages
       WHERE embedding IS NOT NULL
-        AND book IN (${placeholders(books)})
-        ${excludeIds.length ? `AND id NOT IN (${placeholders(excludeIds)})` : ""}
+        ${bookClause}
+        ${excludeClause}
     `,
     args: [...books, ...excludeIds]
   });

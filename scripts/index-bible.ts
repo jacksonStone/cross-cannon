@@ -411,6 +411,7 @@ async function resetRuntimeDatabase(db: Client) {
   await db.execute("DROP INDEX IF EXISTS passages_embedding_idx");
   await db.execute("DROP INDEX IF EXISTS passages_embedding_idx_shadow_idx");
   await db.execute("DROP TABLE IF EXISTS passages_embedding_idx_shadow");
+  await dropVectorIndexMetadata(db, "passages_embedding_idx");
   await db.execute("DROP TABLE IF EXISTS passages_fts");
   await db.execute("DELETE FROM passage_audio_files");
   await db.execute("DELETE FROM paragraph_verses");
@@ -618,6 +619,9 @@ async function upsertParagraphVerses(
 async function rebuildVectorIndex(db: Client) {
   try {
     await db.execute("DROP INDEX IF EXISTS passages_embedding_idx");
+    await db.execute("DROP INDEX IF EXISTS passages_embedding_idx_shadow_idx");
+    await db.execute("DROP TABLE IF EXISTS passages_embedding_idx_shadow");
+    await dropVectorIndexMetadata(db, "passages_embedding_idx");
     await db.execute(`
       CREATE INDEX IF NOT EXISTS passages_embedding_idx
       ON passages(libsql_vector_idx(embedding))
@@ -626,6 +630,17 @@ async function rebuildVectorIndex(db: Client) {
     if (process.env.NODE_ENV !== "production") {
       console.warn("Vector index rebuild unavailable; semantic search requires a rebuilt vector index.");
     }
+  }
+}
+
+async function dropVectorIndexMetadata(db: Client, indexName: string) {
+  try {
+    await db.execute({
+      sql: "DELETE FROM libsql_vector_meta_shadow WHERE name = ?",
+      args: [indexName]
+    });
+  } catch {
+    // Older SQLite/libSQL states may not have vector metadata yet.
   }
 }
 
