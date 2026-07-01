@@ -21,6 +21,7 @@ import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 const MANIFEST_URL = "/church-fathers-preview/manifest.json";
+const PREVIEW_ASSET_VERSION = "early-christian-preview-20260701b";
 const READER_POSITION_STORAGE_KEY = "cross-cannon:church-fathers-position:v1";
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
 const READER_THEMES = ["paper", "sepia", "dark", "contrast"] as const;
@@ -162,7 +163,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return json({
     initialChapterId: url.searchParams.get("chapter") ?? "",
     initialPassageRange: url.searchParams.get("passage") ?? "",
-    manifestUrl: MANIFEST_URL
+    manifestUrl: MANIFEST_URL,
+    previewAssetVersion: PREVIEW_ASSET_VERSION
   });
 }
 
@@ -237,7 +239,12 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function ChurchFathersReaderRoute() {
-  const { initialChapterId, initialPassageRange, manifestUrl } = useLoaderData<typeof loader>();
+  const {
+    initialChapterId,
+    initialPassageRange,
+    manifestUrl,
+    previewAssetVersion
+  } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const [manifest, setManifest] = useState<PreviewManifest | null>(null);
@@ -284,7 +291,7 @@ export default function ChurchFathersReaderRoute() {
   useEffect(() => {
     let ignore = false;
 
-    fetch(manifestUrl)
+    fetch(versionedPreviewUrl(manifestUrl, previewAssetVersion), { cache: "no-store" })
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Failed to load manifest: ${response.status}`);
@@ -306,7 +313,7 @@ export default function ChurchFathersReaderRoute() {
     return () => {
       ignore = true;
     };
-  }, [manifestUrl]);
+  }, [manifestUrl, previewAssetVersion]);
 
   useEffect(() => {
     if (!manifest) {
@@ -315,7 +322,7 @@ export default function ChurchFathersReaderRoute() {
 
     let ignore = false;
 
-    fetch(manifest.bookIndexPath)
+    fetch(versionedPreviewUrl(manifest.bookIndexPath, previewAssetVersion), { cache: "no-store" })
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Failed to load work index: ${response.status}`);
@@ -337,7 +344,7 @@ export default function ChurchFathersReaderRoute() {
     return () => {
       ignore = true;
     };
-  }, [manifest?.bookIndexPath]);
+  }, [manifest?.bookIndexPath, previewAssetVersion]);
 
   useEffect(() => {
     if (!bookIndex) {
@@ -375,10 +382,13 @@ export default function ChurchFathersReaderRoute() {
     }
 
     Promise.all(
-      missingEntries.map((entry) => fetch(entry.chapter.assetPath)
+      missingEntries.map((entry) => fetch(
+        versionedPreviewUrl(entry.chapter.assetPath, previewAssetVersion),
+        { cache: "no-store" }
+      )
         .then((response) => {
           if (!response.ok) {
-            throw new Error(`Failed to load chapter: ${response.status}`);
+            return null;
           }
 
           return response.json() as Promise<ChapterAsset>;
@@ -393,7 +403,9 @@ export default function ChurchFathersReaderRoute() {
           const next = new Map(current);
 
           for (const asset of assets) {
-            next.set(asset.id, asset);
+            if (asset) {
+              next.set(asset.id, asset);
+            }
           }
 
           return next;
@@ -1232,6 +1244,12 @@ function parseMatchCount(formData: FormData):
   }
 
   return { value: matchCount };
+}
+
+function versionedPreviewUrl(path: string, version: string) {
+  const separator = path.includes("?") ? "&" : "?";
+
+  return `${path}${separator}v=${encodeURIComponent(version)}`;
 }
 
 function readSavedReaderTheme(): ReaderTheme {
