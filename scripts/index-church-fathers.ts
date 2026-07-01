@@ -537,6 +537,11 @@ async function ensureEarlyChristianDatabase(db: Client) {
       FOREIGN KEY (work_id) REFERENCES early_christian_works(id) ON DELETE CASCADE
     )
   `);
+
+  await db.execute(`
+    CREATE INDEX IF NOT EXISTS early_christian_passage_metadata_chapter_idx
+    ON early_christian_passage_metadata(chapter_id, passage_id, work_id)
+  `);
 }
 
 async function setIndexedEmbeddingConfig(db: Client, config: IndexedEmbeddingConfig) {

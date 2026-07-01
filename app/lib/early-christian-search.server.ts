@@ -56,6 +56,11 @@ type ChapterCandidate = {
   score: number;
 };
 
+type EarlyChristianSearchTrace = {
+  finish: (label: string, details?: Record<string, unknown>) => void;
+  mark: (label: string, details?: Record<string, unknown>) => void;
+};
+
 let client: Client | null = null;
 
 export function getEarlyChristianDb() {
@@ -69,35 +74,48 @@ export function getEarlyChristianDb() {
 }
 
 export async function searchEarlyChristianWorks(question: string, limit = 10) {
+  const trace = createEarlyChristianSearchTrace("theme", question, limit);
   const embeddingConfig = await getEarlyChristianEmbeddingConfig();
+  trace.mark("embeddingConfig", embeddingConfig);
   const embedding = await embedText(question, embeddingConfig);
+  trace.mark("embedText", { hasEmbedding: Boolean(embedding) });
 
   if (!embedding) {
+    trace.finish("missing-query-embedding", { count: 0 });
     return [];
   }
 
-  return withMatchStrength(await searchByEmbedding(embedding, limit));
+  const results = withMatchStrength(await searchByEmbedding(embedding, limit, {}, trace));
+  trace.finish("results", { count: results.length });
+  return results;
 }
 
 export async function searchSimilarEarlyChristianPassages(sourceKey: string, limit = 10) {
-  const source = await findSourcePassage(sourceKey);
+  const trace = createEarlyChristianSearchTrace("similar", sourceKey, limit);
+  const source = await findSourcePassage(sourceKey, trace);
+  trace.mark("findSourcePassage", { found: Boolean(source) });
 
   if (!source) {
+    trace.finish("missing-source", { count: 0 });
     return null;
   }
 
   const embedding = readStoredEmbedding(source as StoredEmbeddingRow);
+  trace.mark("readSourceEmbedding", { hasEmbedding: Boolean(embedding) });
 
   if (!embedding) {
+    trace.finish("missing-source-embedding", { count: 0 });
     return null;
   }
 
   const results = await searchByEmbedding(embedding, limit, {
     excludePassageIds: [String(source.id)]
-  });
+  }, trace);
+  const rankedResults = withMatchStrength(results);
+  trace.finish("results", { count: rankedResults.length });
 
   return {
-    results: withMatchStrength(results),
+    results: rankedResults,
     source: {
       id: String(source.id),
       reference: String(source.reference),
@@ -131,31 +149,53 @@ async function getEarlyChristianEmbeddingConfig(): Promise<IndexedEmbeddingConfi
 async function searchByEmbedding(
   embedding: ArrayLike<number>,
   limit: number,
-  options: { excludePassageIds?: string[] } = {}
+  options: { excludePassageIds?: string[] } = {},
+  trace: EarlyChristianSearchTrace = createEarlyChristianSearchTrace("internal", "", limit)
 ) {
   const query = normalizeVector(embedding);
-  const chapterCandidates = await searchChapters(query, Math.max(limit * 40, 300));
+  trace.mark("normalizeVector", { dimensions: query.length });
+  const chapterLimit = Math.max(limit * 40, 300);
+  const chapterCandidates = await searchChapters(query, chapterLimit, trace);
+  trace.mark("searchChapters", {
+    chapterCandidateCount: chapterCandidates.length,
+    chapterLimit
+  });
 
   if (chapterCandidates.length > 0) {
     const chapterResults = await searchPassagesInChapters(
       query,
       chapterCandidates.map((chapter) => chapter.id),
       limit,
-      options.excludePassageIds ?? []
+      options.excludePassageIds ?? [],
+      trace
     );
+    trace.mark("searchPassagesInChapters", { count: chapterResults.length });
 
     if (chapterResults.length > 0) {
       return chapterResults;
     }
   }
 
-  return searchAllPassagesExact(query, limit, options.excludePassageIds ?? []);
+  trace.mark("searchAllPassagesExactStart");
+  const fallbackResults = await searchAllPassagesExact(
+    query,
+    limit,
+    options.excludePassageIds ?? [],
+    trace
+  );
+  trace.mark("searchAllPassagesExact", { count: fallbackResults.length });
+  return fallbackResults;
 }
 
-async function searchChapters(embedding: ArrayLike<number>, limit: number) {
+async function searchChapters(
+  embedding: ArrayLike<number>,
+  limit: number,
+  trace: EarlyChristianSearchTrace
+) {
   const db = getEarlyChristianDb();
 
   try {
+    trace.mark("chapterAnnStart", { candidateLimit: limit });
     const response = await db.execute({
       sql: `
         SELECT c.id, c.embedding
@@ -165,25 +205,33 @@ async function searchChapters(embedding: ArrayLike<number>, limit: number) {
       `,
       args: [vectorSql(embedding), limit]
     });
+    trace.mark("chapterAnnSql", { rowCount: response.rows.length });
 
     const results = rowsToChapterCandidates(response.rows, embedding, limit);
+    trace.mark("chapterAnnRank", { count: results.length });
 
     if (results.length > 0) {
       return results;
     }
-  } catch {
+  } catch (error) {
+    trace.mark("chapterAnnError", { error: errorMessage(error) });
     // Local DBs without the chapter vector index can still exact-scan chapters.
   }
 
   try {
+    trace.mark("chapterExactStart", { candidateLimit: limit });
     const response = await db.execute(`
       SELECT id, embedding
       FROM early_christian_chapters
       WHERE embedding IS NOT NULL
     `);
+    trace.mark("chapterExactSql", { rowCount: response.rows.length });
 
-    return rowsToChapterCandidates(response.rows, embedding, limit);
-  } catch {
+    const results = rowsToChapterCandidates(response.rows, embedding, limit);
+    trace.mark("chapterExactRank", { count: results.length });
+    return results;
+  } catch (error) {
+    trace.mark("chapterExactError", { error: errorMessage(error) });
     return [];
   }
 }
@@ -192,7 +240,8 @@ async function searchPassagesInChapters(
   embedding: ArrayLike<number>,
   chapterIds: string[],
   limit: number,
-  excludePassageIds: string[]
+  excludePassageIds: string[],
+  trace: EarlyChristianSearchTrace
 ) {
   if (chapterIds.length === 0) {
     return [];
@@ -201,6 +250,10 @@ async function searchPassagesInChapters(
   const excludeClause = excludePassageIds.length
     ? `AND p.id NOT IN (${placeholders(excludePassageIds)})`
     : "";
+  trace.mark("passageCandidateSqlStart", {
+    chapterCount: chapterIds.length,
+    excludeCount: excludePassageIds.length
+  });
   const response = await getEarlyChristianDb().execute({
     sql: `
       SELECT
@@ -226,18 +279,23 @@ async function searchPassagesInChapters(
     `,
     args: [...chapterIds, ...excludePassageIds]
   });
+  trace.mark("passageCandidateSql", { rowCount: response.rows.length });
 
-  return groupPassageRowsByChapter(response.rows, embedding, limit);
+  const results = groupPassageRowsByChapter(response.rows, embedding, limit);
+  trace.mark("passageCandidateRank", { count: results.length });
+  return results;
 }
 
 async function searchAllPassagesExact(
   embedding: ArrayLike<number>,
   limit: number,
-  excludePassageIds: string[]
+  excludePassageIds: string[],
+  trace: EarlyChristianSearchTrace
 ) {
   const excludeClause = excludePassageIds.length
     ? `AND p.id NOT IN (${placeholders(excludePassageIds)})`
     : "";
+  trace.mark("allPassagesSqlStart", { excludeCount: excludePassageIds.length });
   const response = await getEarlyChristianDb().execute({
     sql: `
       SELECT
@@ -261,14 +319,18 @@ async function searchAllPassagesExact(
     `,
     args: excludePassageIds
   });
+  trace.mark("allPassagesSql", { rowCount: response.rows.length });
 
-  return groupPassageRowsByChapter(response.rows, embedding, limit);
+  const results = groupPassageRowsByChapter(response.rows, embedding, limit);
+  trace.mark("allPassagesRank", { count: results.length });
+  return results;
 }
 
-async function findSourcePassage(sourceKey: string) {
+async function findSourcePassage(sourceKey: string, trace: EarlyChristianSearchTrace) {
   const db = getEarlyChristianDb();
 
   if (/^ecw:[a-f0-9]{24}$/.test(sourceKey)) {
+    trace.mark("findSourceByIdStart");
     const response = await db.execute({
       sql: `
         SELECT id, reference, text, embedding
@@ -278,6 +340,7 @@ async function findSourcePassage(sourceKey: string) {
       `,
       args: [sourceKey]
     });
+    trace.mark("findSourceByIdSql", { rowCount: response.rows.length });
 
     return response.rows[0] ?? null;
   }
@@ -289,6 +352,7 @@ async function findSourcePassage(sourceKey: string) {
   }
 
   const [, chapterId, verseStart, verseEnd] = rangeMatch;
+  trace.mark("findSourceByRangeStart");
   const response = await db.execute({
     sql: `
       SELECT p.id, p.reference, p.text, p.embedding
@@ -302,6 +366,7 @@ async function findSourcePassage(sourceKey: string) {
     `,
     args: [chapterId, Number(verseStart), Number(verseEnd)]
   });
+  trace.mark("findSourceByRangeSql", { rowCount: response.rows.length });
 
   return response.rows[0] ?? null;
 }
@@ -480,4 +545,55 @@ function numberOrNull(value: unknown) {
   const number = Number(value);
 
   return Number.isFinite(number) ? number : null;
+}
+
+function createEarlyChristianSearchTrace(
+  mode: "internal" | "similar" | "theme",
+  query: string,
+  limit: number
+): EarlyChristianSearchTrace {
+  const enabled = process.env.SEARCH_TRACE === "1";
+  const start = performance.now();
+  let previous = start;
+
+  function elapsed(now: number) {
+    return Math.round((now - start) * 10) / 10;
+  }
+
+  function delta(now: number) {
+    return Math.round((now - previous) * 10) / 10;
+  }
+
+  function log(label: string, details: Record<string, unknown> = {}) {
+    if (!enabled) {
+      return;
+    }
+
+    const now = performance.now();
+    console.info(
+      JSON.stringify({
+        type: "search-timing",
+        corpus: "early-christian",
+        label,
+        elapsedMs: elapsed(now),
+        deltaMs: delta(now),
+        limit,
+        mode,
+        queryLength: query.length,
+        ...details
+      })
+    );
+    previous = now;
+  }
+
+  return {
+    finish(label: string, details: Record<string, unknown> = {}) {
+      log("finish", { branch: label, ...details });
+    },
+    mark: log
+  };
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
