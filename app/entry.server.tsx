@@ -6,8 +6,6 @@ import { RemixServer } from "@remix-run/react";
 import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 
-import { getIndexedBooks } from "./features/search/search.server";
-
 const ABORT_DELAY = 5_000;
 
 let hasStartedWarmups = false;
@@ -19,7 +17,9 @@ export default function handleRequest(
   remixContext: EntryContext,
   _loadContext: AppLoadContext
 ) {
-  startRuntimeWarmups();
+  if (shouldStartRuntimeWarmups(request)) {
+    startRuntimeWarmups();
+  }
 
   return isbot(request.headers.get("user-agent"))
     ? handleBotRequest(request, responseStatusCode, responseHeaders, remixContext)
@@ -33,13 +33,20 @@ function startRuntimeWarmups() {
 
   hasStartedWarmups = true;
 
-  void getIndexedBooks()
+  void import("./features/search/search.server")
+    .then(({ getIndexedBooks }) => getIndexedBooks())
     .then((books) => {
       console.info(`Warmed indexed books cache: ${books.length} books`);
     })
     .catch((error: unknown) => {
       console.error("Failed to warm indexed books cache", error);
     });
+}
+
+function shouldStartRuntimeWarmups(request: Request) {
+  const { pathname } = new URL(request.url);
+
+  return pathname === "/";
 }
 
 function handleBotRequest(

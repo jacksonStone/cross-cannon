@@ -1,0 +1,1241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ThML PUBLIC 
+    "-//CCEL/DTD Theological Markup Language//EN"
+    "http://www.ccel.org/dtd/ThML10.dtd">
+<!--
+<?xml-stylesheet type="text/xml"
+    href="http://www.ccel.org/ss/thml.html.xsl" ?>
+<?xml-stylesheet type="text/xsl"
+    href="http://www.ccel.org/ss/thml.html.xsl" ?>
+-->
+    
+<!-- Copyright Christian Classics Ethereal Library -->
+<ThML>
+<ThML.head>
+
+<generalInfo>
+  <description>Originally printed in 1885, the ten-volume 
+set, <i>Ante-Nicene Fathers</i>, brings together the work of 
+early Christian thinkers. In particular, it brings 
+together the writings of the early Church fathers prior to the fourth 
+century Nicene Creed. These volumes are noteworthy for their inclusion 
+of entire texts, and not simply fragments or excerpts from these great 
+writings. The translations are fairly literal, providing both readers 
+and scholars with a good approximation of the originals. This volume is 
+the index. These writings were heavily influential on the early Church, 
+and for good reason, as they are inspirational and encouraging. These 
+volumes also come with many useful notes, providing the reader with new 
+levels of understanding. Overall, <i>Ante-Nicene Fathers</i>, or any 
+part of 
+it, is a welcome addition to one's reading list.<br /><br />Tim Perrine 
+<br />CCEL 
+Staff 
+Writer </description>
+  <pubHistory />
+  <comments />
+</generalInfo>
+
+<printSourceInfo>
+  <published />
+</printSourceInfo>
+
+<electronicEdInfo>
+  <publisherID>ccel</publisherID>
+  <authorID>schaff</authorID>
+  <bookID>anf10</bookID>
+  <workID>anf10</workID>
+  <bkgID>bibliographic_synopsis_general_index_(schaff)</bkgID>
+  <version>1.0</version>
+  <editorialComments />
+  <revisionHistory />
+  <status>Digital Facsimile edition</status>
+
+  <DC>
+    <DC.Title>ANF10. Bibliographic Synopsis; General Index</DC.Title>
+    <DC.Creator sub="Author" scheme="short-form">Philip Schaff</DC.Creator>
+    <DC.Creator sub="Author" scheme="file-as">Schaff, Philip</DC.Creator>
+     
+    <DC.Publisher>Grand Rapids, MI: Christian Classics Ethereal Library</DC.Publisher>
+    <DC.Subject scheme="LCCN" />
+    <DC.Subject scheme="ccel">All; Early Church; Images Only;</DC.Subject>
+    <DC.Contributor sub="Digitizer" />
+    <DC.Date sub="Created">2004-07-25</DC.Date>
+    <DC.Type>Text.Monograph</DC.Type>
+    <DC.Format scheme="IMT">text/html</DC.Format>
+    <DC.Identifier scheme="URL">/ccel/schaff/anf10.html</DC.Identifier>
+    <DC.Identifier scheme="ISBN" />
+    <DC.Source />
+    <DC.Source scheme="URL" />
+    <DC.Language scheme="ISO639-3">eng</DC.Language>
+    <DC.Rights>Public Domain</DC.Rights>
+  </DC>
+
+</electronicEdInfo>
+</ThML.head>
+
+<ThML.body>
+
+<div1 title="Title Page" progress="30.17%" prev="toc" next="ii" id="i">
+
+<pb n="i" href="/ccel/schaff/anf10/Page_i.html" id="i-Page_i" />
+<p id="i-p1"><img alt="Image of page i" src="/ccel/schaff/anf10/png/0001=i.png" id="i-p1.1" /></p>
+
+<pb n="ii" href="/ccel/schaff/anf10/Page_ii.html" id="i-Page_ii" />
+<p id="i-p2"><img alt="Image of page ii" src="/ccel/schaff/anf10/png/0002=ii.png" id="i-p2.1" /></p>
+</div1>
+
+<div1 title="Preface" progress="30.85%" prev="i" next="iii" id="ii">
+<pb n="iii" href="/ccel/schaff/anf10/Page_iii.html" id="ii-Page_iii" />
+<p id="ii-p1"><img alt="Image of page iii" src="/ccel/schaff/anf10/png/0003=iii.png" id="ii-p1.1" /></p>
+
+<pb n="iv" href="/ccel/schaff/anf10/Page_iv.html" id="ii-Page_iv" />
+<p id="ii-p2"><img alt="Image of page iv" src="/ccel/schaff/anf10/png/0004=iv.png" id="ii-p2.1" /></p>
+
+<pb n="v" href="/ccel/schaff/anf10/Page_v.html" id="ii-Page_v" />
+<p id="ii-p3"><img alt="Image of page v" src="/ccel/schaff/anf10/png/0005=v.png" id="ii-p3.1" /></p>
+
+<pb n="vi" href="/ccel/schaff/anf10/Page_vi.html" id="ii-Page_vi" />
+<p id="ii-p4"><img alt="Image of page vi" src="/ccel/schaff/anf10/png/0006=vi.png" id="ii-p4.1" /></p>
+</div1>
+
+<div1 title="Introductory Note" progress="31.91%" prev="ii" next="iv" id="iii">
+<pb n="vii" href="/ccel/schaff/anf10/Page_vii.html" id="iii-Page_vii" />
+<p id="iii-p1"><img alt="Image of page vii" src="/ccel/schaff/anf10/png/0007=vii.png" id="iii-p1.1" /></p>
+
+<pb n="viii" href="/ccel/schaff/anf10/Page_viii.html" id="iii-Page_viii" />
+<p id="iii-p2"><img alt="Image of page viii" src="/ccel/schaff/anf10/png/0008=viii.png" id="iii-p2.1" /></p>
+</div1>
+
+<div1 title="Preface" progress="32.52%" prev="iii" next="v" id="iv">
+<pb n="ix" href="/ccel/schaff/anf10/Page_ix.html" id="iv-Page_ix" />
+<p id="iv-p1"><img alt="Image of page ix" src="/ccel/schaff/anf10/png/0009=ix.png" id="iv-p1.1" /></p>
+
+<pb n="x" href="/ccel/schaff/anf10/Page_x.html" id="iv-Page_x" />
+<p id="iv-p2"><img alt="Image of page x" src="/ccel/schaff/anf10/png/0010=x.png" id="iv-p2.1" /></p>
+
+<pb n="xi" href="/ccel/schaff/anf10/Page_xi.html" id="iv-Page_xi" />
+<p id="iv-p3"><img alt="Image of page xi" src="/ccel/schaff/anf10/png/0011=xi.png" id="iv-p3.1" /></p>
+
+<pb n="xii" href="/ccel/schaff/anf10/Page_xii.html" id="iv-Page_xii" />
+<p id="iv-p4"><img alt="Image of page xii" src="/ccel/schaff/anf10/png/0012=xii.png" id="iv-p4.1" /></p>
+</div1>
+
+<div1 title="Table of Contents" progress="33.59%" prev="iv" next="vi" id="v">
+<pb n="xiii" href="/ccel/schaff/anf10/Page_xiii.html" id="v-Page_xiii" />
+<p id="v-p1"><img alt="Image of page xiii" src="/ccel/schaff/anf10/png/0013=xiii.png" id="v-p1.1" /></p>
+
+<pb n="xiv" href="/ccel/schaff/anf10/Page_xiv.html" id="v-Page_xiv" />
+<p id="v-p2"><img alt="Image of page xiv" src="/ccel/schaff/anf10/png/0014=xiv.png" id="v-p2.1" /></p>
+</div1>
+
+<div1 title="Biographical Synopsis" progress="34.19%" prev="v" next="vii" id="vi">
+<pb n="1" href="/ccel/schaff/anf10/Page_1.html" id="vi-Page_1" />
+<p id="vi-p1"><img alt="Image of page 1" src="/ccel/schaff/anf10/png/0015=1.png" id="vi-p1.1" /></p>
+
+<pb n="2" href="/ccel/schaff/anf10/Page_2.html" id="vi-Page_2" />
+<p id="vi-p2"><img alt="Image of page 2" src="/ccel/schaff/anf10/png/0016=2.png" id="vi-p2.1" /></p>
+
+<pb n="3" href="/ccel/schaff/anf10/Page_3.html" id="vi-Page_3" />
+<p id="vi-p3"><img alt="Image of page 3" src="/ccel/schaff/anf10/png/0017=3.png" id="vi-p3.1" /></p>
+
+<pb n="4" href="/ccel/schaff/anf10/Page_4.html" id="vi-Page_4" />
+<p id="vi-p4"><img alt="Image of page 4" src="/ccel/schaff/anf10/png/0018=4.png" id="vi-p4.1" /></p>
+
+<pb n="5" href="/ccel/schaff/anf10/Page_5.html" id="vi-Page_5" />
+<p id="vi-p5"><img alt="Image of page 5" src="/ccel/schaff/anf10/png/0019=5.png" id="vi-p5.1" /></p>
+
+<pb n="6" href="/ccel/schaff/anf10/Page_6.html" id="vi-Page_6" />
+<p id="vi-p6"><img alt="Image of page 6" src="/ccel/schaff/anf10/png/0020=6.png" id="vi-p6.1" /></p>
+
+<pb n="7" href="/ccel/schaff/anf10/Page_7.html" id="vi-Page_7" />
+<p id="vi-p7"><img alt="Image of page 7" src="/ccel/schaff/anf10/png/0021=7.png" id="vi-p7.1" /></p>
+
+<pb n="8" href="/ccel/schaff/anf10/Page_8.html" id="vi-Page_8" />
+<p id="vi-p8"><img alt="Image of page 8" src="/ccel/schaff/anf10/png/0022=8.png" id="vi-p8.1" /></p>
+
+<pb n="9" href="/ccel/schaff/anf10/Page_9.html" id="vi-Page_9" />
+<p id="vi-p9"><img alt="Image of page 9" src="/ccel/schaff/anf10/png/0023=9.png" id="vi-p9.1" /></p>
+
+<pb n="10" href="/ccel/schaff/anf10/Page_10.html" id="vi-Page_10" />
+<p id="vi-p10"><img alt="Image of page 10" src="/ccel/schaff/anf10/png/0024=10.png" id="vi-p10.1" /></p>
+
+<pb n="11" href="/ccel/schaff/anf10/Page_11.html" id="vi-Page_11" />
+<p id="vi-p11"><img alt="Image of page 11" src="/ccel/schaff/anf10/png/0025=11.png" id="vi-p11.1" /></p>
+
+<pb n="12" href="/ccel/schaff/anf10/Page_12.html" id="vi-Page_12" />
+<p id="vi-p12"><img alt="Image of page 12" src="/ccel/schaff/anf10/png/0026=12.png" id="vi-p12.1" /></p>
+
+<pb n="13" href="/ccel/schaff/anf10/Page_13.html" id="vi-Page_13" />
+<p id="vi-p13"><img alt="Image of page 13" src="/ccel/schaff/anf10/png/0027=13.png" id="vi-p13.1" /></p>
+
+<pb n="14" href="/ccel/schaff/anf10/Page_14.html" id="vi-Page_14" />
+<p id="vi-p14"><img alt="Image of page 14" src="/ccel/schaff/anf10/png/0028=14.png" id="vi-p14.1" /></p>
+
+<pb n="15" href="/ccel/schaff/anf10/Page_15.html" id="vi-Page_15" />
+<p id="vi-p15"><img alt="Image of page 15" src="/ccel/schaff/anf10/png/0029=15.png" id="vi-p15.1" /></p>
+
+<pb n="16" href="/ccel/schaff/anf10/Page_16.html" id="vi-Page_16" />
+<p id="vi-p16"><img alt="Image of page 16" src="/ccel/schaff/anf10/png/0030=16.png" id="vi-p16.1" /></p>
+
+<pb n="17" href="/ccel/schaff/anf10/Page_17.html" id="vi-Page_17" />
+<p id="vi-p17"><img alt="Image of page 17" src="/ccel/schaff/anf10/png/0031=17.png" id="vi-p17.1" /></p>
+
+<pb n="18" href="/ccel/schaff/anf10/Page_18.html" id="vi-Page_18" />
+<p id="vi-p18"><img alt="Image of page 18" src="/ccel/schaff/anf10/png/0032=18.png" id="vi-p18.1" /></p>
+
+<pb n="19" href="/ccel/schaff/anf10/Page_19.html" id="vi-Page_19" />
+<p id="vi-p19"><img alt="Image of page 19" src="/ccel/schaff/anf10/png/0033=19.png" id="vi-p19.1" /></p>
+
+<pb n="20" href="/ccel/schaff/anf10/Page_20.html" id="vi-Page_20" />
+<p id="vi-p20"><img alt="Image of page 20" src="/ccel/schaff/anf10/png/0034=20.png" id="vi-p20.1" /></p>
+
+<pb n="21" href="/ccel/schaff/anf10/Page_21.html" id="vi-Page_21" />
+<p id="vi-p21"><img alt="Image of page 21" src="/ccel/schaff/anf10/png/0035=21.png" id="vi-p21.1" /></p>
+
+<pb n="22" href="/ccel/schaff/anf10/Page_22.html" id="vi-Page_22" />
+<p id="vi-p22"><img alt="Image of page 22" src="/ccel/schaff/anf10/png/0036=22.png" id="vi-p22.1" /></p>
+
+<pb n="23" href="/ccel/schaff/anf10/Page_23.html" id="vi-Page_23" />
+<p id="vi-p23"><img alt="Image of page 23" src="/ccel/schaff/anf10/png/0037=23.png" id="vi-p23.1" /></p>
+
+<pb n="24" href="/ccel/schaff/anf10/Page_24.html" id="vi-Page_24" />
+<p id="vi-p24"><img alt="Image of page 24" src="/ccel/schaff/anf10/png/0038=24.png" id="vi-p24.1" /></p>
+
+<pb n="25" href="/ccel/schaff/anf10/Page_25.html" id="vi-Page_25" />
+<p id="vi-p25"><img alt="Image of page 25" src="/ccel/schaff/anf10/png/0039=25.png" id="vi-p25.1" /></p>
+
+<pb n="26" href="/ccel/schaff/anf10/Page_26.html" id="vi-Page_26" />
+<p id="vi-p26"><img alt="Image of page 26" src="/ccel/schaff/anf10/png/0040=26.png" id="vi-p26.1" /></p>
+
+<pb n="27" href="/ccel/schaff/anf10/Page_27.html" id="vi-Page_27" />
+<p id="vi-p27"><img alt="Image of page 27" src="/ccel/schaff/anf10/png/0041=27.png" id="vi-p27.1" /></p>
+
+<pb n="28" href="/ccel/schaff/anf10/Page_28.html" id="vi-Page_28" />
+<p id="vi-p28"><img alt="Image of page 28" src="/ccel/schaff/anf10/png/0042=28.png" id="vi-p28.1" /></p>
+
+<pb n="29" href="/ccel/schaff/anf10/Page_29.html" id="vi-Page_29" />
+<p id="vi-p29"><img alt="Image of page 29" src="/ccel/schaff/anf10/png/0043=29.png" id="vi-p29.1" /></p>
+
+<pb n="30" href="/ccel/schaff/anf10/Page_30.html" id="vi-Page_30" />
+<p id="vi-p30"><img alt="Image of page 30" src="/ccel/schaff/anf10/png/0044=30.png" id="vi-p30.1" /></p>
+
+<pb n="31" href="/ccel/schaff/anf10/Page_31.html" id="vi-Page_31" />
+<p id="vi-p31"><img alt="Image of page 31" src="/ccel/schaff/anf10/png/0045=31.png" id="vi-p31.1" /></p>
+
+<pb n="32" href="/ccel/schaff/anf10/Page_32.html" id="vi-Page_32" />
+<p id="vi-p32"><img alt="Image of page 32" src="/ccel/schaff/anf10/png/0046=32.png" id="vi-p32.1" /></p>
+
+<pb n="33" href="/ccel/schaff/anf10/Page_33.html" id="vi-Page_33" />
+<p id="vi-p33"><img alt="Image of page 33" src="/ccel/schaff/anf10/png/0047=33.png" id="vi-p33.1" /></p>
+
+<pb n="34" href="/ccel/schaff/anf10/Page_34.html" id="vi-Page_34" />
+<p id="vi-p34"><img alt="Image of page 34" src="/ccel/schaff/anf10/png/0048=34.png" id="vi-p34.1" /></p>
+
+<pb n="35" href="/ccel/schaff/anf10/Page_35.html" id="vi-Page_35" />
+<p id="vi-p35"><img alt="Image of page 35" src="/ccel/schaff/anf10/png/0049=35.png" id="vi-p35.1" /></p>
+
+<pb n="36" href="/ccel/schaff/anf10/Page_36.html" id="vi-Page_36" />
+<p id="vi-p36"><img alt="Image of page 36" src="/ccel/schaff/anf10/png/0050=36.png" id="vi-p36.1" /></p>
+
+<pb n="37" href="/ccel/schaff/anf10/Page_37.html" id="vi-Page_37" />
+<p id="vi-p37"><img alt="Image of page 37" src="/ccel/schaff/anf10/png/0051=37.png" id="vi-p37.1" /></p>
+
+<pb n="38" href="/ccel/schaff/anf10/Page_38.html" id="vi-Page_38" />
+<p id="vi-p38"><img alt="Image of page 38" src="/ccel/schaff/anf10/png/0052=38.png" id="vi-p38.1" /></p>
+
+<pb n="39" href="/ccel/schaff/anf10/Page_39.html" id="vi-Page_39" />
+<p id="vi-p39"><img alt="Image of page 39" src="/ccel/schaff/anf10/png/0053=39.png" id="vi-p39.1" /></p>
+
+<pb n="40" href="/ccel/schaff/anf10/Page_40.html" id="vi-Page_40" />
+<p id="vi-p40"><img alt="Image of page 40" src="/ccel/schaff/anf10/png/0054=40.png" id="vi-p40.1" /></p>
+
+<pb n="41" href="/ccel/schaff/anf10/Page_41.html" id="vi-Page_41" />
+<p id="vi-p41"><img alt="Image of page 41" src="/ccel/schaff/anf10/png/0055=41.png" id="vi-p41.1" /></p>
+
+<pb n="42" href="/ccel/schaff/anf10/Page_42.html" id="vi-Page_42" />
+<p id="vi-p42"><img alt="Image of page 42" src="/ccel/schaff/anf10/png/0056=42.png" id="vi-p42.1" /></p>
+
+<pb n="43" href="/ccel/schaff/anf10/Page_43.html" id="vi-Page_43" />
+<p id="vi-p43"><img alt="Image of page 43" src="/ccel/schaff/anf10/png/0057=43.png" id="vi-p43.1" /></p>
+
+<pb n="44" href="/ccel/schaff/anf10/Page_44.html" id="vi-Page_44" />
+<p id="vi-p44"><img alt="Image of page 44" src="/ccel/schaff/anf10/png/0058=44.png" id="vi-p44.1" /></p>
+
+<pb n="45" href="/ccel/schaff/anf10/Page_45.html" id="vi-Page_45" />
+<p id="vi-p45"><img alt="Image of page 45" src="/ccel/schaff/anf10/png/0059=45.png" id="vi-p45.1" /></p>
+
+<pb n="46" href="/ccel/schaff/anf10/Page_46.html" id="vi-Page_46" />
+<p id="vi-p46"><img alt="Image of page 46" src="/ccel/schaff/anf10/png/0060=46.png" id="vi-p46.1" /></p>
+
+<pb n="47" href="/ccel/schaff/anf10/Page_47.html" id="vi-Page_47" />
+<p id="vi-p47"><img alt="Image of page 47" src="/ccel/schaff/anf10/png/0061=47.png" id="vi-p47.1" /></p>
+
+<pb n="48" href="/ccel/schaff/anf10/Page_48.html" id="vi-Page_48" />
+<p id="vi-p48"><img alt="Image of page 48" src="/ccel/schaff/anf10/png/0062=48.png" id="vi-p48.1" /></p>
+
+<pb n="49" href="/ccel/schaff/anf10/Page_49.html" id="vi-Page_49" />
+<p id="vi-p49"><img alt="Image of page 49" src="/ccel/schaff/anf10/png/0063=49.png" id="vi-p49.1" /></p>
+
+<pb n="50" href="/ccel/schaff/anf10/Page_50.html" id="vi-Page_50" />
+<p id="vi-p50"><img alt="Image of page 50" src="/ccel/schaff/anf10/png/0064=50.png" id="vi-p50.1" /></p>
+
+<pb n="51" href="/ccel/schaff/anf10/Page_51.html" id="vi-Page_51" />
+<p id="vi-p51"><img alt="Image of page 51" src="/ccel/schaff/anf10/png/0065=51.png" id="vi-p51.1" /></p>
+
+<pb n="52" href="/ccel/schaff/anf10/Page_52.html" id="vi-Page_52" />
+<p id="vi-p52"><img alt="Image of page 52" src="/ccel/schaff/anf10/png/0066=52.png" id="vi-p52.1" /></p>
+
+<pb n="53" href="/ccel/schaff/anf10/Page_53.html" id="vi-Page_53" />
+<p id="vi-p53"><img alt="Image of page 53" src="/ccel/schaff/anf10/png/0067=53.png" id="vi-p53.1" /></p>
+
+<pb n="54" href="/ccel/schaff/anf10/Page_54.html" id="vi-Page_54" />
+<p id="vi-p54"><img alt="Image of page 54" src="/ccel/schaff/anf10/png/0068=54.png" id="vi-p54.1" /></p>
+
+<pb n="55" href="/ccel/schaff/anf10/Page_55.html" id="vi-Page_55" />
+<p id="vi-p55"><img alt="Image of page 55" src="/ccel/schaff/anf10/png/0069=55.png" id="vi-p55.1" /></p>
+
+<pb n="56" href="/ccel/schaff/anf10/Page_56.html" id="vi-Page_56" />
+<p id="vi-p56"><img alt="Image of page 56" src="/ccel/schaff/anf10/png/0070=56.png" id="vi-p56.1" /></p>
+
+<pb n="57" href="/ccel/schaff/anf10/Page_57.html" id="vi-Page_57" />
+<p id="vi-p57"><img alt="Image of page 57" src="/ccel/schaff/anf10/png/0071=57.png" id="vi-p57.1" /></p>
+
+<pb n="58" href="/ccel/schaff/anf10/Page_58.html" id="vi-Page_58" />
+<p id="vi-p58"><img alt="Image of page 58" src="/ccel/schaff/anf10/png/0072=58.png" id="vi-p58.1" /></p>
+
+<pb n="59" href="/ccel/schaff/anf10/Page_59.html" id="vi-Page_59" />
+<p id="vi-p59"><img alt="Image of page 59" src="/ccel/schaff/anf10/png/0073=59.png" id="vi-p59.1" /></p>
+
+<pb n="60" href="/ccel/schaff/anf10/Page_60.html" id="vi-Page_60" />
+<p id="vi-p60"><img alt="Image of page 60" src="/ccel/schaff/anf10/png/0074=60.png" id="vi-p60.1" /></p>
+
+<pb n="61" href="/ccel/schaff/anf10/Page_61.html" id="vi-Page_61" />
+<p id="vi-p61"><img alt="Image of page 61" src="/ccel/schaff/anf10/png/0075=61.png" id="vi-p61.1" /></p>
+
+<pb n="62" href="/ccel/schaff/anf10/Page_62.html" id="vi-Page_62" />
+<p id="vi-p62"><img alt="Image of page 62" src="/ccel/schaff/anf10/png/0076=62.png" id="vi-p62.1" /></p>
+
+<pb n="63" href="/ccel/schaff/anf10/Page_63.html" id="vi-Page_63" />
+<p id="vi-p63"><img alt="Image of page 63" src="/ccel/schaff/anf10/png/0077=63.png" id="vi-p63.1" /></p>
+
+<pb n="64" href="/ccel/schaff/anf10/Page_64.html" id="vi-Page_64" />
+<p id="vi-p64"><img alt="Image of page 64" src="/ccel/schaff/anf10/png/0078=64.png" id="vi-p64.1" /></p>
+
+<pb n="65" href="/ccel/schaff/anf10/Page_65.html" id="vi-Page_65" />
+<p id="vi-p65"><img alt="Image of page 65" src="/ccel/schaff/anf10/png/0079=65.png" id="vi-p65.1" /></p>
+
+<pb n="66" href="/ccel/schaff/anf10/Page_66.html" id="vi-Page_66" />
+<p id="vi-p66"><img alt="Image of page 66" src="/ccel/schaff/anf10/png/0080=66.png" id="vi-p66.1" /></p>
+
+<pb n="67" href="/ccel/schaff/anf10/Page_67.html" id="vi-Page_67" />
+<p id="vi-p67"><img alt="Image of page 67" src="/ccel/schaff/anf10/png/0081=67.png" id="vi-p67.1" /></p>
+
+<pb n="68" href="/ccel/schaff/anf10/Page_68.html" id="vi-Page_68" />
+<p id="vi-p68"><img alt="Image of page 68" src="/ccel/schaff/anf10/png/0082=68.png" id="vi-p68.1" /></p>
+
+<pb n="69" href="/ccel/schaff/anf10/Page_69.html" id="vi-Page_69" />
+<p id="vi-p69"><img alt="Image of page 69" src="/ccel/schaff/anf10/png/0083=69.png" id="vi-p69.1" /></p>
+
+<pb n="70" href="/ccel/schaff/anf10/Page_70.html" id="vi-Page_70" />
+<p id="vi-p70"><img alt="Image of page 70" src="/ccel/schaff/anf10/png/0084=70.png" id="vi-p70.1" /></p>
+
+<pb n="71" href="/ccel/schaff/anf10/Page_71.html" id="vi-Page_71" />
+<p id="vi-p71"><img alt="Image of page 71" src="/ccel/schaff/anf10/png/0085=71.png" id="vi-p71.1" /></p>
+
+<pb n="72" href="/ccel/schaff/anf10/Page_72.html" id="vi-Page_72" />
+<p id="vi-p72"><img alt="Image of page 72" src="/ccel/schaff/anf10/png/0086=72.png" id="vi-p72.1" /></p>
+
+<pb n="73" href="/ccel/schaff/anf10/Page_73.html" id="vi-Page_73" />
+<p id="vi-p73"><img alt="Image of page 73" src="/ccel/schaff/anf10/png/0087=73.png" id="vi-p73.1" /></p>
+
+<pb n="74" href="/ccel/schaff/anf10/Page_74.html" id="vi-Page_74" />
+<p id="vi-p74"><img alt="Image of page 74" src="/ccel/schaff/anf10/png/0088=74.png" id="vi-p74.1" /></p>
+
+<pb n="75" href="/ccel/schaff/anf10/Page_75.html" id="vi-Page_75" />
+<p id="vi-p75"><img alt="Image of page 75" src="/ccel/schaff/anf10/png/0089=75.png" id="vi-p75.1" /></p>
+
+<pb n="76" href="/ccel/schaff/anf10/Page_76.html" id="vi-Page_76" />
+<p id="vi-p76"><img alt="Image of page 76" src="/ccel/schaff/anf10/png/0090=76.png" id="vi-p76.1" /></p>
+
+<pb n="77" href="/ccel/schaff/anf10/Page_77.html" id="vi-Page_77" />
+<p id="vi-p77"><img alt="Image of page 77" src="/ccel/schaff/anf10/png/0091=77.png" id="vi-p77.1" /></p>
+
+<pb n="78" href="/ccel/schaff/anf10/Page_78.html" id="vi-Page_78" />
+<p id="vi-p78"><img alt="Image of page 78" src="/ccel/schaff/anf10/png/0092=78.png" id="vi-p78.1" /></p>
+
+<pb n="79" href="/ccel/schaff/anf10/Page_79.html" id="vi-Page_79" />
+<p id="vi-p79"><img alt="Image of page 79" src="/ccel/schaff/anf10/png/0093=79.png" id="vi-p79.1" /></p>
+
+<pb n="80" href="/ccel/schaff/anf10/Page_80.html" id="vi-Page_80" />
+<p id="vi-p80"><img alt="Image of page 80" src="/ccel/schaff/anf10/png/0094=80.png" id="vi-p80.1" /></p>
+
+<pb n="81" href="/ccel/schaff/anf10/Page_81.html" id="vi-Page_81" />
+<p id="vi-p81"><img alt="Image of page 81" src="/ccel/schaff/anf10/png/0095=81.png" id="vi-p81.1" /></p>
+
+<pb n="82" href="/ccel/schaff/anf10/Page_82.html" id="vi-Page_82" />
+<p id="vi-p82"><img alt="Image of page 82" src="/ccel/schaff/anf10/png/0096=82.png" id="vi-p82.1" /></p>
+
+<pb n="83" href="/ccel/schaff/anf10/Page_83.html" id="vi-Page_83" />
+<p id="vi-p83"><img alt="Image of page 83" src="/ccel/schaff/anf10/png/0097=83.png" id="vi-p83.1" /></p>
+
+<pb n="84" href="/ccel/schaff/anf10/Page_84.html" id="vi-Page_84" />
+<p id="vi-p84"><img alt="Image of page 84" src="/ccel/schaff/anf10/png/0098=84.png" id="vi-p84.1" /></p>
+
+<pb n="85" href="/ccel/schaff/anf10/Page_85.html" id="vi-Page_85" />
+<p id="vi-p85"><img alt="Image of page 85" src="/ccel/schaff/anf10/png/0099=85.png" id="vi-p85.1" /></p>
+
+<pb n="86" href="/ccel/schaff/anf10/Page_86.html" id="vi-Page_86" />
+<p id="vi-p86"><img alt="Image of page 86" src="/ccel/schaff/anf10/png/0100=86.png" id="vi-p86.1" /></p>
+
+<pb n="87" href="/ccel/schaff/anf10/Page_87.html" id="vi-Page_87" />
+<p id="vi-p87"><img alt="Image of page 87" src="/ccel/schaff/anf10/png/0101=87.png" id="vi-p87.1" /></p>
+
+<pb n="88" href="/ccel/schaff/anf10/Page_88.html" id="vi-Page_88" />
+<p id="vi-p88"><img alt="Image of page 88" src="/ccel/schaff/anf10/png/0102=88.png" id="vi-p88.1" /></p>
+
+<pb n="89" href="/ccel/schaff/anf10/Page_89.html" id="vi-Page_89" />
+<p id="vi-p89"><img alt="Image of page 89" src="/ccel/schaff/anf10/png/0103=89.png" id="vi-p89.1" /></p>
+
+<pb n="90" href="/ccel/schaff/anf10/Page_90.html" id="vi-Page_90" />
+<p id="vi-p90"><img alt="Image of page 90" src="/ccel/schaff/anf10/png/0104=90.png" id="vi-p90.1" /></p>
+
+<pb n="91" href="/ccel/schaff/anf10/Page_91.html" id="vi-Page_91" />
+<p id="vi-p91"><img alt="Image of page 91" src="/ccel/schaff/anf10/png/0105=91.png" id="vi-p91.1" /></p>
+
+<pb n="92" href="/ccel/schaff/anf10/Page_92.html" id="vi-Page_92" />
+<p id="vi-p92"><img alt="Image of page 92" src="/ccel/schaff/anf10/png/0106=92.png" id="vi-p92.1" /></p>
+
+<pb n="93" href="/ccel/schaff/anf10/Page_93.html" id="vi-Page_93" />
+<p id="vi-p93"><img alt="Image of page 93" src="/ccel/schaff/anf10/png/0107=93.png" id="vi-p93.1" /></p>
+
+<pb n="94" href="/ccel/schaff/anf10/Page_94.html" id="vi-Page_94" />
+<p id="vi-p94"><img alt="Image of page 94" src="/ccel/schaff/anf10/png/0108=94.png" id="vi-p94.1" /></p>
+
+<pb n="95" href="/ccel/schaff/anf10/Page_95.html" id="vi-Page_95" />
+<p id="vi-p95"><img alt="Image of page 95" src="/ccel/schaff/anf10/png/0109=95.png" id="vi-p95.1" /></p>
+
+<pb n="96" href="/ccel/schaff/anf10/Page_96.html" id="vi-Page_96" />
+<p id="vi-p96"><img alt="Image of page 96" src="/ccel/schaff/anf10/png/0110=96.png" id="vi-p96.1" /></p>
+
+<pb n="97" href="/ccel/schaff/anf10/Page_97.html" id="vi-Page_97" />
+<p id="vi-p97"><img alt="Image of page 97" src="/ccel/schaff/anf10/png/0111=97.png" id="vi-p97.1" /></p>
+
+<pb n="98" href="/ccel/schaff/anf10/Page_98.html" id="vi-Page_98" />
+<p id="vi-p98"><img alt="Image of page 98" src="/ccel/schaff/anf10/png/0112=98.png" id="vi-p98.1" /></p>
+
+<pb n="99" href="/ccel/schaff/anf10/Page_99.html" id="vi-Page_99" />
+<p id="vi-p99"><img alt="Image of page 99" src="/ccel/schaff/anf10/png/0113=99.png" id="vi-p99.1" /></p>
+
+<pb n="100" href="/ccel/schaff/anf10/Page_100.html" id="vi-Page_100" />
+<p id="vi-p100"><img alt="Image of page 100" src="/ccel/schaff/anf10/png/0114=100.png" id="vi-p100.1" /></p>
+
+<pb n="101" href="/ccel/schaff/anf10/Page_101.html" id="vi-Page_101" />
+<p id="vi-p101"><img alt="Image of page 101" src="/ccel/schaff/anf10/png/0115=101.png" id="vi-p101.1" /></p>
+
+<pb n="102" href="/ccel/schaff/anf10/Page_102.html" id="vi-Page_102" />
+<p id="vi-p102"><img alt="Image of page 102" src="/ccel/schaff/anf10/png/0116=102.png" id="vi-p102.1" /></p>
+
+<pb n="103" href="/ccel/schaff/anf10/Page_103.html" id="vi-Page_103" />
+<p id="vi-p103"><img alt="Image of page 103" src="/ccel/schaff/anf10/png/0117=103.png" id="vi-p103.1" /></p>
+
+<pb n="104" href="/ccel/schaff/anf10/Page_104.html" id="vi-Page_104" />
+<p id="vi-p104"><img alt="Image of page 104" src="/ccel/schaff/anf10/png/0118=104.png" id="vi-p104.1" /></p>
+
+<pb n="105" href="/ccel/schaff/anf10/Page_105.html" id="vi-Page_105" />
+<p id="vi-p105"><img alt="Image of page 105" src="/ccel/schaff/anf10/png/0119=105.png" id="vi-p105.1" /></p>
+
+<pb n="106" href="/ccel/schaff/anf10/Page_106.html" id="vi-Page_106" />
+<p id="vi-p106"><img alt="Image of page 106" src="/ccel/schaff/anf10/png/0120=106.png" id="vi-p106.1" /></p>
+
+<pb n="107" href="/ccel/schaff/anf10/Page_107.html" id="vi-Page_107" />
+<p id="vi-p107"><img alt="Image of page 107" src="/ccel/schaff/anf10/png/0121=107.png" id="vi-p107.1" /></p>
+
+<pb n="108" href="/ccel/schaff/anf10/Page_108.html" id="vi-Page_108" />
+<p id="vi-p108"><img alt="Image of page 108" src="/ccel/schaff/anf10/png/0122=108.png" id="vi-p108.1" /></p>
+
+<pb n="109" href="/ccel/schaff/anf10/Page_109.html" id="vi-Page_109" />
+<p id="vi-p109"><img alt="Image of page 109" src="/ccel/schaff/anf10/png/0123=109.png" id="vi-p109.1" /></p>
+
+<pb n="110" href="/ccel/schaff/anf10/Page_110.html" id="vi-Page_110" />
+<p id="vi-p110"><img alt="Image of page 110" src="/ccel/schaff/anf10/png/0124=110.png" id="vi-p110.1" /></p>
+
+<pb n="111" href="/ccel/schaff/anf10/Page_111.html" id="vi-Page_111" />
+<p id="vi-p111"><img alt="Image of page 111" src="/ccel/schaff/anf10/png/0125=111.png" id="vi-p111.1" /></p>
+
+<pb n="112" href="/ccel/schaff/anf10/Page_112.html" id="vi-Page_112" />
+<p id="vi-p112"><img alt="Image of page 112" src="/ccel/schaff/anf10/png/0126=112.png" id="vi-p112.1" /></p>
+
+<pb n="113" href="/ccel/schaff/anf10/Page_113.html" id="vi-Page_113" />
+<p id="vi-p113"><img alt="Image of page 113" src="/ccel/schaff/anf10/png/0127=113.png" id="vi-p113.1" /></p>
+
+<pb n="114" href="/ccel/schaff/anf10/Page_114.html" id="vi-Page_114" />
+<p id="vi-p114"><img alt="Image of page 114" src="/ccel/schaff/anf10/png/0128=114.png" id="vi-p114.1" /></p>
+
+<pb n="115" href="/ccel/schaff/anf10/Page_115.html" id="vi-Page_115" />
+<p id="vi-p115"><img alt="Image of page 115" src="/ccel/schaff/anf10/png/0129=115.png" id="vi-p115.1" /></p>
+
+<pb n="116" href="/ccel/schaff/anf10/Page_116.html" id="vi-Page_116" />
+<p id="vi-p116"><img alt="Image of page 116" src="/ccel/schaff/anf10/png/0130=116.png" id="vi-p116.1" /></p>
+
+<pb n="117" href="/ccel/schaff/anf10/Page_117.html" id="vi-Page_117" />
+<p id="vi-p117"><img alt="Image of page 117" src="/ccel/schaff/anf10/png/0131=117.png" id="vi-p117.1" /></p>
+
+<pb n="118" href="/ccel/schaff/anf10/Page_118.html" id="vi-Page_118" />
+<p id="vi-p118"><img alt="Image of page 118" src="/ccel/schaff/anf10/png/0132=118.png" id="vi-p118.1" /></p>
+
+<pb n="119" href="/ccel/schaff/anf10/Page_119.html" id="vi-Page_119" />
+<p id="vi-p119"><img alt="Image of page 119" src="/ccel/schaff/anf10/png/0133=119.png" id="vi-p119.1" /></p>
+
+<pb n="120" href="/ccel/schaff/anf10/Page_120.html" id="vi-Page_120" />
+<p id="vi-p120"><img alt="Image of page 120" src="/ccel/schaff/anf10/png/0134=120.png" id="vi-p120.1" /></p>
+
+<pb n="121" href="/ccel/schaff/anf10/Page_121.html" id="vi-Page_121" />
+<p id="vi-p121"><img alt="Image of page 121" src="/ccel/schaff/anf10/png/0135=121.png" id="vi-p121.1" /></p>
+
+<pb n="122" href="/ccel/schaff/anf10/Page_122.html" id="vi-Page_122" />
+<p id="vi-p122"><img alt="Image of page 122" src="/ccel/schaff/anf10/png/0136=122.png" id="vi-p122.1" /></p>
+
+<pb n="123" href="/ccel/schaff/anf10/Page_123.html" id="vi-Page_123" />
+<p id="vi-p123"><img alt="Image of page 123" src="/ccel/schaff/anf10/png/0137=123.png" id="vi-p123.1" /></p>
+
+<pb n="124" href="/ccel/schaff/anf10/Page_124.html" id="vi-Page_124" />
+<p id="vi-p124"><img alt="Image of page 124" src="/ccel/schaff/anf10/png/0138=124.png" id="vi-p124.1" /></p>
+
+<pb n="125" href="/ccel/schaff/anf10/Page_125.html" id="vi-Page_125" />
+<p id="vi-p125"><img alt="Image of page 125" src="/ccel/schaff/anf10/png/0139=125.png" id="vi-p125.1" /></p>
+
+<pb n="126" href="/ccel/schaff/anf10/Page_126.html" id="vi-Page_126" />
+<p id="vi-p126"><img alt="Image of page 126" src="/ccel/schaff/anf10/png/0140=126.png" id="vi-p126.1" /></p>
+
+<pb n="127" href="/ccel/schaff/anf10/Page_127.html" id="vi-Page_127" />
+<p id="vi-p127"><img alt="Image of page 127" src="/ccel/schaff/anf10/png/0141=127.png" id="vi-p127.1" /></p>
+
+<pb n="128" href="/ccel/schaff/anf10/Page_128.html" id="vi-Page_128" />
+<p id="vi-p128"><img alt="Image of page 128" src="/ccel/schaff/anf10/png/0142=128.png" id="vi-p128.1" /></p>
+
+<pb n="129" href="/ccel/schaff/anf10/Page_129.html" id="vi-Page_129" />
+<p id="vi-p129"><img alt="Image of page 129" src="/ccel/schaff/anf10/png/0143=129.png" id="vi-p129.1" /></p>
+
+<pb n="130" href="/ccel/schaff/anf10/Page_130.html" id="vi-Page_130" />
+<p id="vi-p130"><img alt="Image of page 130" src="/ccel/schaff/anf10/png/0144=130.png" id="vi-p130.1" /></p>
+
+<pb n="131" href="/ccel/schaff/anf10/Page_131.html" id="vi-Page_131" />
+<p id="vi-p131"><img alt="Image of page 131" src="/ccel/schaff/anf10/png/0145=131.png" id="vi-p131.1" /></p>
+
+<pb n="132" href="/ccel/schaff/anf10/Page_132.html" id="vi-Page_132" />
+<p id="vi-p132"><img alt="Image of page 132" src="/ccel/schaff/anf10/png/0146=132.png" id="vi-p132.1" /></p>
+
+<pb n="133" href="/ccel/schaff/anf10/Page_133.html" id="vi-Page_133" />
+<p id="vi-p133"><img alt="Image of page 133" src="/ccel/schaff/anf10/png/0147=133.png" id="vi-p133.1" /></p>
+
+<pb n="134" href="/ccel/schaff/anf10/Page_134.html" id="vi-Page_134" />
+<p id="vi-p134"><img alt="Image of page 134" src="/ccel/schaff/anf10/png/0148=134.png" id="vi-p134.1" /></p>
+</div1>
+
+<div1 title="Index of Subjects" progress="64.89%" prev="vi" next="viii" id="vii">
+<pb n="135" href="/ccel/schaff/anf10/Page_135.html" id="vii-Page_135" />
+<p id="vii-p1"><img alt="Image of page 135" src="/ccel/schaff/anf10/png/0149=135.png" id="vii-p1.1" /></p>
+
+<pb n="136" href="/ccel/schaff/anf10/Page_136.html" id="vii-Page_136" />
+<p id="vii-p2"><img alt="Image of page 136" src="/ccel/schaff/anf10/png/0150=136.png" id="vii-p2.1" /></p>
+</div1>
+
+<div1 title="A Comprehensive General Index to The Ante-Nicene Fathers" progress="65.50%" prev="vii" next="ix" id="viii">
+<pb n="137" href="/ccel/schaff/anf10/Page_137.html" id="viii-Page_137" />
+<p id="viii-p1"><img alt="Image of page 137" src="/ccel/schaff/anf10/png/0151=137.png" id="viii-p1.1" /></p>
+
+<pb n="138" href="/ccel/schaff/anf10/Page_138.html" id="viii-Page_138" />
+<p id="viii-p2"><img alt="Image of page 138" src="/ccel/schaff/anf10/png/0152=138.png" id="viii-p2.1" /></p>
+
+<pb n="139" href="/ccel/schaff/anf10/Page_139.html" id="viii-Page_139" />
+<p id="viii-p3"><img alt="Image of page 139" src="/ccel/schaff/anf10/png/0153=139.png" id="viii-p3.1" /></p>
+
+<pb n="140" href="/ccel/schaff/anf10/Page_140.html" id="viii-Page_140" />
+<p id="viii-p4"><img alt="Image of page 140" src="/ccel/schaff/anf10/png/0154=140.png" id="viii-p4.1" /></p>
+
+<pb n="141" href="/ccel/schaff/anf10/Page_141.html" id="viii-Page_141" />
+<p id="viii-p5"><img alt="Image of page 141" src="/ccel/schaff/anf10/png/0155=141.png" id="viii-p5.1" /></p>
+
+<pb n="142" href="/ccel/schaff/anf10/Page_142.html" id="viii-Page_142" />
+<p id="viii-p6"><img alt="Image of page 142" src="/ccel/schaff/anf10/png/0156=142.png" id="viii-p6.1" /></p>
+
+<pb n="143" href="/ccel/schaff/anf10/Page_143.html" id="viii-Page_143" />
+<p id="viii-p7"><img alt="Image of page 143" src="/ccel/schaff/anf10/png/0157=143.png" id="viii-p7.1" /></p>
+
+<pb n="144" href="/ccel/schaff/anf10/Page_144.html" id="viii-Page_144" />
+<p id="viii-p8"><img alt="Image of page 144" src="/ccel/schaff/anf10/png/0158=144.png" id="viii-p8.1" /></p>
+
+<pb n="145" href="/ccel/schaff/anf10/Page_145.html" id="viii-Page_145" />
+<p id="viii-p9"><img alt="Image of page 145" src="/ccel/schaff/anf10/png/0159=145.png" id="viii-p9.1" /></p>
+
+<pb n="146" href="/ccel/schaff/anf10/Page_146.html" id="viii-Page_146" />
+<p id="viii-p10"><img alt="Image of page 146" src="/ccel/schaff/anf10/png/0160=146.png" id="viii-p10.1" /></p>
+
+<pb n="147" href="/ccel/schaff/anf10/Page_147.html" id="viii-Page_147" />
+<p id="viii-p11"><img alt="Image of page 147" src="/ccel/schaff/anf10/png/0161=147.png" id="viii-p11.1" /></p>
+
+<pb n="148" href="/ccel/schaff/anf10/Page_148.html" id="viii-Page_148" />
+<p id="viii-p12"><img alt="Image of page 148" src="/ccel/schaff/anf10/png/0162=148.png" id="viii-p12.1" /></p>
+
+<pb n="149" href="/ccel/schaff/anf10/Page_149.html" id="viii-Page_149" />
+<p id="viii-p13"><img alt="Image of page 149" src="/ccel/schaff/anf10/png/0163=149.png" id="viii-p13.1" /></p>
+
+<pb n="150" href="/ccel/schaff/anf10/Page_150.html" id="viii-Page_150" />
+<p id="viii-p14"><img alt="Image of page 150" src="/ccel/schaff/anf10/png/0164=150.png" id="viii-p14.1" /></p>
+
+<pb n="151" href="/ccel/schaff/anf10/Page_151.html" id="viii-Page_151" />
+<p id="viii-p15"><img alt="Image of page 151" src="/ccel/schaff/anf10/png/0165=151.png" id="viii-p15.1" /></p>
+
+<pb n="152" href="/ccel/schaff/anf10/Page_152.html" id="viii-Page_152" />
+<p id="viii-p16"><img alt="Image of page 152" src="/ccel/schaff/anf10/png/0166=152.png" id="viii-p16.1" /></p>
+
+<pb n="153" href="/ccel/schaff/anf10/Page_153.html" id="viii-Page_153" />
+<p id="viii-p17"><img alt="Image of page 153" src="/ccel/schaff/anf10/png/0167=153.png" id="viii-p17.1" /></p>
+
+<pb n="154" href="/ccel/schaff/anf10/Page_154.html" id="viii-Page_154" />
+<p id="viii-p18"><img alt="Image of page 154" src="/ccel/schaff/anf10/png/0168=154.png" id="viii-p18.1" /></p>
+
+<pb n="155" href="/ccel/schaff/anf10/Page_155.html" id="viii-Page_155" />
+<p id="viii-p19"><img alt="Image of page 155" src="/ccel/schaff/anf10/png/0169=155.png" id="viii-p19.1" /></p>
+
+<pb n="156" href="/ccel/schaff/anf10/Page_156.html" id="viii-Page_156" />
+<p id="viii-p20"><img alt="Image of page 156" src="/ccel/schaff/anf10/png/0170=156.png" id="viii-p20.1" /></p>
+
+<pb n="157" href="/ccel/schaff/anf10/Page_157.html" id="viii-Page_157" />
+<p id="viii-p21"><img alt="Image of page 157" src="/ccel/schaff/anf10/png/0171=157.png" id="viii-p21.1" /></p>
+
+<pb n="158" href="/ccel/schaff/anf10/Page_158.html" id="viii-Page_158" />
+<p id="viii-p22"><img alt="Image of page 158" src="/ccel/schaff/anf10/png/0172=158.png" id="viii-p22.1" /></p>
+
+<pb n="159" href="/ccel/schaff/anf10/Page_159.html" id="viii-Page_159" />
+<p id="viii-p23"><img alt="Image of page 159" src="/ccel/schaff/anf10/png/0173=159.png" id="viii-p23.1" /></p>
+
+<pb n="160" href="/ccel/schaff/anf10/Page_160.html" id="viii-Page_160" />
+<p id="viii-p24"><img alt="Image of page 160" src="/ccel/schaff/anf10/png/0174=160.png" id="viii-p24.1" /></p>
+
+<pb n="161" href="/ccel/schaff/anf10/Page_161.html" id="viii-Page_161" />
+<p id="viii-p25"><img alt="Image of page 161" src="/ccel/schaff/anf10/png/0175=161.png" id="viii-p25.1" /></p>
+
+<pb n="162" href="/ccel/schaff/anf10/Page_162.html" id="viii-Page_162" />
+<p id="viii-p26"><img alt="Image of page 162" src="/ccel/schaff/anf10/png/0176=162.png" id="viii-p26.1" /></p>
+
+<pb n="163" href="/ccel/schaff/anf10/Page_163.html" id="viii-Page_163" />
+<p id="viii-p27"><img alt="Image of page 163" src="/ccel/schaff/anf10/png/0177=163.png" id="viii-p27.1" /></p>
+
+<pb n="164" href="/ccel/schaff/anf10/Page_164.html" id="viii-Page_164" />
+<p id="viii-p28"><img alt="Image of page 164" src="/ccel/schaff/anf10/png/0178=164.png" id="viii-p28.1" /></p>
+
+<pb n="165" href="/ccel/schaff/anf10/Page_165.html" id="viii-Page_165" />
+<p id="viii-p29"><img alt="Image of page 165" src="/ccel/schaff/anf10/png/0179=165.png" id="viii-p29.1" /></p>
+
+<pb n="166" href="/ccel/schaff/anf10/Page_166.html" id="viii-Page_166" />
+<p id="viii-p30"><img alt="Image of page 166" src="/ccel/schaff/anf10/png/0180=166.png" id="viii-p30.1" /></p>
+
+<pb n="167" href="/ccel/schaff/anf10/Page_167.html" id="viii-Page_167" />
+<p id="viii-p31"><img alt="Image of page 167" src="/ccel/schaff/anf10/png/0181=167.png" id="viii-p31.1" /></p>
+
+<pb n="168" href="/ccel/schaff/anf10/Page_168.html" id="viii-Page_168" />
+<p id="viii-p32"><img alt="Image of page 168" src="/ccel/schaff/anf10/png/0182=168.png" id="viii-p32.1" /></p>
+
+<pb n="169" href="/ccel/schaff/anf10/Page_169.html" id="viii-Page_169" />
+<p id="viii-p33"><img alt="Image of page 169" src="/ccel/schaff/anf10/png/0183=169.png" id="viii-p33.1" /></p>
+
+<pb n="170" href="/ccel/schaff/anf10/Page_170.html" id="viii-Page_170" />
+<p id="viii-p34"><img alt="Image of page 170" src="/ccel/schaff/anf10/png/0184=170.png" id="viii-p34.1" /></p>
+
+<pb n="171" href="/ccel/schaff/anf10/Page_171.html" id="viii-Page_171" />
+<p id="viii-p35"><img alt="Image of page 171" src="/ccel/schaff/anf10/png/0185=171.png" id="viii-p35.1" /></p>
+
+<pb n="172" href="/ccel/schaff/anf10/Page_172.html" id="viii-Page_172" />
+<p id="viii-p36"><img alt="Image of page 172" src="/ccel/schaff/anf10/png/0186=172.png" id="viii-p36.1" /></p>
+
+<pb n="173" href="/ccel/schaff/anf10/Page_173.html" id="viii-Page_173" />
+<p id="viii-p37"><img alt="Image of page 173" src="/ccel/schaff/anf10/png/0187=173.png" id="viii-p37.1" /></p>
+
+<pb n="174" href="/ccel/schaff/anf10/Page_174.html" id="viii-Page_174" />
+<p id="viii-p38"><img alt="Image of page 174" src="/ccel/schaff/anf10/png/0188=174.png" id="viii-p38.1" /></p>
+
+<pb n="175" href="/ccel/schaff/anf10/Page_175.html" id="viii-Page_175" />
+<p id="viii-p39"><img alt="Image of page 175" src="/ccel/schaff/anf10/png/0189=175.png" id="viii-p39.1" /></p>
+
+<pb n="176" href="/ccel/schaff/anf10/Page_176.html" id="viii-Page_176" />
+<p id="viii-p40"><img alt="Image of page 176" src="/ccel/schaff/anf10/png/0190=176.png" id="viii-p40.1" /></p>
+
+<pb n="177" href="/ccel/schaff/anf10/Page_177.html" id="viii-Page_177" />
+<p id="viii-p41"><img alt="Image of page 177" src="/ccel/schaff/anf10/png/0191=177.png" id="viii-p41.1" /></p>
+
+<pb n="178" href="/ccel/schaff/anf10/Page_178.html" id="viii-Page_178" />
+<p id="viii-p42"><img alt="Image of page 178" src="/ccel/schaff/anf10/png/0192=178.png" id="viii-p42.1" /></p>
+
+<pb n="179" href="/ccel/schaff/anf10/Page_179.html" id="viii-Page_179" />
+<p id="viii-p43"><img alt="Image of page 179" src="/ccel/schaff/anf10/png/0193=179.png" id="viii-p43.1" /></p>
+
+<pb n="180" href="/ccel/schaff/anf10/Page_180.html" id="viii-Page_180" />
+<p id="viii-p44"><img alt="Image of page 180" src="/ccel/schaff/anf10/png/0194=180.png" id="viii-p44.1" /></p>
+
+<pb n="181" href="/ccel/schaff/anf10/Page_181.html" id="viii-Page_181" />
+<p id="viii-p45"><img alt="Image of page 181" src="/ccel/schaff/anf10/png/0195=181.png" id="viii-p45.1" /></p>
+
+<pb n="182" href="/ccel/schaff/anf10/Page_182.html" id="viii-Page_182" />
+<p id="viii-p46"><img alt="Image of page 182" src="/ccel/schaff/anf10/png/0196=182.png" id="viii-p46.1" /></p>
+
+<pb n="183" href="/ccel/schaff/anf10/Page_183.html" id="viii-Page_183" />
+<p id="viii-p47"><img alt="Image of page 183" src="/ccel/schaff/anf10/png/0197=183.png" id="viii-p47.1" /></p>
+
+<pb n="184" href="/ccel/schaff/anf10/Page_184.html" id="viii-Page_184" />
+<p id="viii-p48"><img alt="Image of page 184" src="/ccel/schaff/anf10/png/0198=184.png" id="viii-p48.1" /></p>
+
+<pb n="185" href="/ccel/schaff/anf10/Page_185.html" id="viii-Page_185" />
+<p id="viii-p49"><img alt="Image of page 185" src="/ccel/schaff/anf10/png/0199=185.png" id="viii-p49.1" /></p>
+
+<pb n="186" href="/ccel/schaff/anf10/Page_186.html" id="viii-Page_186" />
+<p id="viii-p50"><img alt="Image of page 186" src="/ccel/schaff/anf10/png/0200=186.png" id="viii-p50.1" /></p>
+
+<pb n="187" href="/ccel/schaff/anf10/Page_187.html" id="viii-Page_187" />
+<p id="viii-p51"><img alt="Image of page 187" src="/ccel/schaff/anf10/png/0201=187.png" id="viii-p51.1" /></p>
+
+<pb n="188" href="/ccel/schaff/anf10/Page_188.html" id="viii-Page_188" />
+<p id="viii-p52"><img alt="Image of page 188" src="/ccel/schaff/anf10/png/0202=188.png" id="viii-p52.1" /></p>
+
+<pb n="189" href="/ccel/schaff/anf10/Page_189.html" id="viii-Page_189" />
+<p id="viii-p53"><img alt="Image of page 189" src="/ccel/schaff/anf10/png/0203=189.png" id="viii-p53.1" /></p>
+
+<pb n="190" href="/ccel/schaff/anf10/Page_190.html" id="viii-Page_190" />
+<p id="viii-p54"><img alt="Image of page 190" src="/ccel/schaff/anf10/png/0204=190.png" id="viii-p54.1" /></p>
+
+<pb n="191" href="/ccel/schaff/anf10/Page_191.html" id="viii-Page_191" />
+<p id="viii-p55"><img alt="Image of page 191" src="/ccel/schaff/anf10/png/0205=191.png" id="viii-p55.1" /></p>
+
+<pb n="192" href="/ccel/schaff/anf10/Page_192.html" id="viii-Page_192" />
+<p id="viii-p56"><img alt="Image of page 192" src="/ccel/schaff/anf10/png/0206=192.png" id="viii-p56.1" /></p>
+
+<pb n="193" href="/ccel/schaff/anf10/Page_193.html" id="viii-Page_193" />
+<p id="viii-p57"><img alt="Image of page 193" src="/ccel/schaff/anf10/png/0207=193.png" id="viii-p57.1" /></p>
+
+<pb n="194" href="/ccel/schaff/anf10/Page_194.html" id="viii-Page_194" />
+<p id="viii-p58"><img alt="Image of page 194" src="/ccel/schaff/anf10/png/0208=194.png" id="viii-p58.1" /></p>
+
+<pb n="195" href="/ccel/schaff/anf10/Page_195.html" id="viii-Page_195" />
+<p id="viii-p59"><img alt="Image of page 195" src="/ccel/schaff/anf10/png/0209=195.png" id="viii-p59.1" /></p>
+
+<pb n="196" href="/ccel/schaff/anf10/Page_196.html" id="viii-Page_196" />
+<p id="viii-p60"><img alt="Image of page 196" src="/ccel/schaff/anf10/png/0210=196.png" id="viii-p60.1" /></p>
+
+<pb n="197" href="/ccel/schaff/anf10/Page_197.html" id="viii-Page_197" />
+<p id="viii-p61"><img alt="Image of page 197" src="/ccel/schaff/anf10/png/0211=197.png" id="viii-p61.1" /></p>
+
+<pb n="198" href="/ccel/schaff/anf10/Page_198.html" id="viii-Page_198" />
+<p id="viii-p62"><img alt="Image of page 198" src="/ccel/schaff/anf10/png/0212=198.png" id="viii-p62.1" /></p>
+
+<pb n="199" href="/ccel/schaff/anf10/Page_199.html" id="viii-Page_199" />
+<p id="viii-p63"><img alt="Image of page 199" src="/ccel/schaff/anf10/png/0213=199.png" id="viii-p63.1" /></p>
+
+<pb n="200" href="/ccel/schaff/anf10/Page_200.html" id="viii-Page_200" />
+<p id="viii-p64"><img alt="Image of page 200" src="/ccel/schaff/anf10/png/0214=200.png" id="viii-p64.1" /></p>
+
+<pb n="201" href="/ccel/schaff/anf10/Page_201.html" id="viii-Page_201" />
+<p id="viii-p65"><img alt="Image of page 201" src="/ccel/schaff/anf10/png/0215=201.png" id="viii-p65.1" /></p>
+
+<pb n="202" href="/ccel/schaff/anf10/Page_202.html" id="viii-Page_202" />
+<p id="viii-p66"><img alt="Image of page 202" src="/ccel/schaff/anf10/png/0216=202.png" id="viii-p66.1" /></p>
+
+<pb n="203" href="/ccel/schaff/anf10/Page_203.html" id="viii-Page_203" />
+<p id="viii-p67"><img alt="Image of page 203" src="/ccel/schaff/anf10/png/0217=203.png" id="viii-p67.1" /></p>
+
+<pb n="204" href="/ccel/schaff/anf10/Page_204.html" id="viii-Page_204" />
+<p id="viii-p68"><img alt="Image of page 204" src="/ccel/schaff/anf10/png/0218=204.png" id="viii-p68.1" /></p>
+
+<pb n="205" href="/ccel/schaff/anf10/Page_205.html" id="viii-Page_205" />
+<p id="viii-p69"><img alt="Image of page 205" src="/ccel/schaff/anf10/png/0219=205.png" id="viii-p69.1" /></p>
+
+<pb n="206" href="/ccel/schaff/anf10/Page_206.html" id="viii-Page_206" />
+<p id="viii-p70"><img alt="Image of page 206" src="/ccel/schaff/anf10/png/0220=206.png" id="viii-p70.1" /></p>
+
+<pb n="207" href="/ccel/schaff/anf10/Page_207.html" id="viii-Page_207" />
+<p id="viii-p71"><img alt="Image of page 207" src="/ccel/schaff/anf10/png/0221=207.png" id="viii-p71.1" /></p>
+
+<pb n="208" href="/ccel/schaff/anf10/Page_208.html" id="viii-Page_208" />
+<p id="viii-p72"><img alt="Image of page 208" src="/ccel/schaff/anf10/png/0222=208.png" id="viii-p72.1" /></p>
+
+<pb n="209" href="/ccel/schaff/anf10/Page_209.html" id="viii-Page_209" />
+<p id="viii-p73"><img alt="Image of page 209" src="/ccel/schaff/anf10/png/0223=209.png" id="viii-p73.1" /></p>
+
+<pb n="210" href="/ccel/schaff/anf10/Page_210.html" id="viii-Page_210" />
+<p id="viii-p74"><img alt="Image of page 210" src="/ccel/schaff/anf10/png/0224=210.png" id="viii-p74.1" /></p>
+
+<pb n="211" href="/ccel/schaff/anf10/Page_211.html" id="viii-Page_211" />
+<p id="viii-p75"><img alt="Image of page 211" src="/ccel/schaff/anf10/png/0225=211.png" id="viii-p75.1" /></p>
+
+<pb n="212" href="/ccel/schaff/anf10/Page_212.html" id="viii-Page_212" />
+<p id="viii-p76"><img alt="Image of page 212" src="/ccel/schaff/anf10/png/0226=212.png" id="viii-p76.1" /></p>
+</div1>
+
+<div1 title="Index of Texts" progress="82.98%" prev="viii" next="x" id="ix">
+<pb n="213" href="/ccel/schaff/anf10/Page_213.html" id="ix-Page_213" />
+<p id="ix-p1"><img alt="Image of page 213" src="/ccel/schaff/anf10/png/0227=213.png" id="ix-p1.1" /></p>
+
+<pb n="214" href="/ccel/schaff/anf10/Page_214.html" id="ix-Page_214" />
+<p id="ix-p2"><img alt="Image of page 214" src="/ccel/schaff/anf10/png/0228=214.png" id="ix-p2.1" /></p>
+
+<pb n="215" href="/ccel/schaff/anf10/Page_215.html" id="ix-Page_215" />
+<p id="ix-p3"><img alt="Image of page 215" src="/ccel/schaff/anf10/png/0229=215.png" id="ix-p3.1" /></p>
+
+<pb n="216" href="/ccel/schaff/anf10/Page_216.html" id="ix-Page_216" />
+<p id="ix-p4"><img alt="Image of page 216" src="/ccel/schaff/anf10/png/0230=216.png" id="ix-p4.1" /></p>
+
+<pb n="217" href="/ccel/schaff/anf10/Page_217.html" id="ix-Page_217" />
+<p id="ix-p5"><img alt="Image of page 217" src="/ccel/schaff/anf10/png/0231=217.png" id="ix-p5.1" /></p>
+
+<pb n="218" href="/ccel/schaff/anf10/Page_218.html" id="ix-Page_218" />
+<p id="ix-p6"><img alt="Image of page 218" src="/ccel/schaff/anf10/png/0232=218.png" id="ix-p6.1" /></p>
+
+<pb n="219" href="/ccel/schaff/anf10/Page_219.html" id="ix-Page_219" />
+<p id="ix-p7"><img alt="Image of page 219" src="/ccel/schaff/anf10/png/0233=219.png" id="ix-p7.1" /></p>
+
+<pb n="220" href="/ccel/schaff/anf10/Page_220.html" id="ix-Page_220" />
+<p id="ix-p8"><img alt="Image of page 220" src="/ccel/schaff/anf10/png/0234=220.png" id="ix-p8.1" /></p>
+
+<pb n="221" href="/ccel/schaff/anf10/Page_221.html" id="ix-Page_221" />
+<p id="ix-p9"><img alt="Image of page 221" src="/ccel/schaff/anf10/png/0235=221.png" id="ix-p9.1" /></p>
+
+<pb n="222" href="/ccel/schaff/anf10/Page_222.html" id="ix-Page_222" />
+<p id="ix-p10"><img alt="Image of page 222" src="/ccel/schaff/anf10/png/0236=222.png" id="ix-p10.1" /></p>
+
+<pb n="223" href="/ccel/schaff/anf10/Page_223.html" id="ix-Page_223" />
+<p id="ix-p11"><img alt="Image of page 223" src="/ccel/schaff/anf10/png/0237=223.png" id="ix-p11.1" /></p>
+
+<pb n="224" href="/ccel/schaff/anf10/Page_224.html" id="ix-Page_224" />
+<p id="ix-p12"><img alt="Image of page 224" src="/ccel/schaff/anf10/png/0238=224.png" id="ix-p12.1" /></p>
+
+<pb n="225" href="/ccel/schaff/anf10/Page_225.html" id="ix-Page_225" />
+<p id="ix-p13"><img alt="Image of page 225" src="/ccel/schaff/anf10/png/0239=225.png" id="ix-p13.1" /></p>
+
+<pb n="226" href="/ccel/schaff/anf10/Page_226.html" id="ix-Page_226" />
+<p id="ix-p14"><img alt="Image of page 226" src="/ccel/schaff/anf10/png/0240=226.png" id="ix-p14.1" /></p>
+
+<pb n="227" href="/ccel/schaff/anf10/Page_227.html" id="ix-Page_227" />
+<p id="ix-p15"><img alt="Image of page 227" src="/ccel/schaff/anf10/png/0241=227.png" id="ix-p15.1" /></p>
+
+<pb n="228" href="/ccel/schaff/anf10/Page_228.html" id="ix-Page_228" />
+<p id="ix-p16"><img alt="Image of page 228" src="/ccel/schaff/anf10/png/0242=228.png" id="ix-p16.1" /></p>
+
+<pb n="229" href="/ccel/schaff/anf10/Page_229.html" id="ix-Page_229" />
+<p id="ix-p17"><img alt="Image of page 229" src="/ccel/schaff/anf10/png/0243=229.png" id="ix-p17.1" /></p>
+
+<pb n="230" href="/ccel/schaff/anf10/Page_230.html" id="ix-Page_230" />
+<p id="ix-p18"><img alt="Image of page 230" src="/ccel/schaff/anf10/png/0244=230.png" id="ix-p18.1" /></p>
+
+<pb n="231" href="/ccel/schaff/anf10/Page_231.html" id="ix-Page_231" />
+<p id="ix-p19"><img alt="Image of page 231" src="/ccel/schaff/anf10/png/0245=231.png" id="ix-p19.1" /></p>
+
+<pb n="232" href="/ccel/schaff/anf10/Page_232.html" id="ix-Page_232" />
+<p id="ix-p20"><img alt="Image of page 232" src="/ccel/schaff/anf10/png/0246=232.png" id="ix-p20.1" /></p>
+
+<pb n="233" href="/ccel/schaff/anf10/Page_233.html" id="ix-Page_233" />
+<p id="ix-p21"><img alt="Image of page 233" src="/ccel/schaff/anf10/png/0247=233.png" id="ix-p21.1" /></p>
+
+<pb n="234" href="/ccel/schaff/anf10/Page_234.html" id="ix-Page_234" />
+<p id="ix-p22"><img alt="Image of page 234" src="/ccel/schaff/anf10/png/0248=234.png" id="ix-p22.1" /></p>
+
+<pb n="235" href="/ccel/schaff/anf10/Page_235.html" id="ix-Page_235" />
+<p id="ix-p23"><img alt="Image of page 235" src="/ccel/schaff/anf10/png/0249=235.png" id="ix-p23.1" /></p>
+
+<pb n="236" href="/ccel/schaff/anf10/Page_236.html" id="ix-Page_236" />
+<p id="ix-p24"><img alt="Image of page 236" src="/ccel/schaff/anf10/png/0250=236.png" id="ix-p24.1" /></p>
+
+<pb n="237" href="/ccel/schaff/anf10/Page_237.html" id="ix-Page_237" />
+<p id="ix-p25"><img alt="Image of page 237" src="/ccel/schaff/anf10/png/0251=237.png" id="ix-p25.1" /></p>
+
+<pb n="238" href="/ccel/schaff/anf10/Page_238.html" id="ix-Page_238" />
+<p id="ix-p26"><img alt="Image of page 238" src="/ccel/schaff/anf10/png/0252=238.png" id="ix-p26.1" /></p>
+
+<pb n="239" href="/ccel/schaff/anf10/Page_239.html" id="ix-Page_239" />
+<p id="ix-p27"><img alt="Image of page 239" src="/ccel/schaff/anf10/png/0253=239.png" id="ix-p27.1" /></p>
+
+<pb n="240" href="/ccel/schaff/anf10/Page_240.html" id="ix-Page_240" />
+<p id="ix-p28"><img alt="Image of page 240" src="/ccel/schaff/anf10/png/0254=240.png" id="ix-p28.1" /></p>
+
+<pb n="241" href="/ccel/schaff/anf10/Page_241.html" id="ix-Page_241" />
+<p id="ix-p29"><img alt="Image of page 241" src="/ccel/schaff/anf10/png/0255=241.png" id="ix-p29.1" /></p>
+
+<pb n="242" href="/ccel/schaff/anf10/Page_242.html" id="ix-Page_242" />
+<p id="ix-p30"><img alt="Image of page 242" src="/ccel/schaff/anf10/png/0256=242.png" id="ix-p30.1" /></p>
+
+<pb n="243" href="/ccel/schaff/anf10/Page_243.html" id="ix-Page_243" />
+<p id="ix-p31"><img alt="Image of page 243" src="/ccel/schaff/anf10/png/0257=243.png" id="ix-p31.1" /></p>
+
+<pb n="244" href="/ccel/schaff/anf10/Page_244.html" id="ix-Page_244" />
+<p id="ix-p32"><img alt="Image of page 244" src="/ccel/schaff/anf10/png/0258=244.png" id="ix-p32.1" /></p>
+
+<pb n="245" href="/ccel/schaff/anf10/Page_245.html" id="ix-Page_245" />
+<p id="ix-p33"><img alt="Image of page 245" src="/ccel/schaff/anf10/png/0259=245.png" id="ix-p33.1" /></p>
+
+<pb n="246" href="/ccel/schaff/anf10/Page_246.html" id="ix-Page_246" />
+<p id="ix-p34"><img alt="Image of page 246" src="/ccel/schaff/anf10/png/0260=246.png" id="ix-p34.1" /></p>
+
+<pb n="247" href="/ccel/schaff/anf10/Page_247.html" id="ix-Page_247" />
+<p id="ix-p35"><img alt="Image of page 247" src="/ccel/schaff/anf10/png/0261=247.png" id="ix-p35.1" /></p>
+
+<pb n="248" href="/ccel/schaff/anf10/Page_248.html" id="ix-Page_248" />
+<p id="ix-p36"><img alt="Image of page 248" src="/ccel/schaff/anf10/png/0262=248.png" id="ix-p36.1" /></p>
+
+<pb n="249" href="/ccel/schaff/anf10/Page_249.html" id="ix-Page_249" />
+<p id="ix-p37"><img alt="Image of page 249" src="/ccel/schaff/anf10/png/0263=249.png" id="ix-p37.1" /></p>
+
+<pb n="250" href="/ccel/schaff/anf10/Page_250.html" id="ix-Page_250" />
+<p id="ix-p38"><img alt="Image of page 250" src="/ccel/schaff/anf10/png/0264=250.png" id="ix-p38.1" /></p>
+
+<pb n="251" href="/ccel/schaff/anf10/Page_251.html" id="ix-Page_251" />
+<p id="ix-p39"><img alt="Image of page 251" src="/ccel/schaff/anf10/png/0265=251.png" id="ix-p39.1" /></p>
+
+<pb n="252" href="/ccel/schaff/anf10/Page_252.html" id="ix-Page_252" />
+<p id="ix-p40"><img alt="Image of page 252" src="/ccel/schaff/anf10/png/0266=252.png" id="ix-p40.1" /></p>
+
+<pb n="253" href="/ccel/schaff/anf10/Page_253.html" id="ix-Page_253" />
+<p id="ix-p41"><img alt="Image of page 253" src="/ccel/schaff/anf10/png/0267=253.png" id="ix-p41.1" /></p>
+
+<pb n="254" href="/ccel/schaff/anf10/Page_254.html" id="ix-Page_254" />
+<p id="ix-p42"><img alt="Image of page 254" src="/ccel/schaff/anf10/png/0268=254.png" id="ix-p42.1" /></p>
+
+<pb n="255" href="/ccel/schaff/anf10/Page_255.html" id="ix-Page_255" />
+<p id="ix-p43"><img alt="Image of page 255" src="/ccel/schaff/anf10/png/0269=255.png" id="ix-p43.1" /></p>
+
+<pb n="256" href="/ccel/schaff/anf10/Page_256.html" id="ix-Page_256" />
+<p id="ix-p44"><img alt="Image of page 256" src="/ccel/schaff/anf10/png/0270=256.png" id="ix-p44.1" /></p>
+
+<pb n="257" href="/ccel/schaff/anf10/Page_257.html" id="ix-Page_257" />
+<p id="ix-p45"><img alt="Image of page 257" src="/ccel/schaff/anf10/png/0271=257.png" id="ix-p45.1" /></p>
+
+<pb n="258" href="/ccel/schaff/anf10/Page_258.html" id="ix-Page_258" />
+<p id="ix-p46"><img alt="Image of page 258" src="/ccel/schaff/anf10/png/0272=258.png" id="ix-p46.1" /></p>
+
+<pb n="259" href="/ccel/schaff/anf10/Page_259.html" id="ix-Page_259" />
+<p id="ix-p47"><img alt="Image of page 259" src="/ccel/schaff/anf10/png/0273=259.png" id="ix-p47.1" /></p>
+
+<pb n="260" href="/ccel/schaff/anf10/Page_260.html" id="ix-Page_260" />
+<p id="ix-p48"><img alt="Image of page 260" src="/ccel/schaff/anf10/png/0274=260.png" id="ix-p48.1" /></p>
+
+<pb n="261" href="/ccel/schaff/anf10/Page_261.html" id="ix-Page_261" />
+<p id="ix-p49"><img alt="Image of page 261" src="/ccel/schaff/anf10/png/0275=261.png" id="ix-p49.1" /></p>
+
+<pb n="262" href="/ccel/schaff/anf10/Page_262.html" id="ix-Page_262" />
+<p id="ix-p50"><img alt="Image of page 262" src="/ccel/schaff/anf10/png/0276=262.png" id="ix-p50.1" /></p>
+
+<pb n="263" href="/ccel/schaff/anf10/Page_263.html" id="ix-Page_263" />
+<p id="ix-p51"><img alt="Image of page 263" src="/ccel/schaff/anf10/png/0277=263.png" id="ix-p51.1" /></p>
+
+<pb n="264" href="/ccel/schaff/anf10/Page_264.html" id="ix-Page_264" />
+<p id="ix-p52"><img alt="Image of page 264" src="/ccel/schaff/anf10/png/0278=264.png" id="ix-p52.1" /></p>
+
+<pb n="265" href="/ccel/schaff/anf10/Page_265.html" id="ix-Page_265" />
+<p id="ix-p53"><img alt="Image of page 265" src="/ccel/schaff/anf10/png/0279=265.png" id="ix-p53.1" /></p>
+
+<pb n="266" href="/ccel/schaff/anf10/Page_266.html" id="ix-Page_266" />
+<p id="ix-p54"><img alt="Image of page 266" src="/ccel/schaff/anf10/png/0280=266.png" id="ix-p54.1" /></p>
+
+</div1>
+
+
+<div1 title="Indexes" prev="ix" next="x.i" id="x">
+<h1 id="x-p0.1">Indexes</h1>
+
+<div2 title="Index of Pages of the Print Edition" prev="x" next="toc" id="x.i">
+  <h2 id="x.i-p0.1">Index of Pages of the Print Edition</h2>
+  <insertIndex type="pb" id="x.i-p0.2" />
+
+
+
+<div class="Index">
+<p class="pages"><a class="TOC" href="#i-Page_i">i</a> 
+<a class="TOC" href="#i-Page_ii">ii</a> 
+<a class="TOC" href="#ii-Page_iii">iii</a> 
+<a class="TOC" href="#ii-Page_iv">iv</a> 
+<a class="TOC" href="#ii-Page_v">v</a> 
+<a class="TOC" href="#ii-Page_vi">vi</a> 
+<a class="TOC" href="#iii-Page_vii">vii</a> 
+<a class="TOC" href="#iii-Page_viii">viii</a> 
+<a class="TOC" href="#iv-Page_ix">ix</a> 
+<a class="TOC" href="#iv-Page_x">x</a> 
+<a class="TOC" href="#iv-Page_xi">xi</a> 
+<a class="TOC" href="#iv-Page_xii">xii</a> 
+<a class="TOC" href="#v-Page_xiii">xiii</a> 
+<a class="TOC" href="#v-Page_xiv">xiv</a> 
+<a class="TOC" href="#vi-Page_1">1</a> 
+<a class="TOC" href="#vi-Page_2">2</a> 
+<a class="TOC" href="#vi-Page_3">3</a> 
+<a class="TOC" href="#vi-Page_4">4</a> 
+<a class="TOC" href="#vi-Page_5">5</a> 
+<a class="TOC" href="#vi-Page_6">6</a> 
+<a class="TOC" href="#vi-Page_7">7</a> 
+<a class="TOC" href="#vi-Page_8">8</a> 
+<a class="TOC" href="#vi-Page_9">9</a> 
+<a class="TOC" href="#vi-Page_10">10</a> 
+<a class="TOC" href="#vi-Page_11">11</a> 
+<a class="TOC" href="#vi-Page_12">12</a> 
+<a class="TOC" href="#vi-Page_13">13</a> 
+<a class="TOC" href="#vi-Page_14">14</a> 
+<a class="TOC" href="#vi-Page_15">15</a> 
+<a class="TOC" href="#vi-Page_16">16</a> 
+<a class="TOC" href="#vi-Page_17">17</a> 
+<a class="TOC" href="#vi-Page_18">18</a> 
+<a class="TOC" href="#vi-Page_19">19</a> 
+<a class="TOC" href="#vi-Page_20">20</a> 
+<a class="TOC" href="#vi-Page_21">21</a> 
+<a class="TOC" href="#vi-Page_22">22</a> 
+<a class="TOC" href="#vi-Page_23">23</a> 
+<a class="TOC" href="#vi-Page_24">24</a> 
+<a class="TOC" href="#vi-Page_25">25</a> 
+<a class="TOC" href="#vi-Page_26">26</a> 
+<a class="TOC" href="#vi-Page_27">27</a> 
+<a class="TOC" href="#vi-Page_28">28</a> 
+<a class="TOC" href="#vi-Page_29">29</a> 
+<a class="TOC" href="#vi-Page_30">30</a> 
+<a class="TOC" href="#vi-Page_31">31</a> 
+<a class="TOC" href="#vi-Page_32">32</a> 
+<a class="TOC" href="#vi-Page_33">33</a> 
+<a class="TOC" href="#vi-Page_34">34</a> 
+<a class="TOC" href="#vi-Page_35">35</a> 
+<a class="TOC" href="#vi-Page_36">36</a> 
+<a class="TOC" href="#vi-Page_37">37</a> 
+<a class="TOC" href="#vi-Page_38">38</a> 
+<a class="TOC" href="#vi-Page_39">39</a> 
+<a class="TOC" href="#vi-Page_40">40</a> 
+<a class="TOC" href="#vi-Page_41">41</a> 
+<a class="TOC" href="#vi-Page_42">42</a> 
+<a class="TOC" href="#vi-Page_43">43</a> 
+<a class="TOC" href="#vi-Page_44">44</a> 
+<a class="TOC" href="#vi-Page_45">45</a> 
+<a class="TOC" href="#vi-Page_46">46</a> 
+<a class="TOC" href="#vi-Page_47">47</a> 
+<a class="TOC" href="#vi-Page_48">48</a> 
+<a class="TOC" href="#vi-Page_49">49</a> 
+<a class="TOC" href="#vi-Page_50">50</a> 
+<a class="TOC" href="#vi-Page_51">51</a> 
+<a class="TOC" href="#vi-Page_52">52</a> 
+<a class="TOC" href="#vi-Page_53">53</a> 
+<a class="TOC" href="#vi-Page_54">54</a> 
+<a class="TOC" href="#vi-Page_55">55</a> 
+<a class="TOC" href="#vi-Page_56">56</a> 
+<a class="TOC" href="#vi-Page_57">57</a> 
+<a class="TOC" href="#vi-Page_58">58</a> 
+<a class="TOC" href="#vi-Page_59">59</a> 
+<a class="TOC" href="#vi-Page_60">60</a> 
+<a class="TOC" href="#vi-Page_61">61</a> 
+<a class="TOC" href="#vi-Page_62">62</a> 
+<a class="TOC" href="#vi-Page_63">63</a> 
+<a class="TOC" href="#vi-Page_64">64</a> 
+<a class="TOC" href="#vi-Page_65">65</a> 
+<a class="TOC" href="#vi-Page_66">66</a> 
+<a class="TOC" href="#vi-Page_67">67</a> 
+<a class="TOC" href="#vi-Page_68">68</a> 
+<a class="TOC" href="#vi-Page_69">69</a> 
+<a class="TOC" href="#vi-Page_70">70</a> 
+<a class="TOC" href="#vi-Page_71">71</a> 
+<a class="TOC" href="#vi-Page_72">72</a> 
+<a class="TOC" href="#vi-Page_73">73</a> 
+<a class="TOC" href="#vi-Page_74">74</a> 
+<a class="TOC" href="#vi-Page_75">75</a> 
+<a class="TOC" href="#vi-Page_76">76</a> 
+<a class="TOC" href="#vi-Page_77">77</a> 
+<a class="TOC" href="#vi-Page_78">78</a> 
+<a class="TOC" href="#vi-Page_79">79</a> 
+<a class="TOC" href="#vi-Page_80">80</a> 
+<a class="TOC" href="#vi-Page_81">81</a> 
+<a class="TOC" href="#vi-Page_82">82</a> 
+<a class="TOC" href="#vi-Page_83">83</a> 
+<a class="TOC" href="#vi-Page_84">84</a> 
+<a class="TOC" href="#vi-Page_85">85</a> 
+<a class="TOC" href="#vi-Page_86">86</a> 
+<a class="TOC" href="#vi-Page_87">87</a> 
+<a class="TOC" href="#vi-Page_88">88</a> 
+<a class="TOC" href="#vi-Page_89">89</a> 
+<a class="TOC" href="#vi-Page_90">90</a> 
+<a class="TOC" href="#vi-Page_91">91</a> 
+<a class="TOC" href="#vi-Page_92">92</a> 
+<a class="TOC" href="#vi-Page_93">93</a> 
+<a class="TOC" href="#vi-Page_94">94</a> 
+<a class="TOC" href="#vi-Page_95">95</a> 
+<a class="TOC" href="#vi-Page_96">96</a> 
+<a class="TOC" href="#vi-Page_97">97</a> 
+<a class="TOC" href="#vi-Page_98">98</a> 
+<a class="TOC" href="#vi-Page_99">99</a> 
+<a class="TOC" href="#vi-Page_100">100</a> 
+<a class="TOC" href="#vi-Page_101">101</a> 
+<a class="TOC" href="#vi-Page_102">102</a> 
+<a class="TOC" href="#vi-Page_103">103</a> 
+<a class="TOC" href="#vi-Page_104">104</a> 
+<a class="TOC" href="#vi-Page_105">105</a> 
+<a class="TOC" href="#vi-Page_106">106</a> 
+<a class="TOC" href="#vi-Page_107">107</a> 
+<a class="TOC" href="#vi-Page_108">108</a> 
+<a class="TOC" href="#vi-Page_109">109</a> 
+<a class="TOC" href="#vi-Page_110">110</a> 
+<a class="TOC" href="#vi-Page_111">111</a> 
+<a class="TOC" href="#vi-Page_112">112</a> 
+<a class="TOC" href="#vi-Page_113">113</a> 
+<a class="TOC" href="#vi-Page_114">114</a> 
+<a class="TOC" href="#vi-Page_115">115</a> 
+<a class="TOC" href="#vi-Page_116">116</a> 
+<a class="TOC" href="#vi-Page_117">117</a> 
+<a class="TOC" href="#vi-Page_118">118</a> 
+<a class="TOC" href="#vi-Page_119">119</a> 
+<a class="TOC" href="#vi-Page_120">120</a> 
+<a class="TOC" href="#vi-Page_121">121</a> 
+<a class="TOC" href="#vi-Page_122">122</a> 
+<a class="TOC" href="#vi-Page_123">123</a> 
+<a class="TOC" href="#vi-Page_124">124</a> 
+<a class="TOC" href="#vi-Page_125">125</a> 
+<a class="TOC" href="#vi-Page_126">126</a> 
+<a class="TOC" href="#vi-Page_127">127</a> 
+<a class="TOC" href="#vi-Page_128">128</a> 
+<a class="TOC" href="#vi-Page_129">129</a> 
+<a class="TOC" href="#vi-Page_130">130</a> 
+<a class="TOC" href="#vi-Page_131">131</a> 
+<a class="TOC" href="#vi-Page_132">132</a> 
+<a class="TOC" href="#vi-Page_133">133</a> 
+<a class="TOC" href="#vi-Page_134">134</a> 
+<a class="TOC" href="#vii-Page_135">135</a> 
+<a class="TOC" href="#vii-Page_136">136</a> 
+<a class="TOC" href="#viii-Page_137">137</a> 
+<a class="TOC" href="#viii-Page_138">138</a> 
+<a class="TOC" href="#viii-Page_139">139</a> 
+<a class="TOC" href="#viii-Page_140">140</a> 
+<a class="TOC" href="#viii-Page_141">141</a> 
+<a class="TOC" href="#viii-Page_142">142</a> 
+<a class="TOC" href="#viii-Page_143">143</a> 
+<a class="TOC" href="#viii-Page_144">144</a> 
+<a class="TOC" href="#viii-Page_145">145</a> 
+<a class="TOC" href="#viii-Page_146">146</a> 
+<a class="TOC" href="#viii-Page_147">147</a> 
+<a class="TOC" href="#viii-Page_148">148</a> 
+<a class="TOC" href="#viii-Page_149">149</a> 
+<a class="TOC" href="#viii-Page_150">150</a> 
+<a class="TOC" href="#viii-Page_151">151</a> 
+<a class="TOC" href="#viii-Page_152">152</a> 
+<a class="TOC" href="#viii-Page_153">153</a> 
+<a class="TOC" href="#viii-Page_154">154</a> 
+<a class="TOC" href="#viii-Page_155">155</a> 
+<a class="TOC" href="#viii-Page_156">156</a> 
+<a class="TOC" href="#viii-Page_157">157</a> 
+<a class="TOC" href="#viii-Page_158">158</a> 
+<a class="TOC" href="#viii-Page_159">159</a> 
+<a class="TOC" href="#viii-Page_160">160</a> 
+<a class="TOC" href="#viii-Page_161">161</a> 
+<a class="TOC" href="#viii-Page_162">162</a> 
+<a class="TOC" href="#viii-Page_163">163</a> 
+<a class="TOC" href="#viii-Page_164">164</a> 
+<a class="TOC" href="#viii-Page_165">165</a> 
+<a class="TOC" href="#viii-Page_166">166</a> 
+<a class="TOC" href="#viii-Page_167">167</a> 
+<a class="TOC" href="#viii-Page_168">168</a> 
+<a class="TOC" href="#viii-Page_169">169</a> 
+<a class="TOC" href="#viii-Page_170">170</a> 
+<a class="TOC" href="#viii-Page_171">171</a> 
+<a class="TOC" href="#viii-Page_172">172</a> 
+<a class="TOC" href="#viii-Page_173">173</a> 
+<a class="TOC" href="#viii-Page_174">174</a> 
+<a class="TOC" href="#viii-Page_175">175</a> 
+<a class="TOC" href="#viii-Page_176">176</a> 
+<a class="TOC" href="#viii-Page_177">177</a> 
+<a class="TOC" href="#viii-Page_178">178</a> 
+<a class="TOC" href="#viii-Page_179">179</a> 
+<a class="TOC" href="#viii-Page_180">180</a> 
+<a class="TOC" href="#viii-Page_181">181</a> 
+<a class="TOC" href="#viii-Page_182">182</a> 
+<a class="TOC" href="#viii-Page_183">183</a> 
+<a class="TOC" href="#viii-Page_184">184</a> 
+<a class="TOC" href="#viii-Page_185">185</a> 
+<a class="TOC" href="#viii-Page_186">186</a> 
+<a class="TOC" href="#viii-Page_187">187</a> 
+<a class="TOC" href="#viii-Page_188">188</a> 
+<a class="TOC" href="#viii-Page_189">189</a> 
+<a class="TOC" href="#viii-Page_190">190</a> 
+<a class="TOC" href="#viii-Page_191">191</a> 
+<a class="TOC" href="#viii-Page_192">192</a> 
+<a class="TOC" href="#viii-Page_193">193</a> 
+<a class="TOC" href="#viii-Page_194">194</a> 
+<a class="TOC" href="#viii-Page_195">195</a> 
+<a class="TOC" href="#viii-Page_196">196</a> 
+<a class="TOC" href="#viii-Page_197">197</a> 
+<a class="TOC" href="#viii-Page_198">198</a> 
+<a class="TOC" href="#viii-Page_199">199</a> 
+<a class="TOC" href="#viii-Page_200">200</a> 
+<a class="TOC" href="#viii-Page_201">201</a> 
+<a class="TOC" href="#viii-Page_202">202</a> 
+<a class="TOC" href="#viii-Page_203">203</a> 
+<a class="TOC" href="#viii-Page_204">204</a> 
+<a class="TOC" href="#viii-Page_205">205</a> 
+<a class="TOC" href="#viii-Page_206">206</a> 
+<a class="TOC" href="#viii-Page_207">207</a> 
+<a class="TOC" href="#viii-Page_208">208</a> 
+<a class="TOC" href="#viii-Page_209">209</a> 
+<a class="TOC" href="#viii-Page_210">210</a> 
+<a class="TOC" href="#viii-Page_211">211</a> 
+<a class="TOC" href="#viii-Page_212">212</a> 
+<a class="TOC" href="#ix-Page_213">213</a> 
+<a class="TOC" href="#ix-Page_214">214</a> 
+<a class="TOC" href="#ix-Page_215">215</a> 
+<a class="TOC" href="#ix-Page_216">216</a> 
+<a class="TOC" href="#ix-Page_217">217</a> 
+<a class="TOC" href="#ix-Page_218">218</a> 
+<a class="TOC" href="#ix-Page_219">219</a> 
+<a class="TOC" href="#ix-Page_220">220</a> 
+<a class="TOC" href="#ix-Page_221">221</a> 
+<a class="TOC" href="#ix-Page_222">222</a> 
+<a class="TOC" href="#ix-Page_223">223</a> 
+<a class="TOC" href="#ix-Page_224">224</a> 
+<a class="TOC" href="#ix-Page_225">225</a> 
+<a class="TOC" href="#ix-Page_226">226</a> 
+<a class="TOC" href="#ix-Page_227">227</a> 
+<a class="TOC" href="#ix-Page_228">228</a> 
+<a class="TOC" href="#ix-Page_229">229</a> 
+<a class="TOC" href="#ix-Page_230">230</a> 
+<a class="TOC" href="#ix-Page_231">231</a> 
+<a class="TOC" href="#ix-Page_232">232</a> 
+<a class="TOC" href="#ix-Page_233">233</a> 
+<a class="TOC" href="#ix-Page_234">234</a> 
+<a class="TOC" href="#ix-Page_235">235</a> 
+<a class="TOC" href="#ix-Page_236">236</a> 
+<a class="TOC" href="#ix-Page_237">237</a> 
+<a class="TOC" href="#ix-Page_238">238</a> 
+<a class="TOC" href="#ix-Page_239">239</a> 
+<a class="TOC" href="#ix-Page_240">240</a> 
+<a class="TOC" href="#ix-Page_241">241</a> 
+<a class="TOC" href="#ix-Page_242">242</a> 
+<a class="TOC" href="#ix-Page_243">243</a> 
+<a class="TOC" href="#ix-Page_244">244</a> 
+<a class="TOC" href="#ix-Page_245">245</a> 
+<a class="TOC" href="#ix-Page_246">246</a> 
+<a class="TOC" href="#ix-Page_247">247</a> 
+<a class="TOC" href="#ix-Page_248">248</a> 
+<a class="TOC" href="#ix-Page_249">249</a> 
+<a class="TOC" href="#ix-Page_250">250</a> 
+<a class="TOC" href="#ix-Page_251">251</a> 
+<a class="TOC" href="#ix-Page_252">252</a> 
+<a class="TOC" href="#ix-Page_253">253</a> 
+<a class="TOC" href="#ix-Page_254">254</a> 
+<a class="TOC" href="#ix-Page_255">255</a> 
+<a class="TOC" href="#ix-Page_256">256</a> 
+<a class="TOC" href="#ix-Page_257">257</a> 
+<a class="TOC" href="#ix-Page_258">258</a> 
+<a class="TOC" href="#ix-Page_259">259</a> 
+<a class="TOC" href="#ix-Page_260">260</a> 
+<a class="TOC" href="#ix-Page_261">261</a> 
+<a class="TOC" href="#ix-Page_262">262</a> 
+<a class="TOC" href="#ix-Page_263">263</a> 
+<a class="TOC" href="#ix-Page_264">264</a> 
+<a class="TOC" href="#ix-Page_265">265</a> 
+<a class="TOC" href="#ix-Page_266">266</a> 
+</p>
+</div>
+
+
+
+</div2>
+</div1>
+
+
+
+
+</ThML.body>
+</ThML>
