@@ -340,7 +340,11 @@ export default function ChurchFathersReaderRoute() {
   }, [manifest?.bookIndexPath]);
 
   useEffect(() => {
-    if (!bookIndex || activeChapterId) {
+    if (!bookIndex) {
+      return;
+    }
+
+    if (activeChapterId && chapterById.has(activeChapterId)) {
       return;
     }
 
@@ -348,7 +352,14 @@ export default function ChurchFathersReaderRoute() {
     const rememberedChapter = rememberedChapterId ? chapterById.get(rememberedChapterId) : undefined;
     const nextChapterId = rememberedChapter?.chapter.id ?? chapters[0]?.chapter.id ?? "";
 
+    if (!nextChapterId) {
+      return;
+    }
+
     setActiveChapterId(nextChapterId);
+    setSelectedPassage("");
+    hasScrolledToSelectionRef.current = false;
+    updateUrl(nextChapterId, "");
   }, [activeChapterId, bookIndex, chapterById, chapters]);
 
   useEffect(() => {
@@ -979,6 +990,12 @@ function ChapterJump({
   const bookChapters = selectedBook
     ? chapters.filter((entry) => entry.book.id === selectedBook.id)
     : [];
+
+  useEffect(() => {
+    if (activeEntry?.book.id) {
+      setSelectedBookId(activeEntry.book.id);
+    }
+  }, [activeEntry?.book.id]);
 
   return (
     <div
