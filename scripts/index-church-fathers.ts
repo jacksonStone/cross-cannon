@@ -146,6 +146,13 @@ type Options = {
 };
 
 const MAX_EMBEDDING_INPUT_CHARS = 24_000;
+const EXCLUDED_SOURCE_VOLUME_IDS = new Set(["anf01"]);
+const EXCLUDED_WORK_IDS = new Set([
+  "anf07:x",
+  "npnf101:vii",
+  "npnf205:ix.ii",
+  "npnf205:x.ii"
+]);
 const options = parseArgs(process.argv.slice(2));
 const embeddingConfig = getDefaultEmbeddingConfig();
 
@@ -340,6 +347,10 @@ async function buildIndexData(workIndex: WorkIndex, inputPath: string, sourceHas
   const passages: Passage[] = [];
 
   for (const work of workIndex.books) {
+    if (isExcludedSourceVolume(work)) {
+      continue;
+    }
+
     for (const chapterSummary of work.chapters) {
       const assetPath = path.resolve(
         projectRoot,
@@ -394,6 +405,12 @@ async function buildIndexData(workIndex: WorkIndex, inputPath: string, sourceHas
   }
 
   return { chapters, passages };
+}
+
+function isExcludedSourceVolume(work: WorkSummary) {
+  return EXCLUDED_WORK_IDS.has(work.id)
+    || EXCLUDED_SOURCE_VOLUME_IDS.has(work.metadata.ccel.id.toLowerCase())
+    || EXCLUDED_SOURCE_VOLUME_IDS.has(work.metadata.source.id.toLowerCase());
 }
 
 function groupSentencesIntoPassages(verses: ChapterAsset["verses"]) {

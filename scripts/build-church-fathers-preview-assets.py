@@ -20,6 +20,14 @@ DEFAULT_CLASSIFICATION = {
     "severity": 0,
 }
 
+EXCLUDED_SOURCE_VOLUME_IDS = {"anf01"}
+EXCLUDED_WORK_IDS = {
+    "anf07:x": "duplicate/work",
+    "npnf101:vii": "editorial/reference",
+    "npnf205:ix.ii": "editorial/reference",
+    "npnf205:x.ii": "editorial/reference",
+}
+
 
 def main() -> int:
     data = json.loads(INPUT.read_text(encoding="utf-8"))
@@ -51,6 +59,17 @@ def main() -> int:
 
     for volume in data["volumes"]:
         for work in volume["works"]:
+            if should_exclude_source_volume(volume):
+                increment_count(manifest["excludedSummary"]["byReason"], "duplicate/source-volume")
+                manifest["excludedSummary"]["workCount"] += 1
+                continue
+
+            excluded_work_reason = excluded_work_reason_for(work)
+            if excluded_work_reason is not None:
+                increment_count(manifest["excludedSummary"]["byReason"], excluded_work_reason)
+                manifest["excludedSummary"]["workCount"] += 1
+                continue
+
             classification = classify_work(volume, work)
             include_reason = patristic_scope_exclusion_reason(volume, work, classification)
             if include_reason is not None:
@@ -141,6 +160,14 @@ def main() -> int:
 def safe_id(value: str) -> str:
     safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", value)
     return safe.strip("_") or "chapter"
+
+
+def should_exclude_source_volume(volume: dict) -> bool:
+    return value_lower(volume.get("id")) in EXCLUDED_SOURCE_VOLUME_IDS
+
+
+def excluded_work_reason_for(work: dict):
+    return EXCLUDED_WORK_IDS.get(str(work.get("id") or ""))
 
 
 def display_title_for_work(work: dict) -> str:
