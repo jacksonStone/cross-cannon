@@ -19,6 +19,11 @@ type SearchEmbeddingOptions = {
   excludeIds?: string[];
 };
 
+type SearchTrace = {
+  finish: (label: string, details?: Record<string, unknown>) => void;
+  mark: (label: string, details?: Record<string, unknown>) => void;
+};
+
 type SimilarScriptureSearch = {
   source: {
     id: string;
@@ -38,16 +43,16 @@ export async function searchScripture(
   trace.mark("ensureDatabase");
 
   const embeddingConfig = await getIndexedEmbeddingConfig() ?? getDefaultEmbeddingConfig();
-  trace.mark("embeddingConfig");
+  trace.mark("embeddingConfig", embeddingConfig);
   const embedding = await embedText(question, embeddingConfig);
-  trace.mark("embedText");
+  trace.mark("embedText", { hasEmbedding: Boolean(embedding) });
 
   if (embedding) {
     if (shouldSearchBooksExactly(books)) {
-      const bookResults = await searchBookEmbeddingsExact(embedding, limit, books, options);
+      const bookResults = await searchBookEmbeddingsExact(embedding, limit, books, options, trace);
       trace.mark("searchBookEmbeddingsExact", { count: bookResults.length });
       if (bookResults.length > 0) {
-        const results = await attachVerseHighlights(embedding, bookResults);
+        const results = await attachVerseHighlights(embedding, bookResults, trace);
         trace.finish("book-vector-exact", { count: results.length });
         return results;
       }
@@ -57,20 +62,20 @@ export async function searchScripture(
     }
 
     const vectorResults = await runVectorSearchExclusive(
-      () => searchVector(embedding, limit, books, options),
+      () => searchVector(embedding, limit, books, options, trace),
       () => trace.mark("searchVectorStart")
     );
     trace.mark("searchVector", { count: vectorResults.length });
     if (vectorResults.length >= Math.min(4, limit)) {
-      const results = await attachVerseHighlights(embedding, vectorResults);
+      const results = await attachVerseHighlights(embedding, vectorResults, trace);
       trace.finish("vector", { count: results.length });
       return results;
     }
 
-    const exactResults = await searchEmbeddingsExact(embedding, limit, books, options);
+    const exactResults = await searchEmbeddingsExact(embedding, limit, books, options, trace);
     trace.mark("searchEmbeddingsExactFallback", { count: exactResults.length });
     if (exactResults.length > 0) {
-      const results = await attachVerseHighlights(embedding, exactResults);
+      const results = await attachVerseHighlights(embedding, exactResults, trace);
       trace.finish("vector-exact-fallback", { count: results.length });
       return results;
     }
@@ -92,6 +97,7 @@ export async function searchSimilarScripture(
   await ensureDatabase();
   trace.mark("ensureDatabase");
 
+  trace.mark("findSourcePassageStart");
   const sourceResponse = await getDb().execute({
     sql: `
       SELECT id, reference, embedding
@@ -101,6 +107,7 @@ export async function searchSimilarScripture(
     `,
     args: [passageId]
   });
+  trace.mark("findSourcePassageSql", { rowCount: sourceResponse.rows.length });
   const source = sourceResponse.rows[0];
 
   if (typeof source?.id !== "string") {
@@ -109,6 +116,7 @@ export async function searchSimilarScripture(
   }
 
   const embedding = readStoredEmbedding(source as StoredEmbeddingRow);
+  trace.mark("readSourceEmbedding", { hasEmbedding: Boolean(embedding) });
   if (!embedding) {
     trace.finish("missing-embedding", { count: 0 });
     return null;
@@ -116,9 +124,9 @@ export async function searchSimilarScripture(
 
   const options = { excludeIds: [passageId] } satisfies SearchEmbeddingOptions;
   if (shouldSearchBooksExactly(books)) {
-    const bookResults = await searchBookEmbeddingsExact(embedding, limit, books, options);
+    const bookResults = await searchBookEmbeddingsExact(embedding, limit, books, options, trace);
     trace.mark("searchBookEmbeddingsExact", { count: bookResults.length });
-    const results = await attachVerseHighlights(embedding, bookResults);
+    const results = await attachVerseHighlights(embedding, bookResults, trace);
     trace.finish(bookResults.length > 0 ? "book-vector-exact" : "no-vector-results", {
       count: results.length
     });
@@ -133,12 +141,12 @@ export async function searchSimilarScripture(
   }
 
   const vectorResults = await runVectorSearchExclusive(
-    () => searchVector(embedding, limit, books, options),
+    () => searchVector(embedding, limit, books, options, trace),
     () => trace.mark("searchVectorStart")
   );
   trace.mark("searchVector", { count: vectorResults.length });
   if (vectorResults.length >= Math.min(4, limit)) {
-    const results = await attachVerseHighlights(embedding, vectorResults);
+    const results = await attachVerseHighlights(embedding, vectorResults, trace);
     trace.finish("vector", { count: results.length });
     return {
       source: {
@@ -149,10 +157,10 @@ export async function searchSimilarScripture(
     };
   }
 
-  const exactResults = await searchEmbeddingsExact(embedding, limit, books, options);
+  const exactResults = await searchEmbeddingsExact(embedding, limit, books, options, trace);
   trace.mark("searchEmbeddingsExactFallback", { count: exactResults.length });
   if (exactResults.length > 0) {
-    const results = await attachVerseHighlights(embedding, exactResults);
+    const results = await attachVerseHighlights(embedding, exactResults, trace);
     trace.finish("vector-exact-fallback", { count: results.length });
     return {
       source: {
@@ -175,17 +183,20 @@ export async function searchSimilarScripture(
 
 async function attachVerseHighlights(
   embedding: ArrayLike<number>,
-  results: ScriptureResult[]
+  results: ScriptureResult[],
+  trace: SearchTrace
 ) {
   if (results.length === 0) {
     return results;
   }
 
   try {
+    trace.mark("attachVerseHighlightsStart", { resultCount: results.length });
     const db = getDb();
     const paragraphIds = results.map((result) => result.id);
     const paragraphScores = new Map<string, number>();
     const query = normalizeVector(embedding);
+    trace.mark("attachVerseNormalizeVector", { dimensions: query.length });
 
     for (const result of results) {
       if (typeof result.score === "number" && Number.isFinite(result.score)) {
@@ -198,6 +209,7 @@ async function attachVerseHighlights(
       .map((result) => result.id);
 
     if (missingParagraphScores.length > 0) {
+      trace.mark("attachParagraphScoresSqlStart", { missingCount: missingParagraphScores.length });
       const paragraphResponse = await db.execute({
         sql: `
           SELECT id, embedding
@@ -207,6 +219,7 @@ async function attachVerseHighlights(
         `,
         args: missingParagraphScores
       });
+      trace.mark("attachParagraphScoresSql", { rowCount: paragraphResponse.rows.length });
 
       for (const row of paragraphResponse.rows) {
         const id = String(row.id);
@@ -222,8 +235,10 @@ async function attachVerseHighlights(
           paragraphScores.set(id, score);
         }
       }
+      trace.mark("attachParagraphScoresRank", { count: paragraphScores.size });
     }
 
+    trace.mark("attachVerseSqlStart", { paragraphCount: paragraphIds.length });
     const verseResponse = await db.execute({
       sql: `
         SELECT paragraph_id, verse, embedding
@@ -233,6 +248,7 @@ async function attachVerseHighlights(
       `,
       args: paragraphIds
     });
+    trace.mark("attachVerseSql", { rowCount: verseResponse.rows.length });
     const bestByParagraph = new Map<string, { score: number; verse: number }>();
 
     for (const row of verseResponse.rows) {
@@ -251,8 +267,9 @@ async function attachVerseHighlights(
         bestByParagraph.set(paragraphId, { score, verse });
       }
     }
+    trace.mark("attachVerseRank", { count: bestByParagraph.size });
 
-    return results.map((result) => {
+    const highlightedResults = results.map((result) => {
       const paragraphScore = paragraphScores.get(result.id);
 
       return {
@@ -261,7 +278,11 @@ async function attachVerseHighlights(
         highlightVerse: getHighlightVerse(result.id, paragraphScores, bestByParagraph)
       };
     });
-  } catch {
+
+    trace.mark("attachVerseHighlights", { count: highlightedResults.length });
+    return highlightedResults;
+  } catch (error) {
+    trace.mark("attachVerseHighlightsError", { error: errorMessage(error) });
     return results;
   }
 }
@@ -285,7 +306,8 @@ async function searchVector(
   embedding: ArrayLike<number>,
   limit: number,
   books: string[],
-  options: SearchEmbeddingOptions = {}
+  options: SearchEmbeddingOptions = {},
+  trace: SearchTrace
 ) {
   const db = getDb();
   const excludeIds = options.excludeIds ?? [];
@@ -294,6 +316,11 @@ async function searchVector(
   const excludeClause = excludeIds.length ? `AND p.id NOT IN (${placeholders(excludeIds)})` : "";
 
   try {
+    trace.mark("vectorSqlStart", {
+      candidateLimit,
+      bookCount: books.length,
+      excludeCount: excludeIds.length
+    });
     const response = await db.execute({
       sql: `
         SELECT p.id, p.reference, p.result_type, p.embedding
@@ -312,8 +339,10 @@ async function searchVector(
         limit
       ]
     });
+    trace.mark("vectorSql", { rowCount: response.rows.length });
 
     const query = normalizeVector(embedding);
+    trace.mark("vectorNormalizeVector", { dimensions: query.length });
     const results: ScriptureResult[] = [];
 
     for (const row of response.rows) {
@@ -336,21 +365,13 @@ async function searchVector(
         score
       });
     }
+    trace.mark("vectorRank", { count: results.length });
 
     return results
       .sort((left, right) => (right.score ?? 0) - (left.score ?? 0))
       .slice(0, limit);
-  } catch {
-    if (process.env.SEARCH_TRACE === "1") {
-      console.info(
-        JSON.stringify({
-          type: "search-timing",
-          label: "searchVectorError",
-          limit,
-          bookCount: books.length
-        })
-      );
-    }
+  } catch (error) {
+    trace.mark("searchVectorError", { error: errorMessage(error) });
     return [];
   }
 }
@@ -359,22 +380,29 @@ async function searchBookEmbeddingsExact(
   embedding: ArrayLike<number>,
   limit: number,
   books: string[],
-  options: SearchEmbeddingOptions = {}
+  options: SearchEmbeddingOptions = {},
+  trace: SearchTrace
 ) {
-  return searchEmbeddingsExact(embedding, limit, books, options);
+  return searchEmbeddingsExact(embedding, limit, books, options, trace);
 }
 
 async function searchEmbeddingsExact(
   embedding: ArrayLike<number>,
   limit: number,
   books: string[] = [],
-  options: SearchEmbeddingOptions = {}
+  options: SearchEmbeddingOptions = {},
+  trace: SearchTrace
 ) {
   const db = getDb();
   const query = normalizeVector(embedding);
+  trace.mark("exactNormalizeVector", { dimensions: query.length });
   const excludeIds = options.excludeIds ?? [];
   const bookClause = books.length ? `AND book IN (${placeholders(books)})` : "";
   const excludeClause = excludeIds.length ? `AND id NOT IN (${placeholders(excludeIds)})` : "";
+  trace.mark("exactSqlStart", {
+    bookCount: books.length,
+    excludeCount: excludeIds.length
+  });
   const response = await db.execute({
     sql: `
       SELECT id, reference, result_type, embedding
@@ -385,6 +413,7 @@ async function searchEmbeddingsExact(
     `,
     args: [...books, ...excludeIds]
   });
+  trace.mark("exactSql", { rowCount: response.rows.length });
   const results: ScriptureResult[] = [];
 
   for (const row of response.rows) {
@@ -407,6 +436,7 @@ async function searchEmbeddingsExact(
       score
     });
   }
+  trace.mark("exactRank", { count: results.length });
 
   return results
     .sort((left, right) => (right.score ?? 0) - (left.score ?? 0))
@@ -503,6 +533,7 @@ function createSearchTrace(question: string, limit: number, books: string[]) {
     console.info(
       JSON.stringify({
         type: "search-timing",
+        corpus: "scripture",
         label,
         elapsedMs: elapsed(now),
         deltaMs: delta(now),
@@ -521,4 +552,8 @@ function createSearchTrace(question: string, limit: number, books: string[]) {
       log("finish", { branch: label, ...details });
     }
   };
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
