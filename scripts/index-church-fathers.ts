@@ -108,9 +108,29 @@ type Passage = {
   chapterAsset: ChapterAsset;
 };
 
+type Chapter = {
+  id: string;
+  workId: string;
+  book: string;
+  chapter: number;
+  title: string;
+  reference: string;
+  text: string;
+  verseCount: number;
+  sourceVolumeId: string;
+  lineage: string[];
+  sourceHash: string;
+  work: WorkSummary;
+};
+
 type EmbeddingItem =
   {
     kind: "passage";
+    id: string;
+    text: string;
+  }
+  | {
+    kind: "chapter";
     id: string;
     text: string;
   };
@@ -125,6 +145,7 @@ type Options = {
   rebuildIndexesOnly: boolean;
 };
 
+const MAX_EMBEDDING_INPUT_CHARS = 24_000;
 const options = parseArgs(process.argv.slice(2));
 const embeddingConfig = getDefaultEmbeddingConfig();
 
@@ -154,8 +175,11 @@ const absoluteInputPath = path.resolve(options.inputPath);
 const raw = await readFile(absoluteInputPath, "utf8");
 const sourceHash = stableId(raw);
 const workIndex = JSON.parse(raw) as WorkIndex;
-const passages = await buildPassages(workIndex, absoluteInputPath, sourceHash);
+const indexData = await buildIndexData(workIndex, absoluteInputPath, sourceHash);
+const passages = indexData.passages;
 const selectedPassages = options.limit === null ? passages : passages.slice(0, options.limit);
+const selectedChapterIds = new Set(selectedPassages.map((passage) => passage.chapterAsset.id));
+const selectedChapters = indexData.chapters.filter((chapter) => selectedChapterIds.has(chapter.id));
 
 if (selectedPassages.length === 0) {
   throw new Error(`No passages found in ${absoluteInputPath}`);
@@ -166,13 +190,23 @@ console.log(`Runtime DB: ${options.runtimeDbUrl}`);
 console.log(`Embedding model: ${embeddingConfig.model}`);
 console.log(`Embedding dimensions: ${embeddingConfig.dimensions}`);
 console.log(`Works: ${new Set(selectedPassages.map((passage) => passage.work.id)).size}`);
+console.log(`Chapters to index: ${selectedChapters.length}`);
 console.log(`Passages to index: ${selectedPassages.length}`);
 
 await upsertWorks(db, selectedPassages);
+await upsertChapters(db, selectedChapters);
 
 let indexedPassages = 0;
 const embeddingItems: EmbeddingItem[] = [];
 const rowStatements: InStatement[] = [];
+
+for (const chapter of selectedChapters) {
+  embeddingItems.push({
+    kind: "chapter",
+    id: chapter.id,
+    text: chapter.text
+  });
+}
 
 for (const passage of selectedPassages) {
   rowStatements.push(...upsertPassageStatements(passage));
@@ -190,18 +224,16 @@ for (const passage of selectedPassages) {
 
 await executeBatch(db, rowStatements, 750);
 console.log(`Passage rows stored: ${indexedPassages}`);
-const existingEmbeddingIds = await getExistingPassageEmbeddingIds(db);
-const pendingEmbeddingItems = embeddingItems.filter((item) => !existingEmbeddingIds.has(item.id));
-console.log(`Existing passage embeddings skipped: ${existingEmbeddingIds.size}`);
+const existingEmbeddingIds = await getExistingEmbeddingIds(db);
+const pendingEmbeddingItems = embeddingItems.filter((item) => !existingEmbeddingIds.get(item.kind)?.has(item.id));
+console.log(`Existing chapter embeddings skipped: ${existingEmbeddingIds.get("chapter")?.size ?? 0}`);
+console.log(`Existing passage embeddings skipped: ${existingEmbeddingIds.get("passage")?.size ?? 0}`);
 console.log(`Embeddings to store: ${pendingEmbeddingItems.length}`);
 
 let embeddedCount = 0;
 for (let index = 0; index < pendingEmbeddingItems.length; index += options.batchSize) {
   const batch = pendingEmbeddingItems.slice(index, index + options.batchSize);
-  const embeddings = await embedBatch(
-    batch.map((item) => item.text),
-    embeddingConfig
-  );
+  const embeddings = await embedItems(batch, embeddingConfig);
   const embeddingStatements: InStatement[] = [];
 
   for (let itemIndex = 0; itemIndex < batch.length; itemIndex += 1) {
@@ -220,6 +252,7 @@ if (!options.skipIndexRebuild) {
 
 const summary = await getRuntimeSummary(db);
 console.log(`Indexed early Christian DB complete.`);
+console.log(`Chapters: ${summary.chapters}`);
 console.log(`Passages: ${summary.passages}`);
 console.log(`Paragraph verses: ${summary.paragraphVerses}`);
 console.log(`Embeddings stored this run: ${embeddedCount}`);
@@ -301,8 +334,9 @@ function parseArgs(args: string[]): Options {
   };
 }
 
-async function buildPassages(workIndex: WorkIndex, inputPath: string, sourceHash: string) {
+async function buildIndexData(workIndex: WorkIndex, inputPath: string, sourceHash: string) {
   const projectRoot = process.cwd();
+  const chapters: Chapter[] = [];
   const passages: Passage[] = [];
 
   for (const work of workIndex.books) {
@@ -313,6 +347,23 @@ async function buildPassages(workIndex: WorkIndex, inputPath: string, sourceHash
       );
       const rawChapter = await readFile(assetPath, "utf8");
       const chapterAsset = JSON.parse(rawChapter) as ChapterAsset;
+      const chapterText = chapterAsset.verses.map((verse) => verse.text.trim()).filter(Boolean).join(" ");
+
+      chapters.push({
+        book: work.name,
+        chapter: chapterAsset.chapter,
+        id: chapterAsset.id,
+        lineage: chapterAsset.lineage,
+        reference: `${work.name} ${chapterAsset.chapter}`,
+        sourceHash: stableId(`${sourceHash}:${chapterAsset.id}`),
+        sourceVolumeId: chapterAsset.sourceVolumeId,
+        text: chapterText,
+        title: chapterAsset.title,
+        verseCount: chapterAsset.verses.length,
+        work,
+        workId: work.id
+      });
+
       const groups = groupSentencesIntoPassages(chapterAsset.verses);
 
       for (const group of groups) {
@@ -342,7 +393,7 @@ async function buildPassages(workIndex: WorkIndex, inputPath: string, sourceHash
     }
   }
 
-  return passages;
+  return { chapters, passages };
 }
 
 function groupSentencesIntoPassages(verses: ChapterAsset["verses"]) {
@@ -448,6 +499,31 @@ async function ensureEarlyChristianDatabase(db: Client) {
   `);
 
   await db.execute(`
+    CREATE TABLE IF NOT EXISTS early_christian_chapters (
+      id TEXT PRIMARY KEY,
+      work_id TEXT NOT NULL,
+      book TEXT NOT NULL,
+      chapter INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      reference TEXT NOT NULL,
+      text TEXT NOT NULL,
+      verse_count INTEGER NOT NULL,
+      source_volume_id TEXT NOT NULL,
+      lineage_json TEXT NOT NULL,
+      embedding F32_BLOB(1536),
+      source_hash TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (work_id) REFERENCES early_christian_works(id) ON DELETE CASCADE
+    )
+  `);
+
+  await db.execute(`
+    CREATE INDEX IF NOT EXISTS early_christian_chapters_reference_idx
+    ON early_christian_chapters(work_id, chapter)
+  `);
+
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS early_christian_passage_metadata (
       passage_id TEXT PRIMARY KEY,
       work_id TEXT NOT NULL,
@@ -461,15 +537,6 @@ async function ensureEarlyChristianDatabase(db: Client) {
       FOREIGN KEY (work_id) REFERENCES early_christian_works(id) ON DELETE CASCADE
     )
   `);
-
-  try {
-    await db.execute(`
-      CREATE INDEX IF NOT EXISTS passages_embedding_idx
-      ON passages(libsql_vector_idx(embedding))
-    `);
-  } catch {
-    console.warn("Vector index unavailable now; will retry after embeddings are stored.");
-  }
 }
 
 async function setIndexedEmbeddingConfig(db: Client, config: IndexedEmbeddingConfig) {
@@ -491,7 +558,11 @@ async function resetRuntimeDatabase(db: Client) {
     "DROP INDEX IF EXISTS passages_embedding_idx",
     "DROP INDEX IF EXISTS passages_embedding_idx_shadow_idx",
     "DROP TABLE IF EXISTS passages_embedding_idx_shadow",
+    "DROP INDEX IF EXISTS early_christian_chapters_embedding_idx",
+    "DROP INDEX IF EXISTS early_christian_chapters_embedding_idx_shadow_idx",
+    "DROP TABLE IF EXISTS early_christian_chapters_embedding_idx_shadow",
     "DELETE FROM early_christian_passage_metadata",
+    "DELETE FROM early_christian_chapters",
     "DELETE FROM early_christian_works",
     "DELETE FROM paragraph_verses",
     "DELETE FROM passages"
@@ -556,6 +627,56 @@ async function upsertWorks(db: Client, passages: Passage[]) {
       ]
     });
   }
+
+  await executeBatch(db, statements, 500);
+}
+
+async function upsertChapters(db: Client, chapters: Chapter[]) {
+  const statements: InStatement[] = chapters.map((chapter) => ({
+    sql: `
+      INSERT INTO early_christian_chapters (
+        id,
+        work_id,
+        book,
+        chapter,
+        title,
+        reference,
+        text,
+        verse_count,
+        source_volume_id,
+        lineage_json,
+        embedding,
+        source_hash,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(id) DO UPDATE SET
+        work_id = excluded.work_id,
+        book = excluded.book,
+        chapter = excluded.chapter,
+        title = excluded.title,
+        reference = excluded.reference,
+        text = excluded.text,
+        verse_count = excluded.verse_count,
+        source_volume_id = excluded.source_volume_id,
+        lineage_json = excluded.lineage_json,
+        source_hash = excluded.source_hash,
+        updated_at = CURRENT_TIMESTAMP
+    `,
+    args: [
+      chapter.id,
+      chapter.workId,
+      chapter.book,
+      chapter.chapter,
+      chapter.title,
+      chapter.reference,
+      chapter.text,
+      chapter.verseCount,
+      chapter.sourceVolumeId,
+      JSON.stringify(chapter.lineage),
+      chapter.sourceHash
+    ]
+  }));
 
   await executeBatch(db, statements, 500);
 }
@@ -707,6 +828,99 @@ async function embedBatch(texts: string[], config: IndexedEmbeddingConfig): Prom
   throw new Error("Embedding batch failed unexpectedly.");
 }
 
+async function embedItems(items: EmbeddingItem[], config: IndexedEmbeddingConfig): Promise<number[][]> {
+  const chunks: Array<{ itemIndex: number; text: string; weight: number }> = [];
+
+  for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
+    const item = items[itemIndex];
+    const itemChunks = item.kind === "chapter"
+      ? splitTextForEmbedding(item.text)
+      : [item.text.trim()].filter(Boolean);
+
+    for (const text of itemChunks) {
+      chunks.push({
+        itemIndex,
+        text,
+        weight: Math.max(text.length, 1)
+      });
+    }
+  }
+
+  const itemVectors = items.map(() => Array.from({ length: config.dimensions }, () => 0));
+  const itemWeights = items.map(() => 0);
+
+  if (chunks.length === 0) {
+    return itemVectors;
+  }
+
+  const chunkEmbeddings = await embedBatch(
+    chunks.map((chunk) => chunk.text),
+    config
+  );
+
+  for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
+    const chunk = chunks[chunkIndex];
+    const embedding = chunkEmbeddings[chunkIndex];
+    const vector = itemVectors[chunk.itemIndex];
+    itemWeights[chunk.itemIndex] += chunk.weight;
+
+    for (let dimension = 0; dimension < config.dimensions; dimension += 1) {
+      vector[dimension] += embedding[dimension] * chunk.weight;
+    }
+  }
+
+  return itemVectors.map((vector, itemIndex) => {
+    const weight = itemWeights[itemIndex] || 1;
+
+    return vector.map((value) => value / weight);
+  });
+}
+
+function splitTextForEmbedding(text: string) {
+  const trimmed = text.trim();
+
+  if (!trimmed) {
+    return [];
+  }
+
+  if (trimmed.length <= MAX_EMBEDDING_INPUT_CHARS) {
+    return [trimmed];
+  }
+
+  const chunks: string[] = [];
+  let start = 0;
+
+  while (start < trimmed.length) {
+    let end = Math.min(start + MAX_EMBEDDING_INPUT_CHARS, trimmed.length);
+
+    if (end < trimmed.length) {
+      const sentenceBoundary = Math.max(
+        trimmed.lastIndexOf(". ", end),
+        trimmed.lastIndexOf("? ", end),
+        trimmed.lastIndexOf("! ", end)
+      );
+      const whitespaceBoundary = trimmed.lastIndexOf(" ", end);
+      const boundary = sentenceBoundary > start + MAX_EMBEDDING_INPUT_CHARS * 0.5
+        ? sentenceBoundary + 1
+        : whitespaceBoundary;
+
+      if (boundary > start) {
+        end = boundary;
+      }
+    }
+
+    const chunk = trimmed.slice(start, end).trim();
+
+    if (chunk) {
+      chunks.push(chunk);
+    }
+
+    start = end;
+  }
+
+  return chunks;
+}
+
 function isTokenLimitError(error: unknown) {
   if (!error || typeof error !== "object") {
     return false;
@@ -719,6 +933,13 @@ function isTokenLimitError(error: unknown) {
 }
 
 function storeEmbeddingStatement(item: EmbeddingItem, vector: number[]): InStatement {
+  if (item.kind === "chapter") {
+    return {
+      sql: "UPDATE early_christian_chapters SET embedding = vector32(?) WHERE id = ?",
+      args: [vectorSql(vector), item.id]
+    };
+  }
+
   return {
     sql: "UPDATE passages SET embedding = vector32(?) WHERE id = ?",
     args: [vectorSql(vector), item.id]
@@ -734,30 +955,45 @@ async function executeBatch(db: Client, statements: InStatement[], chunkSize: nu
 async function rebuildVectorIndex(db: Client) {
   try {
     await db.execute("DROP INDEX IF EXISTS passages_embedding_idx");
+    await db.execute("DROP INDEX IF EXISTS passages_embedding_idx_shadow_idx");
+    await db.execute("DROP TABLE IF EXISTS passages_embedding_idx_shadow");
+    await db.execute("DROP INDEX IF EXISTS early_christian_chapters_embedding_idx");
+    await db.execute("DROP INDEX IF EXISTS early_christian_chapters_embedding_idx_shadow_idx");
+    await db.execute("DROP TABLE IF EXISTS early_christian_chapters_embedding_idx_shadow");
     await db.execute(`
-      CREATE INDEX IF NOT EXISTS passages_embedding_idx
-      ON passages(libsql_vector_idx(embedding))
+      CREATE INDEX IF NOT EXISTS early_christian_chapters_embedding_idx
+      ON early_christian_chapters(libsql_vector_idx(embedding))
     `);
   } catch {
-    console.warn("Vector index rebuild unavailable; exact vector scan query can still verify results.");
+    console.warn("Chapter vector index rebuild unavailable; exact vector scan query can still verify results.");
   }
 }
 
-async function getExistingPassageEmbeddingIds(db: Client) {
-  const response = await db.execute(`
+async function getExistingEmbeddingIds(db: Client) {
+  const chapterResponse = await db.execute(`
+    SELECT id
+    FROM early_christian_chapters
+    WHERE embedding IS NOT NULL
+  `);
+  const passageResponse = await db.execute(`
     SELECT id
     FROM passages
     WHERE embedding IS NOT NULL
   `);
 
-  return new Set(response.rows.map((row) => String(row.id)));
+  return new Map<EmbeddingItem["kind"], Set<string>>([
+    ["chapter", new Set(chapterResponse.rows.map((row) => String(row.id)))],
+    ["passage", new Set(passageResponse.rows.map((row) => String(row.id)))]
+  ]);
 }
 
 async function getRuntimeSummary(db: Client) {
+  const chapters = await db.execute("SELECT COUNT(*) AS count FROM early_christian_chapters");
   const passages = await db.execute("SELECT COUNT(*) AS count FROM passages");
   const paragraphVerses = await db.execute("SELECT COUNT(*) AS count FROM paragraph_verses");
 
   return {
+    chapters: Number(chapters.rows[0]?.count ?? 0),
     paragraphVerses: Number(paragraphVerses.rows[0]?.count ?? 0),
     passages: Number(passages.rows[0]?.count ?? 0)
   };

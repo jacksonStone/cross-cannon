@@ -13,9 +13,15 @@ type ResultRow = {
   reference: string;
   text: string;
   score: number;
+  chapterReference: string | null;
   author: string | null;
   date: string | null;
   source: string;
+};
+
+type ChapterCandidate = {
+  id: string;
+  score: number;
 };
 
 const options = parseArgs(process.argv.slice(2));
@@ -112,30 +118,39 @@ async function embedQuery(
 }
 
 async function search(queryEmbedding: number[], limit: number): Promise<ResultRow[]> {
-  const candidateLimit = Math.max(limit * 40, 300);
+  const candidateChapterLimit = Math.max(limit * 40, 300);
+  const chapterCandidates = await searchChapters(queryEmbedding, candidateChapterLimit);
 
+  if (chapterCandidates.length > 0) {
+    const results = await searchPassagesInChapters(
+      queryEmbedding,
+      chapterCandidates.map((chapter) => chapter.id),
+      limit
+    );
+
+    if (results.length > 0) {
+      return results;
+    }
+  }
+
+  return searchAllPassagesExact(queryEmbedding, limit);
+}
+
+async function searchChapters(queryEmbedding: number[], limit: number): Promise<ChapterCandidate[]> {
   try {
     const response = await db.execute({
       sql: `
         SELECT
-          p.id,
-          p.reference,
-          p.text,
-          p.embedding,
-          w.author,
-          w.authorship_date_range,
-          w.ccel_id
-        FROM vector_top_k('passages_embedding_idx', vector32(?), ?) AS v
-        JOIN passages p ON p.rowid = v.id
-        LEFT JOIN early_christian_passage_metadata pm ON pm.passage_id = p.id
-        LEFT JOIN early_christian_works w ON w.id = pm.work_id
-        WHERE p.text <> ''
-        LIMIT ?
+          c.id,
+          c.embedding
+        FROM vector_top_k('early_christian_chapters_embedding_idx', vector32(?), ?) AS v
+        JOIN early_christian_chapters c ON c.rowid = v.id
+        WHERE c.text <> ''
       `,
-      args: [vectorSql(queryEmbedding), candidateLimit, limit]
+      args: [vectorSql(queryEmbedding), limit]
     });
 
-    const results = rowsToResults(response.rows, queryEmbedding, limit);
+    const results = rowsToChapterCandidates(response.rows, queryEmbedding, limit);
 
     if (results.length > 0) {
       return results;
@@ -144,22 +159,119 @@ async function search(queryEmbedding: number[], limit: number): Promise<ResultRo
     // Fall through to exact scan below.
   }
 
-  const response = await db.execute(`
-    SELECT
-      p.id,
-      p.reference,
-      p.text,
-      p.embedding,
-      w.author,
-      w.authorship_date_range,
-      w.ccel_id
-    FROM passages p
-    LEFT JOIN early_christian_passage_metadata pm ON pm.passage_id = p.id
-    LEFT JOIN early_christian_works w ON w.id = pm.work_id
-    WHERE p.embedding IS NOT NULL
-  `);
+  try {
+    const response = await db.execute(`
+      SELECT id, embedding
+      FROM early_christian_chapters
+      WHERE embedding IS NOT NULL
+    `);
+
+    return rowsToChapterCandidates(response.rows, queryEmbedding, limit);
+  } catch {
+    return [];
+  }
+}
+
+async function searchPassagesInChapters(
+  queryEmbedding: number[],
+  chapterIds: string[],
+  limit: number
+): Promise<ResultRow[]> {
+  if (chapterIds.length === 0) {
+    return [];
+  }
+
+  const placeholders = chapterIds.map(() => "?").join(", ");
+  const response = await db.execute({
+    sql: `
+      SELECT
+        p.id,
+        p.reference,
+        p.text,
+        p.embedding,
+        c.reference AS chapter_reference,
+        w.author,
+        w.authorship_date_range,
+        w.ccel_id
+      FROM passages p
+      JOIN early_christian_passage_metadata pm ON pm.passage_id = p.id
+      JOIN early_christian_chapters c ON c.id = pm.chapter_id
+      LEFT JOIN early_christian_works w ON w.id = pm.work_id
+      WHERE p.embedding IS NOT NULL
+        AND pm.chapter_id IN (${placeholders})
+    `,
+    args: chapterIds
+  });
 
   return rowsToResults(response.rows, queryEmbedding, limit);
+}
+
+async function searchAllPassagesExact(queryEmbedding: number[], limit: number): Promise<ResultRow[]> {
+  let response;
+
+  try {
+    response = await db.execute(`
+      SELECT
+        p.id,
+        p.reference,
+        p.text,
+        p.embedding,
+        c.reference AS chapter_reference,
+        w.author,
+        w.authorship_date_range,
+        w.ccel_id
+      FROM passages p
+      LEFT JOIN early_christian_passage_metadata pm ON pm.passage_id = p.id
+      LEFT JOIN early_christian_chapters c ON c.id = pm.chapter_id
+      LEFT JOIN early_christian_works w ON w.id = pm.work_id
+      WHERE p.embedding IS NOT NULL
+    `);
+  } catch {
+    response = await db.execute(`
+      SELECT
+        p.id,
+        p.reference,
+        p.text,
+        p.embedding,
+        NULL AS chapter_reference,
+        w.author,
+        w.authorship_date_range,
+        w.ccel_id
+      FROM passages p
+      LEFT JOIN early_christian_passage_metadata pm ON pm.passage_id = p.id
+      LEFT JOIN early_christian_works w ON w.id = pm.work_id
+      WHERE p.embedding IS NOT NULL
+    `);
+  }
+
+  return rowsToResults(response.rows, queryEmbedding, limit);
+}
+
+function rowsToChapterCandidates(rows: unknown[], queryEmbedding: number[], limit: number): ChapterCandidate[] {
+  const results: ChapterCandidate[] = [];
+
+  for (const row of rows as Array<Record<string, unknown>>) {
+    const stored = readStoredEmbedding(row as StoredEmbeddingRow);
+
+    if (!stored) {
+      continue;
+    }
+
+    const score = cosineSimilarity(queryEmbedding, stored);
+
+    if (!Number.isFinite(score)) {
+      continue;
+    }
+
+    results.push({
+      id: String(row.id),
+      score
+    });
+  }
+
+  return results
+    .sort((left, right) => right.score - left.score)
+    .slice(0, limit);
 }
 
 function rowsToResults(rows: unknown[], queryEmbedding: number[], limit: number): ResultRow[] {
@@ -180,6 +292,7 @@ function rowsToResults(rows: unknown[], queryEmbedding: number[], limit: number)
 
     results.push({
       author: typeof row.author === "string" ? row.author : null,
+      chapterReference: typeof row.chapter_reference === "string" ? row.chapter_reference : null,
       date: typeof row.authorship_date_range === "string" ? row.authorship_date_range : null,
       id: String(row.id),
       reference: String(row.reference),
