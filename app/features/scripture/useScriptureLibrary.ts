@@ -7,6 +7,7 @@ import {
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
 import { loadScriptureCache } from "./scripture-cache.client";
+import { getLoadedScriptureCache } from "./scripture-cache-store";
 
 export type ScriptureLibraryStatus = "loading" | "ready" | "error";
 export type PassageLookup = ReadonlyMap<string, BrowserPassage>;
@@ -32,20 +33,31 @@ type UseScriptureLibraryOptions = {
 export function useScriptureLibrary({
   scriptureCacheUrl
 }: UseScriptureLibraryOptions): ScriptureLibrary {
-  const [snapshot, setSnapshot] = useState<ScriptureLibrarySnapshot>(() => ({
-    error: null,
-    passages: [],
-    status: "loading"
-  }));
+  const [snapshot, setSnapshot] = useState<ScriptureLibrarySnapshot>(() => {
+    const cachedPassages = getLoadedScriptureCache(scriptureCacheUrl);
+
+    return {
+      error: null,
+      passages: cachedPassages ?? [],
+      status: cachedPassages ? "ready" : "loading"
+    };
+  });
 
   useEffect(() => {
     let ignore = false;
+    const cachedPassages = getLoadedScriptureCache(scriptureCacheUrl);
 
     setSnapshot((current) => ({
       error: null,
-      passages: current.status === "ready" ? current.passages : [],
-      status: "loading"
+      passages: cachedPassages ?? (current.status === "ready" ? current.passages : []),
+      status: cachedPassages ? "ready" : "loading"
     }));
+
+    if (cachedPassages) {
+      return () => {
+        ignore = true;
+      };
+    }
 
     loadScriptureCache(scriptureCacheUrl)
       .then((loadedPassages) => {

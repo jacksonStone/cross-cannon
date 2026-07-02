@@ -18,6 +18,16 @@ import {
   rememberReaderCorpus
 } from "~/features/reader-switch/ReaderCorpusSwitch";
 import {
+  EARLY_CHRISTIAN_MANIFEST_URL,
+  EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION,
+  EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY,
+  FIRST_FATHERS_WORK_ID,
+  getCachedPreviewJson,
+  getCachedPreviewJsonEntries,
+  loadPreviewJson,
+  rememberCachedPreviewJson
+} from "~/features/early-christian-preview/preview-cache";
+import {
   useExpandableReaderWindow,
   useInitialTargetScroll,
   usePreservePrependedScroll
@@ -49,11 +59,11 @@ import {
 } from "~/lib/use-dialog-dismiss";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
-const MANIFEST_URL = "/church-fathers-preview/manifest.json";
 const CONFESSIONS_AUDIO_ALIGNMENT_URL =
   "/church-fathers-preview/confessions-audio-alignment.json";
-const PREVIEW_ASSET_VERSION = "early-christian-preview-20260702a";
-const READER_POSITION_STORAGE_KEY = "cross-cannon:church-fathers-position:v1";
+const MANIFEST_URL = EARLY_CHRISTIAN_MANIFEST_URL;
+const PREVIEW_ASSET_VERSION = EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION;
+const READER_POSITION_STORAGE_KEY = EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY;
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
 const READER_THEMES = ["paper", "sepia", "dark", "contrast"] as const;
 const CHAPTER_WINDOW_BEFORE = 5;
@@ -75,7 +85,6 @@ const SEARCH_EXAMPLES = [
   "prayer and fasting"
 ];
 const CONFESSIONS_BOOK_ID = "npnf101:vi";
-const FIRST_FATHERS_WORK_ID = "anf09:xii.iv";
 const WORK_CHRONOLOGY: Record<string, number> = {
   "anf09:xii.iv": 96,
   "anf09:xii.vi": 120
@@ -451,14 +460,22 @@ export default function ChurchFathersReaderRoute() {
   } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
-  const [manifest, setManifest] = useState<PreviewManifest | null>(null);
-  const [bookIndex, setBookIndex] = useState<BookIndex | null>(null);
+  const [manifest, setManifest] = useState<PreviewManifest | null>(() => (
+    getCachedPreviewJson<PreviewManifest>(manifestUrl, previewAssetVersion) ?? null
+  ));
+  const [bookIndex, setBookIndex] = useState<BookIndex | null>(() => (
+    readCachedBookIndex(manifestUrl, previewAssetVersion)
+  ));
   const [confessionsAudioAlignment, setConfessionsAudioAlignment] =
     useState<ConfessionsAudioAlignment | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [loadedChapters, setLoadedChapters] = useState<Map<string, ChapterAsset>>(() => new Map());
+  const [loadedChapters, setLoadedChapters] = useState<Map<string, ChapterAsset>>(() => (
+    getCachedChapterAssets(previewAssetVersion)
+  ));
   const [chapterLoadErrors, setChapterLoadErrors] = useState<Map<string, string>>(() => new Map());
-  const [activeChapterId, setActiveChapterId] = useState(initialChapterId);
+  const [activeChapterId, setActiveChapterId] = useState(() => (
+    initialChapterId || readRememberedChapterId()
+  ));
   const [selectedPassage, setSelectedPassage] = useState(initialPassageRange);
   const [selectedPassageChapterId, setSelectedPassageChapterId] = useState(
     initialPassageRange ? initialChapterId : ""
@@ -499,7 +516,17 @@ export default function ChurchFathersReaderRoute() {
     () => new Map(chapters.map((entry) => [entry.chapter.id, entry])),
     [chapters]
   );
-  const activeEntry = activeChapterId ? chapterById.get(activeChapterId) : undefined;
+  const resolvedActiveChapterId = useMemo(() => (
+    resolveActiveChapterId({
+      activeChapterId,
+      chapterById,
+      chapters,
+      initialChapterId
+    })
+  ), [activeChapterId, chapterById, chapters, initialChapterId]);
+  const activeEntry = resolvedActiveChapterId
+    ? chapterById.get(resolvedActiveChapterId)
+    : undefined;
   const renderedEntries = useMemo(
     () => renderedRange.endIndex >= renderedRange.startIndex
       ? chapters.slice(
@@ -512,11 +539,11 @@ export default function ChurchFathersReaderRoute() {
   const isReady = Boolean(bookIndex && activeEntry);
   const activeChapterIndex = activeEntry?.index;
   const selectedRangeForActiveChapter =
-    selectedPassageChapterId === activeChapterId ? selectedPassage : "";
+    selectedPassageChapterId === resolvedActiveChapterId ? selectedPassage : "";
   const isTargetWindowReady = Boolean(
-    activeChapterId
+    resolvedActiveChapterId
     && typeof activeChapterIndex === "number"
-    && renderedEntries.some((entry) => entry.chapter.id === activeChapterId)
+    && renderedEntries.some((entry) => entry.chapter.id === resolvedActiveChapterId)
     && renderedEntries.every((entry) => (
       entry.index > activeChapterIndex || loadedChapters.has(entry.chapter.id)
     ))
@@ -676,18 +703,12 @@ export default function ChurchFathersReaderRoute() {
   useEffect(() => {
     let ignore = false;
 
-    fetch(versionedPreviewUrl(CONFESSIONS_AUDIO_ALIGNMENT_URL, previewAssetVersion), {
-      cache: "no-store"
-    })
-      .then((response) => {
-        if (!response.ok) {
-          return null;
-        }
-
-        return response.json() as Promise<ConfessionsAudioAlignment>;
-      })
+    loadPreviewJson<ConfessionsAudioAlignment>(
+      CONFESSIONS_AUDIO_ALIGNMENT_URL,
+      previewAssetVersion
+    )
       .then((alignment) => {
-        if (!ignore && alignment) {
+        if (!ignore) {
           setConfessionsAudioAlignment(alignment);
         }
       })
@@ -705,14 +726,7 @@ export default function ChurchFathersReaderRoute() {
   useEffect(() => {
     let ignore = false;
 
-    fetch(versionedPreviewUrl(manifestUrl, previewAssetVersion), { cache: "no-store" })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to load manifest: ${response.status}`);
-        }
-
-        return response.json() as Promise<PreviewManifest>;
-      })
+    loadPreviewJson<PreviewManifest>(manifestUrl, previewAssetVersion)
       .then((loadedManifest) => {
         if (!ignore) {
           setLoadError(null);
@@ -737,18 +751,13 @@ export default function ChurchFathersReaderRoute() {
 
     let ignore = false;
 
-    fetch(versionedPreviewUrl(manifest.bookIndexPath, previewAssetVersion), { cache: "no-store" })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to load work index: ${response.status}`);
-        }
-
-        return response.json() as Promise<BookIndex>;
-      })
+    loadPreviewJson<BookIndex>(manifest.bookIndexPath, previewAssetVersion)
       .then((loadedIndex) => {
         if (!ignore) {
+          const sortedIndex = sortBookIndex(loadedIndex);
+          rememberCachedPreviewJson(manifest.bookIndexPath, previewAssetVersion, sortedIndex);
           setLoadError(null);
-          setBookIndex(sortBookIndex(loadedIndex));
+          setBookIndex(sortedIndex);
         }
       })
       .catch((error: unknown) => {
@@ -767,36 +776,32 @@ export default function ChurchFathersReaderRoute() {
       return;
     }
 
-    if (activeChapterId && chapterById.has(activeChapterId)) {
-      const activeChapterIndex = chapterById.get(activeChapterId)?.index ?? 0;
+    if (resolvedActiveChapterId && chapterById.has(resolvedActiveChapterId)) {
+      const activeChapterIndex = chapterById.get(resolvedActiveChapterId)?.index ?? 0;
       setRenderedRange((range) => (
         windowRangeContainsIndex(range, activeChapterIndex)
           ? range
           : getChapterWindowRange(activeChapterIndex, chapters.length)
       ));
+
+      if (activeChapterId !== resolvedActiveChapterId) {
+        setActiveChapterId(resolvedActiveChapterId);
+        setSelectedPassage("");
+        setSelectedPassageChapterId("");
+        canReportLocationRef.current = false;
+        lastReportedChapterIdRef.current = resolvedActiveChapterId;
+        hasScrolledToSelectionRef.current = false;
+      }
+
       return;
     }
-
-    const rememberedChapterId = window.localStorage.getItem(READER_POSITION_STORAGE_KEY);
-    const rememberedChapter = rememberedChapterId
-      ? chapterById.get(rememberedChapterId)
-      : undefined;
-    const nextEntry = rememberedChapter ?? chapters[0];
-    const nextChapterId = nextEntry?.chapter.id ?? "";
-
-    if (!nextChapterId) {
-      return;
-    }
-
-    setActiveChapterId(nextChapterId);
-    setSelectedPassage("");
-    setSelectedPassageChapterId("");
-    setRenderedRange(getChapterWindowRange(nextEntry.index, chapters.length));
-    canReportLocationRef.current = false;
-    lastReportedChapterIdRef.current = nextChapterId;
-    hasScrolledToSelectionRef.current = false;
-    updateUrl(nextChapterId, "");
-  }, [activeChapterId, bookIndex, chapterById, chapters]);
+  }, [
+    activeChapterId,
+    bookIndex,
+    chapterById,
+    chapters.length,
+    resolvedActiveChapterId
+  ]);
 
   useEffect(() => {
     if (!bookIndex || renderedEntries.length === 0) {
@@ -972,12 +977,12 @@ export default function ChurchFathersReaderRoute() {
   }, [isReady, selectedPassage, selectedPassageChapterId]);
 
   const findInitialChapterTarget = useCallback(() => {
-    if (!activeChapterId) {
+    if (!resolvedActiveChapterId) {
       return null;
     }
 
     const chapterElement = document.querySelector<HTMLElement>(
-      `[data-chapter-id="${cssEscape(activeChapterId)}"]`
+      `[data-chapter-id="${cssEscape(resolvedActiveChapterId)}"]`
     );
 
     if (!chapterElement || !selectedRangeForActiveChapter) {
@@ -988,12 +993,16 @@ export default function ChurchFathersReaderRoute() {
       chapterElement,
       selectedRangeForActiveChapter
     ) ?? chapterElement;
-  }, [activeChapterId, selectedRangeForActiveChapter]);
+  }, [resolvedActiveChapterId, selectedRangeForActiveChapter]);
   const finishInitialChapterScroll = useCallback(() => {
     canReportLocationRef.current = false;
     hasScrolledToSelectionRef.current = true;
-    lastReportedChapterIdRef.current = activeChapterId;
-  }, [activeChapterId]);
+    lastReportedChapterIdRef.current = resolvedActiveChapterId;
+  }, [resolvedActiveChapterId]);
+  const shouldScrollToInitialChapter = useCallback(
+    () => !hasScrolledToSelectionRef.current,
+    []
+  );
 
   useInitialTargetScroll({
     findTarget: findInitialChapterTarget,
@@ -1001,7 +1010,7 @@ export default function ChurchFathersReaderRoute() {
     isReady: isTargetWindowReady,
     maxFrames: INITIAL_SCROLL_MAX_FRAMES,
     onSettled: finishInitialChapterScroll,
-    shouldScroll: !hasScrolledToSelectionRef.current
+    shouldScroll: shouldScrollToInitialChapter
   });
 
   useEffect(() => {
@@ -1789,6 +1798,64 @@ function sortBookIndex(bookIndex: BookIndex): BookIndex {
   };
 }
 
+function readCachedBookIndex(manifestUrl: string, previewAssetVersion: string) {
+  const cachedManifest = getCachedPreviewJson<PreviewManifest>(
+    manifestUrl,
+    previewAssetVersion
+  );
+
+  if (!cachedManifest) {
+    return null;
+  }
+
+  const cachedBookIndex = getCachedPreviewJson<BookIndex>(
+    cachedManifest.bookIndexPath,
+    previewAssetVersion
+  );
+
+  return cachedBookIndex ? sortBookIndex(cachedBookIndex) : null;
+}
+
+function readRememberedChapterId() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  try {
+    return window.localStorage.getItem(READER_POSITION_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function resolveActiveChapterId({
+  activeChapterId,
+  chapterById,
+  chapters,
+  initialChapterId
+}: {
+  activeChapterId: string;
+  chapterById: Map<string, ChapterEntry>;
+  chapters: ChapterEntry[];
+  initialChapterId: string;
+}) {
+  if (activeChapterId && chapterById.has(activeChapterId)) {
+    return activeChapterId;
+  }
+
+  if (initialChapterId && chapterById.has(initialChapterId)) {
+    return initialChapterId;
+  }
+
+  const rememberedChapterId = readRememberedChapterId();
+
+  if (rememberedChapterId && chapterById.has(rememberedChapterId)) {
+    return rememberedChapterId;
+  }
+
+  return chapters[0]?.chapter.id ?? "";
+}
+
 function compareBooks(
   left: BookSummary,
   right: BookSummary,
@@ -2218,10 +2285,17 @@ function parseMatchCount(formData: FormData):
   return { value: matchCount };
 }
 
-function versionedPreviewUrl(path: string, version: string) {
-  const separator = path.includes("?") ? "&" : "?";
+function getCachedChapterAssets(version: string) {
+  const chapters = new Map<string, ChapterAsset>();
 
-  return `${path}${separator}v=${encodeURIComponent(version)}`;
+  for (const asset of getCachedPreviewJsonEntries<ChapterAsset>(
+    version,
+    "/church-fathers-preview/chapters/"
+  )) {
+    chapters.set(asset.id, asset);
+  }
+
+  return chapters;
 }
 
 async function loadChapterAssets(
@@ -2249,20 +2323,11 @@ async function loadChapterAsset(
   previewAssetVersion: string
 ): Promise<ChapterAssetLoadResult> {
   try {
-    const response = await fetch(
-      versionedPreviewUrl(entry.chapter.assetPath, previewAssetVersion),
-      { cache: "no-store" }
-    );
-
-    if (!response.ok) {
-      return {
-        entry,
-        error: `Failed to load chapter: ${response.status}`
-      };
-    }
-
     return {
-      asset: await response.json() as ChapterAsset,
+      asset: await loadPreviewJson<ChapterAsset>(
+        entry.chapter.assetPath,
+        previewAssetVersion
+      ),
       entry
     };
   } catch (error: unknown) {

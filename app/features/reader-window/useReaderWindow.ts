@@ -142,10 +142,10 @@ export function useInitialTargetScroll({
   maxFrames: number;
   onMissingTarget?: () => void;
   onSettled: () => void;
-  shouldScroll: boolean;
+  shouldScroll: () => boolean;
 }) {
   useBrowserLayoutEffect(() => {
-    if (!isReady || !shouldScroll) {
+    if (!isReady || !shouldScroll()) {
       return;
     }
 
@@ -194,6 +194,10 @@ export function useInitialTargetScroll({
       frameCount += 1;
 
       const foundTarget = scrollToTarget();
+
+      if (!shouldScroll()) {
+        return;
+      }
 
       if (
         (foundTarget && fontsSettled && frameCount >= 2)

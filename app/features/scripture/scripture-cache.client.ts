@@ -1,16 +1,21 @@
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
-const scriptureCacheLoads = new Map<string, Promise<BrowserPassage[]>>();
-const scriptureCacheData = new Map<string, BrowserPassage[]>();
+import {
+  forgetScriptureCacheLoad,
+  getLoadedScriptureCache,
+  getScriptureCacheLoad,
+  rememberLoadedScriptureCache,
+  rememberScriptureCacheLoad
+} from "./scripture-cache-store";
 
 export function loadScriptureCache(scriptureCacheUrl: string) {
-  const cachedPassages = scriptureCacheData.get(scriptureCacheUrl);
+  const cachedPassages = getLoadedScriptureCache(scriptureCacheUrl);
 
   if (cachedPassages) {
     return Promise.resolve(cachedPassages);
   }
 
-  const existingLoad = scriptureCacheLoads.get(scriptureCacheUrl);
+  const existingLoad = getScriptureCacheLoad(scriptureCacheUrl);
 
   if (existingLoad) {
     return existingLoad;
@@ -25,14 +30,14 @@ export function loadScriptureCache(scriptureCacheUrl: string) {
       return response.json() as Promise<{ passages: BrowserPassage[] }>;
     })
     .then((data) => {
-      scriptureCacheData.set(scriptureCacheUrl, data.passages);
+      rememberLoadedScriptureCache(scriptureCacheUrl, data.passages);
       return data.passages;
     })
     .catch((error) => {
-      scriptureCacheLoads.delete(scriptureCacheUrl);
+      forgetScriptureCacheLoad(scriptureCacheUrl);
       throw error;
     });
 
-  scriptureCacheLoads.set(scriptureCacheUrl, load);
+  rememberScriptureCacheLoad(scriptureCacheUrl, load);
   return load;
 }

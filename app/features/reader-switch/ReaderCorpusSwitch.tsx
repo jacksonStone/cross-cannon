@@ -1,4 +1,7 @@
 import { Link } from "@remix-run/react";
+import { useEffect } from "react";
+
+import { prefetchEarlyChristianPreview } from "~/features/early-christian-preview/preview-cache";
 
 export const LAST_READER_STORAGE_KEY = "cross-cannon:last-reader:v1";
 
@@ -12,11 +15,24 @@ export function ReaderCorpusSwitch({ current }: ReaderCorpusSwitchProps) {
   const targetCorpus: ReaderCorpus = current === "scripture" ? "fathers" : "scripture";
   const isSwitchingToFathers = targetCorpus === "fathers";
 
+  useEffect(() => {
+    if (isSwitchingToFathers) {
+      prefetchEarlyChristianPreview();
+    }
+  }, [isSwitchingToFathers]);
+
   return (
     <Link
       aria-label={isSwitchingToFathers ? "Switch to early Christian works" : "Switch to Scripture"}
       className="reader-corpus-switch"
-      onClick={() => rememberReaderCorpus(targetCorpus)}
+      onClick={() => {
+        if (isSwitchingToFathers) {
+          prefetchEarlyChristianPreview();
+        }
+
+        rememberReaderCorpus(targetCorpus);
+      }}
+      prefetch="render"
       title={isSwitchingToFathers ? "Early Christian works" : "Scripture"}
       to={isSwitchingToFathers ? "/church-fathers" : "/?reader=scripture"}
     >

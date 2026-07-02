@@ -37,8 +37,6 @@ const INITIAL_NEXT_CHAPTERS = 24;
 const CHAPTER_WINDOW_EXPAND_COUNT = 10;
 const CHAPTER_WINDOW_EDGE_PX = 2200;
 const INITIAL_SCROLL_MAX_FRAMES = 8;
-const TOP_EDGE_SCROLL_RESTORE_PX = 32;
-const TOP_EDGE_SCROLL_MIN_DELTA_PX = 640;
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -116,14 +114,13 @@ export function PassageReader({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasScrolledToInitialPassageRef = useRef(false);
   const lastReportedPassageIdRef = useRef("");
-  const lastScrollYRef = useRef(0);
-  const isRestoringTopEdgeScrollRef = useRef(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const [readerSettings, setReaderSettings] = useState(DEFAULT_READER_SETTINGS);
   const [hasLoadedReaderSettings, setHasLoadedReaderSettings] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isReaderToolsOpen, setIsReaderToolsOpen] = useState(false);
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
+  const [hasCompletedInitialScroll, setHasCompletedInitialScroll] = useState(false);
   const [renderedRange, setRenderedRange] = useState({
     endIndex: -1,
     startIndex: 0
@@ -216,7 +213,7 @@ export function PassageReader({
   }, [activeAudioUrl, isActiveChapterPlaying]);
 
   useBrowserLayoutEffect(() => {
-    const nextRange = getInitialRenderedRange(
+    const nextRange = getInitialAnchoredRange(
       initialChapterIndex,
       orderedChapterEntries.length
     );
@@ -224,6 +221,7 @@ export function PassageReader({
     setRenderedRange(nextRange);
     setActiveChapterKey(initialChapterKey);
     setSelectedPassageId("");
+    setHasCompletedInitialScroll(false);
     prependSnapshotRef.current = null;
     canReportLocationRef.current = false;
     lastReportedPassageIdRef.current = initialPassageId;
@@ -236,7 +234,27 @@ export function PassageReader({
   );
   const finishInitialPassageScroll = useCallback(() => {
     hasScrolledToInitialPassageRef.current = true;
-  }, []);
+    setHasCompletedInitialScroll(true);
+    setRenderedRange((currentRange) => {
+      const nextRange = getInitialRenderedRange(
+        initialChapterIndex,
+        orderedChapterEntries.length
+      );
+
+      if (nextRange.startIndex < currentRange.startIndex) {
+        prependSnapshotRef.current = {
+          scrollHeight: document.documentElement.scrollHeight,
+          scrollY: window.scrollY
+        };
+      }
+
+      return nextRange;
+    });
+  }, [initialChapterIndex, orderedChapterEntries.length]);
+  const shouldScrollToInitialPassage = useCallback(
+    () => !hasScrolledToInitialPassageRef.current,
+    []
+  );
   const scrollToTopWhenInitialPassageMissing = useCallback(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, []);
@@ -248,7 +266,7 @@ export function PassageReader({
     maxFrames: INITIAL_SCROLL_MAX_FRAMES,
     onMissingTarget: scrollToTopWhenInitialPassageMissing,
     onSettled: finishInitialPassageScroll,
-    shouldScroll: !hasScrolledToInitialPassageRef.current
+    shouldScroll: shouldScrollToInitialPassage
   });
 
   usePreservePrependedScroll({
@@ -256,67 +274,10 @@ export function PassageReader({
     startIndex: renderedRange.startIndex
   });
 
-  useEffect(() => {
-    if (!isScriptureReady) {
-      return;
-    }
-
-    lastScrollYRef.current = window.scrollY;
-
-    const restoreAccidentalTopEdgeScroll = (event: Event) => {
-      const currentScrollY = window.scrollY;
-      const previousScrollY = lastScrollYRef.current;
-      const minJumpDistance = Math.max(
-        TOP_EDGE_SCROLL_MIN_DELTA_PX,
-        window.innerHeight * 0.75
-      );
-      const isAbruptTopEdgeScroll =
-        hasScrolledToInitialPassageRef.current
-        && canReportLocationRef.current
-        && !isRestoringTopEdgeScrollRef.current
-        && currentScrollY <= TOP_EDGE_SCROLL_RESTORE_PX
-        && previousScrollY - currentScrollY >= minJumpDistance;
-
-      if (isAbruptTopEdgeScroll) {
-        event.stopImmediatePropagation();
-        isRestoringTopEdgeScrollRef.current = true;
-        canReportLocationRef.current = false;
-
-        window.requestAnimationFrame(() => {
-          window.scrollTo({
-            behavior: "auto",
-            left: 0,
-            top: previousScrollY
-          });
-          lastScrollYRef.current = previousScrollY;
-
-          window.requestAnimationFrame(() => {
-            isRestoringTopEdgeScrollRef.current = false;
-          });
-        });
-        return;
-      }
-
-      if (!isRestoringTopEdgeScrollRef.current) {
-        lastScrollYRef.current = currentScrollY;
-      }
-    };
-
-    window.addEventListener("scroll", restoreAccidentalTopEdgeScroll, {
-      capture: true
-    });
-
-    return () => {
-      window.removeEventListener("scroll", restoreAccidentalTopEdgeScroll, {
-        capture: true
-      });
-    };
-  }, [isScriptureReady]);
-
   useExpandableReaderWindow({
     edgePx: CHAPTER_WINDOW_EDGE_PX,
     expandCount: CHAPTER_WINDOW_EXPAND_COUNT,
-    isReady: isScriptureReady,
+    isReady: isScriptureReady && hasCompletedInitialScroll,
     itemCount: orderedChapterEntries.length,
     prependSnapshotRef,
     setRange: setRenderedRange
@@ -930,6 +891,15 @@ function getInitialRenderedRange(initialChapterIndex: number, chapterCount: numb
   return getCenteredWindowRange({
     after: INITIAL_NEXT_CHAPTERS,
     before: INITIAL_PREVIOUS_CHAPTERS,
+    count: chapterCount,
+    index: initialChapterIndex
+  });
+}
+
+function getInitialAnchoredRange(initialChapterIndex: number, chapterCount: number) {
+  return getCenteredWindowRange({
+    after: INITIAL_NEXT_CHAPTERS,
+    before: 0,
     count: chapterCount,
     index: initialChapterIndex
   });
