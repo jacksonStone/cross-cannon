@@ -14,6 +14,7 @@
     "parse:church-fathers": "python3 scripts/parse-church-fathers.py",
     "build:church-fathers-preview": "python3 scripts/build-church-fathers-preview-assets.py",
     "build:confessions-audio-alignment": "node --import tsx scripts/build-confessions-audio-alignment.ts",
+    "update-db:church-fathers-metadata": "node scripts/update-church-fathers-metadata.mjs",
     "index:church-fathers": "node --import tsx scripts/index-church-fathers.ts",
     "query:church-fathers": "node --import tsx scripts/query-church-fathers.ts",
     "verify": "scripts/verify.sh",
