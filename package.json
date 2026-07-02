@@ -17,6 +17,7 @@
     "query:church-fathers": "node --import tsx scripts/query-church-fathers.ts",
     "verify": "scripts/verify.sh",
     "verify-prod": "scripts/verify-prod.sh",
+    "e2e:reader": "node --import tsx scripts/e2e-reader-kitchen-sink.ts",
     "ship": "CROSS_CANNON_UPDATE_DB=0 npm run verify && CROSS_CANNON_UPDATE_DB=0 ./deploy.sh && sleep 4 && npm run verify-prod",
     "index:bible": "node --import tsx scripts/index-bible.ts",
     "index:genesis": "node --import tsx scripts/index-bible.ts data/bible.json --reset --passage-type paragraph --book Genesis",
