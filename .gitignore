@@ -13,6 +13,7 @@ storage/audio/
 storage/audio-originals/
 storage/audio-processed/
 storage/audio-trim-test/
+storage/church-fathers-audio/
 storage/verse-index/
 data/public-domain/church-fathers/ccel/parsed/church-fathers.json
 scripture-cache/

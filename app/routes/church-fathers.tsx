@@ -22,6 +22,8 @@ import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 const MANIFEST_URL = "/church-fathers-preview/manifest.json";
+const CONFESSIONS_AUDIO_ALIGNMENT_URL =
+  "/church-fathers-preview/confessions-audio-alignment.json";
 const PREVIEW_ASSET_VERSION = "early-christian-preview-20260701b";
 const READER_POSITION_STORAGE_KEY = "cross-cannon:church-fathers-position:v1";
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
@@ -31,7 +33,8 @@ const CHAPTER_WINDOW_AFTER = 10;
 const CHAPTER_WINDOW_EXPAND_COUNT = 8;
 const CHAPTER_WINDOW_EDGE_PX = 1800;
 const HEADER_SCROLL_OFFSET = 118;
-const READING_ANCHOR_RATIO = 0.38;
+const CHAPTER_UPDATE_OFFSET = HEADER_SCROLL_OFFSET + 48;
+const INITIAL_SCROLL_MAX_FRAMES = 8;
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 const SEARCH_EXAMPLES = [
@@ -42,6 +45,42 @@ const SEARCH_EXAMPLES = [
   "the incarnation",
   "prayer and fasting"
 ];
+const CONFESSIONS_BOOK_ID = "npnf101:vi";
+const CONFESSIONS_AUDIO_BASE_URL =
+  "https://archive.org/download/confessions_augustine_0911_librivox";
+const CONFESSIONS_AUDIO_TRACKS = [
+  { book: 1, chapterEnd: 10, chapterStart: 1, fileName: "confessions_01_01-10_augustine_64kb.mp3", label: "Book 01, Chapters 01-10" },
+  { book: 1, chapterEnd: 19, chapterStart: 11, fileName: "confessions_01_11-19_augustine_64kb.mp3", label: "Book 01, Chapters 11-19" },
+  { book: 2, chapterEnd: 10, chapterStart: 1, fileName: "confessions_02_01-10_augustine_64kb.mp3", label: "Book 02, Chapters 01-10" },
+  { book: 3, chapterEnd: 7, chapterStart: 1, fileName: "confessions_03_01-07_augustine_64kb.mp3", label: "Book 03, Chapters 01-07" },
+  { book: 3, chapterEnd: 12, chapterStart: 8, fileName: "confessions_03_08-12_augustine_64kb.mp3", label: "Book 03, Chapters 08-12" },
+  { book: 4, chapterEnd: 9, chapterStart: 1, fileName: "confessions_04_01-09_augustine_64kb.mp3", label: "Book 04, Chapters 01-09" },
+  { book: 4, chapterEnd: 15, chapterStart: 10, fileName: "confessions_04_10-15_augustine_64kb.mp3", label: "Book 04, Chapters 10-15" },
+  { book: 5, chapterEnd: 7, chapterStart: 1, fileName: "confessions_05_01-07_augustine_64kb.mp3", label: "Book 05, Chapters 01-07" },
+  { book: 5, chapterEnd: 14, chapterStart: 8, fileName: "confessions_05_08-14_augustine_64kb.mp3", label: "Book 05, Chapters 08-14" },
+  { book: 6, chapterEnd: 7, chapterStart: 1, fileName: "confessions_06_01-07_augustine_64kb.mp3", label: "Book 06, Chapters 01-07" },
+  { book: 6, chapterEnd: 16, chapterStart: 8, fileName: "confessions_06_08-16_augustine_64kb.mp3", label: "Book 06, Chapters 08-16" },
+  { book: 7, chapterEnd: 9, chapterStart: 1, fileName: "confessions_07_01-09_augustine_64kb.mp3", label: "Book 07, Chapters 01-09" },
+  { book: 7, chapterEnd: 21, chapterStart: 10, fileName: "confessions_07_10-21_augustine_64kb.mp3", label: "Book 07, Chapters 10-21" },
+  { book: 8, chapterEnd: 6, chapterStart: 1, fileName: "confessions_08_01-06_augustine_64kb.mp3", label: "Book 08, Chapters 01-06" },
+  { book: 8, chapterEnd: 12, chapterStart: 7, fileName: "confessions_08_07-12_augustine_64kb.mp3", label: "Book 08, Chapters 07-12" },
+  { book: 9, chapterEnd: 8, chapterStart: 1, fileName: "confessions_09_01-08_augustine_64kb.mp3", label: "Book 09, Chapters 01-08" },
+  { book: 9, chapterEnd: 13, chapterStart: 9, fileName: "confessions_09_09-13_augustine_64kb.mp3", label: "Book 09, Chapters 09-13" },
+  { book: 10, chapterEnd: 10, chapterStart: 1, fileName: "confessions_10_01-10_augustine_64kb.mp3", label: "Book 10, Chapters 01-10" },
+  { book: 10, chapterEnd: 22, chapterStart: 11, fileName: "confessions_10_11-22_augustine_64kb.mp3", label: "Book 10, Chapters 11-22" },
+  { book: 10, chapterEnd: 33, chapterStart: 23, fileName: "confessions_10_23-33_augustine_64kb.mp3", label: "Book 10, Chapters 23-33" },
+  { book: 10, chapterEnd: 43, chapterStart: 34, fileName: "confessions_10_34-43_augustine_64kb.mp3", label: "Book 10, Chapters 34-43" },
+  { book: 11, chapterEnd: 11, chapterStart: 1, fileName: "confessions_11_01-11_augustine_64kb.mp3", label: "Book 11, Chapters 01-11" },
+  { book: 11, chapterEnd: 21, chapterStart: 12, fileName: "confessions_11_12-21_augustine_64kb.mp3", label: "Book 11, Chapters 12-21" },
+  { book: 11, chapterEnd: 31, chapterStart: 22, fileName: "confessions_11_22-31_augustine_64kb.mp3", label: "Book 11, Chapters 22-31" },
+  { book: 12, chapterEnd: 11, chapterStart: 1, fileName: "confessions_12_01-11_augustine_64kb.mp3", label: "Book 12, Chapters 01-11" },
+  { book: 12, chapterEnd: 22, chapterStart: 12, fileName: "confessions_12_12-22_augustine_64kb.mp3", label: "Book 12, Chapters 12-22" },
+  { book: 12, chapterEnd: 32, chapterStart: 23, fileName: "confessions_12_23-32_augustine_64kb.mp3", label: "Book 12, Chapters 23-32" },
+  { book: 13, chapterEnd: 10, chapterStart: 1, fileName: "confessions_13_01-10_augustine_64kb.mp3", label: "Book 13, Chapters 01-10" },
+  { book: 13, chapterEnd: 20, chapterStart: 11, fileName: "confessions_13_11-20_augustine_64kb.mp3", label: "Book 13, Chapters 11-20" },
+  { book: 13, chapterEnd: 29, chapterStart: 21, fileName: "confessions_13_21-29_augustine_64kb.mp3", label: "Book 13, Chapters 21-29" },
+  { book: 13, chapterEnd: 38, chapterStart: 30, fileName: "confessions_13_30-38_augustine_64kb.mp3", label: "Book 13, Chapters 30-38" }
+] as const;
 
 type ReaderTheme = typeof READER_THEMES[number];
 
@@ -97,6 +136,8 @@ type BookIndex = {
   source: string;
 };
 
+let knownPreviewChapterIdsPromise: Promise<Set<string>> | null = null;
+
 type PreviewManifest = {
   bookCount: number;
   bookIndexPath: string;
@@ -135,6 +176,16 @@ type ChapterEntry = {
   index: number;
 };
 
+type ChapterAssetLoadResult =
+  | {
+    asset: ChapterAsset;
+    entry: ChapterEntry;
+  }
+  | {
+    entry: ChapterEntry;
+    error: string;
+  };
+
 type ReaderPassage = {
   key: string;
   rangeLabel: string;
@@ -154,6 +205,18 @@ type ChurchFathersActionData = {
   similarSource?: EarlyChristianSimilarSource;
 };
 
+type ConfessionsAudioAlignment = {
+  chapters: Record<string, {
+    audioUrl: string;
+    confidence?: number;
+    endSeconds?: number;
+    label: string;
+    startSeconds: number;
+  }>;
+  generatedAt?: string | null;
+  source?: string;
+};
+
 export const meta: MetaFunction = () => [
   { title: "Early Christian Reader | Cross Canon" },
   {
@@ -164,13 +227,43 @@ export const meta: MetaFunction = () => [
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
+  const requestedChapterId = url.searchParams.get("chapter") ?? "";
+  const initialChapterId = requestedChapterId && await isKnownPreviewChapterId(requestedChapterId)
+    ? requestedChapterId
+    : "";
 
   return json({
-    initialChapterId: url.searchParams.get("chapter") ?? "",
-    initialPassageRange: url.searchParams.get("passage") ?? "",
+    initialChapterId,
+    initialPassageRange: initialChapterId ? url.searchParams.get("passage") ?? "" : "",
     manifestUrl: MANIFEST_URL,
     previewAssetVersion: PREVIEW_ASSET_VERSION
   });
+}
+
+async function isKnownPreviewChapterId(chapterId: string) {
+  knownPreviewChapterIdsPromise ??= readKnownPreviewChapterIds();
+  return (await knownPreviewChapterIdsPromise).has(chapterId);
+}
+
+async function readKnownPreviewChapterIds() {
+  const [{ readFile }, path] = await Promise.all([
+    import("node:fs/promises"),
+    import("node:path")
+  ]);
+  const bookIndexPath = path.resolve(
+    process.cwd(),
+    "public/church-fathers-preview/books.json"
+  );
+  const bookIndex = JSON.parse(await readFile(bookIndexPath, "utf8")) as BookIndex;
+  const chapterIds = new Set<string>();
+
+  for (const book of bookIndex.books) {
+    for (const chapter of book.chapters) {
+      chapterIds.add(chapter.id);
+    }
+  }
+
+  return chapterIds;
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -254,23 +347,32 @@ export default function ChurchFathersReaderRoute() {
   const navigation = useNavigation();
   const [manifest, setManifest] = useState<PreviewManifest | null>(null);
   const [bookIndex, setBookIndex] = useState<BookIndex | null>(null);
+  const [confessionsAudioAlignment, setConfessionsAudioAlignment] =
+    useState<ConfessionsAudioAlignment | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadedChapters, setLoadedChapters] = useState<Map<string, ChapterAsset>>(() => new Map());
+  const [chapterLoadErrors, setChapterLoadErrors] = useState<Map<string, string>>(() => new Map());
   const [activeChapterId, setActiveChapterId] = useState(initialChapterId);
   const [selectedPassage, setSelectedPassage] = useState(initialPassageRange);
+  const [selectedPassageChapterId, setSelectedPassageChapterId] = useState(
+    initialPassageRange ? initialChapterId : ""
+  );
   const [focusedPassageKey, setFocusedPassageKey] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isJumpOpen, setIsJumpOpen] = useState(false);
   const [exampleIndex, setExampleIndex] = useState(0);
+  const [playingAudioKey, setPlayingAudioKey] = useState<string | null>(null);
   const [renderedRange, setRenderedRange] = useState({
     endIndex: -1,
     startIndex: 0
   });
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const canReportLocationRef = useRef(false);
   const hasScrolledToSelectionRef = useRef(false);
   const lastReportedChapterIdRef = useRef("");
+  const playingAudioEndSecondsRef = useRef<number | null>(null);
   const prependSnapshotRef = useRef<{
     scrollHeight: number;
     scrollY: number;
@@ -297,11 +399,103 @@ export default function ChurchFathersReaderRoute() {
   const focusedPassage = focusedPassageKey
     ? findLoadedPassage(loadedChapters, focusedPassageKey)
     : null;
+  const activeAudio = activeEntry
+    ? getEarlyChristianAudio(activeEntry, confessionsAudioAlignment)
+    : null;
+  const activeAudioUrl = activeAudio?.url ?? null;
+  const activeAudioKey = activeAudio
+    ? `${activeAudio.url}#${activeAudio.startSeconds ?? 0}`
+    : null;
+  const isActiveChapterPlaying = Boolean(
+    activeAudioKey && playingAudioKey === activeAudioKey
+  );
   const isSearching = navigation.state === "submitting";
+
+  const toggleActiveChapterAudio = useCallback(() => {
+    const audio = audioRef.current;
+
+    if (!audio || !activeAudio || !activeAudioKey || !activeAudioUrl) {
+      return;
+    }
+
+    if (isActiveChapterPlaying) {
+      audio.pause();
+      playingAudioEndSecondsRef.current = null;
+      setPlayingAudioKey(null);
+      return;
+    }
+
+    audio.src = activeAudioUrl;
+    audio.load();
+    playingAudioEndSecondsRef.current = activeAudio.endSeconds ?? null;
+
+    const playFromOffset = () => {
+      try {
+        audio.currentTime = Math.max(0, activeAudio.startSeconds ?? 0);
+      } catch {
+        // Some browsers reject seeking until enough metadata is available.
+      }
+
+      void audio.play()
+        .then(() => setPlayingAudioKey(activeAudioKey))
+        .catch(() => {
+          playingAudioEndSecondsRef.current = null;
+          setPlayingAudioKey(null);
+        });
+    };
+
+    if (audio.readyState >= 1) {
+      playFromOffset();
+    } else {
+      audio.addEventListener("loadedmetadata", playFromOffset, { once: true });
+    }
+  }, [activeAudio, activeAudioKey, activeAudioUrl, isActiveChapterPlaying]);
 
   useEffect(() => {
     setReaderTheme(readSavedReaderTheme());
   }, []);
+
+  useBrowserLayoutEffect(() => {
+    if (typeof window === "undefined" || !("scrollRestoration" in window.history)) {
+      return;
+    }
+
+    const previousScrollRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+
+    return () => {
+      window.history.scrollRestoration = previousScrollRestoration;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    fetch(versionedPreviewUrl(CONFESSIONS_AUDIO_ALIGNMENT_URL, previewAssetVersion), {
+      cache: "no-store"
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return null;
+        }
+
+        return response.json() as Promise<ConfessionsAudioAlignment>;
+      })
+      .then((alignment) => {
+        if (!ignore && alignment) {
+          setConfessionsAudioAlignment(alignment);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setConfessionsAudioAlignment(null);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [previewAssetVersion]);
 
   useEffect(() => {
     let ignore = false;
@@ -316,6 +510,7 @@ export default function ChurchFathersReaderRoute() {
       })
       .then((loadedManifest) => {
         if (!ignore) {
+          setLoadError(null);
           setManifest(loadedManifest);
         }
       })
@@ -347,6 +542,7 @@ export default function ChurchFathersReaderRoute() {
       })
       .then((loadedIndex) => {
         if (!ignore) {
+          setLoadError(null);
           setBookIndex(loadedIndex);
         }
       })
@@ -369,7 +565,7 @@ export default function ChurchFathersReaderRoute() {
     if (activeChapterId && chapterById.has(activeChapterId)) {
       const activeChapterIndex = chapterById.get(activeChapterId)?.index ?? 0;
       setRenderedRange((range) => (
-        range.endIndex >= range.startIndex
+        rangeContainsIndex(range, activeChapterIndex)
           ? range
           : getChapterWindowRange(activeChapterIndex, chapters.length)
       ));
@@ -377,7 +573,9 @@ export default function ChurchFathersReaderRoute() {
     }
 
     const rememberedChapterId = window.localStorage.getItem(READER_POSITION_STORAGE_KEY);
-    const rememberedChapter = rememberedChapterId ? chapterById.get(rememberedChapterId) : undefined;
+    const rememberedChapter = rememberedChapterId
+      ? chapterById.get(rememberedChapterId)
+      : undefined;
     const nextEntry = rememberedChapter ?? chapters[0];
     const nextChapterId = nextEntry?.chapter.id ?? "";
 
@@ -387,6 +585,7 @@ export default function ChurchFathersReaderRoute() {
 
     setActiveChapterId(nextChapterId);
     setSelectedPassage("");
+    setSelectedPassageChapterId("");
     setRenderedRange(getChapterWindowRange(nextEntry.index, chapters.length));
     canReportLocationRef.current = false;
     lastReportedChapterIdRef.current = nextChapterId;
@@ -400,7 +599,10 @@ export default function ChurchFathersReaderRoute() {
     }
 
     let ignore = false;
-    const missingEntries = renderedEntries.filter((entry) => !loadedChapters.has(entry.chapter.id));
+    const missingEntries = renderedEntries.filter((entry) => (
+      !loadedChapters.has(entry.chapter.id)
+      && !chapterLoadErrors.has(entry.chapter.id)
+    ));
 
     if (missingEntries.length === 0) {
       return;
@@ -411,15 +613,25 @@ export default function ChurchFathersReaderRoute() {
         versionedPreviewUrl(entry.chapter.assetPath, previewAssetVersion),
         { cache: "no-store" }
       )
-        .then((response) => {
+        .then(async (response): Promise<ChapterAssetLoadResult> => {
           if (!response.ok) {
-            return null;
+            return {
+              entry,
+              error: `Failed to load chapter: ${response.status}`
+            };
           }
 
-          return response.json() as Promise<ChapterAsset>;
-        }))
+          return {
+            asset: await response.json() as ChapterAsset,
+            entry
+          };
+        })
+        .catch((error: unknown): ChapterAssetLoadResult => ({
+          entry,
+          error: error instanceof Error ? error.message : String(error)
+        })))
     )
-      .then((assets) => {
+      .then((results) => {
         if (ignore) {
           return;
         }
@@ -427,25 +639,34 @@ export default function ChurchFathersReaderRoute() {
         setLoadedChapters((current) => {
           const next = new Map(current);
 
-          for (const asset of assets) {
-            if (asset) {
-              next.set(asset.id, asset);
+          for (const result of results) {
+            if ("asset" in result) {
+              next.set(result.asset.id, result.asset);
             }
           }
 
           return next;
         });
-      })
-      .catch((error: unknown) => {
-        if (!ignore) {
-          setLoadError(error instanceof Error ? error.message : String(error));
-        }
+
+        setChapterLoadErrors((current) => {
+          const next = new Map(current);
+
+          for (const result of results) {
+            if ("asset" in result) {
+              next.delete(result.asset.id);
+            } else {
+              next.set(result.entry.chapter.id, result.error);
+            }
+          }
+
+          return next;
+        });
       });
 
     return () => {
       ignore = true;
     };
-  }, [bookIndex, loadedChapters, previewAssetVersion, renderedEntries]);
+  }, [bookIndex, chapterLoadErrors, loadedChapters, previewAssetVersion, renderedEntries]);
 
   useEffect(() => {
     if (!isSearchOpen) {
@@ -606,7 +827,7 @@ export default function ChurchFathersReaderRoute() {
       const chapterElements = [
         ...document.querySelectorAll<HTMLElement>(".ec-reader-chapter")
       ];
-      const currentChapter = findElementAtReadingAnchor(chapterElements);
+      const currentChapter = findElementAtChapterUpdateLine(chapterElements);
       const chapterId = currentChapter?.dataset.chapterId;
 
       if (!hasScrolledToSelectionRef.current || !canReportLocationRef.current) {
@@ -617,7 +838,10 @@ export default function ChurchFathersReaderRoute() {
         lastReportedChapterIdRef.current = chapterId;
         window.localStorage.setItem(READER_POSITION_STORAGE_KEY, chapterId);
         setActiveChapterId(chapterId);
-        updateUrl(chapterId, selectedPassage);
+        updateUrl(
+          chapterId,
+          selectedPassageChapterId === chapterId ? selectedPassage : ""
+        );
       }
     };
 
@@ -636,29 +860,116 @@ export default function ChurchFathersReaderRoute() {
         window.cancelAnimationFrame(frame);
       }
     };
-  }, [isReady, selectedPassage]);
+  }, [isReady, selectedPassage, selectedPassageChapterId]);
 
-  useEffect(() => {
+  useBrowserLayoutEffect(() => {
     if (!activeChapterId || hasScrolledToSelectionRef.current) {
       return;
     }
 
-    const target = selectedPassage
-      ? document.querySelector<HTMLElement>(`[data-passage-range="${cssEscape(selectedPassage)}"]`)
-      : document.querySelector<HTMLElement>(`[data-chapter-id="${cssEscape(activeChapterId)}"]`);
+    const activeChapterIndex = activeEntry?.index;
+    const isTargetWindowReady = typeof activeChapterIndex === "number"
+      && renderedEntries.some((entry) => entry.chapter.id === activeChapterId)
+      && renderedEntries.every((entry) => (
+        entry.index > activeChapterIndex || loadedChapters.has(entry.chapter.id)
+      ));
 
-    if (!target) {
+    if (!isTargetWindowReady) {
       return;
     }
 
-    hasScrolledToSelectionRef.current = true;
-    lastReportedChapterIdRef.current = activeChapterId;
-    window.scrollTo({
-      behavior: "auto",
-      left: 0,
-      top: Math.max(0, target.getBoundingClientRect().top + window.scrollY - HEADER_SCROLL_OFFSET)
-    });
-  }, [activeChapterId, loadedChapters, selectedPassage]);
+    const selectedRangeForActiveChapter =
+      selectedPassageChapterId === activeChapterId ? selectedPassage : "";
+
+    const findTarget = () => selectedRangeForActiveChapter
+      ? document.querySelector<HTMLElement>(
+        `[data-chapter-id="${cssEscape(activeChapterId)}"] [data-passage-range="${cssEscape(selectedRangeForActiveChapter)}"]`
+      )
+      : document.querySelector<HTMLElement>(
+        `[data-chapter-id="${cssEscape(activeChapterId)}"]`
+      );
+
+    const scrollToTarget = () => {
+      const target = findTarget();
+
+      if (!target) {
+        return false;
+      }
+
+      window.scrollTo({
+        behavior: "auto",
+        left: 0,
+        top: Math.max(0, target.getBoundingClientRect().top + window.scrollY - HEADER_SCROLL_OFFSET)
+      });
+
+      return true;
+    };
+
+    let frame = 0;
+    let frameCount = 0;
+    let didCancel = false;
+    let fontsSettled = document.fonts === undefined;
+
+    const finishInitialScroll = () => {
+      if (didCancel) {
+        return;
+      }
+
+      scrollToTarget();
+      canReportLocationRef.current = false;
+      hasScrolledToSelectionRef.current = true;
+      lastReportedChapterIdRef.current = activeChapterId;
+    };
+
+    const scheduleScroll = () => {
+      if (!frame && !hasScrolledToSelectionRef.current) {
+        frame = window.requestAnimationFrame(runScroll);
+      }
+    };
+
+    const runScroll = () => {
+      frame = 0;
+      frameCount += 1;
+
+      const foundTarget = scrollToTarget();
+
+      if (
+        (foundTarget && fontsSettled && frameCount >= 2)
+        || frameCount >= INITIAL_SCROLL_MAX_FRAMES
+      ) {
+        finishInitialScroll();
+        return;
+      }
+
+      scheduleScroll();
+    };
+
+    scheduleScroll();
+    void document.fonts?.ready
+      .then(() => {
+        fontsSettled = true;
+        scheduleScroll();
+      })
+      .catch(() => {
+        fontsSettled = true;
+        scheduleScroll();
+      });
+
+    return () => {
+      didCancel = true;
+
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, [
+    activeChapterId,
+    activeEntry?.index,
+    loadedChapters,
+    renderedEntries,
+    selectedPassage,
+    selectedPassageChapterId
+  ]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -695,7 +1006,7 @@ export default function ChurchFathersReaderRoute() {
     const chapterEntry = chapterById.get(chapterId);
 
     if (!chapterEntry) {
-      return;
+      return false;
     }
 
     hasScrolledToSelectionRef.current = false;
@@ -704,15 +1015,18 @@ export default function ChurchFathersReaderRoute() {
     setRenderedRange(getChapterWindowRange(chapterEntry.index, chapters.length));
     setActiveChapterId(chapterId);
     setSelectedPassage(passageRange);
+    setSelectedPassageChapterId(passageRange ? chapterId : "");
     window.localStorage.setItem(READER_POSITION_STORAGE_KEY, chapterId);
     updateUrl(chapterId, passageRange);
+    return true;
   }, [chapterById, chapters.length]);
 
   const openResult = useCallback((result: EarlyChristianSearchResult) => {
     const passageRange = rangeFromResult(result);
 
-    openChapter(result.chapterId, passageRange);
-    setIsSearchOpen(false);
+    if (openChapter(result.chapterId, passageRange)) {
+      setIsSearchOpen(false);
+    }
   }, [openChapter]);
 
   if (loadError) {
@@ -755,6 +1069,29 @@ export default function ChurchFathersReaderRoute() {
         style={readerStyle()}
       >
         <header className="reader-header">
+          <audio
+            ref={audioRef}
+            onEnded={() => {
+              playingAudioEndSecondsRef.current = null;
+              setPlayingAudioKey(null);
+            }}
+            onPause={() => {
+              playingAudioEndSecondsRef.current = null;
+              setPlayingAudioKey(null);
+            }}
+            onTimeUpdate={(event) => {
+              const endSeconds = playingAudioEndSecondsRef.current;
+
+              if (!endSeconds || event.currentTarget.currentTime < endSeconds) {
+                return;
+              }
+
+              event.currentTarget.pause();
+              playingAudioEndSecondsRef.current = null;
+              setPlayingAudioKey(null);
+            }}
+            preload="none"
+          />
           <div className="reader-header-title">
             <p className="eyebrow">Early Christian Works</p>
             <h1 id="reader-title">
@@ -787,6 +1124,24 @@ export default function ChurchFathersReaderRoute() {
                 ×
               </button>
               <button
+                aria-label={
+                  activeAudio
+                    ? `${isActiveChapterPlaying ? "Pause" : "Play"} Confessions audio covering ${activeAudio.label}`
+                    : `Audio unavailable for this ${activeEntry.book.name} section`
+                }
+                className="context-button reader-icon-button"
+                disabled={!activeAudioUrl}
+                onClick={toggleActiveChapterAudio}
+                title={
+                  activeAudio
+                    ? `${isActiveChapterPlaying ? "Pause" : "Play"} audio covering ${activeAudio.label}`
+                    : "Audio unavailable"
+                }
+                type="button"
+              >
+                {isActiveChapterPlaying ? "❚❚" : "🔊"}
+              </button>
+              <button
                 aria-label="Search"
                 className="context-button reader-icon-button"
                 onClick={() => {
@@ -817,6 +1172,7 @@ export default function ChurchFathersReaderRoute() {
         <div className="reader-passages">
           {renderedEntries.map((entry) => {
             const chapter = loadedChapters.get(entry.chapter.id);
+            const chapterLoadError = chapterLoadErrors.get(entry.chapter.id);
 
             return (
               <section
@@ -833,7 +1189,9 @@ export default function ChurchFathersReaderRoute() {
                     <p className="ec-chapter-title">{chapter.title}</p>
                     <div className="reader-chapter-passages">
                       {groupChapterPassages(chapter).map((passage) => {
-                        const isSelected = selectedPassage === passage.rangeLabel;
+                        const isSelected =
+                          selectedPassageChapterId === chapter.id
+                          && selectedPassage === passage.rangeLabel;
 
                         return (
                           <article
@@ -851,6 +1209,7 @@ export default function ChurchFathersReaderRoute() {
                               onClick={() => {
                                 const nextRange = isSelected ? "" : passage.rangeLabel;
                                 setSelectedPassage(nextRange);
+                                setSelectedPassageChapterId(nextRange ? chapter.id : "");
                                 updateUrl(chapter.id, nextRange);
                               }}
                               type="button"
@@ -886,6 +1245,23 @@ export default function ChurchFathersReaderRoute() {
                       })}
                     </div>
                   </>
+                ) : chapterLoadError ? (
+                  <div className="reader-chapter-error" role="status">
+                    <p>{chapterLoadError}</p>
+                    <button
+                      className="context-button"
+                      onClick={() => {
+                        setChapterLoadErrors((current) => {
+                          const next = new Map(current);
+                          next.delete(entry.chapter.id);
+                          return next;
+                        });
+                      }}
+                      type="button"
+                    >
+                      Retry
+                    </button>
+                  </div>
                 ) : (
                   <div className="reader-loading-lines" aria-hidden="true">
                     <span className="reader-loading-line is-wide" />
@@ -1208,7 +1584,7 @@ function ChapterJump({
             >
               {dedupeBooks(chapters).map((book) => (
                 <option key={book.id} value={book.id}>
-                  {book.name}
+                  {formatBookOptionLabel(book)}
                 </option>
               ))}
             </select>
@@ -1268,6 +1644,15 @@ function getChapterWindowRange(index: number, count: number) {
     endIndex: Math.min(count - 1, index + CHAPTER_WINDOW_AFTER),
     startIndex: Math.max(0, index - CHAPTER_WINDOW_BEFORE)
   };
+}
+
+function rangeContainsIndex(
+  range: { endIndex: number; startIndex: number },
+  index: number
+) {
+  return range.endIndex >= range.startIndex
+    && index >= range.startIndex
+    && index <= range.endIndex;
 }
 
 function groupChapterPassages(chapter: ChapterAsset): ReaderPassage[] {
@@ -1336,14 +1721,13 @@ function findLoadedPassage(chapters: Map<string, ChapterAsset>, key: string) {
   )) ?? null;
 }
 
-function findElementAtReadingAnchor(elements: HTMLElement[]) {
+function findElementAtChapterUpdateLine(elements: HTMLElement[]) {
   if (elements.length === 0) {
     return null;
   }
 
-  const anchorY = Math.max(220, window.innerHeight * READING_ANCHOR_RATIO);
-  let bestElement = elements[0];
-  let bestDistance = Number.POSITIVE_INFINITY;
+  let firstVisibleElement: HTMLElement | null = null;
+  let activeElement: HTMLElement | null = null;
 
   for (const element of elements) {
     const rect = element.getBoundingClientRect();
@@ -1352,15 +1736,14 @@ function findElementAtReadingAnchor(elements: HTMLElement[]) {
       continue;
     }
 
-    const distance = Math.abs(rect.top - anchorY);
+    firstVisibleElement ??= element;
 
-    if (distance < bestDistance) {
-      bestElement = element;
-      bestDistance = distance;
+    if (rect.top <= CHAPTER_UPDATE_OFFSET) {
+      activeElement = element;
     }
   }
 
-  return bestElement;
+  return activeElement ?? firstVisibleElement;
 }
 
 function rangeFromResult(result: EarlyChristianSearchResult) {
@@ -1402,6 +1785,88 @@ function dedupeBooks(chapters: ChapterEntry[]) {
   }
 
   return books;
+}
+
+function formatBookOptionLabel(book: BookSummary) {
+  return book.author ? `${book.name} - ${book.author}` : book.name;
+}
+
+function getEarlyChristianAudio(
+  entry: ChapterEntry,
+  alignment: ConfessionsAudioAlignment | null
+) {
+  if (entry.book.id !== CONFESSIONS_BOOK_ID) {
+    return null;
+  }
+
+  const alignedAudio = alignment?.chapters[entry.chapter.id];
+
+  if (alignedAudio) {
+    return {
+      confidence: alignedAudio.confidence,
+      endSeconds: alignedAudio.endSeconds,
+      label: alignedAudio.label,
+      startSeconds: alignedAudio.startSeconds,
+      url: alignedAudio.audioUrl
+    };
+  }
+
+  const location = parseConfessionsLocation(entry.chapter.id);
+
+  if (!location) {
+    return null;
+  }
+
+  const track = CONFESSIONS_AUDIO_TRACKS.find((candidate) => (
+    candidate.book === location.book &&
+    candidate.chapterStart <= location.chapter &&
+    candidate.chapterEnd >= location.chapter
+  ));
+
+  return track
+    ? {
+      label: track.label,
+      startSeconds: 0,
+      url: `${CONFESSIONS_AUDIO_BASE_URL}/${track.fileName}`
+    }
+    : null;
+}
+
+function parseConfessionsLocation(chapterId: string) {
+  const match = chapterId.match(/^npnf101:vi\.([IVXLCDM]+)(?:_1)?\.([IVXLCDM]+)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const book = romanNumeralToNumber(match[1]);
+  const chapter = romanNumeralToNumber(match[2]);
+
+  if (!book || !chapter) {
+    return null;
+  }
+
+  return { book, chapter };
+}
+
+function romanNumeralToNumber(value: string) {
+  const numerals: Record<string, number> = {
+    C: 100,
+    D: 500,
+    I: 1,
+    L: 50,
+    M: 1000,
+    V: 5,
+    X: 10
+  };
+  const letters = value.toUpperCase().split("");
+
+  return letters.reduce((total, letter, index) => {
+    const current = numerals[letter] ?? 0;
+    const next = numerals[letters[index + 1]] ?? 0;
+
+    return total + (current < next ? -current : current);
+  }, 0);
 }
 
 function parseMatchCount(formData: FormData):
