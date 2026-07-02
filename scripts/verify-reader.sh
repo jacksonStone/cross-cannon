@@ -9,7 +9,7 @@ fi
 verify_port="${VERIFY_PORT:-3005}"
 verify_host="${VERIFY_HOST:-127.0.0.1}"
 base_url="http://${verify_host}:${verify_port}"
-server_log=".tmp/verify-server.log"
+server_log=".tmp/verify-reader-server.log"
 server_pid=""
 
 cleanup() {
@@ -55,8 +55,6 @@ trap cleanup EXIT
 
 mkdir -p .tmp
 
-run_step "Unit tests" npm run test:unit
-run_step "Typecheck" npm run typecheck
 run_step "Production build" npm run build
 
 echo
@@ -66,12 +64,7 @@ PORT="$verify_port" NODE_ENV=production npm run start >"$server_log" 2>&1 &
 server_pid="$!"
 
 run_step "Wait for ${base_url}" wait_for_server
-run_step "Homepage HEAD" curl -fsS -I "$base_url/"
-run_step "Search POST smoke" curl -fsS -X POST "${base_url}/?index" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  --data-urlencode "question=fear and comfort" \
-  --data "matchCount=5" \
-  -o /dev/null
+run_step "Reader kitchen sink" env E2E_BASE_URL="$base_url" npm run e2e:reader
 
 echo
-echo "Verification passed."
+echo "Reader verification passed."

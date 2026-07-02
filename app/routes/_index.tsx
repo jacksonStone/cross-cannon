@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -13,6 +13,10 @@ import { rememberReaderCorpus } from "~/features/reader-switch/ReaderCorpusSwitc
 import { SearchForm } from "~/features/search/SearchForm";
 import { SearchResults } from "~/features/search/SearchResults";
 import { getIndexedBooks, handleSearchRequest } from "~/features/search/search.server";
+import {
+  initialSearchModalFlowState,
+  searchModalFlowReducer
+} from "~/features/search/search-modal-flow";
 import type { SearchActionData } from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import type { EarlyChristianSearchResult } from "~/lib/early-christian-search.server";
@@ -21,6 +25,10 @@ import {
   getScriptureCacheInfo,
   type BrowserPassage
 } from "~/lib/scripture-cache.server";
+import {
+  isBackdropClick,
+  useEscapeDismiss
+} from "~/lib/use-dialog-dismiss";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 const READER_POSITION_STORAGE_KEY = "cross-cannon:reader-position:v1";
@@ -69,8 +77,10 @@ export default function Index() {
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
-  const [focusedPassageId, setFocusedPassageId] = useState<string | null>(null);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchFlow, dispatchSearchFlow] = useReducer(
+    searchModalFlowReducer,
+    initialSearchModalFlowState
+  );
   const [readerPassageId, setReaderPassageId] = useState("");
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
   const savedReaderPassageId = useMemo(() => {
@@ -84,6 +94,16 @@ export default function Index() {
   const scriptureLibrary = useScriptureLibrary({
     scriptureCacheUrl
   });
+  const focusedPassageId = searchFlow.focusedId;
+  const isSearchOpen = searchFlow.isOpen;
+  const closeSearch = useCallback(() => dispatchSearchFlow({ type: "close" }), []);
+  const openSearch = useCallback(() => dispatchSearchFlow({ type: "open" }), []);
+  const setFocusedPassageId = useCallback((focusedId: string | null) => {
+    dispatchSearchFlow({
+      focusedId,
+      type: "set-focused"
+    });
+  }, []);
 
   useModalScrollLock(isSearchOpen);
 
@@ -166,46 +186,40 @@ export default function Index() {
       const sourcePassageId = String(navigation.formData.get("sourcePassageId") ?? "");
 
       if (sourcePassageId) {
-        setFocusedPassageId(sourcePassageId);
+        dispatchSearchFlow({
+          focusedId: sourcePassageId,
+          type: "submitting-similar"
+        });
       }
-
-      setIsSearchOpen(true);
     }
   }, [navigation.formData, navigation.state]);
 
   useEffect(() => {
     if (actionData?.mode === "similar" && actionData.similarSource) {
-      setFocusedPassageId(actionData.similarSource.id);
-      setIsSearchOpen(true);
+      dispatchSearchFlow({
+        focusedId: actionData.similarSource.id,
+        type: "similar-results"
+      });
       return;
     }
 
     if (actionData?.mode === "similar-early-christian" && actionData.similarSource) {
-      setFocusedPassageId(actionData.similarSource.id);
-      setIsSearchOpen(true);
+      dispatchSearchFlow({
+        focusedId: actionData.similarSource.id,
+        type: "similar-results"
+      });
       return;
     }
 
     if (actionData?.mode === "theme") {
-      setFocusedPassageId(null);
-      setIsSearchOpen(true);
+      dispatchSearchFlow({ type: "theme-results" });
     }
   }, [actionData?.mode, actionData?.similarSource?.id]);
 
-  useEffect(() => {
-    if (!isSearchOpen) {
-      return;
-    }
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsSearchOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [isSearchOpen]);
+  useEscapeDismiss({
+    isOpen: isSearchOpen,
+    onDismiss: closeSearch
+  });
 
   const rememberReaderLocation = useCallback((passageId: string) => {
     if (lastVisiblePassageIdRef.current === passageId) {
@@ -219,7 +233,7 @@ export default function Index() {
   const jumpToReaderPassage = useCallback((passageId: string) => {
     setReaderPassageId(passageId);
     rememberReaderLocation(passageId);
-    setIsSearchOpen(false);
+    dispatchSearchFlow({ type: "close" });
   }, [rememberReaderLocation]);
 
   const updateReaderTheme = useCallback((theme: string) => {
@@ -237,7 +251,7 @@ export default function Index() {
         isScriptureReady={scriptureLibrary.isReady && Boolean(readerPassageId)}
         onJumpToPassage={jumpToReaderPassage}
         onLocationChange={rememberReaderLocation}
-        onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenSearch={openSearch}
         onThemeChange={updateReaderTheme}
         passages={scriptureLibrary.passages}
       />
@@ -248,8 +262,8 @@ export default function Index() {
           onClick={(event) => {
             event.stopPropagation();
 
-            if (event.target === event.currentTarget) {
-              setIsSearchOpen(false);
+            if (isBackdropClick(event)) {
+              closeSearch();
             }
           }}
         >
@@ -268,7 +282,7 @@ export default function Index() {
               </div>
               <button
                 className="filter-modal-close"
-                onClick={() => setIsSearchOpen(false)}
+                onClick={closeSearch}
                 type="button"
               >
                 Close

@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Link } from "@remix-run/react";
 
 import { parsePassageLocation } from "~/features/passage-reader/chapter-index";
 import { sortCanonicalBooks } from "~/features/search/canons";
 import type { StoredFilters } from "~/features/search/types";
+import {
+  isBackdropClick,
+  useEscapeDismiss
+} from "~/lib/use-dialog-dismiss";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
@@ -58,28 +62,18 @@ export function PassageJump({
     setSelectedChapter(initialSelection.chapter);
   }, [initialSelection.book, initialSelection.chapter]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [isOpen]);
-
   const book = jumpIndex.books.find((option) => option.name === selectedBook)
     ?? jumpIndex.books[0];
   const chapter = book?.chapters.find((option) => option.number === selectedChapter)
     ?? book?.chapters[0];
   const isDisabled = !isScriptureReady || jumpIndex.books.length === 0;
+  const close = useCallback(() => setIsOpen(false), []);
 
   useModalScrollLock(isOpen && !isDisabled);
+  useEscapeDismiss({
+    isOpen: isOpen && !isDisabled,
+    onDismiss: close
+  });
 
   return (
     <>
@@ -107,8 +101,8 @@ export function PassageJump({
           onClick={(event) => {
             event.stopPropagation();
 
-            if (event.target === event.currentTarget) {
-              setIsOpen(false);
+            if (isBackdropClick(event)) {
+              close();
             }
           }}
         >
@@ -127,7 +121,7 @@ export function PassageJump({
               </div>
               <button
                 className="filter-modal-close"
-                onClick={() => setIsOpen(false)}
+                onClick={close}
                 type="button"
               >
                 Close

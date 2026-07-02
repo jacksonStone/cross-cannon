@@ -1,5 +1,9 @@
-import { useEffect } from "react";
+import { useCallback } from "react";
 
+import {
+  isBackdropClick,
+  useEscapeDismiss
+} from "~/lib/use-dialog-dismiss";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 import { parseCanonMode } from "./canons";
@@ -33,21 +37,12 @@ export function FilterModal({
   onToggleBook
 }: FilterModalProps) {
   useModalScrollLock(isOpen);
+  const close = useCallback(() => onClose(), [onClose]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [isOpen, onClose]);
+  useEscapeDismiss({
+    isOpen,
+    onDismiss: close
+  });
 
   if (!isOpen) {
     return null;
@@ -59,8 +54,8 @@ export function FilterModal({
       onClick={(event) => {
         event.stopPropagation();
 
-        if (event.target === event.currentTarget) {
-          onClose();
+        if (isBackdropClick(event)) {
+          close();
         }
       }}
     >

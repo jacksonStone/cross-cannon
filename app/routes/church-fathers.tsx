@@ -4,6 +4,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useReducer,
   useRef,
   useState
 } from "react";
@@ -16,7 +17,20 @@ import {
   ReaderCorpusSwitch,
   rememberReaderCorpus
 } from "~/features/reader-switch/ReaderCorpusSwitch";
+import {
+  useExpandableReaderWindow,
+  useInitialTargetScroll,
+  usePreservePrependedScroll
+} from "~/features/reader-window/useReaderWindow";
+import {
+  getCenteredWindowRange,
+  rangeContainsIndex as windowRangeContainsIndex
+} from "~/features/reader-window/window-range";
 import { BOOKS_BY_CANON, DEFAULT_CANON } from "~/features/search/canons";
+import {
+  initialSearchModalFlowState,
+  searchModalFlowReducer
+} from "~/features/search/search-modal-flow";
 import { SearchResults } from "~/features/search/SearchResults";
 import type { SearchActionData, SearchResult } from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
@@ -29,6 +43,10 @@ import {
 } from "~/lib/early-christian-search.server";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";
+import {
+  isBackdropClick,
+  useEscapeDismiss
+} from "~/lib/use-dialog-dismiss";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 const MANIFEST_URL = "/church-fathers-preview/manifest.json";
@@ -42,6 +60,7 @@ const CHAPTER_WINDOW_BEFORE = 5;
 const CHAPTER_WINDOW_AFTER = 10;
 const CHAPTER_WINDOW_EXPAND_COUNT = 8;
 const CHAPTER_WINDOW_EDGE_PX = 1800;
+const CHAPTER_ASSET_LOAD_CONCURRENCY = 4;
 const HEADER_SCROLL_OFFSET = 118;
 const CHAPTER_UPDATE_OFFSET = HEADER_SCROLL_OFFSET + 48;
 const INITIAL_SCROLL_MAX_FRAMES = 8;
@@ -444,8 +463,10 @@ export default function ChurchFathersReaderRoute() {
   const [selectedPassageChapterId, setSelectedPassageChapterId] = useState(
     initialPassageRange ? initialChapterId : ""
   );
-  const [focusedPassageKey, setFocusedPassageKey] = useState<string | null>(null);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchFlow, dispatchSearchFlow] = useReducer(
+    searchModalFlowReducer,
+    initialSearchModalFlowState
+  );
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isJumpOpen, setIsJumpOpen] = useState(false);
@@ -459,15 +480,15 @@ export default function ChurchFathersReaderRoute() {
   const canReportLocationRef = useRef(false);
   const hasScrolledToSelectionRef = useRef(false);
   const headerTitleRef = useRef<HTMLDivElement | null>(null);
+  const isMountedRef = useRef(true);
   const lastReportedChapterIdRef = useRef("");
+  const loadingChapterIdsRef = useRef<Set<string>>(new Set());
   const playingAudioEndSecondsRef = useRef<number | null>(null);
   const prependSnapshotRef = useRef<{
     scrollHeight: number;
     scrollY: number;
   } | null>(null);
   const readerTitleRef = useRef<HTMLHeadingElement | null>(null);
-
-  useModalScrollLock(isSearchOpen || isJumpOpen);
 
   const scriptureLibrary = useScriptureLibrary({
     scriptureCacheUrl
@@ -489,6 +510,29 @@ export default function ChurchFathersReaderRoute() {
     [chapters, renderedRange.endIndex, renderedRange.startIndex]
   );
   const isReady = Boolean(bookIndex && activeEntry);
+  const activeChapterIndex = activeEntry?.index;
+  const selectedRangeForActiveChapter =
+    selectedPassageChapterId === activeChapterId ? selectedPassage : "";
+  const isTargetWindowReady = Boolean(
+    activeChapterId
+    && typeof activeChapterIndex === "number"
+    && renderedEntries.some((entry) => entry.chapter.id === activeChapterId)
+    && renderedEntries.every((entry) => (
+      entry.index > activeChapterIndex || loadedChapters.has(entry.chapter.id)
+    ))
+  );
+  const focusedPassageKey = searchFlow.focusedId;
+  const isSearchOpen = searchFlow.isOpen;
+  const closeSearch = useCallback(() => dispatchSearchFlow({ type: "close" }), []);
+  const openSearch = useCallback(() => dispatchSearchFlow({ type: "open" }), []);
+  const setFocusedPassageKey = useCallback((focusedId: string | null) => {
+    dispatchSearchFlow({
+      focusedId,
+      type: "set-focused"
+    });
+  }, []);
+
+  useModalScrollLock(isSearchOpen || isJumpOpen);
   const focusedPassage = focusedPassageKey
     ? findLoadedPassage(loadedChapters, focusedPassageKey)
     : null;
@@ -553,6 +597,14 @@ export default function ChurchFathersReaderRoute() {
 
   useEffect(() => {
     setReaderTheme(readSavedReaderTheme());
+  }, []);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -718,7 +770,7 @@ export default function ChurchFathersReaderRoute() {
     if (activeChapterId && chapterById.has(activeChapterId)) {
       const activeChapterIndex = chapterById.get(activeChapterId)?.index ?? 0;
       setRenderedRange((range) => (
-        rangeContainsIndex(range, activeChapterIndex)
+        windowRangeContainsIndex(range, activeChapterIndex)
           ? range
           : getChapterWindowRange(activeChapterIndex, chapters.length)
       ));
@@ -751,41 +803,32 @@ export default function ChurchFathersReaderRoute() {
       return;
     }
 
-    let ignore = false;
-    const missingEntries = renderedEntries.filter((entry) => (
-      !loadedChapters.has(entry.chapter.id)
-      && !chapterLoadErrors.has(entry.chapter.id)
-    ));
+    const missingEntries = renderedEntries
+      .filter((entry) => (
+        !loadedChapters.has(entry.chapter.id)
+        && !chapterLoadErrors.has(entry.chapter.id)
+        && !loadingChapterIdsRef.current.has(entry.chapter.id)
+      ))
+      .sort((left, right) => (
+        distanceFromActiveChapter(left, activeChapterIndex)
+        - distanceFromActiveChapter(right, activeChapterIndex)
+      ));
 
     if (missingEntries.length === 0) {
       return;
     }
 
-    Promise.all(
-      missingEntries.map((entry) => fetch(
-        versionedPreviewUrl(entry.chapter.assetPath, previewAssetVersion),
-        { cache: "no-store" }
-      )
-        .then(async (response): Promise<ChapterAssetLoadResult> => {
-          if (!response.ok) {
-            return {
-              entry,
-              error: `Failed to load chapter: ${response.status}`
-            };
-          }
+    for (const entry of missingEntries) {
+      loadingChapterIdsRef.current.add(entry.chapter.id);
+    }
 
-          return {
-            asset: await response.json() as ChapterAsset,
-            entry
-          };
-        })
-        .catch((error: unknown): ChapterAssetLoadResult => ({
-          entry,
-          error: error instanceof Error ? error.message : String(error)
-        })))
+    loadChapterAssets(
+      missingEntries,
+      previewAssetVersion,
+      CHAPTER_ASSET_LOAD_CONCURRENCY
     )
       .then((results) => {
-        if (ignore) {
+        if (!isMountedRef.current) {
           return;
         }
 
@@ -814,48 +857,30 @@ export default function ChurchFathersReaderRoute() {
 
           return next;
         });
+      })
+      .finally(() => {
+        for (const entry of missingEntries) {
+          loadingChapterIdsRef.current.delete(entry.chapter.id);
+        }
       });
+  }, [
+    activeChapterIndex,
+    bookIndex,
+    chapterLoadErrors,
+    loadedChapters,
+    previewAssetVersion,
+    renderedEntries
+  ]);
 
-    return () => {
-      ignore = true;
-    };
-  }, [bookIndex, chapterLoadErrors, loadedChapters, previewAssetVersion, renderedEntries]);
+  useEscapeDismiss({
+    isOpen: isSearchOpen,
+    onDismiss: closeSearch
+  });
 
-  useEffect(() => {
-    if (!isSearchOpen) {
-      return;
-    }
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsSearchOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [isSearchOpen]);
-
-  useBrowserLayoutEffect(() => {
-    const snapshot = prependSnapshotRef.current;
-
-    if (!snapshot) {
-      return;
-    }
-
-    prependSnapshotRef.current = null;
-
-    const nextScrollHeight = document.documentElement.scrollHeight;
-    const addedHeight = nextScrollHeight - snapshot.scrollHeight;
-
-    if (addedHeight > 0) {
-      window.scrollTo({
-        behavior: "auto",
-        left: 0,
-        top: snapshot.scrollY + addedHeight
-      });
-    }
-  }, [renderedRange.startIndex]);
+  usePreservePrependedScroll({
+    prependSnapshotRef,
+    startIndex: renderedRange.startIndex
+  });
 
   useEffect(() => {
     if (!isReady) {
@@ -890,83 +915,14 @@ export default function ChurchFathersReaderRoute() {
     };
   }, [isReady]);
 
-  useEffect(() => {
-    if (!isReady || chapters.length === 0) {
-      return;
-    }
-
-    let frame = 0;
-
-    const expandRenderedWindow = () => {
-      frame = 0;
-
-      const distanceToTop = window.scrollY;
-      const distanceToBottom = document.documentElement.scrollHeight
-        - (window.scrollY + window.innerHeight);
-
-      if (distanceToTop < CHAPTER_WINDOW_EDGE_PX) {
-        setRenderedRange((range) => {
-          if (range.startIndex <= 0) {
-            return range;
-          }
-
-          const nextStartIndex = Math.max(
-            0,
-            range.startIndex - CHAPTER_WINDOW_EXPAND_COUNT
-          );
-
-          if (nextStartIndex === range.startIndex) {
-            return range;
-          }
-
-          prependSnapshotRef.current = {
-            scrollHeight: document.documentElement.scrollHeight,
-            scrollY: window.scrollY
-          };
-
-          return {
-            ...range,
-            startIndex: nextStartIndex
-          };
-        });
-      }
-
-      if (distanceToBottom < CHAPTER_WINDOW_EDGE_PX) {
-        setRenderedRange((range) => {
-          if (range.endIndex >= chapters.length - 1) {
-            return range;
-          }
-
-          return {
-            ...range,
-            endIndex: Math.min(
-              chapters.length - 1,
-              range.endIndex + CHAPTER_WINDOW_EXPAND_COUNT
-            )
-          };
-        });
-      }
-    };
-
-    const scheduleExpand = () => {
-      if (!frame) {
-        frame = window.requestAnimationFrame(expandRenderedWindow);
-      }
-    };
-
-    window.addEventListener("scroll", scheduleExpand, { passive: true });
-    window.addEventListener("resize", scheduleExpand);
-    window.requestAnimationFrame(expandRenderedWindow);
-
-    return () => {
-      window.removeEventListener("scroll", scheduleExpand);
-      window.removeEventListener("resize", scheduleExpand);
-
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-      }
-    };
-  }, [chapters.length, isReady]);
+  useExpandableReaderWindow({
+    edgePx: CHAPTER_WINDOW_EDGE_PX,
+    expandCount: CHAPTER_WINDOW_EXPAND_COUNT,
+    isReady,
+    itemCount: chapters.length,
+    prependSnapshotRef,
+    setRange: setRenderedRange
+  });
 
   useEffect(() => {
     if (!isReady) {
@@ -1015,114 +971,38 @@ export default function ChurchFathersReaderRoute() {
     };
   }, [isReady, selectedPassage, selectedPassageChapterId]);
 
-  useBrowserLayoutEffect(() => {
-    if (!activeChapterId || hasScrolledToSelectionRef.current) {
-      return;
+  const findInitialChapterTarget = useCallback(() => {
+    if (!activeChapterId) {
+      return null;
     }
 
-    const activeChapterIndex = activeEntry?.index;
-    const isTargetWindowReady = typeof activeChapterIndex === "number"
-      && renderedEntries.some((entry) => entry.chapter.id === activeChapterId)
-      && renderedEntries.every((entry) => (
-        entry.index > activeChapterIndex || loadedChapters.has(entry.chapter.id)
-      ));
+    const chapterElement = document.querySelector<HTMLElement>(
+      `[data-chapter-id="${cssEscape(activeChapterId)}"]`
+    );
 
-    if (!isTargetWindowReady) {
-      return;
+    if (!chapterElement || !selectedRangeForActiveChapter) {
+      return chapterElement;
     }
 
-    const selectedRangeForActiveChapter =
-      selectedPassageChapterId === activeChapterId ? selectedPassage : "";
+    return findPassageTargetInChapter(
+      chapterElement,
+      selectedRangeForActiveChapter
+    ) ?? chapterElement;
+  }, [activeChapterId, selectedRangeForActiveChapter]);
+  const finishInitialChapterScroll = useCallback(() => {
+    canReportLocationRef.current = false;
+    hasScrolledToSelectionRef.current = true;
+    lastReportedChapterIdRef.current = activeChapterId;
+  }, [activeChapterId]);
 
-    const findTarget = () => selectedRangeForActiveChapter
-      ? document.querySelector<HTMLElement>(
-        `[data-chapter-id="${cssEscape(activeChapterId)}"] [data-passage-range="${cssEscape(selectedRangeForActiveChapter)}"]`
-      )
-      : document.querySelector<HTMLElement>(
-        `[data-chapter-id="${cssEscape(activeChapterId)}"]`
-      );
-
-    const scrollToTarget = () => {
-      const target = findTarget();
-
-      if (!target) {
-        return false;
-      }
-
-      window.scrollTo({
-        behavior: "auto",
-        left: 0,
-        top: Math.max(0, target.getBoundingClientRect().top + window.scrollY - HEADER_SCROLL_OFFSET)
-      });
-
-      return true;
-    };
-
-    let frame = 0;
-    let frameCount = 0;
-    let didCancel = false;
-    let fontsSettled = document.fonts === undefined;
-
-    const finishInitialScroll = () => {
-      if (didCancel) {
-        return;
-      }
-
-      scrollToTarget();
-      canReportLocationRef.current = false;
-      hasScrolledToSelectionRef.current = true;
-      lastReportedChapterIdRef.current = activeChapterId;
-    };
-
-    const scheduleScroll = () => {
-      if (!frame && !hasScrolledToSelectionRef.current) {
-        frame = window.requestAnimationFrame(runScroll);
-      }
-    };
-
-    const runScroll = () => {
-      frame = 0;
-      frameCount += 1;
-
-      const foundTarget = scrollToTarget();
-
-      if (
-        (foundTarget && fontsSettled && frameCount >= 2)
-        || frameCount >= INITIAL_SCROLL_MAX_FRAMES
-      ) {
-        finishInitialScroll();
-        return;
-      }
-
-      scheduleScroll();
-    };
-
-    scheduleScroll();
-    void document.fonts?.ready
-      .then(() => {
-        fontsSettled = true;
-        scheduleScroll();
-      })
-      .catch(() => {
-        fontsSettled = true;
-        scheduleScroll();
-      });
-
-    return () => {
-      didCancel = true;
-
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-      }
-    };
-  }, [
-    activeChapterId,
-    activeEntry?.index,
-    loadedChapters,
-    renderedEntries,
-    selectedPassage,
-    selectedPassageChapterId
-  ]);
+  useInitialTargetScroll({
+    findTarget: findInitialChapterTarget,
+    headerOffset: HEADER_SCROLL_OFFSET,
+    isReady: isTargetWindowReady,
+    maxFrames: INITIAL_SCROLL_MAX_FRAMES,
+    onSettled: finishInitialChapterScroll,
+    shouldScroll: !hasScrolledToSelectionRef.current
+  });
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -1137,27 +1017,32 @@ export default function ChurchFathersReaderRoute() {
       navigation.state === "submitting"
       && navigation.formData?.get("intent") === "similar-passage"
     ) {
-      setFocusedPassageKey(String(navigation.formData.get("sourcePassageId") ?? ""));
-      setIsSearchOpen(true);
+      dispatchSearchFlow({
+        focusedId: String(navigation.formData.get("sourcePassageId") ?? ""),
+        type: "submitting-similar"
+      });
     }
   }, [navigation.formData, navigation.state]);
 
   useEffect(() => {
     if (actionData?.mode === "similar" && actionData.similarSource) {
-      setFocusedPassageKey(actionData.similarSource.id);
-      setIsSearchOpen(true);
+      dispatchSearchFlow({
+        focusedId: actionData.similarSource.id,
+        type: "similar-results"
+      });
       return;
     }
 
     if (actionData?.mode === "similar-scripture" && actionData.similarScriptureSource) {
-      setFocusedPassageKey(actionData.similarScriptureSource.id);
-      setIsSearchOpen(true);
+      dispatchSearchFlow({
+        focusedId: actionData.similarScriptureSource.id,
+        type: "similar-results"
+      });
       return;
     }
 
     if (actionData?.mode === "theme") {
-      setFocusedPassageKey(null);
-      setIsSearchOpen(true);
+      dispatchSearchFlow({ type: "theme-results" });
     }
   }, [actionData?.mode, actionData?.similarSource?.id]);
 
@@ -1184,9 +1069,9 @@ export default function ChurchFathersReaderRoute() {
     const passageRange = rangeFromResult(result);
 
     if (openChapter(result.chapterId, passageRange)) {
-      setIsSearchOpen(false);
+      closeSearch();
     }
-  }, [openChapter]);
+  }, [closeSearch, openChapter]);
 
   if (loadError) {
     return (
@@ -1313,7 +1198,7 @@ export default function ChurchFathersReaderRoute() {
                 className="context-button reader-icon-button"
                 onClick={() => {
                   setIsToolsOpen(false);
-                  setIsSearchOpen(true);
+                  openSearch();
                 }}
                 title="Search"
                 type="button"
@@ -1359,9 +1244,12 @@ export default function ChurchFathersReaderRoute() {
                     <p className="ec-chapter-title">{chapter.title}</p>
                     <div className="reader-chapter-passages">
                       {groupChapterPassages(chapter).map((passage) => {
-                        const isSelected =
-                          selectedPassageChapterId === chapter.id
-                          && selectedPassage === passage.rangeLabel;
+                        const isSelected = isSelectedReaderPassage({
+                          chapterId: chapter.id,
+                          passage,
+                          selectedChapterId: selectedPassageChapterId,
+                          selectedRange: selectedPassage
+                        });
 
                         return (
                           <article
@@ -1370,7 +1258,9 @@ export default function ChurchFathersReaderRoute() {
                               isSelected ? "is-selected" : ""
                             ].filter(Boolean).join(" ")}
                             data-passage-key={passage.key}
+                            data-passage-end={passage.verseEnd}
                             data-passage-range={passage.rangeLabel}
+                            data-passage-start={passage.verseStart}
                             key={passage.key}
                           >
                             <button
@@ -1481,8 +1371,8 @@ export default function ChurchFathersReaderRoute() {
           onClick={(event) => {
             event.stopPropagation();
 
-            if (event.target === event.currentTarget) {
-              setIsSearchOpen(false);
+            if (isBackdropClick(event)) {
+              closeSearch();
             }
           }}
         >
@@ -1501,7 +1391,7 @@ export default function ChurchFathersReaderRoute() {
               </div>
               <button
                 className="filter-modal-close"
-                onClick={() => setIsSearchOpen(false)}
+                onClick={closeSearch}
                 type="button"
               >
                 Close
@@ -1806,9 +1696,9 @@ function ChapterJump({
       onClick={(event) => {
         event.stopPropagation();
 
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
+            if (isBackdropClick(event)) {
+              onClose();
+            }
       }}
     >
       <section
@@ -2012,26 +1902,12 @@ function normalizeSortText(value: string) {
 }
 
 function getChapterWindowRange(index: number, count: number) {
-  if (count <= 0) {
-    return {
-      endIndex: -1,
-      startIndex: 0
-    };
-  }
-
-  return {
-    endIndex: Math.min(count - 1, index + CHAPTER_WINDOW_AFTER),
-    startIndex: Math.max(0, index - CHAPTER_WINDOW_BEFORE)
-  };
-}
-
-function rangeContainsIndex(
-  range: { endIndex: number; startIndex: number },
-  index: number
-) {
-  return range.endIndex >= range.startIndex
-    && index >= range.startIndex
-    && index <= range.endIndex;
+  return getCenteredWindowRange({
+    after: CHAPTER_WINDOW_AFTER,
+    before: CHAPTER_WINDOW_BEFORE,
+    count,
+    index
+  });
 }
 
 function groupChapterPassages(chapter: ChapterAsset): ReaderPassage[] {
@@ -2098,6 +1974,83 @@ function findLoadedPassage(chapters: Map<string, ChapterAsset>, key: string) {
   return groupChapterPassages(chapter).find((passage) => (
     passage.verseStart === Number(verseStart) && passage.verseEnd === Number(verseEnd)
   )) ?? null;
+}
+
+function isSelectedReaderPassage({
+  chapterId,
+  passage,
+  selectedChapterId,
+  selectedRange
+}: {
+  chapterId: string;
+  passage: ReaderPassage;
+  selectedChapterId: string;
+  selectedRange: string;
+}) {
+  if (selectedChapterId !== chapterId || !selectedRange) {
+    return false;
+  }
+
+  if (selectedRange === passage.rangeLabel) {
+    return true;
+  }
+
+  const requestedRange = parsePassageRange(selectedRange);
+
+  return requestedRange
+    ? passage.verseStart <= requestedRange.start
+      && passage.verseEnd >= requestedRange.end
+    : false;
+}
+
+function findPassageTargetInChapter(
+  chapterElement: HTMLElement,
+  selectedRange: string
+) {
+  const exactTarget = chapterElement.querySelector<HTMLElement>(
+    `[data-passage-range="${cssEscape(selectedRange)}"]`
+  );
+
+  if (exactTarget) {
+    return exactTarget;
+  }
+
+  const requestedRange = parsePassageRange(selectedRange);
+
+  if (!requestedRange) {
+    return null;
+  }
+
+  return [...chapterElement.querySelectorAll<HTMLElement>("[data-passage-start][data-passage-end]")]
+    .find((element) => {
+      const passageStart = Number(element.dataset.passageStart);
+      const passageEnd = Number(element.dataset.passageEnd);
+
+      return Number.isFinite(passageStart)
+        && Number.isFinite(passageEnd)
+        && passageStart <= requestedRange.start
+        && passageEnd >= requestedRange.end;
+    }) ?? null;
+}
+
+function parsePassageRange(rangeLabel: string) {
+  const match = rangeLabel.match(/^(\d+)(?:-(\d+))?$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const start = Number(match[1]);
+  const end = Number(match[2] ?? match[1]);
+
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return null;
+  }
+
+  return {
+    end,
+    start
+  };
 }
 
 function findElementAtChapterUpdateLine(elements: HTMLElement[]) {
@@ -2269,6 +2222,64 @@ function versionedPreviewUrl(path: string, version: string) {
   const separator = path.includes("?") ? "&" : "?";
 
   return `${path}${separator}v=${encodeURIComponent(version)}`;
+}
+
+async function loadChapterAssets(
+  entries: ChapterEntry[],
+  previewAssetVersion: string,
+  concurrency: number
+) {
+  const results: ChapterAssetLoadResult[] = [];
+  let nextIndex = 0;
+  const workerCount = Math.max(1, Math.min(concurrency, entries.length));
+
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < entries.length) {
+      const entry = entries[nextIndex];
+      nextIndex += 1;
+      results.push(await loadChapterAsset(entry, previewAssetVersion));
+    }
+  }));
+
+  return results;
+}
+
+async function loadChapterAsset(
+  entry: ChapterEntry,
+  previewAssetVersion: string
+): Promise<ChapterAssetLoadResult> {
+  try {
+    const response = await fetch(
+      versionedPreviewUrl(entry.chapter.assetPath, previewAssetVersion),
+      { cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      return {
+        entry,
+        error: `Failed to load chapter: ${response.status}`
+      };
+    }
+
+    return {
+      asset: await response.json() as ChapterAsset,
+      entry
+    };
+  } catch (error: unknown) {
+    return {
+      entry,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+function distanceFromActiveChapter(
+  entry: ChapterEntry,
+  activeChapterIndex: number | undefined
+) {
+  return typeof activeChapterIndex === "number"
+    ? Math.abs(entry.index - activeChapterIndex)
+    : entry.index;
 }
 
 function readSavedReaderTheme(): ReaderTheme {

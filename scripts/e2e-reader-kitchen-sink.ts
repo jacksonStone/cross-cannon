@@ -395,8 +395,36 @@ async function waitForResultsHeading(page: Page, expectedTitle: string) {
 }
 
 async function expectSelectedPassage(page: Page) {
-  await page.waitForSelector(".reader-passage.is-selected", { visible: true });
-  await assertReaderHealthy(page);
+  const started = performance.now();
+  let lastState: unknown = null;
+
+  while (performance.now() - started < timeoutMs) {
+    const selected = await page.$(".reader-passage.is-selected");
+
+    if (selected) {
+      await assertReaderHealthy(page);
+      return;
+    }
+
+    lastState = await page.evaluate(() => ({
+      chapterErrors: [...document.querySelectorAll(".reader-chapter-error")]
+        .map((element) => element.textContent?.trim() ?? ""),
+      passageRanges: [...document.querySelectorAll<HTMLElement>(".reader-passage")]
+        .slice(0, 12)
+        .map((element) => ({
+          end: element.dataset.passageEnd ?? "",
+          key: element.dataset.passageKey ?? element.dataset.passageId ?? "",
+          range: element.dataset.passageRange ?? "",
+          start: element.dataset.passageStart ?? ""
+        })),
+      title: document.querySelector("#reader-title")?.textContent?.trim() ?? "",
+      url: location.href
+    }));
+    await wait(250);
+  }
+
+  await saveFailureScreenshot(page);
+  throw new Error(`Timed out waiting for selected passage: ${JSON.stringify(lastState)}`);
 }
 
 async function expectReaderPassages(page: Page) {

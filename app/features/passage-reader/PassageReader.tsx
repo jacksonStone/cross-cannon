@@ -12,8 +12,18 @@ import { Form, Link, useNavigation } from "@remix-run/react";
 
 import { PassageJump } from "~/features/passage-jump/PassageJump";
 import { ReaderCorpusSwitch } from "~/features/reader-switch/ReaderCorpusSwitch";
+import {
+  useExpandableReaderWindow,
+  useInitialTargetScroll,
+  usePreservePrependedScroll
+} from "~/features/reader-window/useReaderWindow";
+import { getCenteredWindowRange } from "~/features/reader-window/window-range";
 import { sortCanonicalBooks } from "~/features/search/canons";
 import type { StoredFilters } from "~/features/search/types";
+import {
+  useEscapeDismiss,
+  useOutsideClickDismiss
+} from "~/lib/use-dialog-dismiss";
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
 import { buildChapterIndex, chapterKey } from "./chapter-index";
@@ -220,113 +230,31 @@ export function PassageReader({
     hasScrolledToInitialPassageRef.current = false;
   }, [initialChapterIndex, initialChapterKey, initialPassageId, orderedChapterEntries.length]);
 
-  useBrowserLayoutEffect(() => {
-    if (!isScriptureReady || renderedChapterEntries.length === 0) {
-      return;
-    }
+  const findInitialPassageTarget = useCallback(
+    () => findRenderedPassageElement(initialPassageId),
+    [initialPassageId]
+  );
+  const finishInitialPassageScroll = useCallback(() => {
+    hasScrolledToInitialPassageRef.current = true;
+  }, []);
+  const scrollToTopWhenInitialPassageMissing = useCallback(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, []);
 
-    if (hasScrolledToInitialPassageRef.current) {
-      return;
-    }
+  useInitialTargetScroll({
+    findTarget: findInitialPassageTarget,
+    headerOffset: HEADER_SCROLL_OFFSET,
+    isReady: isScriptureReady && renderedChapterEntries.length > 0,
+    maxFrames: INITIAL_SCROLL_MAX_FRAMES,
+    onMissingTarget: scrollToTopWhenInitialPassageMissing,
+    onSettled: finishInitialPassageScroll,
+    shouldScroll: !hasScrolledToInitialPassageRef.current
+  });
 
-    const scrollToInitialPassage = () => {
-      const initialPassage = findRenderedPassageElement(initialPassageId);
-
-      if (!initialPassage) {
-        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-        return false;
-      }
-
-      const top = initialPassage.getBoundingClientRect().top
-        + window.scrollY
-        - HEADER_SCROLL_OFFSET;
-
-      window.scrollTo({
-        behavior: "auto",
-        left: 0,
-        top: Math.max(0, top)
-      });
-
-      return true;
-    };
-
-    let frame = 0;
-    let frameCount = 0;
-    let didCancel = false;
-    let fontsSettled = document.fonts === undefined;
-
-    const finishInitialScroll = () => {
-      if (didCancel) {
-        return;
-      }
-
-      scrollToInitialPassage();
-      hasScrolledToInitialPassageRef.current = true;
-    };
-
-    const scheduleScroll = () => {
-      if (!frame && !hasScrolledToInitialPassageRef.current) {
-        frame = window.requestAnimationFrame(runScroll);
-      }
-    };
-
-    const runScroll = () => {
-      frame = 0;
-      frameCount += 1;
-
-      const foundTarget = scrollToInitialPassage();
-
-      if (
-        (foundTarget && fontsSettled && frameCount >= 2)
-        || frameCount >= INITIAL_SCROLL_MAX_FRAMES
-      ) {
-        finishInitialScroll();
-        return;
-      }
-
-      scheduleScroll();
-    };
-
-    scheduleScroll();
-    void document.fonts?.ready
-      .then(() => {
-        fontsSettled = true;
-        scheduleScroll();
-      })
-      .catch(() => {
-        fontsSettled = true;
-        scheduleScroll();
-      });
-
-    return () => {
-      didCancel = true;
-
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-      }
-    };
-  }, [initialPassageId, isScriptureReady, renderedChapterEntries.length]);
-
-  useBrowserLayoutEffect(() => {
-    const snapshot = prependSnapshotRef.current;
-
-    if (!snapshot) {
-      return;
-    }
-
-    prependSnapshotRef.current = null;
-
-    const nextScrollHeight = document.documentElement.scrollHeight;
-    const addedHeight = nextScrollHeight - snapshot.scrollHeight;
-
-    if (addedHeight > 0) {
-      window.scrollTo({
-        behavior: "auto",
-        left: 0,
-        top: snapshot.scrollY + addedHeight
-      });
-    }
-  }, [renderedRange.startIndex]);
+  usePreservePrependedScroll({
+    prependSnapshotRef,
+    startIndex: renderedRange.startIndex
+  });
 
   useEffect(() => {
     if (!isScriptureReady) {
@@ -385,83 +313,14 @@ export function PassageReader({
     };
   }, [isScriptureReady]);
 
-  useEffect(() => {
-    if (!isScriptureReady || orderedChapterEntries.length === 0) {
-      return;
-    }
-
-    let frame = 0;
-
-    const expandRenderedWindow = () => {
-      frame = 0;
-
-      const distanceToTop = window.scrollY;
-      const distanceToBottom = document.documentElement.scrollHeight
-        - (window.scrollY + window.innerHeight);
-
-      if (distanceToTop < CHAPTER_WINDOW_EDGE_PX) {
-        setRenderedRange((range) => {
-          if (range.startIndex <= 0) {
-            return range;
-          }
-
-          const nextStartIndex = Math.max(
-            0,
-            range.startIndex - CHAPTER_WINDOW_EXPAND_COUNT
-          );
-
-          if (nextStartIndex === range.startIndex) {
-            return range;
-          }
-
-          prependSnapshotRef.current = {
-            scrollHeight: document.documentElement.scrollHeight,
-            scrollY: window.scrollY
-          };
-
-          return {
-            ...range,
-            startIndex: nextStartIndex
-          };
-        });
-      }
-
-      if (distanceToBottom < CHAPTER_WINDOW_EDGE_PX) {
-        setRenderedRange((range) => {
-          if (range.endIndex >= orderedChapterEntries.length - 1) {
-            return range;
-          }
-
-          return {
-            ...range,
-            endIndex: Math.min(
-              orderedChapterEntries.length - 1,
-              range.endIndex + CHAPTER_WINDOW_EXPAND_COUNT
-            )
-          };
-        });
-      }
-    };
-
-    const scheduleExpand = () => {
-      if (!frame) {
-        frame = window.requestAnimationFrame(expandRenderedWindow);
-      }
-    };
-
-    window.addEventListener("scroll", scheduleExpand, { passive: true });
-    window.addEventListener("resize", scheduleExpand);
-    window.requestAnimationFrame(expandRenderedWindow);
-
-    return () => {
-      window.removeEventListener("scroll", scheduleExpand);
-      window.removeEventListener("resize", scheduleExpand);
-
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-      }
-    };
-  }, [isScriptureReady, orderedChapterEntries.length]);
+  useExpandableReaderWindow({
+    edgePx: CHAPTER_WINDOW_EDGE_PX,
+    expandCount: CHAPTER_WINDOW_EXPAND_COUNT,
+    isReady: isScriptureReady,
+    itemCount: orderedChapterEntries.length,
+    prependSnapshotRef,
+    setRange: setRenderedRange
+  });
 
   useEffect(() => {
     if (!isScriptureReady) {
@@ -598,45 +457,17 @@ export function PassageReader({
     onThemeChange?.(readerSettings.theme);
   }, [hasLoadedReaderSettings, onThemeChange, readerSettings.theme]);
 
-  useEffect(() => {
-    if (!isSettingsOpen) {
-      return;
-    }
-
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      const target = event.target;
-
-      if (!(target instanceof Element)) {
-        return;
-      }
-
-      if (
-        settingsRef.current?.contains(target)
-        || target.closest(".reader-header-actions")
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      setIsSettingsOpen(false);
-    };
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsSettingsOpen(false);
-      }
-    };
-
-    window.addEventListener("click", closeOnOutsideClick, { capture: true });
-    window.addEventListener("keydown", closeOnEscape);
-
-    return () => {
-      window.removeEventListener("click", closeOnOutsideClick, { capture: true });
-      window.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [isSettingsOpen]);
+  const closeSettings = useCallback(() => setIsSettingsOpen(false), []);
+  useEscapeDismiss({
+    isOpen: isSettingsOpen,
+    onDismiss: closeSettings
+  });
+  useOutsideClickDismiss({
+    ignoreSelector: ".reader-header-actions",
+    isOpen: isSettingsOpen,
+    onDismiss: closeSettings,
+    ref: settingsRef
+  });
 
   if (!isScriptureReady) {
     return (
@@ -1096,30 +927,17 @@ function readSavedReaderSettings() {
 }
 
 function getInitialRenderedRange(initialChapterIndex: number, chapterCount: number) {
-  if (chapterCount <= 0) {
-    return {
-      endIndex: -1,
-      startIndex: 0
-    };
-  }
-
-  const safeInitialChapterIndex = initialChapterIndex >= 0 ? initialChapterIndex : 0;
-
-  return {
-    endIndex: Math.min(
-      chapterCount - 1,
-      safeInitialChapterIndex + INITIAL_NEXT_CHAPTERS
-    ),
-    startIndex: Math.max(
-      0,
-      safeInitialChapterIndex - INITIAL_PREVIOUS_CHAPTERS
-    )
-  };
+  return getCenteredWindowRange({
+    after: INITIAL_NEXT_CHAPTERS,
+    before: INITIAL_PREVIOUS_CHAPTERS,
+    count: chapterCount,
+    index: initialChapterIndex
+  });
 }
 
 function findRenderedPassageElement(passageId: string) {
   return [...document.querySelectorAll<HTMLElement>(".reader-passage")]
-    .find((element) => element.dataset.passageId === passageId);
+    .find((element) => element.dataset.passageId === passageId) ?? null;
 }
 
 function findElementAtReadingAnchor(elements: HTMLElement[]) {
