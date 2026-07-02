@@ -52,7 +52,7 @@ import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 const MANIFEST_URL = "/church-fathers-preview/manifest.json";
 const CONFESSIONS_AUDIO_ALIGNMENT_URL =
   "/church-fathers-preview/confessions-audio-alignment.json";
-const PREVIEW_ASSET_VERSION = "early-christian-preview-20260701b";
+const PREVIEW_ASSET_VERSION = "early-christian-preview-20260702a";
 const READER_POSITION_STORAGE_KEY = "cross-cannon:church-fathers-position:v1";
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
 const READER_THEMES = ["paper", "sepia", "dark", "contrast"] as const;

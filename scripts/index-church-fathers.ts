@@ -141,6 +141,7 @@ type Options = {
   reset: boolean;
   limit: number | null;
   batchSize: number;
+  metadataOnly: boolean;
   skipIndexRebuild: boolean;
   rebuildIndexesOnly: boolean;
 };
@@ -155,10 +156,6 @@ const EXCLUDED_WORK_IDS = new Set([
 ]);
 const options = parseArgs(process.argv.slice(2));
 const embeddingConfig = getDefaultEmbeddingConfig();
-
-if (process.env.EMBEDDING_PROVIDER !== "mock" && !process.env.OPENAI_API_KEY) {
-  throw new Error("OPENAI_API_KEY is required to index early Christian works with real embeddings.");
-}
 
 await mkdir("storage", { recursive: true });
 const db = createClient({ url: options.runtimeDbUrl });
@@ -231,6 +228,21 @@ for (const passage of selectedPassages) {
 
 await executeBatch(db, rowStatements, 750);
 console.log(`Passage rows stored: ${indexedPassages}`);
+
+if (options.metadataOnly) {
+  const summary = await getRuntimeSummary(db);
+  console.log(`Indexed early Christian DB metadata complete.`);
+  console.log(`Chapters: ${summary.chapters}`);
+  console.log(`Passages: ${summary.passages}`);
+  console.log(`Paragraph verses: ${summary.paragraphVerses}`);
+  console.log("Embeddings skipped: metadata-only mode.");
+  process.exit(0);
+}
+
+if (process.env.EMBEDDING_PROVIDER !== "mock" && !process.env.OPENAI_API_KEY) {
+  throw new Error("OPENAI_API_KEY is required to index early Christian works with real embeddings.");
+}
+
 const existingEmbeddingIds = await getExistingEmbeddingIds(db);
 const pendingEmbeddingItems = embeddingItems.filter((item) => !existingEmbeddingIds.get(item.kind)?.has(item.id));
 console.log(`Existing chapter embeddings skipped: ${existingEmbeddingIds.get("chapter")?.size ?? 0}`);
@@ -272,6 +284,7 @@ function parseArgs(args: string[]): Options {
   let reset = false;
   let limit: number | null = null;
   let batchSize = Number(process.env.EMBEDDING_BATCH_SIZE ?? 96);
+  let metadataOnly = false;
   let skipIndexRebuild = false;
   let rebuildIndexesOnly = false;
 
@@ -313,6 +326,12 @@ function parseArgs(args: string[]): Options {
       continue;
     }
 
+    if (arg === "--metadata-only") {
+      metadataOnly = true;
+      skipIndexRebuild = true;
+      continue;
+    }
+
     if (arg === "--rebuild-indexes-only") {
       rebuildIndexesOnly = true;
       continue;
@@ -334,6 +353,7 @@ function parseArgs(args: string[]): Options {
     batchSize,
     inputPath,
     limit,
+    metadataOnly,
     rebuildIndexesOnly,
     reset,
     runtimeDbUrl,

@@ -9,6 +9,7 @@ INPUT = Path("data/public-domain/church-fathers/ccel/parsed/church-fathers.json"
 OUTPUT_DIR = Path("public/church-fathers-preview")
 CHAPTERS_DIR = OUTPUT_DIR / "chapters"
 BOOK_INDEX_PATH = OUTPUT_DIR / "books.json"
+PRESERVED_OUTPUT_FILES = ["confessions-audio-alignment.json"]
 
 DEFAULT_CLASSIFICATION = {
     "bucket": "Patristic / broadly orthodox",
@@ -31,11 +32,18 @@ EXCLUDED_WORK_IDS = {
 
 def main() -> int:
     data = json.loads(INPUT.read_text(encoding="utf-8"))
+    preserved_output_files = {
+        file_name: (OUTPUT_DIR / file_name).read_bytes()
+        for file_name in PRESERVED_OUTPUT_FILES
+        if (OUTPUT_DIR / file_name).exists()
+    }
 
     if OUTPUT_DIR.exists():
         shutil.rmtree(OUTPUT_DIR)
 
     CHAPTERS_DIR.mkdir(parents=True, exist_ok=True)
+    for file_name, content in preserved_output_files.items():
+        (OUTPUT_DIR / file_name).write_bytes(content)
 
     manifest = {
         "bookCount": 0,
@@ -423,16 +431,20 @@ def metadata_for_work(volume: dict, work: dict):
 def author_for_work(volume: dict, work: dict):
     author = str(work.get("authorOrSection") or "").strip()
     title = str(work.get("title") or "")
+    volume_author = author_from_volume_title(str(volume.get("title") or ""))
 
     if not author or is_collection_heading_work(value_lower(author).rstrip(".") + "."):
         lowered_title = value_lower(title)
         if "clement" in lowered_title:
             return "Clement of Rome"
-        return author_from_volume_title(str(volume.get("title") or ""))
+        return volume_author
 
     normalized_author = normalize_author_label(author)
-    if is_section_label(normalized_author):
-        return author_from_volume_title(str(volume.get("title") or ""))
+    if volume_author and (
+        is_section_label(normalized_author)
+        or is_containing_work_title(normalized_author, work)
+    ):
+        return volume_author
 
     return normalized_author
 
@@ -521,6 +533,67 @@ def is_section_label(author):
         "part fourth",
         "the seven books of arnobius against the heathen",
     }
+
+
+def is_containing_work_title(author, work: dict) -> bool:
+    if not author:
+        return False
+
+    chapters = work.get("chapters") or []
+    if not chapters:
+        return False
+
+    lineage = chapters[0].get("lineage") or []
+    if not lineage:
+        return False
+
+    normalized_author = normalize_heading(author)
+    normalized_lineage = [normalize_heading(item) for item in lineage]
+    normalized_title = normalize_heading(work.get("title"))
+    if normalized_lineage[0] != normalized_author:
+        return False
+
+    title_is_nested_under_author = normalized_title in normalized_lineage[1:]
+    return title_is_nested_under_author and looks_like_work_heading(author)
+
+
+def looks_like_work_heading(value: str) -> bool:
+    lowered = value_lower(value)
+    if " with " in lowered and " and " in lowered:
+        return False
+
+    return contains_any(lowered, [
+        " against ",
+        " commentary ",
+        " connection ",
+        " exposition ",
+        " homilies ",
+        " homily ",
+        " letters ",
+        " oration ",
+        " treatise ",
+        " treatises ",
+        " writings ",
+        "works",
+        "the book of ",
+        "the church history",
+        "the life of ",
+        "with ",
+    ]) or lowered.startswith((
+        "a treatise ",
+        "against ",
+        "commentary ",
+        "defence ",
+        "expositions ",
+        "letters ",
+        "life ",
+        "on ",
+        "the ",
+    ))
+
+
+def normalize_heading(value) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip().strip(".").lower()
 
 
 def is_reference_work(title: str) -> bool:
