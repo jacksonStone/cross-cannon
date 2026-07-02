@@ -1,6 +1,7 @@
 import { createClient, type Client } from "@libsql/client";
 
 import {
+  getDb,
   normalizeVector,
   vectorSql,
   type IndexedEmbeddingConfig
@@ -59,6 +60,13 @@ type ChapterCandidate = {
 type EarlyChristianSearchTrace = {
   finish: (label: string, details?: Record<string, unknown>) => void;
   mark: (label: string, details?: Record<string, unknown>) => void;
+};
+
+export type EarlyChristianEmbeddingSource = {
+  embedding: ArrayLike<number>;
+  id: string;
+  reference: string;
+  text: string;
 };
 
 let client: Client | null = null;
@@ -122,6 +130,89 @@ export async function searchSimilarEarlyChristianPassages(sourceKey: string, lim
       text: String(source.text)
     } satisfies EarlyChristianSimilarSource
   };
+}
+
+export async function searchSimilarEarlyChristianFromScripture(
+  passageId: string,
+  limit = 10
+) {
+  const trace = createEarlyChristianSearchTrace("similar", `scripture:${passageId}`, limit);
+  const source = await findScriptureSourcePassage(passageId, trace);
+  trace.mark("findScriptureSourcePassage", { found: Boolean(source) });
+
+  if (!source) {
+    trace.finish("missing-scripture-source", { count: 0 });
+    return null;
+  }
+
+  const embedding = readStoredEmbedding(source as StoredEmbeddingRow);
+  trace.mark("readScriptureSourceEmbedding", { hasEmbedding: Boolean(embedding) });
+
+  if (!embedding) {
+    trace.finish("missing-scripture-source-embedding", { count: 0 });
+    return null;
+  }
+
+  const results = withMatchStrength(await searchEarlyChristianPassagesByEmbedding(
+    embedding,
+    limit,
+    [],
+    trace
+  ));
+  trace.finish("results", { count: results.length });
+
+  return {
+    results,
+    source: {
+      id: String(source.id),
+      reference: String(source.reference)
+    }
+  };
+}
+
+export async function getEarlyChristianEmbeddingSource(
+  sourceKey: string
+): Promise<EarlyChristianEmbeddingSource | null> {
+  const trace = createEarlyChristianSearchTrace("similar", sourceKey, 1);
+  const source = await findSourcePassage(sourceKey, trace);
+
+  if (!source) {
+    return null;
+  }
+
+  const embedding = readStoredEmbedding(source as StoredEmbeddingRow);
+
+  if (!embedding) {
+    return null;
+  }
+
+  return {
+    embedding,
+    id: String(source.id),
+    reference: String(source.reference),
+    text: String(source.text)
+  };
+}
+
+export async function searchEarlyChristianByEmbedding(
+  embedding: ArrayLike<number>,
+  limit = 10,
+  excludePassageIds: string[] = [],
+  trace: EarlyChristianSearchTrace = createEarlyChristianSearchTrace("internal", "embedding", limit)
+) {
+  return searchByEmbedding(embedding, limit, { excludePassageIds }, trace);
+}
+
+export async function searchEarlyChristianPassagesByEmbedding(
+  embedding: ArrayLike<number>,
+  limit = 10,
+  excludePassageIds: string[] = [],
+  trace: EarlyChristianSearchTrace = createEarlyChristianSearchTrace("internal", "passage-embedding", limit)
+) {
+  trace.mark("searchPassagesDirectStart", { excludeCount: excludePassageIds.length });
+  const results = await searchAllPassagesExact(embedding, limit, excludePassageIds, trace);
+  trace.mark("searchPassagesDirect", { count: results.length });
+  return results;
 }
 
 async function getEarlyChristianEmbeddingConfig(): Promise<IndexedEmbeddingConfig> {
@@ -367,6 +458,25 @@ async function findSourcePassage(sourceKey: string, trace: EarlyChristianSearchT
     args: [chapterId, Number(verseStart), Number(verseEnd)]
   });
   trace.mark("findSourceByRangeSql", { rowCount: response.rows.length });
+
+  return response.rows[0] ?? null;
+}
+
+async function findScriptureSourcePassage(
+  passageId: string,
+  trace: EarlyChristianSearchTrace
+) {
+  trace.mark("findScriptureSourceByIdStart");
+  const response = await getDb().execute({
+    sql: `
+      SELECT id, reference, embedding
+      FROM passages
+      WHERE id = ?
+        AND embedding IS NOT NULL
+    `,
+    args: [passageId]
+  });
+  trace.mark("findScriptureSourceByIdSql", { rowCount: response.rows.length });
 
   return response.rows[0] ?? null;
 }

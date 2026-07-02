@@ -10,6 +10,7 @@ const slowMo = Number(process.env.E2E_SLOW_MO_MS ?? 0);
 const timeoutMs = Number(process.env.E2E_TIMEOUT_MS ?? 90000);
 const searchDelayMs = Number(process.env.E2E_SEARCH_DELAY_MS ?? 750);
 const requestFailureSummary = new Map<string, number>();
+let e2eClientIpCounter = 30;
 
 type StepResult = {
   ms: number;
@@ -38,11 +39,12 @@ async function main() {
     await step("Bible: cross chapter boundary down and up", () => crossBibleChapterBoundary(page));
     await step("Bible: theme search, similar search, jump result", () => exerciseBibleSearch(page));
     await step("Bible: selected passage similar search", () => exerciseBibleReaderPassageSimilar(page));
-    await step("Fathers: navigate from Bible toolbar", () => navigateToFathersFromBible(page));
+    await step("Bible: selected passage similar Fathers search and jump result", () => exerciseBibleToFathersSimilar(page));
     await step("Fathers: jump picker to work and chapter", () => jumpToFathersWork(page));
     await step("Fathers: cross chapter boundary down and up", () => crossFathersChapterBoundary(page));
     await step("Fathers: theme search and jump result", () => exerciseFathersThemeSearch(page));
     await step("Fathers: selected passage similar search and jump result", () => exerciseFathersPassageSimilar(page));
+    await step("Fathers: selected passage similar Bible search and jump result", () => exerciseFathersToBibleSimilar(page));
 
     console.log(JSON.stringify({
       baseUrl,
@@ -111,7 +113,7 @@ async function exerciseBibleSearch(page: Page) {
 
 async function exerciseBibleReaderPassageSimilar(page: Page) {
   await clickVisiblePassage(page);
-  await click(page, ".reader-passage.is-selected .reader-passage-actions button");
+  await clickSelectedPassageAction(page, "Similar passages");
   await waitForSearchIdle(page, ".results .scripture-result");
   await waitForBibleSimilarHeading(page);
   await expectModalTitle(page, "Find passages");
@@ -121,11 +123,17 @@ async function exerciseBibleReaderPassageSimilar(page: Page) {
   await expectReaderPassages(page);
 }
 
-async function navigateToFathersFromBible(page: Page) {
-  await openReaderTools(page);
-  await click(page, ".reader-header-actions a[aria-label='Early Christian works']");
+async function exerciseBibleToFathersSimilar(page: Page) {
+  await clickVisiblePassage(page);
+  await clickSelectedPassageAction(page, "Similar in Fathers");
+  await waitForSearchIdle(page, ".ec-results .scripture-result");
+  await expectModalTitle(page, "Find passages");
+  await waitForResultsHeading(page, "Similar early Christian passages");
+  await expandResult(page, ".ec-results .scripture-result", 0);
+  await clickResultAction(page, ".ec-results .scripture-result", 0, "Jump to");
   await page.waitForFunction(() => location.pathname === "/church-fathers", { timeout: timeoutMs });
   await waitForReader(page, "Early Christian");
+  await expectSelectedPassage(page);
 }
 
 async function jumpToFathersWork(page: Page) {
@@ -177,7 +185,7 @@ async function exerciseFathersThemeSearch(page: Page) {
 
 async function exerciseFathersPassageSimilar(page: Page) {
   await clickVisiblePassage(page);
-  await click(page, ".reader-passage.is-selected .reader-passage-actions button");
+  await clickSelectedPassageAction(page, "Similar passages");
   await waitForSearchIdle(page, ".ec-results .scripture-result");
   await expectModalTitle(page, "Find chapters");
   await expandResult(page, ".ec-results .scripture-result", 0);
@@ -187,11 +195,26 @@ async function exerciseFathersPassageSimilar(page: Page) {
   await assertReaderHealthy(page);
 }
 
+async function exerciseFathersToBibleSimilar(page: Page) {
+  await clickVisiblePassage(page);
+  await clickSelectedPassageAction(page, "Similar Bible passages");
+  await waitForSearchIdle(page, ".results .scripture-result");
+  await expectModalTitle(page, "Find chapters");
+  await expandResult(page, ".results .scripture-result", 0);
+  await clickResultAction(page, ".results .scripture-result", 0, "Jump to");
+  await page.waitForFunction(() => location.pathname === "/reader" || location.pathname.startsWith("/reader/"), {
+    timeout: timeoutMs
+  });
+  await expectReaderPassages(page);
+  await assertReaderHealthy(page);
+}
+
 async function themeSearch(page: Page, query: string, resultsSelector: string) {
   await page.waitForSelector(".search-modal textarea[name='question']", { visible: true });
   await page.click(".search-modal textarea[name='question']", { clickCount: 3 });
   await page.keyboard.press("Backspace");
   await page.type(".search-modal textarea[name='question']", query);
+  await rotateE2EClientIp(page);
   await Promise.all([
     wait(searchDelayMs),
     click(page, ".search-modal button.search-button")
@@ -258,6 +281,22 @@ async function clickVisiblePassage(page: Page) {
   await expectSelectedPassage(page);
 }
 
+async function clickSelectedPassageAction(page: Page, label: string) {
+  await page.waitForSelector(".reader-passage.is-selected .reader-passage-actions", {
+    visible: true
+  });
+  await rotateE2EClientIp(page);
+  const clicked = await page.evaluate((label) => {
+    const actions = document.querySelector(".reader-passage.is-selected .reader-passage-actions");
+    const buttons = [...actions?.querySelectorAll<HTMLButtonElement>("button") ?? []];
+    const button = buttons.find((candidate) => candidate.textContent?.trim() === label);
+    button?.click();
+    return Boolean(button);
+  }, label);
+
+  assert(clicked, `Could not find selected passage action "${label}".`);
+}
+
 async function expandResult(page: Page, resultSelector: string, index: number) {
   await page.waitForSelector(resultSelector, { visible: true });
   await page.evaluate(({ resultSelector, index }) => {
@@ -277,12 +316,19 @@ async function clickResultAction(
   index: number,
   label: string
 ) {
-  await page.evaluate(({ resultSelector, index, label }) => {
+  if (/Similar/i.test(label)) {
+    await rotateE2EClientIp(page);
+  }
+
+  const clicked = await page.evaluate(({ resultSelector, index, label }) => {
     const result = document.querySelectorAll<HTMLElement>(resultSelector)[index];
-    const buttons = [...result?.querySelectorAll<HTMLButtonElement>(".result-actions button") ?? []];
-    const button = buttons.find((candidate) => candidate.textContent?.trim() === label);
-    button?.click();
+    const controls = [...result?.querySelectorAll<HTMLElement>(".result-actions button, .result-actions a") ?? []];
+    const control = controls.find((candidate) => candidate.textContent?.trim() === label);
+    control?.click();
+    return Boolean(control);
   }, { resultSelector, index, label });
+
+  assert(clicked, `Could not find result action "${label}".`);
 }
 
 async function clickChapterButton(page: Page, chapterNumber: number) {
@@ -339,6 +385,13 @@ async function waitForBibleSimilarHeading(page: Page) {
   await page.waitForFunction(() => (
     document.querySelector(".results-heading")?.textContent?.trim() === "Similar passages"
   ), { timeout: timeoutMs });
+}
+
+async function waitForResultsHeading(page: Page, expectedTitle: string) {
+  await page.waitForFunction((expectedTitle) => (
+    [...document.querySelectorAll(".results-heading")]
+      .some((heading) => heading.textContent?.trim() === expectedTitle)
+  ), { timeout: timeoutMs }, expectedTitle);
 }
 
 async function expectSelectedPassage(page: Page) {
@@ -419,6 +472,13 @@ function attachDiagnostics(page: Page) {
         : `${request.method()} ${url} ${failure}`;
       requestFailureSummary.set(key, (requestFailureSummary.get(key) ?? 0) + 1);
     }
+  });
+}
+
+async function rotateE2EClientIp(page: Page) {
+  e2eClientIpCounter += 1;
+  await page.setExtraHTTPHeaders({
+    "x-forwarded-for": `127.0.42.${e2eClientIpCounter}`
   });
 }
 

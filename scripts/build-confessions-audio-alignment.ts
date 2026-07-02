@@ -171,7 +171,7 @@ const alignedChapters: Record<string, {
   endSeconds: number;
   label: string;
   startSeconds: number;
-}> = {};
+}> = await readExistingAlignments();
 
 for (const { sections: trackSections, track } of selectedTracks) {
   const audioUrl = `${AUDIO_BASE_URL}/${track.fileName}`;
@@ -195,12 +195,49 @@ for (const { sections: trackSections, track } of selectedTracks) {
 }
 
 await writeFile(OUTPUT_PATH, `${JSON.stringify({
-  chapters: alignedChapters,
+  chapters: sortAlignedChapters(alignedChapters, sections),
   generatedAt: new Date().toISOString(),
   source: "https://archive.org/details/confessions_augustine_0911_librivox"
 }, null, 2)}\n`);
 
 console.log(`Wrote ${Object.keys(alignedChapters).length} aligned sections to ${OUTPUT_PATH}`);
+
+async function readExistingAlignments() {
+  try {
+    const existing = JSON.parse(await readFile(OUTPUT_PATH, "utf8")) as {
+      chapters?: Record<string, {
+        audioUrl: string;
+        confidence: number;
+        endSeconds: number;
+        label: string;
+        startSeconds: number;
+      }>;
+    };
+
+    return existing.chapters ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function sortAlignedChapters<T>(chapters: Record<string, T>, orderedSections: Section[]) {
+  const sorted: Record<string, T> = {};
+  const sectionIds = new Set(orderedSections.map((section) => section.id));
+
+  for (const section of orderedSections) {
+    if (chapters[section.id]) {
+      sorted[section.id] = chapters[section.id];
+    }
+  }
+
+  for (const [id, alignment] of Object.entries(chapters)) {
+    if (!sectionIds.has(id)) {
+      sorted[id] = alignment;
+    }
+  }
+
+  return sorted;
+}
 
 async function loadConfessionsSections() {
   const index = JSON.parse(await readFile(BOOK_INDEX_PATH, "utf8")) as BookIndex;
@@ -317,19 +354,19 @@ function alignTrackSections(
       endNeedle,
       Math.max(startMatch.index, cursor)
     );
-    const confidence = Math.min(startMatch.score, endMatch.score);
+    const textConfidence = Math.min(startMatch.score, endMatch.score);
     const requiredConfidence = cursor > 0 ? Math.min(minConfidence, 0.6) : minConfidence;
 
-    if (confidence < requiredConfidence) {
+    if (startMatch.score < requiredConfidence) {
       console.warn(
-        `Skipped ${section.id} (${section.title}) confidence=${confidence.toFixed(2)}`
+        `Skipped ${section.id} (${section.title}) startConfidence=${startMatch.score.toFixed(2)} endConfidence=${endMatch.score.toFixed(2)}`
       );
       starts.push(null);
       continue;
     }
 
     starts.push({
-      confidence,
+      confidence: textConfidence >= requiredConfidence ? textConfidence : startMatch.score,
       markerSeconds: words[startMatch.index]?.start ?? 0,
       section,
       startSeconds: words[startMatch.index]?.start ?? 0,

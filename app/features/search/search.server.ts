@@ -1,6 +1,7 @@
 import { json } from "@remix-run/node";
 
 import { ensureDatabase, getDb } from "~/lib/db.server";
+import { searchFathersSimilarToScripture } from "~/lib/cross-corpus-search.server";
 import { searchScripture, searchSimilarScripture } from "~/lib/search.server";
 
 import { BOOKS_BY_CANON, DEFAULT_MATCH_COUNT, parseCanonMode, sortCanonicalBooks } from "./canons";
@@ -42,6 +43,10 @@ export async function handleSearchRequest(formData: FormData) {
     return handleSimilarPassageSearch(formData, filters);
   }
 
+  if (intent === "similar-early-christian") {
+    return handleSimilarEarlyChristianSearch(formData, filters);
+  }
+
   const question = String(formData.get("question") ?? "").trim();
 
   if (question.length < 3) {
@@ -69,6 +74,41 @@ export async function handleSearchRequest(formData: FormData) {
     books: filters.books,
     matchCount: filters.matchCount,
     results
+  });
+}
+
+async function handleSimilarEarlyChristianSearch(
+  formData: FormData,
+  filters: ParsedSearchFilters
+) {
+  const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
+
+  if (!/^[a-f0-9]{24}$/.test(sourcePassageId)) {
+    return json<SearchActionData>(
+      { error: "Choose a passage to search from." },
+      { status: 400 }
+    );
+  }
+
+  const similarSearch = await searchFathersSimilarToScripture(
+    sourcePassageId,
+    filters.matchCount
+  );
+
+  if (!similarSearch) {
+    return json<SearchActionData>(
+      { error: "That passage is not available for early Christian similarity search." },
+      { status: 400 }
+    );
+  }
+
+  return json<SearchActionData>({
+    mode: "similar-early-christian",
+    canon: filters.canon,
+    books: filters.books,
+    earlyChristianResults: similarSearch.results,
+    matchCount: filters.matchCount,
+    similarSource: similarSearch.source
   });
 }
 

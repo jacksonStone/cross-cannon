@@ -168,6 +168,51 @@ scripture-cache/manifest.json
 The cache route serves these artifacts with long-lived immutable cache headers
 and gzip when the browser accepts it.
 
+## Confessions Audio Alignment
+
+The Early Christian reader links Confessions audio instead of downloading MP3s
+into the app. LibriVox tracks do not map cleanly to the parsed chapter names, so
+audio support is produced as a timestamp alignment file:
+
+```bash
+npm run build:confessions-audio-alignment -- --track confessions_01_11-19_augustine_64kb.mp3
+```
+
+The script downloads the selected Archive.org MP3 to a temp file, sends it to
+OpenAI `whisper-1` with `verbose_json` and word timestamps, archives the raw API
+JSON under `storage/church-fathers-audio/transcripts/`, then fuzzy-aligns parsed
+Confessions chapter text against the timestamped transcript. Cached transcript
+JSON is reused on later runs, so rerunning the same track does not call the API
+unless the cache is missing.
+
+The deployed browser asset is:
+
+```text
+public/church-fathers-preview/confessions-audio-alignment.json
+```
+
+It has this shape:
+
+```json
+{
+  "chapters": {
+    "npnf101:vi.I_1.XIV": {
+      "audioUrl": "https://archive.org/download/confessions_augustine_0911_librivox/confessions_01_11-19_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 695.3,
+      "label": "Book 01, Chapters 11-19",
+      "startSeconds": 591.9
+    }
+  },
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "source": "https://archive.org/details/confessions_augustine_0911_librivox"
+}
+```
+
+Treat `audioUrl`, `startSeconds`, and `endSeconds` as the playback contract.
+Track labels and parsed chapter names are metadata only; do not assume they
+align exactly.
+
 On production startup, `app/entry.server.tsx` warms the indexed-books cache.
 The browser loads the full immutable scripture cache before enabling reader and
 search controls that need passage text.

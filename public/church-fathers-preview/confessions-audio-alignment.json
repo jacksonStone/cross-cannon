@@ -69,8 +69,64 @@
       "endSeconds": 1710.2,
       "label": "Book 01, Chapters 01-10",
       "startSeconds": 1616.4
+    },
+    "npnf101:vi.I_1.XI": {
+      "audioUrl": "https://archive.org/download/confessions_augustine_0911_librivox/confessions_01_11-19_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 230,
+      "label": "Book 01, Chapters 11-19",
+      "startSeconds": 35.6
+    },
+    "npnf101:vi.I_1.XII": {
+      "audioUrl": "https://archive.org/download/confessions_augustine_0911_librivox/confessions_01_11-19_augustine_64kb.mp3",
+      "confidence": 0.8333333333333334,
+      "endSeconds": 321.6,
+      "label": "Book 01, Chapters 11-19",
+      "startSeconds": 230
+    },
+    "npnf101:vi.I_1.XIII": {
+      "audioUrl": "https://archive.org/download/confessions_augustine_0911_librivox/confessions_01_11-19_augustine_64kb.mp3",
+      "confidence": 0.6666666666666666,
+      "endSeconds": 591.9,
+      "label": "Book 01, Chapters 11-19",
+      "startSeconds": 321.6
+    },
+    "npnf101:vi.I_1.XIV": {
+      "audioUrl": "https://archive.org/download/confessions_augustine_0911_librivox/confessions_01_11-19_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 695.3,
+      "label": "Book 01, Chapters 11-19",
+      "startSeconds": 591.9
+    },
+    "npnf101:vi.I_1.XV": {
+      "audioUrl": "https://archive.org/download/confessions_augustine_0911_librivox/confessions_01_11-19_augustine_64kb.mp3",
+      "confidence": 0.8333333333333334,
+      "endSeconds": 760.4,
+      "label": "Book 01, Chapters 11-19",
+      "startSeconds": 695.3
+    },
+    "npnf101:vi.I_1.XVI": {
+      "audioUrl": "https://archive.org/download/confessions_augustine_0911_librivox/confessions_01_11-19_augustine_64kb.mp3",
+      "confidence": 0.6666666666666666,
+      "endSeconds": 959.9,
+      "label": "Book 01, Chapters 11-19",
+      "startSeconds": 760.4
+    },
+    "npnf101:vi.I_1.XVII": {
+      "audioUrl": "https://archive.org/download/confessions_augustine_0911_librivox/confessions_01_11-19_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1039.5,
+      "label": "Book 01, Chapters 11-19",
+      "startSeconds": 962.4
+    },
+    "npnf101:vi.I_1.XVIII": {
+      "audioUrl": "https://archive.org/download/confessions_augustine_0911_librivox/confessions_01_11-19_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1525.5,
+      "label": "Book 01, Chapters 11-19",
+      "startSeconds": 1042.1
     }
   },
-  "generatedAt": "2026-07-02T01:33:39.087Z",
+  "generatedAt": "2026-07-02T11:06:36.562Z",
   "source": "https://archive.org/details/confessions_augustine_0911_librivox"
 }

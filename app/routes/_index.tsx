@@ -2,14 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import {
+  useActionData,
+  useLoaderData,
+  useNavigation
+} from "@remix-run/react";
 
 import { PassageReader } from "~/features/passage-reader/PassageReader";
+import { rememberReaderCorpus } from "~/features/reader-switch/ReaderCorpusSwitch";
 import { SearchForm } from "~/features/search/SearchForm";
 import { SearchResults } from "~/features/search/SearchResults";
 import { getIndexedBooks, handleSearchRequest } from "~/features/search/search.server";
 import type { SearchActionData } from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
+import type { EarlyChristianSearchResult } from "~/lib/early-christian-search.server";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import {
   getScriptureCacheInfo,
@@ -86,6 +92,24 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+
+    if (searchParams.get("reader") === "scripture") {
+      rememberReaderCorpus("scripture");
+      searchParams.delete("reader");
+      const nextSearch = searchParams.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`
+      );
+      return;
+    }
+
+    rememberReaderCorpus("scripture");
+  }, []);
+
+  useEffect(() => {
     if (!("scrollRestoration" in window.history)) {
       return;
     }
@@ -134,7 +158,10 @@ export default function Index() {
   useEffect(() => {
     if (
       navigation.state === "submitting"
-      && navigation.formData?.get("intent") === "similar-passage"
+      && (
+        navigation.formData?.get("intent") === "similar-passage"
+        || navigation.formData?.get("intent") === "similar-early-christian"
+      )
     ) {
       const sourcePassageId = String(navigation.formData.get("sourcePassageId") ?? "");
 
@@ -148,6 +175,12 @@ export default function Index() {
 
   useEffect(() => {
     if (actionData?.mode === "similar" && actionData.similarSource) {
+      setFocusedPassageId(actionData.similarSource.id);
+      setIsSearchOpen(true);
+      return;
+    }
+
+    if (actionData?.mode === "similar-early-christian" && actionData.similarSource) {
       setFocusedPassageId(actionData.similarSource.id);
       setIsSearchOpen(true);
       return;
@@ -267,10 +300,20 @@ export default function Index() {
               <SearchResults
                 actionData={actionData}
                 contextActionLabel="Jump to"
+                crossCorpusAction={{
+                  intent: "similar-early-christian",
+                  label: "Similar in Fathers",
+                  pendingLabel: "Finding Fathers"
+                }}
                 focusedPassageId={focusedPassageId}
                 onJumpToPassage={jumpToReaderPassage}
                 passageLookup={scriptureLibrary.passageLookup}
                 results={actionData?.results}
+                showEmptyState={actionData?.mode !== "similar-early-christian"}
+              />
+
+              <EarlyChristianCrossResults
+                results={actionData?.earlyChristianResults}
               />
             </div>
           </section>
@@ -280,8 +323,101 @@ export default function Index() {
   );
 }
 
+function EarlyChristianCrossResults({
+  results
+}: {
+  results?: EarlyChristianSearchResult[];
+}) {
+  const [selectedResult, setSelectedResult] = useState("");
+
+  useEffect(() => {
+    setSelectedResult("");
+  }, [results]);
+
+  if (!results?.length) {
+    return null;
+  }
+
+  return (
+    <section className="results ec-results" aria-live="polite">
+      <h2 className="results-heading">Similar early Christian passages</h2>
+      {results.map((result, index) => {
+        const isSelected = selectedResult === result.highlightPassage.id;
+
+        return (
+          <article
+            className={[
+              "scripture-result",
+              `match-level-${result.matchStrength}`,
+              isSelected ? "is-selected" : ""
+            ].filter(Boolean).join(" ")}
+            key={`${result.highlightPassage.id}-${index}`}
+          >
+            <button
+              aria-expanded={isSelected}
+              className="scripture-result-button"
+              onClick={() => setSelectedResult(isSelected ? "" : result.highlightPassage.id)}
+              type="button"
+            >
+              <span className="result-meta">
+                <span>{result.chapterReference}</span>
+                <span>{result.author ?? result.source.toUpperCase()}</span>
+                <span
+                  aria-label={`${result.matchStrength} of 4 match strength`}
+                  className="match-dots"
+                  title={`${result.matchStrength} of 4 match strength`}
+                >
+                  {[1, 2, 3, 4].map((level) => (
+                    <span
+                      aria-hidden="true"
+                      className={level <= result.matchStrength ? "is-active" : undefined}
+                      key={level}
+                    />
+                  ))}
+                </span>
+              </span>
+              <span className="scripture-result-text">
+                {result.highlightPassage.rangeLabel ? (
+                  <>
+                    <span className="result-range-label">
+                      {result.highlightPassage.rangeLabel}.
+                    </span>{" "}
+                  </>
+                ) : null}
+                {result.highlightPassage.text}
+              </span>
+            </button>
+            {isSelected ? (
+              <div className="result-actions">
+                <a
+                  className="context-button"
+                  href={buildChurchFathersUrl(result)}
+                >
+                  Jump to
+                </a>
+              </div>
+            ) : null}
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
+function buildChurchFathersUrl(result: EarlyChristianSearchResult) {
+  const searchParams = new URLSearchParams();
+  searchParams.set("chapter", result.chapterId);
+
+  if (result.highlightPassage.rangeLabel) {
+    searchParams.set("passage", result.highlightPassage.rangeLabel);
+  }
+
+  return `/church-fathers?${searchParams.toString()}`;
+}
+
 function findDefaultReaderPassageId(passages: BrowserPassage[]) {
-  return passages.find((passage) => passage.reference.startsWith("Genesis "))?.id
+  return passages.find((passage) => passage.reference === "Genesis 1:1-5")?.id
+    ?? passages.find((passage) => passage.reference.startsWith("Genesis 1:"))?.id
     ?? passages[0]?.id
     ?? "";
 }

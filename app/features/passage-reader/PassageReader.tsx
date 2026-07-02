@@ -11,6 +11,7 @@ import {
 import { Form, Link, useNavigation } from "@remix-run/react";
 
 import { PassageJump } from "~/features/passage-jump/PassageJump";
+import { ReaderCorpusSwitch } from "~/features/reader-switch/ReaderCorpusSwitch";
 import { sortCanonicalBooks } from "~/features/search/canons";
 import type { StoredFilters } from "~/features/search/types";
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
@@ -559,6 +560,9 @@ export function PassageReader({
 
   const isSearchingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
+  const isSearchingSimilarFathers = navigation.state === "submitting"
+    && navigation.formData?.get("intent") === "similar-early-christian";
+  const isSearchingReaderAction = isSearchingSimilar || isSearchingSimilarFathers;
   const readerStyle = {
     "--reader-content-width": `${readerSettings.contentWidth}px`,
     "--reader-font-scale": readerSettings.fontScale,
@@ -770,14 +774,6 @@ export function PassageReader({
                 🔍
               </Link>
             )}
-            <Link
-              aria-label="Early Christian works"
-              className="context-button reader-icon-button"
-              title="Early Christian works"
-              to="/church-fathers"
-            >
-              ✣
-            </Link>
             <PassageJump
               filters={filters}
               initialPassageId={passageJumpInitialPassageId}
@@ -873,12 +869,55 @@ export function PassageReader({
                             <SearchFilterInputs filters={filters} />
                             <button
                               className="context-button"
-                              disabled={isSearchingSimilar}
+                              disabled={isSearchingReaderAction}
                               type="submit"
                             >
-                              {isSearchingSimilar ? "Finding similar" : "Similar passages"}
+                              {isSearchingSimilar ? (
+                                <>
+                                  <span className="button-spinner" aria-hidden="true" />
+                                  Finding similar
+                                </>
+                              ) : (
+                                "Similar passages"
+                              )}
                             </button>
                           </Form>
+                          <Form action="/?index" method="post">
+                            <input
+                              type="hidden"
+                              name="intent"
+                              value="similar-early-christian"
+                            />
+                            <input
+                              type="hidden"
+                              name="sourcePassageId"
+                              value={passage.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="matchCount"
+                              value={filters.matchCount ?? 10}
+                            />
+                            <button
+                              className="context-button"
+                              disabled={isSearchingReaderAction}
+                              type="submit"
+                            >
+                              {isSearchingSimilarFathers ? (
+                                <>
+                                  <span className="button-spinner" aria-hidden="true" />
+                                  Finding Fathers
+                                </>
+                              ) : (
+                                "Similar in Fathers"
+                              )}
+                            </button>
+                          </Form>
+                          {isSearchingReaderAction ? (
+                            <p className="reader-action-status" role="status">
+                              Searching similar passages...
+                            </p>
+                          ) : null}
                         </div>
                       ) : null}
                     </article>
@@ -889,6 +928,7 @@ export function PassageReader({
           );
         })}
       </div>
+      <ReaderCorpusSwitch current="scripture" />
     </section>
   );
 }

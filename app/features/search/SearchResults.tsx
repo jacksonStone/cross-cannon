@@ -12,25 +12,44 @@ const TRANSLATION_ABBREVIATION = "WEB";
 type SearchResultsProps = {
   actionData?: SearchActionData;
   contextActionLabel?: string;
+  crossCorpusAction?: {
+    intent: string;
+    label: string;
+    pendingLabel: string;
+  };
   focusedPassageId: string | null;
   onJumpToPassage?: (passageId: string) => void;
   passageLookup: PassageLookup;
   results?: SearchResult[];
+  showEmptyState?: boolean;
+  showSimilarAction?: boolean;
 };
 
 export function SearchResults({
   actionData,
   contextActionLabel = "View in context",
+  crossCorpusAction,
   focusedPassageId,
   onJumpToPassage,
   passageLookup,
-  results
+  results,
+  showEmptyState = true,
+  showSimilarAction = true
 }: SearchResultsProps) {
   const navigation = useNavigation();
   const [selectedResultId, setSelectedResultId] = useState("");
+  const isSubmitting = navigation.state === "submitting";
   const isSubmittingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
+  const isSubmittingCrossCorpus = Boolean(
+    crossCorpusAction
+    && navigation.state === "submitting"
+    && navigation.formData?.get("intent") === crossCorpusAction.intent
+  );
   const submittingSimilarPassageId = isSubmittingSimilar
+    ? String(navigation.formData?.get("sourcePassageId") ?? "")
+    : null;
+  const submittingCrossCorpusPassageId = isSubmittingCrossCorpus
     ? String(navigation.formData?.get("sourcePassageId") ?? "")
     : null;
 
@@ -125,27 +144,63 @@ export function SearchResults({
                         {contextActionLabel}
                       </Link>
                     )}
-                    <Form method="post">
-                      <input type="hidden" name="intent" value="similar-passage" />
-                      <input type="hidden" name="sourcePassageId" value={result.id} />
-                      <SearchFilterInputs actionData={actionData} />
-                      <button
-                        className="context-button"
-                        disabled={!passage || isSubmittingSimilar}
-                        type="submit"
-                      >
-                        {isThisSimilarSearch ? "Finding similar" : "Similar passages"}
-                      </button>
-                    </Form>
+                    {showSimilarAction ? (
+                      <Form method="post">
+                        <input type="hidden" name="intent" value="similar-passage" />
+                        <input type="hidden" name="sourcePassageId" value={result.id} />
+                        <SearchFilterInputs actionData={actionData} />
+                        <button
+                          className="context-button"
+                          disabled={!passage || isSubmitting}
+                          type="submit"
+                        >
+                          {isThisSimilarSearch ? (
+                            <>
+                              <span className="button-spinner" aria-hidden="true" />
+                              Finding similar
+                            </>
+                          ) : (
+                            "Similar passages"
+                          )}
+                        </button>
+                      </Form>
+                    ) : null}
+                    {crossCorpusAction ? (
+                      <Form method="post">
+                        <input type="hidden" name="intent" value={crossCorpusAction.intent} />
+                        <input type="hidden" name="sourcePassageId" value={result.id} />
+                        <input
+                          type="hidden"
+                          name="matchCount"
+                          value={actionData?.matchCount ?? DEFAULT_MATCH_COUNT}
+                        />
+                        <button
+                          className="context-button"
+                          disabled={!passage || isSubmitting}
+                          type="submit"
+                        >
+                          {submittingCrossCorpusPassageId === result.id ? (
+                            <>
+                              <span className="button-spinner" aria-hidden="true" />
+                              {crossCorpusAction.pendingLabel}
+                            </>
+                          ) : (
+                            crossCorpusAction.label
+                          )}
+                        </button>
+                      </Form>
+                    ) : null}
                   </div>
                 ) : null}
               </article>
             );
           })
-        ) : (
+        ) : showEmptyState ? (
           <div className="empty-state">
             <p>Scripture results will appear here.</p>
           </div>
+        ) : (
+          null
         )}
     </section>
   );

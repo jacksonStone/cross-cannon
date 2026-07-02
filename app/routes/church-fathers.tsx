@@ -13,12 +13,22 @@ import { json } from "@remix-run/node";
 import { Form, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
 
 import {
+  ReaderCorpusSwitch,
+  rememberReaderCorpus
+} from "~/features/reader-switch/ReaderCorpusSwitch";
+import { BOOKS_BY_CANON, DEFAULT_CANON } from "~/features/search/canons";
+import { SearchResults } from "~/features/search/SearchResults";
+import type { SearchActionData, SearchResult } from "~/features/search/types";
+import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
+import { searchScriptureSimilarToFathers } from "~/lib/cross-corpus-search.server";
+import {
   searchEarlyChristianWorks,
   searchSimilarEarlyChristianPassages,
   type EarlyChristianSearchResult,
   type EarlyChristianSimilarSource
 } from "~/lib/early-christian-search.server";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
+import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 const MANIFEST_URL = "/church-fathers-preview/manifest.json";
@@ -46,6 +56,53 @@ const SEARCH_EXAMPLES = [
   "prayer and fasting"
 ];
 const CONFESSIONS_BOOK_ID = "npnf101:vi";
+const FIRST_FATHERS_WORK_ID = "anf09:xii.iv";
+const WORK_CHRONOLOGY: Record<string, number> = {
+  "anf09:xii.iv": 96,
+  "anf09:xii.vi": 120
+};
+const AUTHOR_CHRONOLOGY: Record<string, number> = {
+  "clement of rome": 96,
+  "ignatius": 108,
+  "polycarp": 110,
+  "papias": 120,
+  "aristides": 125,
+  "pastor of hermas": 140,
+  "hermas": 140,
+  "justin martyr": 155,
+  "mathetes": 160,
+  "tatian": 165,
+  "athenagoras": 177,
+  "theophilus": 180,
+  "irenaeus": 185,
+  "clement of alexandria": 195,
+  "tertullian": 205,
+  "minucius felix": 210,
+  "hippolytus": 225,
+  "origen": 230,
+  "cyprian": 250,
+  "commodianus": 255,
+  "novatian": 255,
+  "gregory thaumaturgus": 260,
+  "dionysius": 265,
+  "methodius": 300,
+  "lactantius": 310,
+  "eusebius": 325,
+  "athanasius": 340,
+  "cyril of jerusalem": 350,
+  "hilary": 355,
+  "basil": 370,
+  "gregory of nazianzus": 375,
+  "gregory of nyssa": 380,
+  "ambrose": 385,
+  "jerome": 390,
+  "john chrysostom": 395,
+  "augustine": 400,
+  "sulpitius severus": 405,
+  "cyril of alexandria": 425,
+  "leo": 445,
+  "gregory the great": 590
+};
 const CONFESSIONS_AUDIO_BASE_URL =
   "https://archive.org/download/confessions_augustine_0911_librivox";
 const CONFESSIONS_AUDIO_TRACKS = [
@@ -198,11 +255,13 @@ type ReaderPassage = {
 type ChurchFathersActionData = {
   error?: string;
   matchCount?: number;
-  mode?: "theme" | "similar";
+  mode?: "theme" | "similar" | "similar-scripture";
   question?: string;
   results?: EarlyChristianSearchResult[];
   retryAfterSeconds?: number;
   similarSource?: EarlyChristianSimilarSource;
+  similarScriptureSource?: EarlyChristianSimilarSource;
+  scriptureResults?: SearchResult[];
 };
 
 type ConfessionsAudioAlignment = {
@@ -227,6 +286,7 @@ export const meta: MetaFunction = () => [
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
+  const scriptureCache = await getScriptureCacheInfo();
   const requestedChapterId = url.searchParams.get("chapter") ?? "";
   const initialChapterId = requestedChapterId && await isKnownPreviewChapterId(requestedChapterId)
     ? requestedChapterId
@@ -236,7 +296,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
     initialChapterId,
     initialPassageRange: initialChapterId ? url.searchParams.get("passage") ?? "" : "",
     manifestUrl: MANIFEST_URL,
-    previewAssetVersion: PREVIEW_ASSET_VERSION
+    previewAssetVersion: PREVIEW_ASSET_VERSION,
+    scriptureCacheKey: scriptureCache.version,
+    scriptureCacheUrl: scriptureCache.url
   });
 }
 
@@ -312,6 +374,29 @@ export async function action({ request }: ActionFunctionArgs) {
     });
   }
 
+  if (intent === "similar-scripture") {
+    const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
+    const similar = await searchScriptureSimilarToFathers(
+      sourcePassageId,
+      matchCount.value,
+      Array.from(BOOKS_BY_CANON[DEFAULT_CANON])
+    );
+
+    if (!similar) {
+      return json<ChurchFathersActionData>(
+        { error: "Choose an indexed passage to search from." },
+        { status: 400 }
+      );
+    }
+
+    return json<ChurchFathersActionData>({
+      matchCount: matchCount.value,
+      mode: "similar-scripture",
+      scriptureResults: withScriptureMatchStrength(similar.results),
+      similarScriptureSource: similar.source
+    });
+  }
+
   const question = String(formData.get("question") ?? "").trim();
 
   if (question.length < 3) {
@@ -341,7 +426,9 @@ export default function ChurchFathersReaderRoute() {
     initialChapterId,
     initialPassageRange,
     manifestUrl,
-    previewAssetVersion
+    previewAssetVersion,
+    scriptureCacheKey,
+    scriptureCacheUrl
   } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
@@ -371,14 +458,20 @@ export default function ChurchFathersReaderRoute() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canReportLocationRef = useRef(false);
   const hasScrolledToSelectionRef = useRef(false);
+  const headerTitleRef = useRef<HTMLDivElement | null>(null);
   const lastReportedChapterIdRef = useRef("");
   const playingAudioEndSecondsRef = useRef<number | null>(null);
   const prependSnapshotRef = useRef<{
     scrollHeight: number;
     scrollY: number;
   } | null>(null);
+  const readerTitleRef = useRef<HTMLHeadingElement | null>(null);
 
   useModalScrollLock(isSearchOpen || isJumpOpen);
+
+  const scriptureLibrary = useScriptureLibrary({
+    scriptureCacheUrl
+  });
 
   const chapters = useMemo(() => flattenChapters(bookIndex), [bookIndex]);
   const chapterById = useMemo(
@@ -410,6 +503,13 @@ export default function ChurchFathersReaderRoute() {
     activeAudioKey && playingAudioKey === activeAudioKey
   );
   const isSearching = navigation.state === "submitting";
+  const isFindingSimilarFathers = isSearching
+    && navigation.formData?.get("intent") === "similar-passage";
+  const isFindingSimilarScripture = isSearching
+    && navigation.formData?.get("intent") === "similar-scripture";
+  const activeHeaderTitle = activeEntry
+    ? `${activeEntry.book.name} ${activeEntry.chapter.chapter}`
+    : "";
 
   const toggleActiveChapterAudio = useCallback(() => {
     const audio = audioRef.current;
@@ -454,6 +554,59 @@ export default function ChurchFathersReaderRoute() {
   useEffect(() => {
     setReaderTheme(readSavedReaderTheme());
   }, []);
+
+  useEffect(() => {
+    rememberReaderCorpus("fathers");
+  }, []);
+
+  useBrowserLayoutEffect(() => {
+    const container = headerTitleRef.current;
+    const title = readerTitleRef.current;
+
+    if (!container || !title) {
+      return;
+    }
+
+    let frameId = 0;
+    const fitTitle = () => {
+      title.style.fontSize = "";
+
+      const availableWidth = container.clientWidth;
+
+      if (availableWidth <= 0) {
+        return;
+      }
+
+      const baseFontSize = Number.parseFloat(window.getComputedStyle(title).fontSize);
+      const naturalWidth = title.scrollWidth;
+
+      if (!Number.isFinite(baseFontSize) || baseFontSize <= 0 || naturalWidth <= 0) {
+        return;
+      }
+
+      const fitScale = Math.min(1, Math.max(0.28, (availableWidth - 2) / naturalWidth));
+      title.style.fontSize = `${baseFontSize * fitScale}px`;
+    };
+    const scheduleFit = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(fitTitle);
+    };
+    const resizeObserver = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(scheduleFit);
+
+    scheduleFit();
+    resizeObserver?.observe(container);
+    window.addEventListener("resize", scheduleFit);
+    void document.fonts?.ready.then(scheduleFit).catch(() => undefined);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", scheduleFit);
+      title.style.fontSize = "";
+    };
+  }, [activeHeaderTitle]);
 
   useBrowserLayoutEffect(() => {
     if (typeof window === "undefined" || !("scrollRestoration" in window.history)) {
@@ -543,7 +696,7 @@ export default function ChurchFathersReaderRoute() {
       .then((loadedIndex) => {
         if (!ignore) {
           setLoadError(null);
-          setBookIndex(loadedIndex);
+          setBookIndex(sortBookIndex(loadedIndex));
         }
       })
       .catch((error: unknown) => {
@@ -996,6 +1149,12 @@ export default function ChurchFathersReaderRoute() {
       return;
     }
 
+    if (actionData?.mode === "similar-scripture" && actionData.similarScriptureSource) {
+      setFocusedPassageKey(actionData.similarScriptureSource.id);
+      setIsSearchOpen(true);
+      return;
+    }
+
     if (actionData?.mode === "theme") {
       setFocusedPassageKey(null);
       setIsSearchOpen(true);
@@ -1035,6 +1194,7 @@ export default function ChurchFathersReaderRoute() {
         <section className="reader-empty" role="alert">
           <p>Early Christian reader unavailable: {loadError}</p>
         </section>
+        <ReaderCorpusSwitch current="fathers" />
       </main>
     );
   }
@@ -1057,12 +1217,14 @@ export default function ChurchFathersReaderRoute() {
             </div>
           </header>
         </section>
+        <ReaderCorpusSwitch current="fathers" />
       </main>
     );
   }
 
   return (
     <main className={`reader-shell reader-theme-${readerTheme}`}>
+      <data value={scriptureCacheKey} data-scripture-cache-key hidden />
       <section
         aria-labelledby="reader-title"
         className={`reader-page reader-theme-${readerTheme}`}
@@ -1092,10 +1254,15 @@ export default function ChurchFathersReaderRoute() {
             }}
             preload="none"
           />
-          <div className="reader-header-title">
+          <div className="reader-header-title" ref={headerTitleRef}>
             <p className="eyebrow">Early Christian Works</p>
-            <h1 id="reader-title">
-              {activeEntry.book.name} {activeEntry.chapter.chapter}
+            <h1
+              className="ec-reader-title"
+              id="reader-title"
+              ref={readerTitleRef}
+              style={headerScaleStyle(activeHeaderTitle)}
+            >
+              {activeHeaderTitle}
             </h1>
           </div>
           {!isToolsOpen ? (
@@ -1180,7 +1347,10 @@ export default function ChurchFathersReaderRoute() {
                 data-chapter-id={entry.chapter.id}
                 key={entry.chapter.id}
               >
-                <h2 className="reader-chapter-heading">
+                <h2
+                  className="reader-chapter-heading"
+                  style={chapterHeadingScaleStyle(`${entry.book.name} ${entry.chapter.chapter}`)}
+                >
                   {entry.book.name} {entry.chapter.chapter}
                   <span>{entry.book.author ?? entry.book.metadata.source.id.toUpperCase()}</span>
                 </h2>
@@ -1218,9 +1388,7 @@ export default function ChurchFathersReaderRoute() {
                                 {passage.rangeLabel}
                               </span>
                               <span className="reader-passage-text">
-                                <span
-                                  className={isSelected ? "reader-verse verse-highlight" : "reader-verse"}
-                                >
+                                <span className="reader-verse">
                                   {passage.text}
                                 </span>
                               </span>
@@ -1235,9 +1403,40 @@ export default function ChurchFathersReaderRoute() {
                                     disabled={isSearching}
                                     type="submit"
                                   >
-                                    {isSearching ? "Finding similar" : "Similar passages"}
+                                    {isFindingSimilarFathers ? (
+                                      <>
+                                        <span className="button-spinner" aria-hidden="true" />
+                                        Finding similar
+                                      </>
+                                    ) : (
+                                      "Similar passages"
+                                    )}
                                   </button>
                                 </Form>
+                                <Form method="post">
+                                  <input type="hidden" name="intent" value="similar-scripture" />
+                                  <input type="hidden" name="sourcePassageId" value={passage.key} />
+                                  <input type="hidden" name="matchCount" value={actionData?.matchCount ?? 10} />
+                                  <button
+                                    className="context-button"
+                                    disabled={isSearching}
+                                    type="submit"
+                                  >
+                                    {isFindingSimilarScripture ? (
+                                      <>
+                                        <span className="button-spinner" aria-hidden="true" />
+                                        Finding Bible
+                                      </>
+                                    ) : (
+                                      "Similar Bible passages"
+                                    )}
+                                  </button>
+                                </Form>
+                                {isSearching ? (
+                                  <p className="reader-action-status" role="status">
+                                    Searching similar passages...
+                                  </p>
+                                ) : null}
                               </div>
                             ) : null}
                           </article>
@@ -1273,6 +1472,7 @@ export default function ChurchFathersReaderRoute() {
             );
           })}
         </div>
+        <ReaderCorpusSwitch current="fathers" />
       </section>
 
       {isSearchOpen ? (
@@ -1317,7 +1517,13 @@ export default function ChurchFathersReaderRoute() {
                 <Form method="post" className="search-form">
                   {focusedPassageKey ? (
                     <>
-                      <input type="hidden" name="intent" value="similar-passage" />
+                      <input
+                        type="hidden"
+                        name="intent"
+                        value={actionData?.mode === "similar-scripture"
+                          ? "similar-scripture"
+                          : "similar-passage"}
+                      />
                       <input type="hidden" name="sourcePassageId" value={focusedPassageKey} />
                     </>
                   ) : null}
@@ -1340,11 +1546,13 @@ export default function ChurchFathersReaderRoute() {
                           </button>
                           <h2>
                             {actionData?.similarSource?.reference
+                              ?? actionData?.similarScriptureSource?.reference
                               ?? focusedPassage?.reference
                               ?? "Selected passage"}
                           </h2>
                           <p>
                             {actionData?.similarSource?.text
+                              ?? actionData?.similarScriptureSource?.text
                               ?? focusedPassage?.text
                               ?? "Passage text is loading."}
                           </p>
@@ -1403,7 +1611,20 @@ export default function ChurchFathersReaderRoute() {
                 isSearching={isSearching}
                 onOpenResult={openResult}
                 results={actionData?.results}
+                showEmptyState={actionData?.mode !== "similar-scripture"}
               />
+
+              {actionData?.scriptureResults ? (
+                <SearchResults
+                  actionData={churchFathersScriptureActionData(actionData)}
+                  contextActionLabel="Jump to"
+                  focusedPassageId={null}
+                  passageLookup={scriptureLibrary.passageLookup}
+                  results={actionData.scriptureResults}
+                  showEmptyState={false}
+                  showSimilarAction={false}
+                />
+              ) : null}
             </div>
           </section>
         </div>
@@ -1427,11 +1648,13 @@ export default function ChurchFathersReaderRoute() {
 function EarlyChristianSearchResults({
   isSearching,
   onOpenResult,
-  results
+  results,
+  showEmptyState = true
 }: {
   isSearching: boolean;
   onOpenResult: (result: EarlyChristianSearchResult) => void;
   results?: EarlyChristianSearchResult[];
+  showEmptyState?: boolean;
 }) {
   const [selectedResult, setSelectedResult] = useState("");
 
@@ -1509,7 +1732,36 @@ function EarlyChristianSearchResults({
                       disabled={isSearching}
                       type="submit"
                     >
-                      {isSearching ? "Finding similar" : "Similar passages"}
+                      {isSearching ? (
+                        <>
+                          <span className="button-spinner" aria-hidden="true" />
+                          Finding similar
+                        </>
+                      ) : (
+                        "Similar passages"
+                      )}
+                    </button>
+                  </Form>
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="similar-scripture" />
+                    <input
+                      type="hidden"
+                      name="sourcePassageId"
+                      value={result.highlightPassage.id}
+                    />
+                    <button
+                      className="context-button"
+                      disabled={isSearching}
+                      type="submit"
+                    >
+                      {isSearching ? (
+                        <>
+                          <span className="button-spinner" aria-hidden="true" />
+                          Finding Bible
+                        </>
+                      ) : (
+                        "Similar Bible passages"
+                      )}
                     </button>
                   </Form>
                 </div>
@@ -1517,10 +1769,12 @@ function EarlyChristianSearchResults({
             </article>
           );
         })
-      ) : (
+      ) : showEmptyState ? (
         <div className="empty-state">
           <p>Early Christian results will appear here.</p>
         </div>
+      ) : (
+        null
       )}
     </section>
   );
@@ -1630,6 +1884,131 @@ function flattenChapters(bookIndex: BookIndex | null): ChapterEntry[] {
   }
 
   return entries;
+}
+
+function sortBookIndex(bookIndex: BookIndex): BookIndex {
+  return {
+    ...bookIndex,
+    books: bookIndex.books
+      .map((book, index) => ({ book, index }))
+      .sort((left, right) => compareBooks(left.book, right.book, left.index, right.index))
+      .map(({ book }) => ({
+        ...book,
+        chapters: [...book.chapters].sort((left, right) => left.chapter - right.chapter)
+      }))
+  };
+}
+
+function compareBooks(
+  left: BookSummary,
+  right: BookSummary,
+  leftIndex: number,
+  rightIndex: number
+) {
+  const leftRank = getBookChronologyRank(left);
+  const rightRank = getBookChronologyRank(right);
+
+  if (leftRank !== rightRank) {
+    return leftRank - rightRank;
+  }
+
+  const leftAuthor = getBookAuthorLabel(left);
+  const rightAuthor = getBookAuthorLabel(right);
+  const authorComparison = leftAuthor.localeCompare(rightAuthor);
+
+  if (authorComparison !== 0) {
+    return authorComparison;
+  }
+
+  const titleComparison = left.name.localeCompare(right.name);
+
+  if (titleComparison !== 0) {
+    return titleComparison;
+  }
+
+  return leftIndex - rightIndex;
+}
+
+function getBookChronologyRank(book: BookSummary) {
+  if (book.id === FIRST_FATHERS_WORK_ID) {
+    return 0;
+  }
+
+  const explicitWorkYear = WORK_CHRONOLOGY[book.id];
+
+  if (explicitWorkYear) {
+    return explicitWorkYear;
+  }
+
+  const normalizedAuthor = normalizeSortText(getBookAuthorLabel(book));
+  const normalizedTitle = normalizeSortText(book.name);
+  const knownAuthorYear = findKnownChronologyYear(normalizedAuthor)
+    ?? findKnownChronologyYear(normalizedTitle);
+
+  if (knownAuthorYear) {
+    return knownAuthorYear;
+  }
+
+  return parseAuthorshipDateRange(book.metadata.authorshipDateRange) ?? 9999;
+}
+
+function findKnownChronologyYear(value: string) {
+  for (const [key, year] of Object.entries(AUTHOR_CHRONOLOGY)) {
+    if (value.includes(key)) {
+      return year;
+    }
+  }
+
+  return null;
+}
+
+function parseAuthorshipDateRange(value: string | null) {
+  const normalized = normalizeSortText(value ?? "");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const centuryMatch = normalized.match(/(\d+)(?:st|nd|rd|th)? century/);
+
+  if (centuryMatch?.[1]) {
+    return (Number(centuryMatch[1]) - 1) * 100 + 50;
+  }
+
+  const wordCentury = [
+    "first",
+    "second",
+    "third",
+    "fourth",
+    "fifth",
+    "sixth"
+  ].findIndex((word) => normalized.includes(`${word} century`));
+
+  if (wordCentury >= 0) {
+    return wordCentury * 100 + 50;
+  }
+
+  const yearMatch = normalized.match(/\b([1-6]\d{2})\b/);
+
+  if (yearMatch?.[1]) {
+    return Number(yearMatch[1]);
+  }
+
+  return null;
+}
+
+function getBookAuthorLabel(book: BookSummary) {
+  return book.author
+    ?? book.metadata.author
+    ?? book.name;
+}
+
+function normalizeSortText(value: string) {
+  return value
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function getChapterWindowRange(index: number, count: number) {
@@ -1921,6 +2300,81 @@ function readerStyle() {
     "--reader-font-scale": 1,
     "--reader-line-height": 1.72
   } as CSSProperties;
+}
+
+function churchFathersScriptureActionData(
+  actionData: ChurchFathersActionData | undefined
+): SearchActionData | undefined {
+  if (!actionData?.scriptureResults) {
+    return undefined;
+  }
+
+  return {
+    matchCount: actionData.matchCount,
+    mode: "similar",
+    results: actionData.scriptureResults,
+    similarSource: actionData.similarScriptureSource
+      ? {
+        id: actionData.similarScriptureSource.id,
+        reference: actionData.similarScriptureSource.reference
+      }
+      : undefined
+  };
+}
+
+function withScriptureMatchStrength(results: Array<Omit<SearchResult, "matchStrength">>) {
+  const scores = results
+    .map((result) => result.score)
+    .filter((score): score is number => typeof score === "number" && Number.isFinite(score));
+  const min = scores.length ? Math.min(...scores) : null;
+  const max = scores.length ? Math.max(...scores) : null;
+  const spread = min !== null && max !== null ? max - min : 0;
+  const denominator = Math.max(results.length - 1, 1);
+
+  return results.map((result, index) => {
+    let matchStrength = Math.max(1, 4 - Math.floor((index / denominator) * 4));
+
+    if (typeof result.score === "number" && Number.isFinite(result.score)) {
+      matchStrength = spread > 0
+        ? 1 + Math.round(((result.score - (min ?? result.score)) / spread) * 3)
+        : 4;
+    }
+
+    return {
+      ...result,
+      matchStrength: Math.max(1, Math.min(4, matchStrength))
+    };
+  });
+}
+
+function headerScaleStyle(title: string) {
+  return {
+    "--ec-reader-title-scale": getTextScale(title.length, {
+      floor: 0.48,
+      startAt: 18,
+      step: 0.015
+    })
+  } as CSSProperties;
+}
+
+function chapterHeadingScaleStyle(title: string) {
+  return {
+    "--ec-chapter-heading-scale": getTextScale(title.length, {
+      floor: 0.74,
+      startAt: 34,
+      step: 0.0048
+    })
+  } as CSSProperties;
+}
+
+function getTextScale(
+  length: number,
+  options: { floor: number; startAt: number; step: number }
+) {
+  return Math.max(
+    options.floor,
+    1 - Math.max(0, length - options.startAt) * options.step
+  );
 }
 
 function cssEscape(value: string) {

@@ -1,8 +1,11 @@
+import { useEffect } from "react";
+
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
 import { PassageReader } from "~/features/passage-reader/PassageReader";
+import { rememberReaderCorpus } from "~/features/reader-switch/ReaderCorpusSwitch";
 import type { StoredFilters } from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";
@@ -31,6 +34,10 @@ export default function ReaderRoute() {
   const { filters, passageId, scriptureCacheKey, scriptureCacheUrl } =
     useLoaderData<typeof loader>();
   const scriptureLibrary = useScriptureLibrary({ scriptureCacheUrl });
+
+  useEffect(() => {
+    rememberReaderCorpus("scripture");
+  }, []);
 
   return (
     <main className="reader-shell">

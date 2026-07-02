@@ -32,6 +32,12 @@ type SimilarScriptureSearch = {
   results: ScriptureResult[];
 };
 
+export type ScriptureEmbeddingSource = {
+  embedding: ArrayLike<number>;
+  id: string;
+  reference: string;
+};
+
 export async function searchScripture(
   question: string,
   limit = 10,
@@ -179,6 +185,79 @@ export async function searchSimilarScripture(
     },
     results: []
   };
+}
+
+export async function getScriptureEmbeddingSource(
+  passageId: string
+): Promise<ScriptureEmbeddingSource | null> {
+  await ensureDatabase();
+
+  const sourceResponse = await getDb().execute({
+    sql: `
+      SELECT id, reference, embedding
+      FROM passages
+      WHERE id = ?
+        AND embedding IS NOT NULL
+    `,
+    args: [passageId]
+  });
+  const source = sourceResponse.rows[0];
+
+  if (typeof source?.id !== "string") {
+    return null;
+  }
+
+  const embedding = readStoredEmbedding(source as StoredEmbeddingRow);
+
+  if (!embedding) {
+    return null;
+  }
+
+  return {
+    embedding,
+    id: String(source.id),
+    reference: String(source.reference)
+  };
+}
+
+export async function searchScriptureByEmbedding(
+  embedding: ArrayLike<number>,
+  limit = 10,
+  books: string[] = [],
+  options: SearchEmbeddingOptions = {}
+) {
+  const trace = createSearchTrace("embedding", limit, books);
+  await ensureDatabase();
+  trace.mark("ensureDatabase");
+
+  if (shouldSearchBooksExactly(books)) {
+    const bookResults = await searchBookEmbeddingsExact(embedding, limit, books, options, trace);
+    trace.mark("searchBookEmbeddingsExact", { count: bookResults.length });
+    const results = await attachVerseHighlights(embedding, bookResults, trace);
+    trace.finish(bookResults.length > 0 ? "book-vector-exact" : "no-vector-results", {
+      count: results.length
+    });
+    return results;
+  }
+
+  const vectorResults = await runVectorSearchExclusive(
+    () => searchVector(embedding, limit, books, options, trace),
+    () => trace.mark("searchVectorStart")
+  );
+  trace.mark("searchVector", { count: vectorResults.length });
+  if (vectorResults.length >= Math.min(4, limit)) {
+    const results = await attachVerseHighlights(embedding, vectorResults, trace);
+    trace.finish("vector", { count: results.length });
+    return results;
+  }
+
+  const exactResults = await searchEmbeddingsExact(embedding, limit, books, options, trace);
+  trace.mark("searchEmbeddingsExactFallback", { count: exactResults.length });
+  const results = await attachVerseHighlights(embedding, exactResults, trace);
+  trace.finish(results.length > 0 ? "vector-exact-fallback" : "no-vector-results", {
+    count: results.length
+  });
+  return results;
 }
 
 async function attachVerseHighlights(

@@ -734,6 +734,7 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 7px;
   width: auto;
   min-width: 0;
   min-height: 34px;
@@ -756,6 +757,13 @@ button:disabled {
 .context-button[aria-disabled="true"] {
   pointer-events: none;
   opacity: 0.58;
+}
+
+.context-button .button-spinner {
+  width: 13px;
+  height: 13px;
+  border-color: color-mix(in srgb, currentColor 28%, transparent);
+  border-top-color: currentColor;
 }
 
 .verse-highlight {
@@ -957,6 +965,11 @@ button:disabled {
   line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.reader-header h1.ec-reader-title {
+  font-size: calc(2.05rem * var(--ec-reader-title-scale, 1));
+  text-overflow: clip;
 }
 
 .reader-header-actions {
@@ -1268,7 +1281,8 @@ button:disabled {
 }
 
 .ec-reader-chapter .reader-chapter-heading {
-  font-size: 0.82rem;
+  font-size: calc(0.82rem * var(--ec-chapter-heading-scale, 1));
+  line-height: 1.35;
 }
 
 .ec-chapter-title {
@@ -1363,6 +1377,72 @@ button:disabled {
   background: var(--reader-selected-mark);
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+}
+
+.ec-reader-chapter .reader-passage.is-selected::before {
+  width: 1px;
+  background: color-mix(in srgb, var(--reader-action-ink) 30%, transparent);
+}
+
+.ec-reader-chapter .reader-passage.is-selected .reader-passage-button {
+  background: color-mix(in srgb, var(--reader-selected-bg) 34%, transparent);
+}
+
+.ec-reader-chapter .reader-passage.is-selected .reader-passage-reference {
+  color: color-mix(in srgb, var(--reader-action-ink) 72%, var(--reader-muted));
+}
+
+.ec-reader-chapter .reader-passage.is-selected .reader-verse {
+  background: transparent;
+}
+
+.reader-corpus-switch {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 25;
+  display: grid;
+  align-items: center;
+  justify-content: center;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--reader-line) 74%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--reader-panel) 86%, transparent);
+  box-shadow: 0 10px 26px color-mix(in srgb, #000 12%, transparent);
+  color: color-mix(in srgb, var(--reader-action-ink) 78%, var(--reader-muted));
+  font-size: 1.18rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  text-decoration: none;
+  backdrop-filter: blur(12px);
+}
+
+.reader-corpus-switch:hover {
+  border-color: color-mix(in srgb, var(--reader-action-ink) 36%, var(--reader-line));
+  background: color-mix(in srgb, var(--reader-panel) 94%, transparent);
+  color: var(--reader-action-active-ink);
+}
+
+.reader-corpus-switch-mark {
+  display: block;
+  grid-area: 1 / 1;
+}
+
+.reader-corpus-switch-mark.is-fathers {
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.reader-corpus-switch-mark.is-scripture {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  object-fit: contain;
 }
 
 .reader-settings {
@@ -1515,12 +1595,22 @@ button:disabled {
 
 .reader-passage-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: flex-start;
   padding: 0 10px 6px;
 }
 
 .reader-passage-actions form {
   margin: 0;
+}
+
+.reader-action-status {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .reader-empty {
@@ -2102,6 +2192,10 @@ button:disabled {
     font-size: clamp(1.35rem, 7vw, 1.85rem);
   }
 
+  .reader-header h1.ec-reader-title {
+    font-size: calc(1.78rem * var(--ec-reader-title-scale, 1));
+  }
+
   .reader-loading-header {
     grid-template-columns: 1fr;
     gap: 10px;
@@ -2174,11 +2268,26 @@ button:disabled {
   }
 
   .ec-reader-chapter .reader-chapter-heading {
-    font-size: 0.86rem;
+    font-size: calc(0.82rem * var(--ec-chapter-heading-scale, 1));
   }
 
   .reader-passage-button {
     padding: 8px 8px;
+  }
+
+  .reader-corpus-switch {
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 1.08rem;
+  }
+
+  .reader-corpus-switch-mark.is-scripture {
+    width: 24px;
+    height: 24px;
   }
 
   .fathers-preview {
