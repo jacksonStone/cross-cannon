@@ -988,6 +988,7 @@ button:disabled {
 }
 
 .reader-tools-close {
+  order: 999;
   width: 34px;
   min-width: 34px;
   min-height: 34px;
