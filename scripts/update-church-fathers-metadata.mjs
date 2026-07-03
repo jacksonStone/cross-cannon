@@ -21,6 +21,7 @@ const db = createClient({ url: runtimeDbUrl });
 await db.execute("PRAGMA busy_timeout = 5000");
 
 let updatedCount = 0;
+const bookIds = new Set(books.map((book) => String(book.id)));
 const statements = books.map((book) => {
   updatedCount += 1;
 
@@ -71,4 +72,84 @@ for (let index = 0; index < statements.length; index += 500) {
   await db.batch(statements.slice(index, index + 500), "write");
 }
 
-console.log(`Updated Church Fathers metadata for ${updatedCount} works in ${runtimeDbUrl}`);
+const existingWorks = await db.execute("SELECT id FROM early_christian_works");
+const prunedWorkIds = existingWorks.rows
+  .map((row) => String(row.id))
+  .filter((id) => !bookIds.has(id));
+
+let prunedCount = 0;
+let prunedPassageCount = 0;
+let prunedChapterCount = 0;
+
+for (let index = 0; index < prunedWorkIds.length; index += 200) {
+  const ids = prunedWorkIds.slice(index, index + 200);
+  const placeholders = ids.map(() => "?").join(", ");
+
+  const counts = await db.execute({
+    sql: `
+      SELECT
+        COUNT(DISTINCT passage_id) AS passages,
+        COUNT(DISTINCT chapter_id) AS chapters
+      FROM early_christian_passage_metadata
+      WHERE work_id IN (${placeholders})
+    `,
+    args: ids
+  });
+  prunedPassageCount += Number(counts.rows[0]?.passages ?? 0);
+  prunedChapterCount += Number(counts.rows[0]?.chapters ?? 0);
+
+  await db.batch([
+    {
+      sql: `
+        DELETE FROM paragraph_verses
+        WHERE paragraph_id IN (
+          SELECT passage_id
+          FROM early_christian_passage_metadata
+          WHERE work_id IN (${placeholders})
+        )
+      `,
+      args: ids
+    },
+    {
+      sql: `
+        DELETE FROM passages
+        WHERE id IN (
+          SELECT passage_id
+          FROM early_christian_passage_metadata
+          WHERE work_id IN (${placeholders})
+        )
+      `,
+      args: ids
+    },
+    {
+      sql: `
+        DELETE FROM early_christian_passage_metadata
+        WHERE work_id IN (${placeholders})
+      `,
+      args: ids
+    },
+    {
+      sql: `
+        DELETE FROM early_christian_chapters
+        WHERE work_id IN (${placeholders})
+      `,
+      args: ids
+    },
+    {
+      sql: `
+        DELETE FROM early_christian_works
+        WHERE id IN (${placeholders})
+      `,
+      args: ids
+    }
+  ], "write");
+
+  prunedCount += ids.length;
+}
+
+console.log(
+  `Updated Church Fathers metadata for ${updatedCount} works in ${runtimeDbUrl}`
+);
+console.log(
+  `Pruned ${prunedCount} excluded works, ${prunedChapterCount} chapters, and ${prunedPassageCount} passages`
+);

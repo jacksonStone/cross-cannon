@@ -29,6 +29,88 @@ EXCLUDED_WORK_IDS = {
     "npnf205:x.ii": "editorial/reference",
 }
 
+AUTHOR_LABEL_OVERRIDES = {
+    "appendix": "Anonymous",
+    "arian history. (historia arianorum ad monachos.)": "Athanasius of Alexandria",
+    "apology to the emperor. (apologia ad constantium.)": "Athanasius of Alexandria",
+    "ascetic and moral treatises": "Gregory of Nyssa",
+    "athenagoras": "Athenagoras of Athens",
+    "clement of alexandria": "Clement of Alexandria",
+    "circular to bishops of egypt and libya. (ad episcopos ægypti et libyæ epistola encyclica.)": "Athanasius of Alexandria",
+    "circular to bishops of egypt and libya. (ad episcopos aegypti et libyae epistola encyclica.)": "Athanasius of Alexandria",
+    "dogmatic treatises": "Gregory of Nyssa",
+    "doctrinal treatises of st. augustin": "Augustine of Hippo",
+    "encyclical letter. (epistola encyclica.)": "Athanasius of Alexandria",
+    "jerome and gennadius. lives of illustrious men": "Jerome / Gennadius",
+    "john of damascus: exposition of the orthodox faith": "John of Damascus",
+    "life and works of rufinus with jerome's apology against rufinus": "Rufinus / Jerome",
+    "memoirs of edessa and other ancient syriac documents": "Syriac documents / mixed",
+    "moral treatises of st. augustin": "Augustine of Hippo",
+    "select letters of saint gregory nazianzen": "Gregory Nazianzen",
+    "selections from the hymns and homilies of ephraim the syrian and from the demonstrations of aphrahat the persian sage": "Ephraim the Syrian / Aphrahat",
+    "the book of pastoral rule, and selected epistles, of gregory the great": "Gregory the Great",
+    "the ecclesiastical history, dialogues, and letters of theodoret": "Theodoret of Cyrus",
+    "the letters and sermons of leo the great": "Leo the Great",
+    "the life of constantine with orations of constantine and eusebius": "Eusebius of Caesarea",
+    "the teaching of the twelve apostles": "Didache / unknown",
+    "theophilus": "Theophilus of Antioch",
+    "the works of john cassian": "John Cassian",
+    "the works of sulpitius severus": "Sulpitius Severus",
+    "treatises": "Jerome",
+}
+
+AUTHOR_TITLE_PATTERNS = [
+    ("peter of alexandria", "Peter of Alexandria"),
+    ("caius", "Caius"),
+    ("archelaus", "Archelaus"),
+    ("venantius", "Venantius"),
+    ("victorinus", "Victorinus"),
+    ("melito", "Melito of Sardis"),
+    ("hegesippus", "Hegesippus"),
+    ("hermas", "Hermas"),
+    ("tatian", "Tatian"),
+    ("diatessaron", "Tatian"),
+    ("aristides", "Aristides"),
+    ("cyprian", "Cyprian of Carthage"),
+    ("gregory thaumaturgus", "Gregory Thaumaturgus"),
+    ("dionysius the great", "Dionysius of Alexandria"),
+    ("dionysius of alexandria", "Dionysius of Alexandria"),
+    ("dionysius", "Dionysius of Alexandria"),
+    ("julius africanus", "Julius Africanus"),
+    ("anatolius", "Anatolius of Alexandria"),
+    ("methodius", "Methodius of Olympus"),
+    ("arnobius", "Arnobius"),
+    ("lactantius", "Lactantius"),
+    ("origen", "Origen"),
+    ("socrates scholasticus", "Socrates Scholasticus"),
+    ("sozomen", "Sozomen"),
+    ("cyril of jerusalem", "Cyril of Jerusalem"),
+    ("s. cyril", "Cyril of Jerusalem"),
+    ("saint gregory nazianzen", "Gregory Nazianzen"),
+    ("gregory nazianzen", "Gregory Nazianzen"),
+    ("hilary of poitiers", "Hilary of Poitiers"),
+    ("john of damascus", "John of Damascus"),
+    ("vincent of lérins", "Vincent of Lerins"),
+    ("vincent of lerins", "Vincent of Lerins"),
+    ("leo the great", "Leo the Great"),
+    ("gregory the great", "Gregory the Great"),
+    ("ephraim", "Ephraim the Syrian"),
+    ("aphrahat", "Aphrahat"),
+    ("theodoret", "Theodoret of Cyrus"),
+    ("memoirs of edessa", "Syriac documents / mixed"),
+    ("early liturgies", "Liturgical texts / unknown"),
+    ("scillitan martyrs", "Scillitan Martyrs / unknown"),
+    ("nicene creed", "Councils / synods"),
+]
+
+CONCILIAR_TITLE_PATTERNS = [
+    "canons of",
+    "council of",
+    "ecumenical council",
+    "synod of",
+    "synods of",
+]
+
 
 def main() -> int:
     data = json.loads(INPUT.read_text(encoding="utf-8"))
@@ -432,21 +514,60 @@ def author_for_work(volume: dict, work: dict):
     author = str(work.get("authorOrSection") or "").strip()
     title = str(work.get("title") or "")
     volume_author = author_from_volume_title(str(volume.get("title") or ""))
+    contextual_author = author_from_work_context(volume, work)
 
     if not author or is_collection_heading_work(value_lower(author).rstrip(".") + "."):
-        lowered_title = value_lower(title)
-        if "clement" in lowered_title:
+        if "clement" in value_lower(title):
             return "Clement of Rome"
-        return volume_author
+        return contextual_author or volume_author
 
     normalized_author = normalize_author_label(author)
     if volume_author and (
         is_section_label(normalized_author)
         or is_containing_work_title(normalized_author, work)
     ):
-        return volume_author
+        return contextual_author or volume_author
+
+    if normalized_author and looks_like_author_bucket_leak(normalized_author):
+        return contextual_author or volume_author or normalized_author
 
     return normalized_author
+
+
+def author_from_work_context(volume: dict, work: dict):
+    title = str(work.get("title") or "")
+    lineage = " ".join(
+        str(item or "")
+        for chapter in work.get("chapters", [])[:1]
+        for item in chapter.get("lineage", [])
+    )
+    context = normalize_author_lookup_key(" ".join([
+        str(work.get("authorOrSection") or ""),
+        title,
+        lineage,
+    ]))
+
+    for label in [
+        str(work.get("authorOrSection") or ""),
+        title,
+        *list(work_title_lineage(work)),
+    ]:
+        override = author_label_override(label)
+        if override:
+            return override
+
+    if any(pattern in context for pattern in CONCILIAR_TITLE_PATTERNS):
+        return "Councils / synods"
+
+    for pattern, author in AUTHOR_TITLE_PATTERNS:
+        if pattern in context:
+            return author
+
+    volume_author = author_from_volume_title(str(volume.get("title") or ""))
+    if volume_author:
+        return volume_author
+
+    return None
 
 
 def authorship_date_range_for_work(volume: dict, work: dict):
@@ -504,6 +625,10 @@ def author_from_volume_title(title: str):
 def normalize_author_label(author: str):
     cleaned = re.sub(r"\s+", " ", author).strip().strip(".")
     lowered = value_lower(cleaned)
+    override = author_label_override(cleaned)
+
+    if override:
+        return override
 
     if lowered.startswith("tertullian:"):
         return "Tertullian"
@@ -513,6 +638,33 @@ def normalize_author_label(author: str):
         return "Jerome"
 
     return cleaned or None
+
+
+def author_label_override(label: str):
+    key = normalize_author_lookup_key(label)
+    return AUTHOR_LABEL_OVERRIDES.get(key)
+
+
+def normalize_author_lookup_key(value: str) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip().strip(".").lower()
+
+
+def work_title_lineage(work: dict):
+    for chapter in work.get("chapters", [])[:1]:
+        for item in chapter.get("lineage", []):
+            yield str(item or "")
+
+
+def looks_like_author_bucket_leak(author: str) -> bool:
+    lowered = value_lower(author)
+
+    if lowered in {"appendix", "memoirs of edessa and other ancient syriac documents"}:
+        return False
+
+    if any(pattern in lowered for pattern in CONCILIAR_TITLE_PATTERNS):
+        return True
+
+    return looks_like_work_heading(author)
 
 
 def is_section_label(author):
@@ -606,7 +758,11 @@ def is_reference_work(title: str) -> bool:
         "title pages.",
         "series title",
     } or (
-        title.startswith("index of ")
+        title.startswith("appended note ")
+        or title.startswith("appendix containing ")
+        or title.startswith("excursus ")
+        or title.startswith("general introduction")
+        or title.startswith("index of ")
         or title.startswith("chief events ")
         or title.startswith("dedication of volume ")
         or title.startswith("introductory essay")
