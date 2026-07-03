@@ -631,6 +631,7 @@ export default function ChurchFathersReaderRoute() {
   const hasScrolledToSelectionRef = useRef(false);
   const headerTitleRef = useRef<HTMLDivElement | null>(null);
   const isMountedRef = useRef(true);
+  const lastAppliedInitialTargetRef = useRef("");
   const lastReportedChapterIdRef = useRef(initialChapterId || savedReaderPositionRef.current);
   const loadingChapterIdsRef = useRef<Set<string>>(new Set());
   const playingAudioEndSecondsRef = useRef<number | null>(null);
@@ -1048,6 +1049,40 @@ export default function ChurchFathersReaderRoute() {
     chapters.length,
     rememberReaderChapter,
     resolvedActiveChapterId
+  ]);
+
+  useEffect(() => {
+    if (!bookIndex || !initialChapterId || !chapterById.has(initialChapterId)) {
+      return;
+    }
+
+    const initialTargetKey = `${initialChapterId}|${initialPassageRange}`;
+
+    if (lastAppliedInitialTargetRef.current === initialTargetKey) {
+      return;
+    }
+
+    const targetEntry = chapterById.get(initialChapterId);
+
+    if (!targetEntry) {
+      return;
+    }
+
+    lastAppliedInitialTargetRef.current = initialTargetKey;
+    hasScrolledToSelectionRef.current = false;
+    lastReportedChapterIdRef.current = initialChapterId;
+    setRenderedRange(getChapterWindowRange(targetEntry.index, chapters.length));
+    setActiveChapterId(initialChapterId);
+    setSelectedPassage(initialPassageRange);
+    setSelectedPassageChapterId(initialPassageRange ? initialChapterId : "");
+    rememberReaderChapter(initialChapterId);
+  }, [
+    bookIndex,
+    chapterById,
+    chapters.length,
+    initialChapterId,
+    initialPassageRange,
+    rememberReaderChapter
   ]);
 
   useEffect(() => {
@@ -1861,7 +1896,9 @@ function EarlyChristianSearchResults({
     <section className="results ec-results" aria-live="polite">
       {results?.length ? (
         results.map((result, index) => {
-          const isSelected = selectedResult === result.chapterId;
+          const resultSelectionId = result.highlightPassage.id
+            || `${result.chapterId}:${result.highlightPassage.rangeLabel}`;
+          const isSelected = selectedResult === resultSelectionId;
 
           return (
             <article
@@ -1875,7 +1912,7 @@ function EarlyChristianSearchResults({
               <button
                 aria-expanded={isSelected}
                 className="scripture-result-button"
-                onClick={() => setSelectedResult(isSelected ? "" : result.chapterId)}
+                onClick={() => setSelectedResult(isSelected ? "" : resultSelectionId)}
                 type="button"
               >
                 <span className="result-meta">
