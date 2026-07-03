@@ -78,14 +78,6 @@ export async function searchScripture(
       return results;
     }
 
-    const exactResults = await searchEmbeddingsExact(embedding, limit, books, options, trace);
-    trace.mark("searchEmbeddingsExactFallback", { count: exactResults.length });
-    if (exactResults.length > 0) {
-      const results = await attachVerseHighlights(embedding, exactResults, trace);
-      trace.finish("vector-exact-fallback", { count: results.length });
-      return results;
-    }
-
     trace.finish("no-vector-results", { count: 0 });
     return [];
   }
@@ -154,20 +146,6 @@ export async function searchSimilarScripture(
   if (vectorResults.length >= Math.min(4, limit)) {
     const results = await attachVerseHighlights(embedding, vectorResults, trace);
     trace.finish("vector", { count: results.length });
-    return {
-      source: {
-        id: String(source.id),
-        reference: String(source.reference)
-      },
-      results
-    };
-  }
-
-  const exactResults = await searchEmbeddingsExact(embedding, limit, books, options, trace);
-  trace.mark("searchEmbeddingsExactFallback", { count: exactResults.length });
-  if (exactResults.length > 0) {
-    const results = await attachVerseHighlights(embedding, exactResults, trace);
-    trace.finish("vector-exact-fallback", { count: results.length });
     return {
       source: {
         id: String(source.id),
@@ -251,13 +229,8 @@ export async function searchScriptureByEmbedding(
     return results;
   }
 
-  const exactResults = await searchEmbeddingsExact(embedding, limit, books, options, trace);
-  trace.mark("searchEmbeddingsExactFallback", { count: exactResults.length });
-  const results = await attachVerseHighlights(embedding, exactResults, trace);
-  trace.finish(results.length > 0 ? "vector-exact-fallback" : "no-vector-results", {
-    count: results.length
-  });
-  return results;
+  trace.finish("no-vector-results", { count: 0 });
+  return [];
 }
 
 async function attachVerseHighlights(
@@ -472,6 +445,11 @@ async function searchEmbeddingsExact(
   options: SearchEmbeddingOptions = {},
   trace: SearchTrace
 ) {
+  if (!shouldSearchBooksExactly(books)) {
+    trace.mark("exactSkipped", { bookCount: books.length, reason: "unbounded-book-set" });
+    return [];
+  }
+
   const db = getDb();
   const query = normalizeVector(embedding);
   trace.mark("exactNormalizeVector", { dimensions: query.length });

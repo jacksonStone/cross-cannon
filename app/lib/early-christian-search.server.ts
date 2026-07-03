@@ -63,7 +63,6 @@ type EarlyChristianSearchTrace = {
 };
 
 type SearchByEmbeddingOptions = {
-  allowAllPassageFallback?: boolean;
   excludePassageIds?: string[];
 };
 
@@ -216,7 +215,6 @@ export async function searchEarlyChristianPassagesByEmbedding(
 ) {
   trace.mark("searchPassagesNarrowedStart", { excludeCount: excludePassageIds.length });
   const results = await searchByEmbedding(embedding, limit, {
-    allowAllPassageFallback: false,
     excludePassageIds
   }, trace);
   trace.mark("searchPassagesNarrowed", { count: results.length });
@@ -275,23 +273,11 @@ async function searchByEmbedding(
     }
   }
 
-  if (options.allowAllPassageFallback === false) {
-    trace.mark("searchAllPassagesExactSkipped", {
-      reason: "disabled",
-      searchedChapterCandidates: chapterCandidates.length
-    });
-    return [];
-  }
-
-  trace.mark("searchAllPassagesExactStart");
-  const fallbackResults = await searchAllPassagesExact(
-    query,
-    limit,
-    options.excludePassageIds ?? [],
-    trace
-  );
-  trace.mark("searchAllPassagesExact", { count: fallbackResults.length });
-  return fallbackResults;
+  trace.mark("searchAllPassagesExactSkipped", {
+    reason: "disabled",
+    searchedChapterCandidates: chapterCandidates.length
+  });
+  return [];
 }
 
 async function searchChapters(
@@ -322,25 +308,10 @@ async function searchChapters(
     }
   } catch (error) {
     trace.mark("chapterAnnError", { error: errorMessage(error) });
-    // Local DBs without the chapter vector index can still exact-scan chapters.
-  }
-
-  try {
-    trace.mark("chapterExactStart", { candidateLimit: limit });
-    const response = await db.execute(`
-      SELECT id, embedding
-      FROM early_christian_chapters
-      WHERE embedding IS NOT NULL
-    `);
-    trace.mark("chapterExactSql", { rowCount: response.rows.length });
-
-    const results = rowsToChapterCandidates(response.rows, embedding, limit);
-    trace.mark("chapterExactRank", { count: results.length });
-    return results;
-  } catch (error) {
-    trace.mark("chapterExactError", { error: errorMessage(error) });
     return [];
   }
+
+  return [];
 }
 
 async function searchPassagesInChapters(
@@ -390,46 +361,6 @@ async function searchPassagesInChapters(
 
   const results = groupPassageRowsByChapter(response.rows, embedding, limit);
   trace.mark("passageCandidateRank", { count: results.length });
-  return results;
-}
-
-async function searchAllPassagesExact(
-  embedding: ArrayLike<number>,
-  limit: number,
-  excludePassageIds: string[],
-  trace: EarlyChristianSearchTrace
-) {
-  const excludeClause = excludePassageIds.length
-    ? `AND p.id NOT IN (${placeholders(excludePassageIds)})`
-    : "";
-  trace.mark("allPassagesSqlStart", { excludeCount: excludePassageIds.length });
-  const response = await getEarlyChristianDb().execute({
-    sql: `
-      SELECT
-        p.id,
-        p.reference,
-        p.text,
-        p.embedding,
-        p.verse_start,
-        p.verse_end,
-        pm.chapter_id,
-        p.book || ' ' || p.chapter AS chapter_reference,
-        w.title,
-        w.author,
-        w.authorship_date_range,
-        w.ccel_id
-      FROM passages p
-      LEFT JOIN early_christian_passage_metadata pm ON pm.passage_id = p.id
-      LEFT JOIN early_christian_works w ON w.id = pm.work_id
-      WHERE p.embedding IS NOT NULL
-        ${excludeClause}
-    `,
-    args: excludePassageIds
-  });
-  trace.mark("allPassagesSql", { rowCount: response.rows.length });
-
-  const results = groupPassageRowsByChapter(response.rows, embedding, limit);
-  trace.mark("allPassagesRank", { count: results.length });
   return results;
 }
 
