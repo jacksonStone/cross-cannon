@@ -41,6 +41,7 @@ async function main() {
     await step("Bible: theme search, similar search, jump result", () => exerciseBibleSearch(page));
     await step("Bible: selected passage similar search", () => exerciseBibleReaderPassageSimilar(page));
     await step("Bible: selected passage similar Fathers search and jump result", () => exerciseBibleToFathersSimilar(page));
+    await step("Fathers: invalid bookmark falls back to first work", () => exerciseFathersPositionFallback(page));
     await step("Fathers: jump picker to work and chapter", () => jumpToFathersWork(page));
     await step("Fathers: cross chapter boundary down and up", () => crossFathersChapterBoundary(page));
     await step("Fathers: theme search and jump result", () => exerciseFathersThemeSearch(page));
@@ -159,6 +160,36 @@ async function simulateUserScroll(page: Page, deltaY: number) {
     window.dispatchEvent(new Event("scroll"));
   }, deltaY);
   await wait(250);
+}
+
+async function exerciseFathersPositionFallback(page: Page) {
+  await page.goto(`${baseUrl}/church-fathers`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
+    window.localStorage.setItem("cross-cannon:church-fathers-position:v1", "not-a-valid-chapter");
+    window.localStorage.setItem("cross-cannon:last-reader:v1", "fathers");
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForReader(page, "Early Christian");
+  await waitForReader(page, "First Epistle of Clement");
+
+  const state = await page.evaluate(() => ({
+    firstRenderedChapterId: document
+      .querySelector<HTMLElement>(".ec-reader-chapter")
+      ?.dataset.chapterId ?? "",
+    savedChapterId: window.localStorage.getItem("cross-cannon:church-fathers-position:v1") ?? "",
+    title: document.querySelector("#reader-title")?.textContent?.trim() ?? ""
+  }));
+
+  assert(
+    state.savedChapterId
+      && state.savedChapterId !== "not-a-valid-chapter"
+      && state.savedChapterId === state.firstRenderedChapterId,
+    `Expected invalid Fathers bookmark to be replaced by first rendered chapter, got ${JSON.stringify(state)}.`
+  );
+  assert(
+    state.title.includes("First Epistle of Clement"),
+    `Expected Fathers fallback title to be Clement, got "${state.title}".`
+  );
 }
 
 async function exerciseBibleSearch(page: Page) {
@@ -524,7 +555,7 @@ async function scrollUntilTitleChanges(
 ) {
   for (let attempt = 0; attempt < 6; attempt += 1) {
     const didScroll = await page.evaluate((direction) => {
-      const anchorY = Math.max(118 + 40, Math.min(window.innerHeight * 0.38, 220));
+      const anchorY = 120;
       const chapters = [...document.querySelectorAll<HTMLElement>(".reader-chapter")];
       const activeChapter = chapters.find((element) => {
         const rect = element.getBoundingClientRect();
