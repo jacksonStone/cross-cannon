@@ -1,4 +1,4 @@
-export type SearchTargetCorpus = "scripture" | "early-christian";
+import type { SearchTargetCorpus } from "./types";
 
 type SearchTargetControlProps = {
   disabled: boolean;
@@ -14,21 +14,29 @@ export function SearchTargetControl({
   return (
     <fieldset className="search-target-control" disabled={disabled}>
       <legend>Search</legend>
-      <div className="reader-segmented-control">
-        <button
-          className={value === "scripture" ? "is-active" : undefined}
-          onClick={() => onChange("scripture")}
-          type="button"
-        >
-          Bible
-        </button>
-        <button
-          className={value === "early-christian" ? "is-active" : undefined}
-          onClick={() => onChange("early-christian")}
-          type="button"
-        >
-          Fathers
-        </button>
+      <div className="search-target-dial" role="radiogroup" aria-label="Search target">
+        <label className={value === "scripture" ? "is-active" : undefined}>
+          <input
+            checked={value === "scripture"}
+            disabled={disabled}
+            name="targetCorpus"
+            onChange={() => onChange("scripture")}
+            type="radio"
+            value="scripture"
+          />
+          <span>Bible</span>
+        </label>
+        <label className={value === "early-christian" ? "is-active" : undefined}>
+          <input
+            checked={value === "early-christian"}
+            disabled={disabled}
+            name="targetCorpus"
+            onChange={() => onChange("early-christian")}
+            type="radio"
+            value="early-christian"
+          />
+          <span>Fathers</span>
+        </label>
       </div>
     </fieldset>
   );

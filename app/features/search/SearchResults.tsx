@@ -147,6 +147,7 @@ export function SearchResults({
                     {showSimilarAction ? (
                       <Form method="post">
                         <input type="hidden" name="intent" value="similar-passage" />
+                        <input type="hidden" name="targetCorpus" value="scripture" />
                         <input type="hidden" name="sourcePassageId" value={result.id} />
                         <SearchFilterInputs
                           actionData={actionData}
@@ -172,6 +173,15 @@ export function SearchResults({
                     {crossCorpusAction ? (
                       <Form method="post">
                         <input type="hidden" name="intent" value={crossCorpusAction.intent} />
+                        <input
+                          type="hidden"
+                          name="targetCorpus"
+                          value={
+                            crossCorpusAction.intent === "similar-early-christian"
+                              ? "early-christian"
+                              : "scripture"
+                          }
+                        />
                         <input type="hidden" name="sourcePassageId" value={result.id} />
                         <SearchFilterInputs
                           actionData={actionData}

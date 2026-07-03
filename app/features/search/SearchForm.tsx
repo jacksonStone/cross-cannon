@@ -8,11 +8,8 @@ import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
 import { DEFAULT_MATCH_COUNT } from "./canons";
 import { FilterModal } from "./FilterModal";
-import {
-  SearchTargetControl,
-  type SearchTargetCorpus
-} from "./SearchTargetControl";
-import type { SearchActionData } from "./types";
+import { SearchTargetControl } from "./SearchTargetControl";
+import type { SearchActionData, SearchTargetCorpus } from "./types";
 import { useSearchFilters } from "./useSearchFilters";
 
 const SEARCH_EXAMPLES = [
@@ -97,6 +94,10 @@ export function SearchForm({
     : isThemeEarlyChristianSearch
     ? "theme-early-christian"
     : "theme";
+  const targetCorpus: SearchTargetCorpus = searchIntent === "similar-early-christian"
+    || searchIntent === "theme-early-christian"
+    ? "early-christian"
+    : "scripture";
   const showScriptureFilters = focusedPassageId
     ? !isFocusedEarlyChristianSearch
     : themeCorpus === "scripture";
@@ -114,6 +115,11 @@ export function SearchForm({
   }, [navigation.state]);
 
   useEffect(() => {
+    if (actionData?.targetCorpus) {
+      setThemeCorpus(actionData.targetCorpus);
+      return;
+    }
+
     if (actionData?.mode === "theme-early-christian") {
       setThemeCorpus("early-christian");
     }
@@ -121,7 +127,7 @@ export function SearchForm({
     if (actionData?.mode === "theme") {
       setThemeCorpus("scripture");
     }
-  }, [actionData?.mode]);
+  }, [actionData?.mode, actionData?.targetCorpus]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -150,6 +156,9 @@ export function SearchForm({
         }}
       >
         <input type="hidden" name="intent" value={searchIntent} />
+        {focusedPassageId ? (
+          <input type="hidden" name="targetCorpus" value={targetCorpus} />
+        ) : null}
         {focusedPassageId ? (
           <>
             <input type="hidden" name="sourcePassageId" value={focusedPassageId} />

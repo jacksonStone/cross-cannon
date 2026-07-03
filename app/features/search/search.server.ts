@@ -82,7 +82,8 @@ export async function handleSearchRequest(formData: FormData) {
     books: filters.books,
     earlyChristianAuthors: filters.earlyChristianAuthors,
     matchCount: filters.matchCount,
-    results
+    results,
+    targetCorpus: "scripture"
   });
 }
 
@@ -115,7 +116,8 @@ async function handleEarlyChristianThemeSearch(
       filters.matchCount,
       filters.earlyChristianAuthors
     ),
-    matchCount: filters.matchCount
+    matchCount: filters.matchCount,
+    targetCorpus: "early-christian"
   });
 }
 
@@ -152,7 +154,8 @@ async function handleSimilarEarlyChristianSearch(
     earlyChristianAuthors: filters.earlyChristianAuthors,
     earlyChristianResults: similarSearch.results,
     matchCount: filters.matchCount,
-    similarSource: similarSearch.source
+    similarSource: similarSearch.source,
+    targetCorpus: "early-christian"
   });
 }
 
@@ -189,7 +192,8 @@ async function handleSimilarPassageSearch(
     earlyChristianAuthors: filters.earlyChristianAuthors,
     matchCount: filters.matchCount,
     similarSource: similarSearch.source,
-    results: withMatchStrength(similarSearch.results)
+    results: withMatchStrength(similarSearch.results),
+    targetCorpus: "scripture"
   });
 }
 

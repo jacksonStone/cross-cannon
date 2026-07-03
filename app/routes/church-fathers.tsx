@@ -48,11 +48,13 @@ import {
   searchModalFlowReducer
 } from "~/features/search/search-modal-flow";
 import { SearchResults } from "~/features/search/SearchResults";
-import {
-  SearchTargetControl,
-  type SearchTargetCorpus
-} from "~/features/search/SearchTargetControl";
-import type { CanonMode, SearchActionData, SearchResult } from "~/features/search/types";
+import { SearchTargetControl } from "~/features/search/SearchTargetControl";
+import type {
+  CanonMode,
+  SearchActionData,
+  SearchResult,
+  SearchTargetCorpus
+} from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import { searchScriptureSimilarToFathers } from "~/lib/cross-corpus-search.server";
 import {
@@ -307,6 +309,7 @@ type ChurchFathersActionData = {
   similarSource?: EarlyChristianSimilarSource;
   similarScriptureSource?: EarlyChristianSimilarSource;
   scriptureResults?: SearchResult[];
+  targetCorpus?: SearchTargetCorpus;
 };
 
 type ConfessionsAudioAlignment = {
@@ -436,7 +439,8 @@ export async function action({ request }: ActionFunctionArgs) {
       matchCount: matchCount.value,
       mode: "similar",
       results: similar.results,
-      similarSource: similar.source
+      similarSource: similar.source,
+      targetCorpus: "early-christian"
     });
   }
 
@@ -467,7 +471,8 @@ export async function action({ request }: ActionFunctionArgs) {
       matchCount: matchCount.value,
       mode: "similar-scripture",
       scriptureResults: withScriptureMatchStrength(similar.results),
-      similarScriptureSource: similar.source
+      similarScriptureSource: similar.source,
+      targetCorpus: "scripture"
     });
   }
 
@@ -506,7 +511,8 @@ export async function action({ request }: ActionFunctionArgs) {
       matchCount: matchCount.value,
       mode: "theme-scripture",
       question,
-      scriptureResults: withScriptureMatchStrength(results)
+      scriptureResults: withScriptureMatchStrength(results),
+      targetCorpus: "scripture"
     });
   }
 
@@ -535,7 +541,8 @@ export async function action({ request }: ActionFunctionArgs) {
       question,
       matchCount.value,
       authorFilters.authors
-    )
+    ),
+    targetCorpus: "early-christian"
   });
 }
 
@@ -858,11 +865,11 @@ export default function ChurchFathersReaderRoute() {
       setMatchCount(actionData.matchCount);
     }
 
-    if (actionData?.mode === "theme-scripture") {
+    if (actionData?.targetCorpus) {
+      setThemeCorpus(actionData.targetCorpus);
+    } else if (actionData?.mode === "theme-scripture") {
       setThemeCorpus("scripture");
-    }
-
-    if (actionData?.mode === "theme") {
+    } else if (actionData?.mode === "theme") {
       setThemeCorpus("early-christian");
     }
   }, [
@@ -870,7 +877,8 @@ export default function ChurchFathersReaderRoute() {
     actionData?.books,
     actionData?.canon,
     actionData?.matchCount,
-    actionData?.mode
+    actionData?.mode,
+    actionData?.targetCorpus
   ]);
 
   useEffect(() => {
@@ -1556,6 +1564,7 @@ export default function ChurchFathersReaderRoute() {
                               <div className="reader-passage-actions">
                                 <Form method="post">
                                   <input type="hidden" name="intent" value="similar-passage" />
+                                  <input type="hidden" name="targetCorpus" value="early-christian" />
                                   <input type="hidden" name="sourcePassageId" value={passage.key} />
                                   <EarlyChristianAuthorInputs authors={selectedAuthorFilters} />
                                   <button
@@ -1574,13 +1583,14 @@ export default function ChurchFathersReaderRoute() {
                                   </button>
                                 </Form>
                                 <Form method="post">
-	                                  <input type="hidden" name="intent" value="similar-scripture" />
-	                                  <input type="hidden" name="sourcePassageId" value={passage.key} />
-	                                  <ChurchFathersScriptureFilterInputs
-	                                    books={selectedBooksForCanon}
-	                                    canon={canon}
-	                                  />
-	                                  <input type="hidden" name="matchCount" value={matchCount} />
+                                  <input type="hidden" name="intent" value="similar-scripture" />
+                                  <input type="hidden" name="targetCorpus" value="scripture" />
+                                  <input type="hidden" name="sourcePassageId" value={passage.key} />
+                                  <ChurchFathersScriptureFilterInputs
+                                    books={selectedBooksForCanon}
+                                    canon={canon}
+                                  />
+                                  <input type="hidden" name="matchCount" value={matchCount} />
                                   <button
                                     className="context-button"
                                     disabled={isSearching}
@@ -1681,9 +1691,18 @@ export default function ChurchFathersReaderRoute() {
                 <Form method="post" className="search-form">
                   <input type="hidden" name="intent" value={searchIntent} />
                   {focusedPassageKey ? (
-                    <>
-                      <input type="hidden" name="sourcePassageId" value={focusedPassageKey} />
-                    </>
+                    <input
+                      type="hidden"
+                      name="targetCorpus"
+                      value={
+                        searchIntent === "similar-scripture"
+                          ? "scripture"
+                          : "early-christian"
+                      }
+                    />
+                  ) : null}
+                  {focusedPassageKey ? (
+                    <input type="hidden" name="sourcePassageId" value={focusedPassageKey} />
                   ) : null}
                   {showScriptureFilters ? (
                     <input type="hidden" name="canon" value={canon} />
@@ -1954,6 +1973,7 @@ function EarlyChristianSearchResults({
                   </button>
                   <Form method="post">
                     <input type="hidden" name="intent" value="similar-passage" />
+                    <input type="hidden" name="targetCorpus" value="early-christian" />
                     <input
                       type="hidden"
                       name="sourcePassageId"
@@ -1977,16 +1997,17 @@ function EarlyChristianSearchResults({
                   </Form>
                   <Form method="post">
                     <input type="hidden" name="intent" value="similar-scripture" />
-	                    <input
-	                      type="hidden"
-	                      name="sourcePassageId"
-	                      value={result.highlightPassage.id}
-	                    />
-	                    <ChurchFathersScriptureFilterInputs
-	                      books={scriptureBooks}
-	                      canon={canon}
-	                    />
-	                    <button
+                    <input type="hidden" name="targetCorpus" value="scripture" />
+                    <input
+                      type="hidden"
+                      name="sourcePassageId"
+                      value={result.highlightPassage.id}
+                    />
+                    <ChurchFathersScriptureFilterInputs
+                      books={scriptureBooks}
+                      canon={canon}
+                    />
+                    <button
                       className="context-button"
                       disabled={isSearching}
                       type="submit"
@@ -2756,7 +2777,8 @@ function churchFathersScriptureActionData(
         id: actionData.similarScriptureSource.id,
         reference: actionData.similarScriptureSource.reference
       }
-      : undefined
+      : undefined,
+    targetCorpus: "scripture"
   };
 }
 

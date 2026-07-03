@@ -1,6 +1,7 @@
 import type { EarlyChristianSearchResult } from "~/lib/early-christian-search.server";
 
 export type CanonMode = "protestant" | "catholic" | "orthodox";
+export type SearchTargetCorpus = "scripture" | "early-christian";
 
 export type SearchResult = {
   id: string;
@@ -26,6 +27,7 @@ export type SearchActionData = {
   };
   results?: SearchResult[];
   retryAfterSeconds?: number;
+  targetCorpus?: SearchTargetCorpus;
 };
 
 export type StoredFilters = {

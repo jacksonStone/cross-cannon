@@ -605,6 +605,11 @@ export function PassageReader({
                             />
                             <input
                               type="hidden"
+                              name="targetCorpus"
+                              value="scripture"
+                            />
+                            <input
+                              type="hidden"
                               name="sourcePassageId"
                               value={passage.id}
                             />
@@ -629,6 +634,11 @@ export function PassageReader({
                               type="hidden"
                               name="intent"
                               value="similar-early-christian"
+                            />
+                            <input
+                              type="hidden"
+                              name="targetCorpus"
+                              value="early-christian"
                             />
                             <input
                               type="hidden"
