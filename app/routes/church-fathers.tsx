@@ -739,17 +739,8 @@ export default function ChurchFathersReaderRoute() {
       .filter((author) => knownAuthors.has(author))
       .slice(0, MAX_AUTHOR_FILTERS);
   }, [authorOptions, selectedAuthors]);
-  const isFocusedScriptureSearch = Boolean(
-    focusedPassageKey
-    && actionData?.mode === "similar-scripture"
-    && actionData.similarScriptureSource?.id === focusedPassageKey
-  );
-  const showScriptureFilters = focusedPassageKey
-    ? isFocusedScriptureSearch
-    : themeCorpus === "scripture";
-  const showAuthorFilters = focusedPassageKey
-    ? !isFocusedScriptureSearch
-    : themeCorpus === "early-christian";
+  const showScriptureFilters = themeCorpus === "scripture";
+  const showAuthorFilters = themeCorpus === "early-christian";
   const visibleScriptureBooks = useMemo(
     () => Array.from(BOOKS_BY_CANON[canon]),
     [canon]
@@ -759,7 +750,7 @@ export default function ChurchFathersReaderRoute() {
     [canon, selectedScriptureBooks]
   );
   const searchIntent = focusedPassageKey
-    ? isFocusedScriptureSearch ? "similar-scripture" : "similar-passage"
+    ? themeCorpus === "scripture" ? "similar-scripture" : "similar-passage"
     : themeCorpus === "scripture" ? "theme-scripture" : "theme";
   const activeFilterCount = (matchCount === DEFAULT_MATCH_COUNT ? 0 : 1)
     + (showScriptureFilters ? selectedBooksForCanon.length : 0)
@@ -1322,7 +1313,11 @@ export default function ChurchFathersReaderRoute() {
     if (actionData?.mode === "theme") {
       dispatchSearchFlow({ type: "theme-results" });
     }
-  }, [actionData?.mode, actionData?.similarSource?.id]);
+  }, [
+    actionData?.mode,
+    actionData?.similarScriptureSource?.id,
+    actionData?.similarSource?.id
+  ]);
 
   const openChapter = useCallback((chapterId: string, passageRange = "") => {
     const chapterEntry = chapterById.get(chapterId);
@@ -1691,17 +1686,6 @@ export default function ChurchFathersReaderRoute() {
                 <Form method="post" className="search-form">
                   <input type="hidden" name="intent" value={searchIntent} />
                   {focusedPassageKey ? (
-                    <input
-                      type="hidden"
-                      name="targetCorpus"
-                      value={
-                        searchIntent === "similar-scripture"
-                          ? "scripture"
-                          : "early-christian"
-                      }
-                    />
-                  ) : null}
-                  {focusedPassageKey ? (
                     <input type="hidden" name="sourcePassageId" value={focusedPassageKey} />
                   ) : null}
                   {showScriptureFilters ? (
@@ -1714,13 +1698,11 @@ export default function ChurchFathersReaderRoute() {
                   {showAuthorFilters ? (
                     <EarlyChristianAuthorInputs authors={selectedAuthorFilters} />
                   ) : null}
-                  {!focusedPassageKey ? (
-                    <SearchTargetControl
-                      disabled={isSearching}
-                      value={themeCorpus}
-                      onChange={setThemeCorpus}
-                    />
-                  ) : null}
+                  <SearchTargetControl
+                    disabled={isSearching}
+                    value={themeCorpus}
+                    onChange={setThemeCorpus}
+                  />
                   {!focusedPassageKey ? (
                     <label htmlFor="question">
                       Search {themeCorpus === "scripture" ? "Bible" : "early Christian works"} for...
