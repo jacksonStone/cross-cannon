@@ -19,6 +19,20 @@ if (books.length === 0) {
 
 const db = createClient({ url: runtimeDbUrl });
 await db.execute("PRAGMA busy_timeout = 5000");
+await db.batch([
+  {
+    sql: `
+      CREATE INDEX IF NOT EXISTS early_christian_works_author_idx
+      ON early_christian_works(author, id)
+    `
+  },
+  {
+    sql: `
+      CREATE INDEX IF NOT EXISTS early_christian_passage_metadata_work_idx
+      ON early_christian_passage_metadata(work_id, passage_id, chapter_id)
+    `
+  }
+], "write");
 
 let updatedCount = 0;
 const bookIds = new Set(books.map((book) => String(book.id)));

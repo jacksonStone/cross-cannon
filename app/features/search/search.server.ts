@@ -2,6 +2,7 @@ import { json } from "@remix-run/node";
 
 import { ensureDatabase, getDb } from "~/lib/db.server";
 import { searchFathersSimilarToScripture } from "~/lib/cross-corpus-search.server";
+import { parseEarlyChristianAuthorFilters } from "~/lib/early-christian-search.server";
 import { searchScripture, searchSimilarScripture } from "~/lib/search.server";
 
 import { BOOKS_BY_CANON, DEFAULT_MATCH_COUNT, parseCanonMode, sortCanonicalBooks } from "./canons";
@@ -72,6 +73,7 @@ export async function handleSearchRequest(formData: FormData) {
     question,
     canon: filters.canon,
     books: filters.books,
+    earlyChristianAuthors: filters.earlyChristianAuthors,
     matchCount: filters.matchCount,
     results
   });
@@ -92,7 +94,8 @@ async function handleSimilarEarlyChristianSearch(
 
   const similarSearch = await searchFathersSimilarToScripture(
     sourcePassageId,
-    filters.matchCount
+    filters.matchCount,
+    filters.earlyChristianAuthors
   );
 
   if (!similarSearch) {
@@ -106,6 +109,7 @@ async function handleSimilarEarlyChristianSearch(
     mode: "similar-early-christian",
     canon: filters.canon,
     books: filters.books,
+    earlyChristianAuthors: filters.earlyChristianAuthors,
     earlyChristianResults: similarSearch.results,
     matchCount: filters.matchCount,
     similarSource: similarSearch.source
@@ -142,6 +146,7 @@ async function handleSimilarPassageSearch(
     mode: "similar",
     canon: filters.canon,
     books: filters.books,
+    earlyChristianAuthors: filters.earlyChristianAuthors,
     matchCount: filters.matchCount,
     similarSource: similarSearch.source,
     results: withMatchStrength(similarSearch.results)
@@ -151,6 +156,7 @@ async function handleSimilarPassageSearch(
 type ParsedSearchFilters = {
   canon: CanonMode;
   books: string[];
+  earlyChristianAuthors: string[];
   matchCount: number;
   searchBooks: string[];
 };
@@ -164,6 +170,18 @@ async function parseSearchFilters(formData: FormData): Promise<
     .map((value) => String(value).trim())
     .filter(Boolean);
   const matchCount = Number(formData.get("matchCount") ?? DEFAULT_MATCH_COUNT);
+  const authorFilters = await parseEarlyChristianAuthorFilters(
+    formData.getAll("earlyChristianAuthors")
+  );
+
+  if ("error" in authorFilters) {
+    return {
+      response: json<SearchActionData>(
+        { error: authorFilters.error },
+        { status: 400 }
+      )
+    };
+  }
 
   if (!Number.isInteger(matchCount) || matchCount < 5 || matchCount > 40) {
     return {
@@ -193,6 +211,7 @@ async function parseSearchFilters(formData: FormData): Promise<
   return {
     canon,
     books,
+    earlyChristianAuthors: authorFilters.authors,
     matchCount,
     searchBooks: books.length > 0
       ? books

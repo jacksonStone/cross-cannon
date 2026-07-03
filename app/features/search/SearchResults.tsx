@@ -169,11 +169,7 @@ export function SearchResults({
                       <Form method="post">
                         <input type="hidden" name="intent" value={crossCorpusAction.intent} />
                         <input type="hidden" name="sourcePassageId" value={result.id} />
-                        <input
-                          type="hidden"
-                          name="matchCount"
-                          value={actionData?.matchCount ?? DEFAULT_MATCH_COUNT}
-                        />
+                        <SearchFilterInputs actionData={actionData} />
                         <button
                           className="context-button"
                           disabled={!passage || isSubmitting}
@@ -217,6 +213,14 @@ function SearchFilterInputs({ actionData }: { actionData?: SearchActionData }) {
       <input type="hidden" name="matchCount" value={matchCount} />
       {books.map((book) => (
         <input key={book} type="hidden" name="books" value={book} />
+      ))}
+      {(actionData?.earlyChristianAuthors ?? []).map((author) => (
+        <input
+          key={author}
+          type="hidden"
+          name="earlyChristianAuthors"
+          value={author}
+        />
       ))}
     </>
   );

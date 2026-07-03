@@ -536,6 +536,11 @@ async function ensureEarlyChristianDatabase(db: Client) {
   `);
 
   await db.execute(`
+    CREATE INDEX IF NOT EXISTS early_christian_works_author_idx
+    ON early_christian_works(author, id)
+  `);
+
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS early_christian_chapters (
       id TEXT PRIMARY KEY,
       work_id TEXT NOT NULL,
@@ -578,6 +583,11 @@ async function ensureEarlyChristianDatabase(db: Client) {
   await db.execute(`
     CREATE INDEX IF NOT EXISTS early_christian_passage_metadata_chapter_idx
     ON early_christian_passage_metadata(chapter_id, passage_id, work_id)
+  `);
+
+  await db.execute(`
+    CREATE INDEX IF NOT EXISTS early_christian_passage_metadata_work_idx
+    ON early_christian_passage_metadata(work_id, passage_id, chapter_id)
   `);
 }
 

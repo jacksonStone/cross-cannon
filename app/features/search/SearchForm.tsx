@@ -22,6 +22,7 @@ const SEARCH_EXAMPLES = [
 type SearchFormProps = {
   actionData?: SearchActionData;
   books: string[];
+  earlyChristianAuthors?: string[];
   focusedPassageId: string | null;
   isScriptureReady: boolean;
   jumpInitialPassageId?: string;
@@ -35,6 +36,7 @@ type SearchFormProps = {
 export function SearchForm({
   actionData,
   books,
+  earlyChristianAuthors = [],
   focusedPassageId,
   isScriptureReady,
   jumpInitialPassageId,
@@ -63,12 +65,14 @@ export function SearchForm({
     canon,
     clearFilters,
     matchCount,
+    selectedEarlyChristianAuthors,
     selectedBooksForCanon,
     setMatchCount,
+    toggleEarlyChristianAuthor,
     toggleSelectedBook,
     updateCanon,
     visibleBooks
-  } = useSearchFilters({ actionData, books });
+  } = useSearchFilters({ actionData, books, earlyChristianAuthors });
 
   useEffect(() => {
     if (navigation.state === "idle") {
@@ -112,6 +116,14 @@ export function SearchForm({
         <input type="hidden" name="matchCount" value={matchCount} />
         {selectedBooksForCanon.map((book) => (
           <input key={book} type="hidden" name="books" value={book} />
+        ))}
+        {selectedEarlyChristianAuthors.map((author) => (
+          <input
+            key={author}
+            type="hidden"
+            name="earlyChristianAuthors"
+            value={author}
+          />
         ))}
         {showJump ? (
           <PassageJump
@@ -203,14 +215,17 @@ export function SearchForm({
         </div>
         <FilterModal
           canon={canon}
+          earlyChristianAuthors={earlyChristianAuthors}
           isOpen={isFilterModalOpen}
           isSearching={isSearching}
           matchCount={matchCount}
+          selectedEarlyChristianAuthors={selectedEarlyChristianAuthors}
           selectedBooks={selectedBooksForCanon}
           visibleBooks={visibleBooks}
           onCanonChange={updateCanon}
           onClearFilters={clearFilters}
           onClose={() => setIsFilterModalOpen(false)}
+          onToggleEarlyChristianAuthor={toggleEarlyChristianAuthor}
           onMatchCountChange={setMatchCount}
           onToggleBook={toggleSelectedBook}
         />

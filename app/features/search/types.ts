@@ -13,6 +13,7 @@ export type SearchResult = {
 
 export type SearchActionData = {
   error?: string;
+  earlyChristianAuthors?: string[];
   mode?: "theme" | "similar" | "similar-early-christian";
   question?: string;
   canon?: CanonMode;
@@ -31,4 +32,5 @@ export type StoredFilters = {
   canon?: string;
   matchCount?: number;
   books?: string[];
+  earlyChristianAuthors?: string[];
 };

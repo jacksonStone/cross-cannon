@@ -63,6 +63,7 @@ type EarlyChristianSearchTrace = {
 };
 
 type SearchByEmbeddingOptions = {
+  authors?: string[];
   excludePassageIds?: string[];
 };
 
@@ -74,6 +75,9 @@ export type EarlyChristianEmbeddingSource = {
 };
 
 let client: Client | null = null;
+let earlyChristianAuthorsPromise: Promise<string[]> | null = null;
+const AUTHOR_FILTER_PAGE_SIZE = 10_000;
+export const MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS = 3;
 
 export function getEarlyChristianDb() {
   client ??= createClient({
@@ -85,7 +89,61 @@ export function getEarlyChristianDb() {
   return client;
 }
 
-export async function searchEarlyChristianWorks(question: string, limit = 10) {
+export async function getEarlyChristianAuthors() {
+  earlyChristianAuthorsPromise ??= readEarlyChristianAuthors().catch((error: unknown) => {
+    earlyChristianAuthorsPromise = null;
+    throw error;
+  });
+  return earlyChristianAuthorsPromise;
+}
+
+export async function parseEarlyChristianAuthorFilters(values: unknown[]) {
+  const requestedAuthors = Array.from(new Set(
+    values
+      .map((value) => String(value).trim())
+      .filter(Boolean)
+  ));
+
+  if (requestedAuthors.length > MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS) {
+    return {
+      error: `Choose up to ${MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS} early Christian authors.`
+    };
+  }
+
+  if (requestedAuthors.length === 0) {
+    return { authors: [] };
+  }
+
+  const knownAuthors = new Set(await getEarlyChristianAuthors());
+  const authors = requestedAuthors.filter((author) => knownAuthors.has(author));
+
+  if (authors.length === 0) {
+    return {
+      error: "Choose at least one indexed early Christian author."
+    };
+  }
+
+  return { authors };
+}
+
+async function readEarlyChristianAuthors() {
+  const response = await getEarlyChristianDb().execute(`
+    SELECT author
+    FROM early_christian_works
+    WHERE author IS NOT NULL
+      AND TRIM(author) <> ''
+    GROUP BY author
+    ORDER BY LOWER(author)
+  `);
+
+  return response.rows.map((row) => String(row.author));
+}
+
+export async function searchEarlyChristianWorks(
+  question: string,
+  limit = 10,
+  authors: string[] = []
+) {
   const trace = createEarlyChristianSearchTrace("theme", question, limit);
   const embeddingConfig = await getEarlyChristianEmbeddingConfig();
   trace.mark("embeddingConfig", embeddingConfig);
@@ -97,12 +155,16 @@ export async function searchEarlyChristianWorks(question: string, limit = 10) {
     return [];
   }
 
-  const results = withMatchStrength(await searchByEmbedding(embedding, limit, {}, trace));
+  const results = withMatchStrength(await searchByEmbedding(embedding, limit, { authors }, trace));
   trace.finish("results", { count: results.length });
   return results;
 }
 
-export async function searchSimilarEarlyChristianPassages(sourceKey: string, limit = 10) {
+export async function searchSimilarEarlyChristianPassages(
+  sourceKey: string,
+  limit = 10,
+  authors: string[] = []
+) {
   const trace = createEarlyChristianSearchTrace("similar", sourceKey, limit);
   const source = await findSourcePassage(sourceKey, trace);
   trace.mark("findSourcePassage", { found: Boolean(source) });
@@ -121,6 +183,7 @@ export async function searchSimilarEarlyChristianPassages(sourceKey: string, lim
   }
 
   const results = await searchByEmbedding(embedding, limit, {
+    authors,
     excludePassageIds: [String(source.id)]
   }, trace);
   const rankedResults = withMatchStrength(results);
@@ -138,7 +201,8 @@ export async function searchSimilarEarlyChristianPassages(sourceKey: string, lim
 
 export async function searchSimilarEarlyChristianFromScripture(
   passageId: string,
-  limit = 10
+  limit = 10,
+  authors: string[] = []
 ) {
   const trace = createEarlyChristianSearchTrace("similar", `scripture:${passageId}`, limit);
   const source = await findScriptureSourcePassage(passageId, trace);
@@ -161,7 +225,8 @@ export async function searchSimilarEarlyChristianFromScripture(
     embedding,
     limit,
     [],
-    trace
+    trace,
+    authors
   ));
   trace.finish("results", { count: results.length });
 
@@ -202,19 +267,25 @@ export async function searchEarlyChristianByEmbedding(
   embedding: ArrayLike<number>,
   limit = 10,
   excludePassageIds: string[] = [],
-  trace: EarlyChristianSearchTrace = createEarlyChristianSearchTrace("internal", "embedding", limit)
+  trace: EarlyChristianSearchTrace = createEarlyChristianSearchTrace("internal", "embedding", limit),
+  authors: string[] = []
 ) {
-  return searchByEmbedding(embedding, limit, { excludePassageIds }, trace);
+  return searchByEmbedding(embedding, limit, { authors, excludePassageIds }, trace);
 }
 
 export async function searchEarlyChristianPassagesByEmbedding(
   embedding: ArrayLike<number>,
   limit = 10,
   excludePassageIds: string[] = [],
-  trace: EarlyChristianSearchTrace = createEarlyChristianSearchTrace("internal", "passage-embedding", limit)
+  trace: EarlyChristianSearchTrace = createEarlyChristianSearchTrace("internal", "passage-embedding", limit),
+  authors: string[] = []
 ) {
-  trace.mark("searchPassagesNarrowedStart", { excludeCount: excludePassageIds.length });
+  trace.mark("searchPassagesNarrowedStart", {
+    authorCount: authors.length,
+    excludeCount: excludePassageIds.length
+  });
   const results = await searchByEmbedding(embedding, limit, {
+    authors,
     excludePassageIds
   }, trace);
   trace.mark("searchPassagesNarrowed", { count: results.length });
@@ -251,6 +322,17 @@ async function searchByEmbedding(
 ) {
   const query = normalizeVector(embedding);
   trace.mark("normalizeVector", { dimensions: query.length });
+
+  if (options.authors?.length) {
+    return searchPassagesByAuthorsExact(
+      query,
+      limit,
+      options.authors,
+      options.excludePassageIds ?? [],
+      trace
+    );
+  }
+
   const chapterLimit = Math.max(limit * 40, 300);
   const chapterCandidates = await searchChapters(query, chapterLimit, trace);
   trace.mark("searchChapters", {
@@ -364,6 +446,114 @@ async function searchPassagesInChapters(
   return results;
 }
 
+async function searchPassagesByAuthorsExact(
+  embedding: ArrayLike<number>,
+  limit: number,
+  authors: string[],
+  excludePassageIds: string[],
+  trace: EarlyChristianSearchTrace
+) {
+  if (authors.length === 0) {
+    return [];
+  }
+
+  const excludeClause = excludePassageIds.length
+    ? `AND p.id NOT IN (${placeholders(excludePassageIds)})`
+    : "";
+  const bestByChapter = new Map<string, PassageCandidate>();
+  let lastMetadataRowid = 0;
+  let scannedCount = 0;
+
+  for (;;) {
+    trace.mark("authorPassagePageSqlStart", {
+      authorCount: authors.length,
+      excludeCount: excludePassageIds.length,
+      lastMetadataRowid,
+      pageSize: AUTHOR_FILTER_PAGE_SIZE
+    });
+    const response = await getEarlyChristianDb().execute({
+      sql: `
+        SELECT
+          pm.rowid AS metadata_rowid,
+          p.id,
+          p.reference,
+          p.text,
+          p.embedding,
+          p.verse_start,
+          p.verse_end,
+          c.id AS chapter_id,
+          c.reference AS chapter_reference,
+          w.title,
+          w.author,
+          w.authorship_date_range,
+          w.ccel_id
+        FROM early_christian_passage_metadata pm
+        JOIN passages p ON p.id = pm.passage_id
+        JOIN early_christian_chapters c ON c.id = pm.chapter_id
+        JOIN early_christian_works w ON w.id = pm.work_id
+        WHERE pm.rowid > ?
+          AND p.embedding IS NOT NULL
+          AND w.author IN (${placeholders(authors)})
+          ${excludeClause}
+        ORDER BY pm.rowid
+        LIMIT ?
+      `,
+      args: [
+        lastMetadataRowid,
+        ...authors,
+        ...excludePassageIds,
+        AUTHOR_FILTER_PAGE_SIZE
+      ]
+    });
+    trace.mark("authorPassagePageSql", { rowCount: response.rows.length });
+
+    if (response.rows.length === 0) {
+      break;
+    }
+
+    for (const row of response.rows as Array<Record<string, unknown>>) {
+      lastMetadataRowid = Math.max(
+        lastMetadataRowid,
+        Number(row.metadata_rowid) || lastMetadataRowid
+      );
+      scannedCount += 1;
+
+      const candidate = passageCandidateFromRow(row, embedding);
+
+      if (!candidate) {
+        continue;
+      }
+
+      const current = bestByChapter.get(candidate.chapterId);
+
+      if (!current || candidate.score > current.score) {
+        bestByChapter.set(candidate.chapterId, candidate);
+      }
+    }
+
+    trace.mark("authorPassagePageRank", {
+      bestChapterCount: bestByChapter.size,
+      scannedCount
+    });
+
+    if (response.rows.length < AUTHOR_FILTER_PAGE_SIZE) {
+      break;
+    }
+  }
+
+  const results = [...bestByChapter.values()]
+    .sort((left, right) => right.score - left.score)
+    .slice(0, limit)
+    .map(passageCandidateToSearchResult);
+
+  trace.mark("authorPassageExactRank", {
+    authorCount: authors.length,
+    count: results.length,
+    scannedCount
+  });
+  return results;
+}
+
 async function findSourcePassage(sourceKey: string, trace: EarlyChristianSearchTrace) {
   const db = getEarlyChristianDb();
 
@@ -465,39 +655,15 @@ function groupPassageRowsByChapter(
   const bestByChapter = new Map<string, PassageCandidate>();
 
   for (const row of rows as Array<Record<string, unknown>>) {
-    const stored = readStoredEmbedding(row as StoredEmbeddingRow);
+    const candidate = passageCandidateFromRow(row, embedding);
 
-    if (!stored) {
+    if (!candidate) {
       continue;
     }
-
-    const score = cosineSimilarity(embedding, stored);
-    const chapterId = String(row.chapter_id ?? "");
-
-    if (!chapterId || !Number.isFinite(score)) {
-      continue;
-    }
-
-    const candidate: PassageCandidate = {
-      author: typeof row.author === "string" ? row.author : null,
-      chapterId,
-      chapterReference: String(row.chapter_reference ?? row.reference ?? ""),
-      date: typeof row.authorship_date_range === "string"
-        ? row.authorship_date_range
-        : null,
-      id: String(row.id),
-      reference: String(row.reference),
-      score,
-      source: String(row.ccel_id ?? ""),
-      text: String(row.text),
-      title: String(row.title ?? row.chapter_reference ?? ""),
-      verseEnd: numberOrNull(row.verse_end),
-      verseStart: numberOrNull(row.verse_start)
-    };
-    const current = bestByChapter.get(chapterId);
+    const current = bestByChapter.get(candidate.chapterId);
 
     if (!current || candidate.score > current.score) {
-      bestByChapter.set(chapterId, candidate);
+      bestByChapter.set(candidate.chapterId, candidate);
     }
   }
 
@@ -505,6 +671,41 @@ function groupPassageRowsByChapter(
     .sort((left, right) => right.score - left.score)
     .slice(0, limit)
     .map(passageCandidateToSearchResult);
+}
+
+function passageCandidateFromRow(
+  row: Record<string, unknown>,
+  embedding: ArrayLike<number>
+) {
+  const stored = readStoredEmbedding(row as StoredEmbeddingRow);
+
+  if (!stored) {
+    return null;
+  }
+
+  const score = cosineSimilarity(embedding, stored);
+  const chapterId = String(row.chapter_id ?? "");
+
+  if (!chapterId || !Number.isFinite(score)) {
+    return null;
+  }
+
+  return {
+    author: typeof row.author === "string" ? row.author : null,
+    chapterId,
+    chapterReference: String(row.chapter_reference ?? row.reference ?? ""),
+    date: typeof row.authorship_date_range === "string"
+      ? row.authorship_date_range
+      : null,
+    id: String(row.id),
+    reference: String(row.reference),
+    score,
+    source: String(row.ccel_id ?? ""),
+    text: String(row.text),
+    title: String(row.title ?? row.chapter_reference ?? ""),
+    verseEnd: numberOrNull(row.verse_end),
+    verseStart: numberOrNull(row.verse_start)
+  } satisfies PassageCandidate;
 }
 
 function passageCandidateToSearchResult(candidate: PassageCandidate): EarlyChristianSearchResult {

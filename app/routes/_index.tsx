@@ -19,7 +19,10 @@ import {
 } from "~/features/search/search-modal-flow";
 import type { SearchActionData } from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
-import type { EarlyChristianSearchResult } from "~/lib/early-christian-search.server";
+import {
+  getEarlyChristianAuthors,
+  type EarlyChristianSearchResult
+} from "~/lib/early-christian-search.server";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import {
   getScriptureCacheInfo,
@@ -43,13 +46,17 @@ const READER_THEMES = ["paper", "sepia", "dark", "contrast"] as const;
 type ReaderTheme = typeof READER_THEMES[number];
 
 export async function loader({}: LoaderFunctionArgs) {
-  const [books, scriptureCache] = await Promise.all([
+  const earlyChristianAuthorsPromise: Promise<string[]> = getEarlyChristianAuthors()
+    .catch(() => []);
+  const [books, earlyChristianAuthors, scriptureCache] = await Promise.all([
     getIndexedBooks(),
+    earlyChristianAuthorsPromise,
     getScriptureCacheInfo()
   ]);
 
   return json({
     books,
+    earlyChristianAuthors,
     scriptureCacheKey: scriptureCache.version,
     scriptureCacheUrl: scriptureCache.url
   });
@@ -78,7 +85,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Index() {
-  const { books, scriptureCacheKey, scriptureCacheUrl } =
+  const { books, earlyChristianAuthors, scriptureCacheKey, scriptureCacheUrl } =
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
@@ -308,6 +315,7 @@ export default function Index() {
               <SearchForm
                 actionData={actionData}
                 books={books}
+                earlyChristianAuthors={earlyChristianAuthors}
                 focusedPassageId={focusedPassageId}
                 isScriptureReady={scriptureLibrary.isReady}
                 jumpInitialPassageId={readerPassageId}

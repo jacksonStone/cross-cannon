@@ -10,9 +10,10 @@ import {
 
 export async function searchFathersSimilarToScripture(
   passageId: string,
-  limit = 10
+  limit = 10,
+  authors: string[] = []
 ) {
-  return searchSimilarEarlyChristianFromScripture(passageId, limit);
+  return searchSimilarEarlyChristianFromScripture(passageId, limit, authors);
 }
 
 export async function searchScriptureSimilarToFathers(
@@ -47,7 +48,8 @@ export async function searchScriptureSimilarToFathers(
 
 export async function searchFathersPassagesByEmbedding(
   embedding: ArrayLike<number>,
-  limit = 10
+  limit = 10,
+  authors: string[] = []
 ) {
-  return searchEarlyChristianPassagesByEmbedding(embedding, limit);
+  return searchEarlyChristianPassagesByEmbedding(embedding, limit, [], undefined, authors);
 }

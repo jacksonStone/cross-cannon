@@ -12,12 +12,22 @@ import type { CanonMode, SearchActionData, StoredFilters } from "./types";
 type UseSearchFiltersOptions = {
   actionData?: SearchActionData;
   books: string[];
+  earlyChristianAuthors?: string[];
 };
 
-export function useSearchFilters({ actionData, books }: UseSearchFiltersOptions) {
+const MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS = 3;
+
+export function useSearchFilters({
+  actionData,
+  books,
+  earlyChristianAuthors = []
+}: UseSearchFiltersOptions) {
   const [canon, setCanon] = useState<CanonMode>(actionData?.canon ?? DEFAULT_CANON);
   const [matchCount, setMatchCount] = useState(actionData?.matchCount ?? DEFAULT_MATCH_COUNT);
   const [selectedBooks, setSelectedBooks] = useState<string[]>(() => actionData?.books ?? []);
+  const [selectedEarlyChristianAuthors, setSelectedEarlyChristianAuthors] = useState<string[]>(
+    () => actionData?.earlyChristianAuthors ?? []
+  );
   const [hasLoadedStoredFilters, setHasLoadedStoredFilters] = useState(false);
   const visibleBooks = useMemo(
     () => books.filter((book) => BOOKS_BY_CANON[canon].has(book)),
@@ -27,8 +37,13 @@ export function useSearchFilters({ actionData, books }: UseSearchFiltersOptions)
     () => selectedBooks.filter((book) => BOOKS_BY_CANON[canon].has(book)),
     [canon, selectedBooks]
   );
+  const selectedKnownEarlyChristianAuthors = useMemo(() => {
+    const knownAuthors = new Set(earlyChristianAuthors);
+    return selectedEarlyChristianAuthors.filter((author) => knownAuthors.has(author));
+  }, [earlyChristianAuthors, selectedEarlyChristianAuthors]);
   const activeFilterCount = (matchCount === DEFAULT_MATCH_COUNT ? 0 : 1)
-    + selectedBooksForCanon.length;
+    + selectedBooksForCanon.length
+    + selectedKnownEarlyChristianAuthors.length;
 
   useEffect(() => {
     if (hasLoadedStoredFilters) {
@@ -71,12 +86,22 @@ export function useSearchFilters({ actionData, books }: UseSearchFiltersOptions)
             .filter((book) => indexedBooks.has(book) && BOOKS_BY_CANON[storedCanon].has(book))
         );
       }
+
+      if (Array.isArray(parsedFilters.earlyChristianAuthors)) {
+        const knownAuthors = new Set(earlyChristianAuthors);
+        setSelectedEarlyChristianAuthors(
+          parsedFilters.earlyChristianAuthors
+            .map((author) => String(author))
+            .filter((author) => knownAuthors.has(author))
+            .slice(0, MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS)
+        );
+      }
     } catch {
       window.localStorage.removeItem(FILTER_STORAGE_KEY);
     } finally {
       setHasLoadedStoredFilters(true);
     }
-  }, [actionData, books, hasLoadedStoredFilters]);
+  }, [actionData, books, earlyChristianAuthors, hasLoadedStoredFilters]);
 
   useEffect(() => {
     if (!hasLoadedStoredFilters) {
@@ -86,11 +111,18 @@ export function useSearchFilters({ actionData, books }: UseSearchFiltersOptions)
     const filters = {
       canon,
       matchCount,
-      books: selectedBooksForCanon
+      books: selectedBooksForCanon,
+      earlyChristianAuthors: selectedKnownEarlyChristianAuthors
     } satisfies StoredFilters;
 
     window.localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(filters));
-  }, [canon, hasLoadedStoredFilters, matchCount, selectedBooksForCanon]);
+  }, [
+    canon,
+    hasLoadedStoredFilters,
+    matchCount,
+    selectedBooksForCanon,
+    selectedKnownEarlyChristianAuthors
+  ]);
 
   function updateCanon(nextCanon: CanonMode) {
     setCanon(nextCanon);
@@ -107,9 +139,28 @@ export function useSearchFilters({ actionData, books }: UseSearchFiltersOptions)
     );
   }
 
+  function toggleEarlyChristianAuthor(author: string) {
+    if (!earlyChristianAuthors.includes(author)) {
+      return;
+    }
+
+    setSelectedEarlyChristianAuthors((currentAuthors) => {
+      if (currentAuthors.includes(author)) {
+        return currentAuthors.filter((selectedAuthor) => selectedAuthor !== author);
+      }
+
+      if (currentAuthors.length >= MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS) {
+        return currentAuthors;
+      }
+
+      return [...currentAuthors, author];
+    });
+  }
+
   function clearFilters() {
     setMatchCount(DEFAULT_MATCH_COUNT);
     setSelectedBooks([]);
+    setSelectedEarlyChristianAuthors([]);
   }
 
   return {
@@ -117,8 +168,10 @@ export function useSearchFilters({ actionData, books }: UseSearchFiltersOptions)
     canon,
     clearFilters,
     matchCount,
+    selectedEarlyChristianAuthors: selectedKnownEarlyChristianAuthors,
     selectedBooksForCanon,
     setMatchCount,
+    toggleEarlyChristianAuthor,
     toggleSelectedBook,
     updateCanon,
     visibleBooks

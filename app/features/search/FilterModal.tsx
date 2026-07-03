@@ -7,32 +7,39 @@ import {
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 import { parseCanonMode } from "./canons";
+import { CheckboxPicker } from "./CheckboxPicker";
 import type { CanonMode } from "./types";
 
 type FilterModalProps = {
   canon: CanonMode;
+  earlyChristianAuthors?: string[];
   isOpen: boolean;
   isSearching: boolean;
   matchCount: number;
+  selectedEarlyChristianAuthors?: string[];
   selectedBooks: string[];
   visibleBooks: string[];
   onCanonChange: (canon: CanonMode) => void;
   onClearFilters: () => void;
   onClose: () => void;
+  onToggleEarlyChristianAuthor?: (author: string) => void;
   onMatchCountChange: (matchCount: number) => void;
   onToggleBook: (book: string) => void;
 };
 
 export function FilterModal({
   canon,
+  earlyChristianAuthors = [],
   isOpen,
   isSearching,
   matchCount,
+  selectedEarlyChristianAuthors = [],
   selectedBooks,
   visibleBooks,
   onCanonChange,
   onClearFilters,
   onClose,
+  onToggleEarlyChristianAuthor,
   onMatchCountChange,
   onToggleBook
 }: FilterModalProps) {
@@ -103,23 +110,28 @@ export function FilterModal({
               onChange={(event) => onMatchCountChange(Number(event.currentTarget.value))}
             />
           </fieldset>
-          <fieldset className="book-picker" disabled={isSearching}>
-            <legend>Books</legend>
-            <p className="book-picker-hint">Leave blank to search every book in this canon.</p>
-            <div className="book-options">
-              {visibleBooks.map((book) => (
-                <label className="book-option" key={book}>
-                  <input
-                    type="checkbox"
-                    value={book}
-                    checked={selectedBooks.includes(book)}
-                    onChange={() => onToggleBook(book)}
-                  />
-                  {book}
-                </label>
-              ))}
-            </div>
-          </fieldset>
+          <CheckboxPicker
+            disabled={isSearching}
+            hint="Leave blank to search every book in this canon."
+            legend="Books"
+            onToggle={onToggleBook}
+            options={visibleBooks.map((book) => ({ label: book, value: book }))}
+            selectedValues={selectedBooks}
+          />
+          {earlyChristianAuthors.length > 0 && onToggleEarlyChristianAuthor ? (
+            <CheckboxPicker
+              disabled={isSearching}
+              hint="Choose up to 3 authors for early Christian similarity results. Leave blank to search every author."
+              legend="Fathers authors"
+              maxSelected={3}
+              onToggle={onToggleEarlyChristianAuthor}
+              options={earlyChristianAuthors.map((author) => ({
+                label: author,
+                value: author
+              }))}
+              selectedValues={selectedEarlyChristianAuthors}
+            />
+          ) : null}
         </div>
         <div className="filter-modal-actions">
           <button className="secondary-button" onClick={onClearFilters} type="button">
