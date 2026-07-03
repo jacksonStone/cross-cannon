@@ -293,7 +293,10 @@ export function PassageReader({
     let animationFrame = 0;
 
     const updateLocationFromHeaderAnchor = () => {
-      if (!hasScrolledToInitialPassageRef.current) {
+      if (
+        !hasScrolledToInitialPassageRef.current
+        || prependSnapshotRef.current
+      ) {
         return;
       }
 
@@ -330,7 +333,6 @@ export function PassageReader({
     };
 
     window.addEventListener("scroll", scheduleLocationUpdate, { passive: true });
-    scheduleLocationUpdate();
 
     return () => {
       window.removeEventListener("scroll", scheduleLocationUpdate);
