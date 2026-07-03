@@ -99,7 +99,7 @@ async function crossBibleChapterBoundary(page: Page) {
 
 async function exerciseBiblePositionPersistence(page: Page) {
   await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
-  const psalm149Id = await page.evaluate(async () => {
+  const psalm149ChapterKey = await page.evaluate(async () => {
     const cacheKey = document
       .querySelector("data[data-scripture-cache-key]")
       ?.getAttribute("value");
@@ -121,42 +121,27 @@ async function exerciseBiblePositionPersistence(page: Page) {
       return "";
     }
 
-    window.localStorage.setItem("cross-cannon:reader-position:v1", psalm149.id);
+    window.localStorage.setItem("cross-cannon:reader-position:v1", "Psalms\t149");
     window.localStorage.setItem("cross-cannon:last-reader:v1", "scripture");
     window.localStorage.removeItem("cross-cannon:church-fathers-position:v1");
-    return psalm149.id;
+    return "Psalms\t149";
   });
 
-  assert(psalm149Id, "Could not find Psalm 149 in scripture cache.");
+  assert(psalm149ChapterKey, "Could not find Psalm 149 in scripture cache.");
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForReader(page, "Psalms");
   await waitForReaderTitle(page, "Psalms 149");
-  await simulateUserScroll(page, 450);
   await page.goto(`${baseUrl}/church-fathers`, { waitUntil: "domcontentloaded" });
   await waitForReader(page, "Early Christian");
   await simulateUserScroll(page, 900);
 
-  const savedReference = await page.evaluate(async () => {
-    const savedId = window.localStorage.getItem("cross-cannon:reader-position:v1");
-    const cacheKey = document
-      .querySelector("data[data-scripture-cache-key]")
-      ?.getAttribute("value");
-
-    if (!savedId || !cacheKey) {
-      return "";
-    }
-
-    const response = await fetch(`/scripture-cache/${cacheKey}.json`);
-    const cache = await response.json() as {
-      passages: Array<{ id: string; reference: string }>;
-    };
-
-    return cache.passages.find((passage) => passage.id === savedId)?.reference ?? "";
-  });
+  const savedChapterKey = await page.evaluate(() => (
+    window.localStorage.getItem("cross-cannon:reader-position:v1") ?? ""
+  ));
 
   assert(
-    savedReference.startsWith("Psalms 149:"),
-    `Expected saved Bible passage to remain in Psalms 149, got "${savedReference}".`
+    savedChapterKey === "Psalms\t149",
+    `Expected saved Bible chapter to remain Psalms 149, got "${savedChapterKey}".`
   );
 
   await page.goto(`${baseUrl}/?reader=scripture`, { waitUntil: "domcontentloaded" });

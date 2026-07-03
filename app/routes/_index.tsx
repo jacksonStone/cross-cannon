@@ -31,6 +31,11 @@ import {
 } from "~/lib/use-dialog-dismiss";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
+import {
+  chapterKey,
+  parsePassageLocation
+} from "~/features/passage-reader/chapter-index";
+
 const READER_POSITION_STORAGE_KEY = "cross-cannon:reader-position:v1";
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
 const READER_THEMES = ["paper", "sepia", "dark", "contrast"] as const;
@@ -81,9 +86,10 @@ export default function Index() {
     searchModalFlowReducer,
     initialSearchModalFlowState
   );
-  const [readerPassageId, setReaderPassageId] = useState(readSavedReaderPassageId);
+  const savedReaderPositionRef = useRef(readSavedReaderPosition());
+  const [readerPassageId, setReaderPassageId] = useState("");
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
-  const lastVisiblePassageIdRef = useRef(readerPassageId);
+  const lastVisibleChapterKeyRef = useRef(savedReaderPositionRef.current);
   const scriptureLibrary = useScriptureLibrary({
     scriptureCacheUrl
   });
@@ -147,18 +153,27 @@ export default function Index() {
       return;
     }
 
-    const rememberedPassage = readerPassageId
-      ? scriptureLibrary.passageLookup.get(readerPassageId)
-      : null;
     const initialPassageId =
-      rememberedPassage?.id ?? findDefaultReaderPassageId(scriptureLibrary.passages);
+      findFirstPassageIdForChapter(
+        scriptureLibrary.passages,
+        savedReaderPositionRef.current
+      ) ?? findDefaultReaderPassageId(scriptureLibrary.passages);
 
     if (!initialPassageId) {
       return;
     }
 
+    const initialChapterKey = getPassageChapterKey(
+      scriptureLibrary.passageLookup.get(initialPassageId)
+    );
+
+    if (initialChapterKey) {
+      savedReaderPositionRef.current = initialChapterKey;
+      lastVisibleChapterKeyRef.current = initialChapterKey;
+      window.localStorage.setItem(READER_POSITION_STORAGE_KEY, initialChapterKey);
+    }
+
     setReaderPassageId(initialPassageId);
-    lastVisiblePassageIdRef.current = initialPassageId;
   }, [
     readerPassageId,
     scriptureLibrary.isReady,
@@ -212,20 +227,29 @@ export default function Index() {
     onDismiss: closeSearch
   });
 
-  const rememberReaderLocation = useCallback((passageId: string) => {
-    if (lastVisiblePassageIdRef.current === passageId) {
+  const rememberReaderChapter = useCallback((chapterKeyValue: string) => {
+    if (lastVisibleChapterKeyRef.current === chapterKeyValue) {
       return;
     }
 
-    lastVisiblePassageIdRef.current = passageId;
-    window.localStorage.setItem(READER_POSITION_STORAGE_KEY, passageId);
+    savedReaderPositionRef.current = chapterKeyValue;
+    lastVisibleChapterKeyRef.current = chapterKeyValue;
+    window.localStorage.setItem(READER_POSITION_STORAGE_KEY, chapterKeyValue);
   }, []);
 
   const jumpToReaderPassage = useCallback((passageId: string) => {
     setReaderPassageId(passageId);
-    rememberReaderLocation(passageId);
+
+    const nextChapterKey = getPassageChapterKey(
+      scriptureLibrary.passageLookup.get(passageId)
+    );
+
+    if (nextChapterKey) {
+      rememberReaderChapter(nextChapterKey);
+    }
+
     dispatchSearchFlow({ type: "close" });
-  }, [rememberReaderLocation]);
+  }, [rememberReaderChapter, scriptureLibrary.passageLookup]);
 
   const updateReaderTheme = useCallback((theme: string) => {
     if (isReaderTheme(theme)) {
@@ -241,7 +265,7 @@ export default function Index() {
         initialPassageId={readerPassageId}
         isScriptureReady={scriptureLibrary.isReady && Boolean(readerPassageId)}
         onJumpToPassage={jumpToReaderPassage}
-        onLocationChange={rememberReaderLocation}
+        onChapterChange={rememberReaderChapter}
         onOpenSearch={openSearch}
         onThemeChange={updateReaderTheme}
         passages={scriptureLibrary.passages}
@@ -427,7 +451,31 @@ function findDefaultReaderPassageId(passages: BrowserPassage[]) {
     ?? "";
 }
 
-function readSavedReaderPassageId() {
+function findFirstPassageIdForChapter(passages: BrowserPassage[], chapterKeyValue: string) {
+  if (!chapterKeyValue) {
+    return null;
+  }
+
+  for (const passage of passages) {
+    if (getPassageChapterKey(passage) === chapterKeyValue) {
+      return passage.id;
+    }
+  }
+
+  return null;
+}
+
+function getPassageChapterKey(passage: BrowserPassage | undefined) {
+  if (!passage) {
+    return null;
+  }
+
+  const location = parsePassageLocation(passage.reference);
+
+  return location ? chapterKey(location.book, location.chapter) : null;
+}
+
+function readSavedReaderPosition() {
   if (typeof window === "undefined") {
     return "";
   }

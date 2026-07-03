@@ -92,8 +92,8 @@ type PassageReaderProps = {
   filters: StoredFilters;
   initialPassageId: string;
   isScriptureReady: boolean;
+  onChapterChange?: (chapterKey: string) => void;
   onJumpToPassage?: (passageId: string) => void;
-  onLocationChange?: (passageId: string) => void;
   onOpenSearch?: () => void;
   onThemeChange?: (theme: ReaderTheme) => void;
   passages: BrowserPassage[];
@@ -103,8 +103,8 @@ export function PassageReader({
   filters,
   initialPassageId,
   isScriptureReady,
+  onChapterChange,
   onJumpToPassage,
-  onLocationChange,
   onOpenSearch,
   onThemeChange,
   passages
@@ -298,13 +298,7 @@ export function PassageReader({
 
       activeChapterKeyRef.current = currentChapterKey;
       setActiveChapterKey(currentChapterKey);
-
-      const currentChapterData = chapterIndex.chaptersByKey.get(currentChapterKey);
-      const currentChapterFirstPassageId = currentChapterData?.passages[0]?.id;
-
-      if (currentChapterFirstPassageId) {
-        onLocationChange?.(currentChapterFirstPassageId);
-      }
+      onChapterChange?.(currentChapterKey);
     };
 
     const scheduleLocationUpdate = () => {
@@ -330,7 +324,7 @@ export function PassageReader({
   }, [
     chapterIndex.chaptersByKey,
     hasCompletedInitialScroll,
-    onLocationChange,
+    onChapterChange,
     orderedChapterEntries.length
   ]);
 
