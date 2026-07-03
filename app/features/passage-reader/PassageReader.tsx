@@ -216,7 +216,7 @@ export function PassageReader({
   }, [activeAudioUrl, isActiveChapterPlaying]);
 
   useBrowserLayoutEffect(() => {
-    const nextRange = getInitialAnchoredRange(
+    const nextRange = getInitialRenderedRange(
       initialChapterIndex,
       orderedChapterEntries.length
     );
@@ -237,22 +237,7 @@ export function PassageReader({
   const finishInitialPassageScroll = useCallback(() => {
     hasScrolledToInitialPassageRef.current = true;
     setHasCompletedInitialScroll(true);
-    setRenderedRange((currentRange) => {
-      const nextRange = getInitialRenderedRange(
-        initialChapterIndex,
-        orderedChapterEntries.length
-      );
-
-      if (nextRange.startIndex < currentRange.startIndex) {
-        prependSnapshotRef.current = {
-          scrollHeight: document.documentElement.scrollHeight,
-          scrollY: window.scrollY
-        };
-      }
-
-      return nextRange;
-    });
-  }, [initialChapterIndex, orderedChapterEntries.length]);
+  }, []);
   const shouldScrollToInitialPassage = useCallback(
     () => !hasScrolledToInitialPassageRef.current,
     []
@@ -279,6 +264,7 @@ export function PassageReader({
   useExpandableReaderWindow({
     edgePx: CHAPTER_WINDOW_EDGE_PX,
     expandCount: CHAPTER_WINDOW_EXPAND_COUNT,
+    expandOnMount: false,
     isReady: isScriptureReady && hasCompletedInitialScroll,
     itemCount: orderedChapterEntries.length,
     prependSnapshotRef,
@@ -861,15 +847,6 @@ function getInitialRenderedRange(initialChapterIndex: number, chapterCount: numb
   return getCenteredWindowRange({
     after: INITIAL_NEXT_CHAPTERS,
     before: INITIAL_PREVIOUS_CHAPTERS,
-    count: chapterCount,
-    index: initialChapterIndex
-  });
-}
-
-function getInitialAnchoredRange(initialChapterIndex: number, chapterCount: number) {
-  return getCenteredWindowRange({
-    after: INITIAL_NEXT_CHAPTERS,
-    before: 0,
     count: chapterCount,
     index: initialChapterIndex
   });

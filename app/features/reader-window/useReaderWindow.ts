@@ -51,6 +51,7 @@ export function usePreservePrependedScroll({
 export function useExpandableReaderWindow({
   edgePx,
   expandCount,
+  expandOnMount = true,
   isReady,
   itemCount,
   prependSnapshotRef,
@@ -58,6 +59,7 @@ export function useExpandableReaderWindow({
 }: {
   edgePx: number;
   expandCount: number;
+  expandOnMount?: boolean;
   isReady: boolean;
   itemCount: number;
   prependSnapshotRef: MutableRefObject<PrependSnapshot | null>;
@@ -107,7 +109,10 @@ export function useExpandableReaderWindow({
 
     window.addEventListener("scroll", scheduleExpand, { passive: true });
     window.addEventListener("resize", scheduleExpand);
-    window.requestAnimationFrame(expandRenderedWindow);
+
+    if (expandOnMount) {
+      window.requestAnimationFrame(expandRenderedWindow);
+    }
 
     return () => {
       window.removeEventListener("scroll", scheduleExpand);
@@ -120,6 +125,7 @@ export function useExpandableReaderWindow({
   }, [
     edgePx,
     expandCount,
+    expandOnMount,
     isReady,
     itemCount,
     prependSnapshotRef,

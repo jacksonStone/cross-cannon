@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -81,16 +81,9 @@ export default function Index() {
     searchModalFlowReducer,
     initialSearchModalFlowState
   );
-  const [readerPassageId, setReaderPassageId] = useState("");
+  const [readerPassageId, setReaderPassageId] = useState(readSavedReaderPassageId);
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
-  const savedReaderPassageId = useMemo(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    return window.localStorage.getItem(READER_POSITION_STORAGE_KEY);
-  }, []);
-  const lastVisiblePassageIdRef = useRef("");
+  const lastVisiblePassageIdRef = useRef(readerPassageId);
   const scriptureLibrary = useScriptureLibrary({
     scriptureCacheUrl
   });
@@ -154,10 +147,9 @@ export default function Index() {
       return;
     }
 
-    const rememberedPassage =
-      savedReaderPassageId
-        ? scriptureLibrary.passageLookup.get(savedReaderPassageId)
-        : null;
+    const rememberedPassage = readerPassageId
+      ? scriptureLibrary.passageLookup.get(readerPassageId)
+      : null;
     const initialPassageId =
       rememberedPassage?.id ?? findDefaultReaderPassageId(scriptureLibrary.passages);
 
@@ -169,7 +161,6 @@ export default function Index() {
     lastVisiblePassageIdRef.current = initialPassageId;
   }, [
     readerPassageId,
-    savedReaderPassageId,
     scriptureLibrary.isReady,
     scriptureLibrary.passageLookup,
     scriptureLibrary.passages
@@ -434,6 +425,14 @@ function findDefaultReaderPassageId(passages: BrowserPassage[]) {
     ?? passages.find((passage) => passage.reference.startsWith("Genesis 1:"))?.id
     ?? passages[0]?.id
     ?? "";
+}
+
+function readSavedReaderPassageId() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return window.localStorage.getItem(READER_POSITION_STORAGE_KEY) ?? "";
 }
 
 function readSavedReaderTheme(): ReaderTheme {
