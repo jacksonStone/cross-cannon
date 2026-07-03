@@ -110,7 +110,6 @@ export function PassageReader({
   passages
 }: PassageReaderProps) {
   const navigation = useNavigation();
-  const canReportLocationRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasScrolledToInitialPassageRef = useRef(false);
   const lastReportedPassageIdRef = useRef("");
@@ -223,7 +222,6 @@ export function PassageReader({
     setSelectedPassageId("");
     setHasCompletedInitialScroll(false);
     prependSnapshotRef.current = null;
-    canReportLocationRef.current = false;
     lastReportedPassageIdRef.current = initialPassageId;
     hasScrolledToInitialPassageRef.current = false;
   }, [initialChapterIndex, initialChapterKey, initialPassageId, orderedChapterEntries.length]);
@@ -284,61 +282,15 @@ export function PassageReader({
   });
 
   useEffect(() => {
-    if (!isScriptureReady) {
+    if (!hasCompletedInitialScroll || orderedChapterEntries.length === 0) {
       return;
     }
 
-    const enableLocationReporting = () => {
-      canReportLocationRef.current = true;
-    };
-    const enableLocationReportingFromKey = (event: KeyboardEvent) => {
-      if (
-        event.key === "ArrowDown"
-        || event.key === "ArrowUp"
-        || event.key === "PageDown"
-        || event.key === "PageUp"
-        || event.key === " "
-        || event.key === "Home"
-        || event.key === "End"
-      ) {
-        enableLocationReporting();
-      }
-    };
+    let animationFrame = 0;
 
-    window.addEventListener("wheel", enableLocationReporting, { passive: true });
-    window.addEventListener("touchmove", enableLocationReporting, { passive: true });
-    window.addEventListener("keydown", enableLocationReportingFromKey);
-
-    return () => {
-      window.removeEventListener("wheel", enableLocationReporting);
-      window.removeEventListener("touchmove", enableLocationReporting);
-      window.removeEventListener("keydown", enableLocationReportingFromKey);
-    };
-  }, [isScriptureReady]);
-
-  useEffect(() => {
-    if (orderedChapterEntries.length === 0) {
-      return;
-    }
-
-    let frame = 0;
-
-    const updateLocation = () => {
-      frame = 0;
-
-      if (!hasScrolledToInitialPassageRef.current || !canReportLocationRef.current) {
+    const updateLocationFromHeaderAnchor = () => {
+      if (!hasScrolledToInitialPassageRef.current) {
         return;
-      }
-
-      const passageElements = [
-        ...document.querySelectorAll<HTMLElement>(".reader-passage")
-      ];
-      const currentPassage = findElementAtReadingAnchor(passageElements);
-      const passageId = currentPassage?.dataset.passageId;
-
-      if (passageId && passageId !== lastReportedPassageIdRef.current) {
-        lastReportedPassageIdRef.current = passageId;
-        onLocationChange?.(passageId);
       }
 
       const chapterElements = [
@@ -355,25 +307,44 @@ export function PassageReader({
 
           return currentChapterKey;
         });
+
+        const currentChapterData = chapterIndex.chaptersByKey.get(currentChapterKey);
+        const currentChapterFirstPassageId = currentChapterData?.passages[0]?.id;
+
+        if (
+          currentChapterFirstPassageId
+          && currentChapterFirstPassageId !== lastReportedPassageIdRef.current
+        ) {
+          lastReportedPassageIdRef.current = currentChapterFirstPassageId;
+          onLocationChange?.(currentChapterFirstPassageId);
+        }
       }
     };
 
-    const scheduleUpdate = () => {
-      if (!frame) {
-        frame = window.requestAnimationFrame(updateLocation);
+    const scheduleLocationUpdate = () => {
+      if (animationFrame) {
+        return;
       }
+
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = 0;
+        updateLocationFromHeaderAnchor();
+      });
     };
 
-    window.addEventListener("scroll", scheduleUpdate, { passive: true });
-    window.requestAnimationFrame(updateLocation);
+    window.addEventListener("scroll", scheduleLocationUpdate, { passive: true });
+    scheduleLocationUpdate();
 
     return () => {
-      window.removeEventListener("scroll", scheduleUpdate);
-      if (frame) {
-        window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", scheduleLocationUpdate);
+
+      if (animationFrame) {
+        window.cancelAnimationFrame(animationFrame);
       }
     };
   }, [
+    chapterIndex.chaptersByKey,
+    hasCompletedInitialScroll,
     onLocationChange,
     orderedChapterEntries.length
   ]);

@@ -37,6 +37,7 @@ async function main() {
 
     await step("Bible: load reader", () => loadBible(page));
     await step("Bible: cross chapter boundary down and up", () => crossBibleChapterBoundary(page));
+    await step("Bible: persisted spot survives Fathers switch", () => exerciseBiblePositionPersistence(page));
     await step("Bible: theme search, similar search, jump result", () => exerciseBibleSearch(page));
     await step("Bible: selected passage similar search", () => exerciseBibleReaderPassageSimilar(page));
     await step("Bible: selected passage similar Fathers search and jump result", () => exerciseBibleToFathersSimilar(page));
@@ -94,6 +95,85 @@ async function crossBibleChapterBoundary(page: Page) {
   await scrollUntilTitleChanges(page, nextTitle, "up");
 
   await assertReaderHealthy(page);
+}
+
+async function exerciseBiblePositionPersistence(page: Page) {
+  await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+  const psalm149Id = await page.evaluate(async () => {
+    const cacheKey = document
+      .querySelector("data[data-scripture-cache-key]")
+      ?.getAttribute("value");
+
+    if (!cacheKey) {
+      return "";
+    }
+
+    const response = await fetch(`/scripture-cache/${cacheKey}.json`);
+    const cache = await response.json() as {
+      passages: Array<{ id: string; reference: string }>;
+    };
+    const psalm149 = cache.passages.find((passage) => (
+      passage.reference === "Psalms 149:1-7"
+      || passage.reference.startsWith("Psalms 149:")
+    ));
+
+    if (!psalm149) {
+      return "";
+    }
+
+    window.localStorage.setItem("cross-cannon:reader-position:v1", psalm149.id);
+    window.localStorage.setItem("cross-cannon:last-reader:v1", "scripture");
+    window.localStorage.removeItem("cross-cannon:church-fathers-position:v1");
+    return psalm149.id;
+  });
+
+  assert(psalm149Id, "Could not find Psalm 149 in scripture cache.");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForReader(page, "Psalms");
+  await waitForReaderTitle(page, "Psalms 149");
+  await simulateUserScroll(page, 450);
+  await page.goto(`${baseUrl}/church-fathers`, { waitUntil: "domcontentloaded" });
+  await waitForReader(page, "Early Christian");
+  await simulateUserScroll(page, 900);
+
+  const savedReference = await page.evaluate(async () => {
+    const savedId = window.localStorage.getItem("cross-cannon:reader-position:v1");
+    const cacheKey = document
+      .querySelector("data[data-scripture-cache-key]")
+      ?.getAttribute("value");
+
+    if (!savedId || !cacheKey) {
+      return "";
+    }
+
+    const response = await fetch(`/scripture-cache/${cacheKey}.json`);
+    const cache = await response.json() as {
+      passages: Array<{ id: string; reference: string }>;
+    };
+
+    return cache.passages.find((passage) => passage.id === savedId)?.reference ?? "";
+  });
+
+  assert(
+    savedReference.startsWith("Psalms 149:"),
+    `Expected saved Bible passage to remain in Psalms 149, got "${savedReference}".`
+  );
+
+  await page.goto(`${baseUrl}/?reader=scripture`, { waitUntil: "domcontentloaded" });
+  await waitForReader(page, "Psalms");
+  await waitForReaderTitle(page, "Psalms 149");
+  await assertReaderHealthy(page);
+}
+
+async function simulateUserScroll(page: Page, deltaY: number) {
+  await page.evaluate((deltaY) => {
+    window.scrollBy({
+      behavior: "auto",
+      top: deltaY
+    });
+    window.dispatchEvent(new Event("scroll"));
+  }, deltaY);
+  await wait(250);
 }
 
 async function exerciseBibleSearch(page: Page) {
@@ -360,15 +440,35 @@ async function click(page: Page, selector: string) {
 
 async function waitForReader(page: Page, expectedText: string) {
   await page.waitForSelector(".reader-page", { visible: true });
-  await page.waitForFunction((expectedText) => {
-    const title = document.querySelector("#reader-title")?.textContent ?? "";
-    const alert = document.querySelector("[role='alert']")?.textContent ?? "";
+  const started = performance.now();
+  let lastState: unknown = null;
 
-    return title.length > 0
-      && !/unavailable|Failed to load/i.test(alert)
-      && document.body.textContent?.includes(expectedText);
-  }, { timeout: timeoutMs }, expectedText);
-  await assertReaderHealthy(page);
+  while (performance.now() - started < timeoutMs) {
+    lastState = await page.evaluate((expectedText) => {
+      const title = document.querySelector("#reader-title")?.textContent?.trim() ?? "";
+      const alert = document.querySelector("[role='alert']")?.textContent?.trim() ?? "";
+
+      return {
+        alert,
+        hasExpectedText: Boolean(document.body.textContent?.includes(expectedText)),
+        isReady: title.length > 0
+          && !/unavailable|Failed to load/i.test(alert)
+          && Boolean(document.body.textContent?.includes(expectedText)),
+        title,
+        url: location.href
+      };
+    }, expectedText);
+
+    if ((lastState as { isReady?: boolean }).isReady) {
+      await assertReaderHealthy(page);
+      return;
+    }
+
+    await wait(250);
+  }
+
+  await saveFailureScreenshot(page);
+  throw new Error(`Timed out waiting for reader: ${JSON.stringify(lastState)}`);
 }
 
 async function waitForModalClosed(page: Page) {
@@ -437,12 +537,35 @@ async function scrollUntilTitleChanges(
   initialTitle: string,
   direction: "down" | "up"
 ) {
-  const delta = direction === "down" ? 850 : -850;
-  await page.mouse.move(640, 640);
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const didScroll = await page.evaluate((direction) => {
+      const anchorY = Math.max(118 + 40, Math.min(window.innerHeight * 0.38, 220));
+      const chapters = [...document.querySelectorAll<HTMLElement>(".reader-chapter")];
+      const activeChapter = chapters.find((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.top <= anchorY && rect.bottom >= anchorY;
+      }) ?? chapters.find((element) => element.getBoundingClientRect().top > anchorY)
+        ?? chapters.at(-1);
+      const activeIndex = activeChapter ? chapters.indexOf(activeChapter) : -1;
+      const targetIndex = activeIndex + (direction === "down" ? 1 : -1);
+      const targetChapter = chapters[targetIndex];
 
-  for (let attempt = 0; attempt < 14; attempt += 1) {
-    await page.mouse.wheel({ deltaY: delta });
-    await wait(180);
+      if (!targetChapter) {
+        return false;
+      }
+
+      const targetTop = targetChapter.getBoundingClientRect().top
+        + window.scrollY
+        - anchorY
+        + 1;
+
+      window.scrollTo({ behavior: "auto", top: targetTop });
+      window.dispatchEvent(new Event("scroll"));
+      return true;
+    }, direction);
+
+    assert(didScroll, `Could not find adjacent chapter while scrolling ${direction}.`);
+    await wait(300);
     await assertReaderHealthy(page);
 
     if (await readerTitle(page) !== initialTitle) {
@@ -458,6 +581,23 @@ async function readerTitle(page: Page) {
 
   assert(title.length > 0, "Reader title is empty.");
   return title;
+}
+
+async function waitForReaderTitle(page: Page, expectedTitle: string) {
+  const started = performance.now();
+  let lastTitle = "";
+
+  while (performance.now() - started < timeoutMs) {
+    lastTitle = await readerTitle(page);
+
+    if (lastTitle === expectedTitle) {
+      return;
+    }
+
+    await wait(250);
+  }
+
+  throw new Error(`Expected reader title "${expectedTitle}", got "${lastTitle}".`);
 }
 
 async function assertReaderHealthy(page: Page) {
