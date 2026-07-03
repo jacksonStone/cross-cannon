@@ -111,8 +111,8 @@ export function PassageReader({
 }: PassageReaderProps) {
   const navigation = useNavigation();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const activeChapterKeyRef = useRef<string | null>(null);
   const hasScrolledToInitialPassageRef = useRef(false);
-  const lastReportedPassageIdRef = useRef("");
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const [readerSettings, setReaderSettings] = useState(DEFAULT_READER_SETTINGS);
   const [hasLoadedReaderSettings, setHasLoadedReaderSettings] = useState(false);
@@ -185,6 +185,10 @@ export function PassageReader({
     },
     [orderedChapterEntries, renderedRange.endIndex, renderedRange.startIndex]
   );
+  const isInitialChapterReadyToRender = Boolean(
+    initialChapterKey
+    && renderedChapterEntries.some((entry) => entry.key === initialChapterKey)
+  );
   const activeAudioUrl = activeChapter?.audioUrl ?? null;
   const passageJumpInitialPassageId =
     activeChapter?.passages[0]?.id ?? initialPassageId;
@@ -218,11 +222,11 @@ export function PassageReader({
     );
 
     setRenderedRange(nextRange);
+    activeChapterKeyRef.current = initialChapterKey;
     setActiveChapterKey(initialChapterKey);
     setSelectedPassageId("");
     setHasCompletedInitialScroll(false);
     prependSnapshotRef.current = null;
-    lastReportedPassageIdRef.current = initialPassageId;
     hasScrolledToInitialPassageRef.current = false;
   }, [initialChapterIndex, initialChapterKey, initialPassageId, orderedChapterEntries.length]);
 
@@ -299,25 +303,18 @@ export function PassageReader({
       const currentChapter = findElementAtReadingAnchor(chapterElements);
       const currentChapterKey = currentChapter?.dataset.chapterKey;
 
-      if (currentChapterKey) {
-        setActiveChapterKey((existingChapterKey) => {
-          if (existingChapterKey === currentChapterKey) {
-            return existingChapterKey;
-          }
+      if (!currentChapterKey || currentChapterKey === activeChapterKeyRef.current) {
+        return;
+      }
 
-          return currentChapterKey;
-        });
+      activeChapterKeyRef.current = currentChapterKey;
+      setActiveChapterKey(currentChapterKey);
 
-        const currentChapterData = chapterIndex.chaptersByKey.get(currentChapterKey);
-        const currentChapterFirstPassageId = currentChapterData?.passages[0]?.id;
+      const currentChapterData = chapterIndex.chaptersByKey.get(currentChapterKey);
+      const currentChapterFirstPassageId = currentChapterData?.passages[0]?.id;
 
-        if (
-          currentChapterFirstPassageId
-          && currentChapterFirstPassageId !== lastReportedPassageIdRef.current
-        ) {
-          lastReportedPassageIdRef.current = currentChapterFirstPassageId;
-          onLocationChange?.(currentChapterFirstPassageId);
-        }
+      if (currentChapterFirstPassageId) {
+        onLocationChange?.(currentChapterFirstPassageId);
       }
     };
 
@@ -401,7 +398,7 @@ export function PassageReader({
     ref: settingsRef
   });
 
-  if (!isScriptureReady) {
+  if (!isScriptureReady || !isInitialChapterReadyToRender) {
     return (
       <section
         className={`reader-page reader-theme-${readerSettings.theme} reader-loading`}
