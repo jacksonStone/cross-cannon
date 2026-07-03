@@ -62,6 +62,11 @@ type EarlyChristianSearchTrace = {
   mark: (label: string, details?: Record<string, unknown>) => void;
 };
 
+type SearchByEmbeddingOptions = {
+  allowAllPassageFallback?: boolean;
+  excludePassageIds?: string[];
+};
+
 export type EarlyChristianEmbeddingSource = {
   embedding: ArrayLike<number>;
   id: string;
@@ -209,9 +214,12 @@ export async function searchEarlyChristianPassagesByEmbedding(
   excludePassageIds: string[] = [],
   trace: EarlyChristianSearchTrace = createEarlyChristianSearchTrace("internal", "passage-embedding", limit)
 ) {
-  trace.mark("searchPassagesDirectStart", { excludeCount: excludePassageIds.length });
-  const results = await searchAllPassagesExact(embedding, limit, excludePassageIds, trace);
-  trace.mark("searchPassagesDirect", { count: results.length });
+  trace.mark("searchPassagesNarrowedStart", { excludeCount: excludePassageIds.length });
+  const results = await searchByEmbedding(embedding, limit, {
+    allowAllPassageFallback: false,
+    excludePassageIds
+  }, trace);
+  trace.mark("searchPassagesNarrowed", { count: results.length });
   return results;
 }
 
@@ -240,7 +248,7 @@ async function getEarlyChristianEmbeddingConfig(): Promise<IndexedEmbeddingConfi
 async function searchByEmbedding(
   embedding: ArrayLike<number>,
   limit: number,
-  options: { excludePassageIds?: string[] } = {},
+  options: SearchByEmbeddingOptions = {},
   trace: EarlyChristianSearchTrace = createEarlyChristianSearchTrace("internal", "", limit)
 ) {
   const query = normalizeVector(embedding);
@@ -265,6 +273,14 @@ async function searchByEmbedding(
     if (chapterResults.length > 0) {
       return chapterResults;
     }
+  }
+
+  if (options.allowAllPassageFallback === false) {
+    trace.mark("searchAllPassagesExactSkipped", {
+      reason: "disabled",
+      searchedChapterCandidates: chapterCandidates.length
+    });
+    return [];
   }
 
   trace.mark("searchAllPassagesExactStart");
