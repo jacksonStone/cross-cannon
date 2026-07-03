@@ -148,7 +148,11 @@ export function SearchResults({
                       <Form method="post">
                         <input type="hidden" name="intent" value="similar-passage" />
                         <input type="hidden" name="sourcePassageId" value={result.id} />
-                        <SearchFilterInputs actionData={actionData} />
+                        <SearchFilterInputs
+                          actionData={actionData}
+                          includeEarlyChristianFilters={false}
+                          includeScriptureFilters
+                        />
                         <button
                           className="context-button"
                           disabled={!passage || isSubmitting}
@@ -169,7 +173,11 @@ export function SearchResults({
                       <Form method="post">
                         <input type="hidden" name="intent" value={crossCorpusAction.intent} />
                         <input type="hidden" name="sourcePassageId" value={result.id} />
-                        <SearchFilterInputs actionData={actionData} />
+                        <SearchFilterInputs
+                          actionData={actionData}
+                          includeEarlyChristianFilters={crossCorpusAction.intent === "similar-early-christian"}
+                          includeScriptureFilters={crossCorpusAction.intent !== "similar-early-christian"}
+                        />
                         <button
                           className="context-button"
                           disabled={!passage || isSubmitting}
@@ -202,26 +210,36 @@ export function SearchResults({
   );
 }
 
-function SearchFilterInputs({ actionData }: { actionData?: SearchActionData }) {
+function SearchFilterInputs({
+  actionData,
+  includeEarlyChristianFilters = false,
+  includeScriptureFilters = true
+}: {
+  actionData?: SearchActionData;
+  includeEarlyChristianFilters?: boolean;
+  includeScriptureFilters?: boolean;
+}) {
   const canon = actionData?.canon ?? DEFAULT_CANON;
   const matchCount = actionData?.matchCount ?? DEFAULT_MATCH_COUNT;
   const books = actionData?.books ?? [];
 
   return (
     <>
-      <input type="hidden" name="canon" value={canon} />
+      {includeScriptureFilters ? (
+        <input type="hidden" name="canon" value={canon} />
+      ) : null}
       <input type="hidden" name="matchCount" value={matchCount} />
-      {books.map((book) => (
+      {includeScriptureFilters ? books.map((book) => (
         <input key={book} type="hidden" name="books" value={book} />
-      ))}
-      {(actionData?.earlyChristianAuthors ?? []).map((author) => (
+      )) : null}
+      {includeEarlyChristianFilters ? (actionData?.earlyChristianAuthors ?? []).map((author) => (
         <input
           key={author}
           type="hidden"
           name="earlyChristianAuthors"
           value={author}
         />
-      ))}
+      )) : null}
     </>
   );
 }

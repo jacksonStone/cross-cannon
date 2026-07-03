@@ -2,7 +2,10 @@ import { json } from "@remix-run/node";
 
 import { ensureDatabase, getDb } from "~/lib/db.server";
 import { searchFathersSimilarToScripture } from "~/lib/cross-corpus-search.server";
-import { parseEarlyChristianAuthorFilters } from "~/lib/early-christian-search.server";
+import {
+  parseEarlyChristianAuthorFilters,
+  searchEarlyChristianWorks
+} from "~/lib/early-christian-search.server";
 import { searchScripture, searchSimilarScripture } from "~/lib/search.server";
 
 import { BOOKS_BY_CANON, DEFAULT_MATCH_COUNT, parseCanonMode, sortCanonicalBooks } from "./canons";
@@ -48,6 +51,10 @@ export async function handleSearchRequest(formData: FormData) {
     return handleSimilarEarlyChristianSearch(formData, filters);
   }
 
+  if (intent === "theme-early-christian") {
+    return handleEarlyChristianThemeSearch(formData, filters);
+  }
+
   const question = String(formData.get("question") ?? "").trim();
 
   if (question.length < 3) {
@@ -76,6 +83,39 @@ export async function handleSearchRequest(formData: FormData) {
     earlyChristianAuthors: filters.earlyChristianAuthors,
     matchCount: filters.matchCount,
     results
+  });
+}
+
+async function handleEarlyChristianThemeSearch(
+  formData: FormData,
+  filters: ParsedSearchFilters
+) {
+  const question = String(formData.get("question") ?? "").trim();
+
+  if (question.length < 3) {
+    return json<SearchActionData>(
+      { error: "Enter a longer question." },
+      { status: 400 }
+    );
+  }
+
+  if (question.length > 500) {
+    return json<SearchActionData>(
+      { error: "Keep the question under 500 characters." },
+      { status: 400 }
+    );
+  }
+
+  return json<SearchActionData>({
+    mode: "theme-early-christian",
+    question,
+    earlyChristianAuthors: filters.earlyChristianAuthors,
+    earlyChristianResults: await searchEarlyChristianWorks(
+      question,
+      filters.matchCount,
+      filters.earlyChristianAuthors
+    ),
+    matchCount: filters.matchCount
   });
 }
 

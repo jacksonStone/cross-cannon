@@ -36,14 +36,23 @@ import {
   getCenteredWindowRange,
   rangeContainsIndex as windowRangeContainsIndex
 } from "~/features/reader-window/window-range";
-import { BOOKS_BY_CANON, DEFAULT_CANON } from "~/features/search/canons";
-import { CheckboxPicker } from "~/features/search/CheckboxPicker";
+import {
+  BOOKS_BY_CANON,
+  DEFAULT_CANON,
+  DEFAULT_MATCH_COUNT,
+  parseCanonMode
+} from "~/features/search/canons";
+import { FilterModal } from "~/features/search/FilterModal";
 import {
   initialSearchModalFlowState,
   searchModalFlowReducer
 } from "~/features/search/search-modal-flow";
 import { SearchResults } from "~/features/search/SearchResults";
-import type { SearchActionData, SearchResult } from "~/features/search/types";
+import {
+  SearchTargetControl,
+  type SearchTargetCorpus
+} from "~/features/search/SearchTargetControl";
+import type { CanonMode, SearchActionData, SearchResult } from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import { searchScriptureSimilarToFathers } from "~/lib/cross-corpus-search.server";
 import {
@@ -56,6 +65,7 @@ import {
 } from "~/lib/early-christian-search.server";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";
+import { searchScripture } from "~/lib/search.server";
 import {
   isBackdropClick,
   useEscapeDismiss
@@ -286,9 +296,11 @@ type ReaderPassage = {
 
 type ChurchFathersActionData = {
   authors?: string[];
+  books?: string[];
+  canon?: CanonMode;
   error?: string;
   matchCount?: number;
-  mode?: "theme" | "similar" | "similar-scripture";
+  mode?: "theme" | "theme-scripture" | "similar" | "similar-scripture";
   question?: string;
   results?: EarlyChristianSearchResult[];
   retryAfterSeconds?: number;
@@ -429,11 +441,17 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   if (intent === "similar-scripture") {
+    const scriptureFilters = parseChurchFathersScriptureFilters(formData);
+
+    if ("response" in scriptureFilters) {
+      return scriptureFilters.response;
+    }
+
     const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
     const similar = await searchScriptureSimilarToFathers(
       sourcePassageId,
       matchCount.value,
-      Array.from(BOOKS_BY_CANON[DEFAULT_CANON])
+      scriptureFilters.searchBooks
     );
 
     if (!similar) {
@@ -444,11 +462,51 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     return json<ChurchFathersActionData>({
-      authors: authorFilters.authors,
+      books: scriptureFilters.books,
+      canon: scriptureFilters.canon,
       matchCount: matchCount.value,
       mode: "similar-scripture",
       scriptureResults: withScriptureMatchStrength(similar.results),
       similarScriptureSource: similar.source
+    });
+  }
+
+  if (intent === "theme-scripture") {
+    const scriptureFilters = parseChurchFathersScriptureFilters(formData);
+
+    if ("response" in scriptureFilters) {
+      return scriptureFilters.response;
+    }
+
+    const question = String(formData.get("question") ?? "").trim();
+
+    if (question.length < 3) {
+      return json<ChurchFathersActionData>(
+        { error: "Enter a longer question." },
+        { status: 400 }
+      );
+    }
+
+    if (question.length > 500) {
+      return json<ChurchFathersActionData>(
+        { error: "Keep the question under 500 characters." },
+        { status: 400 }
+      );
+    }
+
+    const results = await searchScripture(
+      question,
+      matchCount.value,
+      scriptureFilters.searchBooks
+    );
+
+    return json<ChurchFathersActionData>({
+      books: scriptureFilters.books,
+      canon: scriptureFilters.canon,
+      matchCount: matchCount.value,
+      mode: "theme-scripture",
+      question,
+      scriptureResults: withScriptureMatchStrength(results)
     });
   }
 
@@ -479,6 +537,38 @@ export async function action({ request }: ActionFunctionArgs) {
       authorFilters.authors
     )
   });
+}
+
+function parseChurchFathersScriptureFilters(formData: FormData):
+  | {
+    books: string[];
+    canon: CanonMode;
+    searchBooks: string[];
+  }
+  | { response: ReturnType<typeof json<ChurchFathersActionData>> } {
+  const canon = parseCanonMode(String(formData.get("canon") ?? ""));
+  const canonBooks = BOOKS_BY_CANON[canon];
+  const selectedBooks = formData
+    .getAll("books")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const books = Array.from(new Set(selectedBooks))
+    .filter((book) => canonBooks.has(book));
+
+  if (selectedBooks.length > 0 && books.length === 0) {
+    return {
+      response: json<ChurchFathersActionData>(
+        { error: "Choose at least one book in the selected canon." },
+        { status: 400 }
+      )
+    };
+  }
+
+  return {
+    books,
+    canon,
+    searchBooks: books.length > 0 ? books : Array.from(canonBooks)
+  };
 }
 
 export default function ChurchFathersReaderRoute() {
@@ -522,6 +612,12 @@ export default function ChurchFathersReaderRoute() {
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isJumpOpen, setIsJumpOpen] = useState(false);
   const [isAuthorFilterOpen, setIsAuthorFilterOpen] = useState(false);
+  const [themeCorpus, setThemeCorpus] = useState<SearchTargetCorpus>("early-christian");
+  const [canon, setCanon] = useState<CanonMode>(actionData?.canon ?? DEFAULT_CANON);
+  const [matchCount, setMatchCount] = useState(actionData?.matchCount ?? DEFAULT_MATCH_COUNT);
+  const [selectedScriptureBooks, setSelectedScriptureBooks] = useState<string[]>(
+    () => actionData?.books ?? []
+  );
   const [selectedAuthors, setSelectedAuthors] = useState<string[]>(() => (
     actionData?.authors ?? []
   ));
@@ -635,7 +731,48 @@ export default function ChurchFathersReaderRoute() {
       .filter((author) => knownAuthors.has(author))
       .slice(0, MAX_AUTHOR_FILTERS);
   }, [authorOptions, selectedAuthors]);
-  const activeAuthorFilterCount = selectedAuthorFilters.length;
+  const isFocusedScriptureSearch = Boolean(
+    focusedPassageKey
+    && actionData?.mode === "similar-scripture"
+    && actionData.similarScriptureSource?.id === focusedPassageKey
+  );
+  const showScriptureFilters = focusedPassageKey
+    ? isFocusedScriptureSearch
+    : themeCorpus === "scripture";
+  const showAuthorFilters = focusedPassageKey
+    ? !isFocusedScriptureSearch
+    : themeCorpus === "early-christian";
+  const visibleScriptureBooks = useMemo(
+    () => Array.from(BOOKS_BY_CANON[canon]),
+    [canon]
+  );
+  const selectedBooksForCanon = useMemo(
+    () => selectedScriptureBooks.filter((book) => BOOKS_BY_CANON[canon].has(book)),
+    [canon, selectedScriptureBooks]
+  );
+  const searchIntent = focusedPassageKey
+    ? isFocusedScriptureSearch ? "similar-scripture" : "similar-passage"
+    : themeCorpus === "scripture" ? "theme-scripture" : "theme";
+  const activeFilterCount = (matchCount === DEFAULT_MATCH_COUNT ? 0 : 1)
+    + (showScriptureFilters ? selectedBooksForCanon.length : 0)
+    + (showAuthorFilters ? selectedAuthorFilters.length : 0);
+  const toggleSelectedBook = useCallback((book: string) => {
+    if (!BOOKS_BY_CANON[canon].has(book)) {
+      return;
+    }
+
+    setSelectedScriptureBooks((currentBooks) => (
+      currentBooks.includes(book)
+        ? currentBooks.filter((selectedBook) => selectedBook !== book)
+        : [...currentBooks, book]
+    ));
+  }, [canon]);
+  const updateCanon = useCallback((nextCanon: CanonMode) => {
+    setCanon(nextCanon);
+    setSelectedScriptureBooks((currentBooks) => (
+      currentBooks.filter((book) => BOOKS_BY_CANON[nextCanon].has(book))
+    ));
+  }, []);
   const toggleSelectedAuthor = useCallback((author: string) => {
     if (!authorOptions.includes(author)) {
       return;
@@ -654,6 +791,8 @@ export default function ChurchFathersReaderRoute() {
     });
   }, [authorOptions]);
   const clearAuthorFilters = useCallback(() => {
+    setMatchCount(DEFAULT_MATCH_COUNT);
+    setSelectedScriptureBooks([]);
     setSelectedAuthors([]);
   }, []);
 
@@ -705,7 +844,33 @@ export default function ChurchFathersReaderRoute() {
     if (actionData?.authors) {
       setSelectedAuthors(actionData.authors);
     }
-  }, [actionData?.authors]);
+
+    if (actionData?.books) {
+      setSelectedScriptureBooks(actionData.books);
+    }
+
+    if (actionData?.canon) {
+      setCanon(actionData.canon);
+    }
+
+    if (typeof actionData?.matchCount === "number") {
+      setMatchCount(actionData.matchCount);
+    }
+
+    if (actionData?.mode === "theme-scripture") {
+      setThemeCorpus("scripture");
+    }
+
+    if (actionData?.mode === "theme") {
+      setThemeCorpus("early-christian");
+    }
+  }, [
+    actionData?.authors,
+    actionData?.books,
+    actionData?.canon,
+    actionData?.matchCount,
+    actionData?.mode
+  ]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -1374,9 +1539,13 @@ export default function ChurchFathersReaderRoute() {
                                   </button>
                                 </Form>
                                 <Form method="post">
-                                  <input type="hidden" name="intent" value="similar-scripture" />
-                                  <input type="hidden" name="sourcePassageId" value={passage.key} />
-                                  <input type="hidden" name="matchCount" value={actionData?.matchCount ?? 10} />
+	                                  <input type="hidden" name="intent" value="similar-scripture" />
+	                                  <input type="hidden" name="sourcePassageId" value={passage.key} />
+	                                  <ChurchFathersScriptureFilterInputs
+	                                    books={selectedBooksForCanon}
+	                                    canon={canon}
+	                                  />
+	                                  <input type="hidden" name="matchCount" value={matchCount} />
                                   <button
                                     className="context-button"
                                     disabled={isSearching}
@@ -1475,22 +1644,33 @@ export default function ChurchFathersReaderRoute() {
                 className={`search-band${isSearching ? " is-searching" : ""}`}
               >
                 <Form method="post" className="search-form">
+                  <input type="hidden" name="intent" value={searchIntent} />
                   {focusedPassageKey ? (
                     <>
-                      <input
-                        type="hidden"
-                        name="intent"
-                        value={actionData?.mode === "similar-scripture"
-                          ? "similar-scripture"
-                          : "similar-passage"}
-                      />
                       <input type="hidden" name="sourcePassageId" value={focusedPassageKey} />
                     </>
                   ) : null}
-                  <input type="hidden" name="matchCount" value={actionData?.matchCount ?? 10} />
-                  <EarlyChristianAuthorInputs authors={selectedAuthorFilters} />
+                  {showScriptureFilters ? (
+                    <input type="hidden" name="canon" value={canon} />
+                  ) : null}
+                  <input type="hidden" name="matchCount" value={matchCount} />
+                  {showScriptureFilters ? selectedBooksForCanon.map((book) => (
+                    <input key={book} type="hidden" name="books" value={book} />
+                  )) : null}
+                  {showAuthorFilters ? (
+                    <EarlyChristianAuthorInputs authors={selectedAuthorFilters} />
+                  ) : null}
                   {!focusedPassageKey ? (
-                    <label htmlFor="question">Search early Christian works for...</label>
+                    <SearchTargetControl
+                      disabled={isSearching}
+                      value={themeCorpus}
+                      onChange={setThemeCorpus}
+                    />
+                  ) : null}
+                  {!focusedPassageKey ? (
+                    <label htmlFor="question">
+                      Search {themeCorpus === "scripture" ? "Bible" : "early Christian works"} for...
+                    </label>
                   ) : null}
                   <div className="search-row">
                     <div className="search-primary">
@@ -1534,14 +1714,14 @@ export default function ChurchFathersReaderRoute() {
                     </div>
                     <div className="search-actions">
                       <button
-                        aria-controls="ec-author-filter-modal"
+                        aria-controls="filter-modal"
                         aria-expanded={isAuthorFilterOpen}
-                        className={`filter-toggle${activeAuthorFilterCount > 0 ? " is-active" : ""}`}
+                        className={`filter-toggle${activeFilterCount > 0 ? " is-active" : ""}`}
                         disabled={isSearching}
                         onClick={() => setIsAuthorFilterOpen(true)}
                         type="button"
                       >
-                        Authors{activeAuthorFilterCount > 0 ? ` (${activeAuthorFilterCount})` : ""}
+                        Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
                       </button>
                       <button
                         className="search-button"
@@ -1551,17 +1731,33 @@ export default function ChurchFathersReaderRoute() {
                         {isSearching ? (
                           <>
                             <span className="button-spinner" aria-hidden="true" />
-                            Searching
+                            {searchIntent === "theme-scripture"
+                              ? "Searching Bible"
+                              : searchIntent === "theme"
+                              ? "Searching Fathers"
+                              : searchIntent === "similar-scripture"
+                              ? "Finding Bible"
+                              : "Finding similar"}
                           </>
+                        ) : searchIntent === "theme-scripture" ? (
+                          "Search Bible"
+                        ) : searchIntent === "theme" ? (
+                          "Search Fathers"
+                        ) : searchIntent === "similar-scripture" ? (
+                          "Find Bible"
                         ) : focusedPassageKey ? (
                           "Find similar"
                         ) : (
-                          "Search"
+                          "Search Fathers"
                         )}
                       </button>
                       {isSearching ? (
                         <p className="search-status" role="status">
-                          Searching early Christian works...
+                          {searchIntent === "theme-scripture"
+                            ? "Searching Bible passages..."
+                            : searchIntent === "similar-scripture"
+                            ? "Finding Bible passages..."
+                            : "Searching early Christian works..."}
                         </p>
                       ) : null}
                     </div>
@@ -1580,10 +1776,12 @@ export default function ChurchFathersReaderRoute() {
 
               <EarlyChristianSearchResults
                 authors={selectedAuthorFilters}
+                canon={canon}
                 isSearching={isSearching}
                 onOpenResult={openResult}
                 results={actionData?.results}
-                showEmptyState={actionData?.mode !== "similar-scripture"}
+                scriptureBooks={selectedBooksForCanon}
+                showEmptyState={!actionData?.scriptureResults}
               />
 
               {actionData?.scriptureResults ? (
@@ -1602,14 +1800,23 @@ export default function ChurchFathersReaderRoute() {
         </div>
       ) : null}
 
-      <AuthorFilterModal
-        authors={authorOptions}
+      <FilterModal
+        canon={canon}
+        earlyChristianAuthors={authorOptions}
         isOpen={isAuthorFilterOpen}
         isSearching={isSearching}
-        selectedAuthors={selectedAuthorFilters}
-        onClear={clearAuthorFilters}
+        matchCount={matchCount}
+        selectedEarlyChristianAuthors={selectedAuthorFilters}
+        selectedBooks={selectedBooksForCanon}
+        showEarlyChristianAuthorFilters={showAuthorFilters}
+        showScriptureFilters={showScriptureFilters}
+        visibleBooks={visibleScriptureBooks}
+        onCanonChange={updateCanon}
+        onClearFilters={clearAuthorFilters}
         onClose={() => setIsAuthorFilterOpen(false)}
-        onToggle={toggleSelectedAuthor}
+        onMatchCountChange={setMatchCount}
+        onToggleBook={toggleSelectedBook}
+        onToggleEarlyChristianAuthor={toggleSelectedAuthor}
       />
 
       {isJumpOpen ? (
@@ -1629,15 +1836,19 @@ export default function ChurchFathersReaderRoute() {
 
 function EarlyChristianSearchResults({
   authors,
+  canon,
   isSearching,
   onOpenResult,
   results,
+  scriptureBooks,
   showEmptyState = true
 }: {
   authors: string[];
+  canon: CanonMode;
   isSearching: boolean;
   onOpenResult: (result: EarlyChristianSearchResult) => void;
   results?: EarlyChristianSearchResult[];
+  scriptureBooks: string[];
   showEmptyState?: boolean;
 }) {
   const [selectedResult, setSelectedResult] = useState("");
@@ -1729,12 +1940,16 @@ function EarlyChristianSearchResults({
                   </Form>
                   <Form method="post">
                     <input type="hidden" name="intent" value="similar-scripture" />
-                    <input
-                      type="hidden"
-                      name="sourcePassageId"
-                      value={result.highlightPassage.id}
-                    />
-                    <button
+	                    <input
+	                      type="hidden"
+	                      name="sourcePassageId"
+	                      value={result.highlightPassage.id}
+	                    />
+	                    <ChurchFathersScriptureFilterInputs
+	                      books={scriptureBooks}
+	                      canon={canon}
+	                    />
+	                    <button
                       className="context-button"
                       disabled={isSearching}
                       type="submit"
@@ -1765,94 +1980,28 @@ function EarlyChristianSearchResults({
   );
 }
 
-function AuthorFilterModal({
-  authors,
-  isOpen,
-  isSearching,
-  selectedAuthors,
-  onClear,
-  onClose,
-  onToggle
-}: {
-  authors: string[];
-  isOpen: boolean;
-  isSearching: boolean;
-  selectedAuthors: string[];
-  onClear: () => void;
-  onClose: () => void;
-  onToggle: (author: string) => void;
-}) {
-  useEscapeDismiss({
-    isOpen,
-    onDismiss: onClose
-  });
-
-  if (!isOpen) {
-    return null;
-  }
-
-  return (
-    <div
-      className="filter-modal-backdrop"
-      onClick={(event) => {
-        event.stopPropagation();
-
-        if (isBackdropClick(event)) {
-          onClose();
-        }
-      }}
-    >
-      <section
-        aria-labelledby="ec-author-filter-modal-title"
-        aria-modal="true"
-        className="filter-modal"
-        id="ec-author-filter-modal"
-        onClick={(event) => event.stopPropagation()}
-        onPointerDown={(event) => event.stopPropagation()}
-        role="dialog"
-      >
-        <div className="filter-modal-header">
-          <h2 id="ec-author-filter-modal-title">Authors</h2>
-          <button
-            className="filter-modal-close"
-            onClick={onClose}
-            type="button"
-          >
-            Close
-          </button>
-        </div>
-        <div className="filter-modal-body">
-          <CheckboxPicker
-            disabled={isSearching}
-            hint="Choose up to 3 authors. Leave blank to search every author."
-            legend="Fathers authors"
-            maxSelected={MAX_AUTHOR_FILTERS}
-            onToggle={onToggle}
-            options={authors.map((author) => ({
-              label: author,
-              value: author
-            }))}
-            selectedValues={selectedAuthors}
-          />
-        </div>
-        <div className="filter-modal-actions">
-          <button className="secondary-button" onClick={onClear} type="button">
-            Clear all
-          </button>
-          <button onClick={onClose} type="button">
-            Done
-          </button>
-        </div>
-      </section>
-    </div>
-  );
-}
-
 function EarlyChristianAuthorInputs({ authors }: { authors: string[] }) {
   return (
     <>
       {authors.map((author) => (
         <input key={author} type="hidden" name="authors" value={author} />
+      ))}
+    </>
+  );
+}
+
+function ChurchFathersScriptureFilterInputs({
+  books,
+  canon
+}: {
+  books: string[];
+  canon: CanonMode;
+}) {
+  return (
+    <>
+      <input type="hidden" name="canon" value={canon} />
+      {books.map((book) => (
+        <input key={book} type="hidden" name="books" value={book} />
       ))}
     </>
   );
@@ -2559,8 +2708,11 @@ function churchFathersScriptureActionData(
   }
 
   return {
+    books: actionData.books,
+    canon: actionData.canon,
     matchCount: actionData.matchCount,
-    mode: "similar",
+    mode: actionData.mode === "theme-scripture" ? "theme" : "similar",
+    question: actionData.question,
     results: actionData.scriptureResults,
     similarSource: actionData.similarScriptureSource
       ? {

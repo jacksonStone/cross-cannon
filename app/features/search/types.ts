@@ -14,7 +14,7 @@ export type SearchResult = {
 export type SearchActionData = {
   error?: string;
   earlyChristianAuthors?: string[];
-  mode?: "theme" | "similar" | "similar-early-christian";
+  mode?: "theme" | "theme-early-christian" | "similar" | "similar-early-christian";
   question?: string;
   canon?: CanonMode;
   books?: string[];

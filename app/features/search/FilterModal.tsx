@@ -18,6 +18,8 @@ type FilterModalProps = {
   matchCount: number;
   selectedEarlyChristianAuthors?: string[];
   selectedBooks: string[];
+  showEarlyChristianAuthorFilters?: boolean;
+  showScriptureFilters?: boolean;
   visibleBooks: string[];
   onCanonChange: (canon: CanonMode) => void;
   onClearFilters: () => void;
@@ -35,6 +37,8 @@ export function FilterModal({
   matchCount,
   selectedEarlyChristianAuthors = [],
   selectedBooks,
+  showEarlyChristianAuthorFilters = false,
+  showScriptureFilters = true,
   visibleBooks,
   onCanonChange,
   onClearFilters,
@@ -86,18 +90,20 @@ export function FilterModal({
           </button>
         </div>
         <div className="filter-modal-body">
-          <fieldset className="canon-control" disabled={isSearching}>
-            <legend>Canon</legend>
-            <select
-              aria-label="Canon"
-              onChange={(event) => onCanonChange(parseCanonMode(event.currentTarget.value))}
-              value={canon}
-            >
-              <option value="protestant">Protestant</option>
-              <option value="catholic">Catholic</option>
-              <option value="orthodox">Orthodox</option>
-            </select>
-          </fieldset>
+          {showScriptureFilters ? (
+            <fieldset className="canon-control" disabled={isSearching}>
+              <legend>Canon</legend>
+              <select
+                aria-label="Canon"
+                onChange={(event) => onCanonChange(parseCanonMode(event.currentTarget.value))}
+                value={canon}
+              >
+                <option value="protestant">Protestant</option>
+                <option value="catholic">Catholic</option>
+                <option value="orthodox">Orthodox</option>
+              </select>
+            </fieldset>
+          ) : null}
           <fieldset className="match-control" disabled={isSearching}>
             <legend>Matches</legend>
             <input
@@ -110,15 +116,19 @@ export function FilterModal({
               onChange={(event) => onMatchCountChange(Number(event.currentTarget.value))}
             />
           </fieldset>
-          <CheckboxPicker
-            disabled={isSearching}
-            hint="Leave blank to search every book in this canon."
-            legend="Books"
-            onToggle={onToggleBook}
-            options={visibleBooks.map((book) => ({ label: book, value: book }))}
-            selectedValues={selectedBooks}
-          />
-          {earlyChristianAuthors.length > 0 && onToggleEarlyChristianAuthor ? (
+          {showScriptureFilters ? (
+            <CheckboxPicker
+              disabled={isSearching}
+              hint="Leave blank to search every book in this canon."
+              legend="Books"
+              onToggle={onToggleBook}
+              options={visibleBooks.map((book) => ({ label: book, value: book }))}
+              selectedValues={selectedBooks}
+            />
+          ) : null}
+          {showEarlyChristianAuthorFilters
+            && earlyChristianAuthors.length > 0
+            && onToggleEarlyChristianAuthor ? (
             <CheckboxPicker
               disabled={isSearching}
               hint="Choose up to 3 authors for early Christian similarity results. Leave blank to search every author."

@@ -226,6 +226,11 @@ export default function Index() {
 
     if (actionData?.mode === "theme") {
       dispatchSearchFlow({ type: "theme-results" });
+      return;
+    }
+
+    if (actionData?.mode === "theme-early-christian") {
+      dispatchSearchFlow({ type: "theme-results" });
     }
   }, [actionData?.mode, actionData?.similarSource?.id]);
 
@@ -346,10 +351,16 @@ export default function Index() {
                 onJumpToPassage={jumpToReaderPassage}
                 passageLookup={scriptureLibrary.passageLookup}
                 results={actionData?.results}
-                showEmptyState={actionData?.mode !== "similar-early-christian"}
+                showEmptyState={
+                  actionData?.mode !== "similar-early-christian"
+                  && actionData?.mode !== "theme-early-christian"
+                }
               />
 
               <EarlyChristianCrossResults
+                heading={actionData?.mode === "theme-early-christian"
+                  ? "Early Christian results"
+                  : "Similar early Christian passages"}
                 results={actionData?.earlyChristianResults}
               />
             </div>
@@ -361,8 +372,10 @@ export default function Index() {
 }
 
 function EarlyChristianCrossResults({
+  heading,
   results
 }: {
+  heading: string;
   results?: EarlyChristianSearchResult[];
 }) {
   const [selectedResult, setSelectedResult] = useState("");
@@ -377,7 +390,7 @@ function EarlyChristianCrossResults({
 
   return (
     <section className="results ec-results" aria-live="polite">
-      <h2 className="results-heading">Similar early Christian passages</h2>
+      <h2 className="results-heading">{heading}</h2>
       {results.map((result, index) => {
         const isSelected = selectedResult === result.highlightPassage.id;
 

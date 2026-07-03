@@ -232,6 +232,22 @@ h1 {
   gap: 8px;
 }
 
+.search-target-control {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.search-target-control legend {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .search-actions {
   display: grid;
   gap: 8px;
