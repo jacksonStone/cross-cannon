@@ -3,7 +3,8 @@ import {
   type SetStateAction,
   useCallback,
   useEffect,
-  useLayoutEffect
+  useLayoutEffect,
+  useRef
 } from "react";
 
 import {
@@ -16,6 +17,26 @@ type PrependSnapshot = {
   scrollHeight: number;
   scrollY: number;
 };
+
+type ReadingAnchorOptions = {
+  headerOffset: number;
+  minReadingAnchorOffset: number;
+  readingAnchorRatio: number;
+};
+
+type ReadingAnchorSnapshot = {
+  attribute: string;
+  key: string;
+  offsetRatio: number;
+  selector: string;
+};
+
+const READING_ANCHOR_KEY_ATTRIBUTES = [
+  "data-passage-id",
+  "data-passage-key",
+  "data-chapter-key",
+  "data-chapter-id"
+] as const;
 
 export const DEFAULT_READER_SCROLL_WINDOW = {
   edgePx: 2200,
@@ -315,6 +336,25 @@ export function useReaderScrollWindow({
     () => !hasScrolledToInitialTargetRef.current,
     [hasScrolledToInitialTargetRef]
   );
+  const lastReadingAnchorRef = useRef<ReadingAnchorSnapshot | null>(null);
+  const pendingResizeAnchorRef = useRef<ReadingAnchorSnapshot | null>(null);
+  const isPreservingResizeRef = useRef(false);
+  const anchorOptions = {
+    headerOffset,
+    minReadingAnchorOffset,
+    readingAnchorRatio
+  };
+  const captureCurrentReadingAnchor = useCallback(() => (
+    captureReadingAnchorSnapshot({
+      anchorOptions,
+      chapterSelector
+    })
+  ), [
+    chapterSelector,
+    headerOffset,
+    minReadingAnchorOffset,
+    readingAnchorRatio
+  ]);
 
   useInitialTargetScroll({
     findTarget: findInitialTarget,
@@ -347,23 +387,106 @@ export function useReaderScrollWindow({
       return;
     }
 
+    lastReadingAnchorRef.current = captureCurrentReadingAnchor();
+  }, [captureCurrentReadingAnchor, itemCount, trackingReady]);
+
+  useEffect(() => {
+    if (!trackingReady || itemCount === 0) {
+      return;
+    }
+
+    let animationFrame = 0;
+    let settleTimeout = 0;
+
+    const restoreAnchor = () => {
+      const snapshot = pendingResizeAnchorRef.current;
+
+      if (!snapshot) {
+        return;
+      }
+
+      restoreReadingAnchorSnapshot(snapshot, anchorOptions);
+    };
+
+    const finishResizePreservation = () => {
+      restoreAnchor();
+      pendingResizeAnchorRef.current = null;
+      isPreservingResizeRef.current = false;
+      lastReadingAnchorRef.current = captureCurrentReadingAnchor();
+    };
+
+    const scheduleResizePreservation = () => {
+      pendingResizeAnchorRef.current ??= lastReadingAnchorRef.current
+        ?? captureCurrentReadingAnchor();
+
+      if (!pendingResizeAnchorRef.current) {
+        return;
+      }
+
+      isPreservingResizeRef.current = true;
+
+      if (animationFrame) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+
+      if (settleTimeout) {
+        window.clearTimeout(settleTimeout);
+      }
+
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = 0;
+        restoreAnchor();
+      });
+      settleTimeout = window.setTimeout(finishResizePreservation, 180);
+    };
+
+    window.addEventListener("resize", scheduleResizePreservation);
+    window.visualViewport?.addEventListener("resize", scheduleResizePreservation);
+
+    return () => {
+      window.removeEventListener("resize", scheduleResizePreservation);
+      window.visualViewport?.removeEventListener("resize", scheduleResizePreservation);
+
+      if (animationFrame) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+
+      if (settleTimeout) {
+        window.clearTimeout(settleTimeout);
+      }
+
+      pendingResizeAnchorRef.current = null;
+      isPreservingResizeRef.current = false;
+    };
+  }, [
+    captureCurrentReadingAnchor,
+    headerOffset,
+    itemCount,
+    minReadingAnchorOffset,
+    readingAnchorRatio,
+    trackingReady
+  ]);
+
+  useEffect(() => {
+    if (!trackingReady || itemCount === 0) {
+      return;
+    }
+
     let animationFrame = 0;
 
     const updateActiveKeyFromAnchor = () => {
       if (
         !hasScrolledToInitialTargetRef.current
         || prependSnapshotRef.current
+        || isPreservingResizeRef.current
       ) {
         return;
       }
 
+      lastReadingAnchorRef.current = captureCurrentReadingAnchor();
       const currentChapter = findElementAtReadingAnchor(
         [...document.querySelectorAll<HTMLElement>(chapterSelector)],
-        {
-          headerOffset,
-          minReadingAnchorOffset,
-          readingAnchorRatio
-        }
+        anchorOptions
       );
       const currentKey = currentChapter ? getChapterKey(currentChapter) : null;
 
@@ -398,6 +521,7 @@ export function useReaderScrollWindow({
   }, [
     activeKeyRef,
     chapterSelector,
+    captureCurrentReadingAnchor,
     getChapterKey,
     hasScrolledToInitialTargetRef,
     headerOffset,
@@ -408,6 +532,83 @@ export function useReaderScrollWindow({
     readingAnchorRatio,
     trackingReady
   ]);
+}
+
+function captureReadingAnchorSnapshot({
+  anchorOptions,
+  chapterSelector
+}: {
+  anchorOptions: ReadingAnchorOptions;
+  chapterSelector: string;
+}) {
+  const anchorY = getReadingAnchorY(anchorOptions);
+  const element = findElementAtReadingAnchor(
+    [...document.querySelectorAll<HTMLElement>(".reader-passage")],
+    anchorOptions
+  ) ?? findElementAtReadingAnchor(
+    [...document.querySelectorAll<HTMLElement>(chapterSelector)],
+    anchorOptions
+  );
+
+  if (!element) {
+    return null;
+  }
+
+  const stableKey = getStableElementKey(element);
+
+  if (!stableKey) {
+    return null;
+  }
+
+  const rect = element.getBoundingClientRect();
+  const offsetRatio = rect.height > 0
+    ? Math.max(0, Math.min(1, (anchorY - rect.top) / rect.height))
+    : 0;
+
+  return {
+    ...stableKey,
+    offsetRatio,
+    selector: element.matches(".reader-passage") ? ".reader-passage" : chapterSelector
+  };
+}
+
+function restoreReadingAnchorSnapshot(
+  snapshot: ReadingAnchorSnapshot,
+  anchorOptions: ReadingAnchorOptions
+) {
+  const element = [...document.querySelectorAll<HTMLElement>(snapshot.selector)]
+    .find((candidate) => candidate.getAttribute(snapshot.attribute) === snapshot.key);
+
+  if (!element) {
+    return;
+  }
+
+  const rect = element.getBoundingClientRect();
+  const anchorY = getReadingAnchorY(anchorOptions);
+
+  window.scrollTo({
+    behavior: "auto",
+    left: 0,
+    top: Math.max(
+      0,
+      window.scrollY + rect.top + (rect.height * snapshot.offsetRatio) - anchorY
+    )
+  });
+}
+
+function getStableElementKey(element: HTMLElement) {
+  for (const attribute of READING_ANCHOR_KEY_ATTRIBUTES) {
+    const key = element.getAttribute(attribute);
+
+    if (key) {
+      return {
+        attribute,
+        key
+      };
+    }
+  }
+
+  return null;
 }
 
 function findElementAtReadingAnchor(
@@ -422,14 +623,26 @@ function findElementAtReadingAnchor(
     readingAnchorRatio: number;
   }
 ) {
-  const anchorY = Math.max(
-    headerOffset + 40,
-    Math.min(window.innerHeight * readingAnchorRatio, minReadingAnchorOffset)
-  );
+  const anchorY = getReadingAnchorY({
+    headerOffset,
+    minReadingAnchorOffset,
+    readingAnchorRatio
+  });
 
   return elements.find((element) => {
     const rect = element.getBoundingClientRect();
     return rect.top <= anchorY && rect.bottom >= anchorY;
   }) ?? elements.find((element) => element.getBoundingClientRect().top > anchorY)
     ?? elements[elements.length - 1];
+}
+
+function getReadingAnchorY({
+  headerOffset,
+  minReadingAnchorOffset,
+  readingAnchorRatio
+}: ReadingAnchorOptions) {
+  return Math.max(
+    headerOffset + 40,
+    Math.min(window.innerHeight * readingAnchorRatio, minReadingAnchorOffset)
+  );
 }
