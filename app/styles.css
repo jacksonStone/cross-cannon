@@ -1479,6 +1479,22 @@ button:disabled {
   border-radius: 4px;
 }
 
+.reader-modernized-change {
+  border-radius: 0.18em;
+  background: color-mix(in srgb, var(--reader-action-ink) 7%, transparent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.reader-theme-dark .reader-modernized-change {
+  background: color-mix(in srgb, var(--reader-action-ink) 10%, transparent);
+}
+
+.reader-theme-contrast .reader-modernized-change {
+  outline: 1px dotted color-mix(in srgb, var(--reader-ink) 16%, transparent);
+  background: transparent;
+}
+
 .reader-passage.is-selected .reader-verse {
   background: var(--reader-selected-mark);
   box-decoration-break: clone;
