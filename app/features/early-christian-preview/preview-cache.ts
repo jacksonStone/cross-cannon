@@ -1,7 +1,7 @@
 import { readReaderPosition } from "~/features/reader-position/reader-position";
 
 export const EARLY_CHRISTIAN_MANIFEST_URL = "/church-fathers-preview/manifest.json";
-export const EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION = "early-christian-preview-20260704a";
+export const EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION = "early-christian-preview-20260704b";
 export const EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY =
   "cross-cannon:church-fathers-position:v1";
 export const FIRST_FATHERS_WORK_ID = "anf09:xii.iv";

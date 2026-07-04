@@ -42,6 +42,12 @@ type ModernizationResponse = {
 const DEFAULT_WORK_ID = "npnf102:iv";
 const DEFAULT_MODEL = process.env.MODERNIZATION_MODEL ?? "gpt-5.4-mini";
 const BOOK_INDEX_PATH = "public/church-fathers-preview/books.json";
+const MODERNIZATION_INSTRUCTIONS = [
+  "Modernize this public-domain patristic passage while staying close to the original translation.",
+  "Preserve the meaning, theology, argument, tone, imagery, and formal register.",
+  "Only update archaic or misleading English, obsolete pronouns or verb forms, and awkward old word order.",
+  "Do not summarize, expand, explain, soften, or paraphrase; return one modernizedText string for the input key."
+].join(" ");
 
 const options = parseArgs(process.argv.slice(2));
 
@@ -63,55 +69,17 @@ if (targets.length === 0) {
   process.exit(0);
 }
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const response = await client.responses.create({
-  instructions: [
-    "Modernize the English of these public-domain patristic passages while staying as close as possible to the original translation.",
-    "Preserve the meaning, theology, argument, tone, register, imagery, and rhetorical force. Do not summarize, expand, explain, soften, or paraphrase.",
-    "Only change English that is archaic, misleading to a modern reader, or unnecessarily difficult because of obsolete grammar or word order. Examples include forms like unto, hath, doth, giveth, resisteth, thee, thou, thy, and older uses of words whose meaning has shifted.",
-    "Keep elevated, formal, biblical, poetic, or rhetorical language when it is still understandable. Preserve proper names, doctrinal terms, quotations, poetry line breaks, sentence fragments, and punctuation as much as possible.",
-    "Return exactly one modernizedText string for every input key."
-  ].join(" "),
-  input: JSON.stringify({
-    passages: targets.map((target) => ({
-      key: target.key,
-      text: target.text
-    }))
-  }),
-  max_output_tokens: Math.max(1200, targets.reduce((total, target) => total + target.text.length, 0)),
-  model: options.model,
-  text: {
-    format: {
-      name: "church_fathers_modernization",
-      schema: {
-        additionalProperties: false,
-        properties: {
-          passages: {
-            items: {
-              additionalProperties: false,
-              properties: {
-                key: { type: "string" },
-                modernizedText: { type: "string" }
-              },
-              required: ["key", "modernizedText"],
-              type: "object"
-            },
-            type: "array"
-          }
-        },
-        required: ["passages"],
-        type: "object"
-      },
-      strict: true,
-      type: "json_schema"
-    },
-    verbosity: "low"
-  }
-});
-
-const output = parseModernizationResponse(response.output_text);
-const outputByKey = new Map(output.passages.map((passage) => [passage.key, passage.modernizedText]));
+const outputByKey = new Map<string, string>();
 const changedFiles = new Map<string, ChapterAsset>();
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+for (const batch of chunks(targets, options.batchSize)) {
+  const output = await modernizeBatch(client, batch, options.model);
+
+  for (const passage of output.passages) {
+    outputByKey.set(passage.key, passage.modernizedText);
+  }
+}
 
 for (const target of targets) {
   const modernizedText = outputByKey.get(target.key)?.trim();
@@ -132,11 +100,13 @@ console.log(JSON.stringify({
   changedFiles: [...changedFiles.keys()],
   count: targets.length,
   model: options.model,
+  batchSize: options.batchSize,
   work: work.name,
   workId: work.id
 }, null, 2));
 
 function parseArgs(args: string[]) {
+  let batchSize = 1;
   let force = false;
   let limit = 10;
   let model = DEFAULT_MODEL;
@@ -154,6 +124,12 @@ function parseArgs(args: string[]) {
 
     if (arg === "--model" && next) {
       model = next;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--batch-size" && next) {
+      batchSize = Number(next);
       index += 1;
       continue;
     }
@@ -176,7 +152,61 @@ function parseArgs(args: string[]) {
     throw new Error("--limit must be a positive integer.");
   }
 
-  return { force, limit, model, workId };
+  if (!Number.isInteger(batchSize) || batchSize < 1) {
+    throw new Error("--batch-size must be a positive integer.");
+  }
+
+  return { batchSize, force, limit, model, workId };
+}
+
+async function modernizeBatch(
+  client: OpenAI,
+  batch: ModernizationTarget[],
+  model: string
+) {
+  const response = await client.responses.create({
+    instructions: MODERNIZATION_INSTRUCTIONS,
+    input: JSON.stringify({
+      passages: batch.map((target) => ({
+        key: target.key,
+        text: target.text
+      }))
+    }),
+    max_output_tokens: Math.max(
+      2000,
+      batch.reduce((total, target) => total + target.text.length, 0) + 1000
+    ),
+    model,
+    text: {
+      format: {
+        name: "church_fathers_modernization",
+        schema: {
+          additionalProperties: false,
+          properties: {
+            passages: {
+              items: {
+                additionalProperties: false,
+                properties: {
+                  key: { type: "string" },
+                  modernizedText: { type: "string" }
+                },
+                required: ["key", "modernizedText"],
+                type: "object"
+              },
+              type: "array"
+            }
+          },
+          required: ["passages"],
+          type: "object"
+        },
+        strict: true,
+        type: "json_schema"
+      },
+      verbosity: "low"
+    }
+  });
+
+  return parseModernizationResponse(response.output_text);
 }
 
 function collectTargets(work: BookIndex["books"][number], limit: number, force: boolean) {
@@ -224,6 +254,16 @@ function parseModernizationResponse(raw: string): ModernizationResponse {
   }
 
   return parsed;
+}
+
+function chunks<T>(items: T[], size: number) {
+  const batches: T[][] = [];
+
+  for (let index = 0; index < items.length; index += size) {
+    batches.push(items.slice(index, index + size));
+  }
+
+  return batches;
 }
 
 function readJson<T>(filePath: string): T {

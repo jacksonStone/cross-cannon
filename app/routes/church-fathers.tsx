@@ -189,6 +189,7 @@ const CONFESSIONS_AUDIO_TRACKS = [
 ] as const;
 
 type ReaderTheme = typeof READER_THEMES[number];
+type ReaderTextMode = "modernized" | "original";
 
 type WorkClassification = {
   bucket: string;
@@ -625,6 +626,7 @@ export default function ChurchFathersReaderRoute() {
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isJumpOpen, setIsJumpOpen] = useState(false);
   const [isAuthorFilterOpen, setIsAuthorFilterOpen] = useState(false);
+  const [readerTextMode, setReaderTextMode] = useState<ReaderTextMode>("modernized");
   const [themeCorpus, setThemeCorpus] = useState<SearchTargetCorpus>("early-christian");
   const [canon, setCanon] = useState<CanonMode>(actionData?.canon ?? DEFAULT_CANON);
   const [matchCount, setMatchCount] = useState(actionData?.matchCount ?? DEFAULT_MATCH_COUNT);
@@ -717,7 +719,7 @@ export default function ChurchFathersReaderRoute() {
 
   useModalScrollLock(isSearchOpen || isJumpOpen || isAuthorFilterOpen);
   const focusedPassage = focusedPassageKey
-    ? findLoadedPassage(loadedChapters, focusedPassageKey)
+    ? findLoadedPassage(loadedChapters, focusedPassageKey, readerTextMode)
     : null;
   const activeAudio = activeEntry
     ? getEarlyChristianAudio(activeEntry, confessionsAudioAlignment)
@@ -1483,6 +1485,20 @@ export default function ChurchFathersReaderRoute() {
                   Jump
                 </button>
               </section>
+              <div className="reader-segmented-control reader-text-toggle" aria-label="Text version">
+                {(["modernized", "original"] as const).map((mode) => (
+                  <button
+                    aria-pressed={readerTextMode === mode}
+                    className={readerTextMode === mode ? "is-active" : ""}
+                    key={mode}
+                    onClick={() => setReaderTextMode(mode)}
+                    title={mode === "modernized" ? "Show modernized text" : "Show original translation"}
+                    type="button"
+                  >
+                    {mode === "modernized" ? "Modern" : "Original"}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </header>
@@ -1509,7 +1525,7 @@ export default function ChurchFathersReaderRoute() {
                   <>
                     <p className="ec-chapter-title">{chapter.title}</p>
                     <div className="reader-chapter-passages">
-                      {groupChapterPassages(chapter).map((passage) => {
+                      {groupChapterPassages(chapter, readerTextMode).map((passage) => {
                         const isSelected = isSelectedReaderPassage({
                           chapterId: chapter.id,
                           passage,
@@ -2320,7 +2336,10 @@ function getChapterWindowRange(index: number, count: number) {
   });
 }
 
-function groupChapterPassages(chapter: ChapterAsset): ReaderPassage[] {
+function groupChapterPassages(
+  chapter: ChapterAsset,
+  textMode: ReaderTextMode = "modernized"
+): ReaderPassage[] {
   const passages: ReaderPassage[] = [];
   let current: ChapterAsset["verses"] = [];
 
@@ -2328,7 +2347,7 @@ function groupChapterPassages(chapter: ChapterAsset): ReaderPassage[] {
     current.push(verse);
 
     if (current.length >= 3) {
-      passages.push(buildReaderPassage(chapter, current));
+      passages.push(buildReaderPassage(chapter, current, textMode));
       current = [];
     }
   }
@@ -2341,16 +2360,20 @@ function groupChapterPassages(chapter: ChapterAsset): ReaderPassage[] {
           verse.verse >= previous.verseStart && verse.verse <= previous.verseEnd
         ))
         : [];
-      passages.push(buildReaderPassage(chapter, [...previousVerses, ...current]));
+      passages.push(buildReaderPassage(chapter, [...previousVerses, ...current], textMode));
     } else {
-      passages.push(buildReaderPassage(chapter, current));
+      passages.push(buildReaderPassage(chapter, current, textMode));
     }
   }
 
   return passages;
 }
 
-function buildReaderPassage(chapter: ChapterAsset, verses: ChapterAsset["verses"]): ReaderPassage {
+function buildReaderPassage(
+  chapter: ChapterAsset,
+  verses: ChapterAsset["verses"],
+  textMode: ReaderTextMode
+): ReaderPassage {
   const first = verses[0];
   const last = verses[verses.length - 1];
   const rangeLabel = last.verse === first.verse
@@ -2361,13 +2384,19 @@ function buildReaderPassage(chapter: ChapterAsset, verses: ChapterAsset["verses"
     key: `${chapter.id}:${first.verse}-${last.verse}`,
     rangeLabel,
     reference: `${chapter.book} ${chapter.chapter}:${rangeLabel}`,
-    text: verses.map((verse) => (verse.modernizedText ?? verse.text).trim()).join(" "),
+    text: verses.map((verse) => (
+      textMode === "modernized" ? verse.modernizedText ?? verse.text : verse.text
+    ).trim()).join(" "),
     verseEnd: last.verse,
     verseStart: first.verse
   };
 }
 
-function findLoadedPassage(chapters: Map<string, ChapterAsset>, key: string) {
+function findLoadedPassage(
+  chapters: Map<string, ChapterAsset>,
+  key: string,
+  textMode: ReaderTextMode
+) {
   const rangeMatch = key.match(/^(.+):(\d+)-(\d+)$/);
 
   if (!rangeMatch) {
@@ -2381,7 +2410,7 @@ function findLoadedPassage(chapters: Map<string, ChapterAsset>, key: string) {
     return null;
   }
 
-  return groupChapterPassages(chapter).find((passage) => (
+  return groupChapterPassages(chapter, textMode).find((passage) => (
     passage.verseStart === Number(verseStart) && passage.verseEnd === Number(verseEnd)
   )) ?? null;
 }
