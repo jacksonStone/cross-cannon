@@ -1,6 +1,7 @@
 import {
   type MutableRefObject,
   type SetStateAction,
+  useCallback,
   useEffect,
   useLayoutEffect
 } from "react";
@@ -15,6 +16,17 @@ type PrependSnapshot = {
   scrollHeight: number;
   scrollY: number;
 };
+
+export const DEFAULT_READER_SCROLL_WINDOW = {
+  edgePx: 2200,
+  expandCount: 10,
+  headerOffset: 118,
+  initialAfter: 24,
+  initialBefore: 10,
+  initialScrollMaxFrames: 8,
+  minReadingAnchorOffset: 220,
+  readingAnchorRatio: 0.38
+} as const;
 
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -178,17 +190,7 @@ export function useInitialTargetScroll({
     let frame = 0;
     let frameCount = 0;
     let didCancel = false;
-    let didSettle = false;
     let fontsSettled = document.fonts === undefined;
-
-    const settle = () => {
-      if (didSettle) {
-        return;
-      }
-
-      didSettle = true;
-      onSettled();
-    };
 
     const finishInitialScroll = () => {
       if (didCancel) {
@@ -196,45 +198,16 @@ export function useInitialTargetScroll({
       }
 
       scrollToTarget();
-      settle();
-    };
-
-    const abortInitialScroll = () => {
-      if (didCancel) {
-        return;
-      }
-
-      didCancel = true;
-
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-        frame = 0;
-      }
-
-      settle();
-    };
-
-    const abortInitialScrollForKey = (event: KeyboardEvent) => {
-      if (isScrollKey(event.key)) {
-        abortInitialScroll();
-      }
+      onSettled();
     };
 
     const scheduleScroll = () => {
-      if (didCancel) {
-        return;
-      }
-
       if (!frame) {
         frame = window.requestAnimationFrame(runScroll);
       }
     };
 
     const runScroll = () => {
-      if (didCancel) {
-        return;
-      }
-
       frame = 0;
       frameCount += 1;
 
@@ -256,9 +229,6 @@ export function useInitialTargetScroll({
     };
 
     scheduleScroll();
-    window.addEventListener("wheel", abortInitialScroll, { passive: true });
-    window.addEventListener("touchmove", abortInitialScroll, { passive: true });
-    window.addEventListener("keydown", abortInitialScrollForKey);
     void document.fonts?.ready
       .then(() => {
         fontsSettled = true;
@@ -271,9 +241,6 @@ export function useInitialTargetScroll({
 
     return () => {
       didCancel = true;
-      window.removeEventListener("wheel", abortInitialScroll);
-      window.removeEventListener("touchmove", abortInitialScroll);
-      window.removeEventListener("keydown", abortInitialScrollForKey);
 
       if (frame) {
         window.cancelAnimationFrame(frame);
@@ -290,12 +257,173 @@ export function useInitialTargetScroll({
   ]);
 }
 
-function isScrollKey(key: string) {
-  return key === "ArrowDown"
-    || key === "ArrowUp"
-    || key === "End"
-    || key === "Home"
-    || key === "PageDown"
-    || key === "PageUp"
-    || key === " ";
+export function useReaderScrollWindow({
+  activeKeyRef,
+  chapterSelector,
+  edgePx,
+  expandCount,
+  findInitialTarget,
+  getChapterKey,
+  hasScrolledToInitialTargetRef,
+  headerOffset,
+  initialScrollMaxFrames,
+  initialScrollReady,
+  itemCount,
+  minReadingAnchorOffset,
+  onActiveKeyChange,
+  onInitialScrollSettled,
+  onMissingInitialTarget,
+  prependSnapshotRef,
+  readingAnchorRatio,
+  setRange,
+  startIndex,
+  trackingReady,
+  windowReady
+}: {
+  activeKeyRef: MutableRefObject<string | null>;
+  chapterSelector: string;
+  edgePx: number;
+  expandCount: number;
+  findInitialTarget: () => HTMLElement | null;
+  getChapterKey: (element: HTMLElement) => string | null | undefined;
+  hasScrolledToInitialTargetRef: MutableRefObject<boolean>;
+  headerOffset: number;
+  initialScrollMaxFrames: number;
+  initialScrollReady: boolean;
+  itemCount: number;
+  minReadingAnchorOffset: number;
+  onActiveKeyChange: (key: string) => void;
+  onInitialScrollSettled: () => void;
+  onMissingInitialTarget?: () => void;
+  prependSnapshotRef: MutableRefObject<PrependSnapshot | null>;
+  readingAnchorRatio: number;
+  setRange: (value: SetStateAction<WindowRange>) => void;
+  startIndex: number;
+  trackingReady: boolean;
+  windowReady: boolean;
+}) {
+  const settleInitialScroll = useCallback(() => {
+    hasScrolledToInitialTargetRef.current = true;
+    onInitialScrollSettled();
+  }, [hasScrolledToInitialTargetRef, onInitialScrollSettled]);
+  const shouldScrollToInitialTarget = useCallback(
+    () => !hasScrolledToInitialTargetRef.current,
+    [hasScrolledToInitialTargetRef]
+  );
+
+  useInitialTargetScroll({
+    findTarget: findInitialTarget,
+    headerOffset,
+    isReady: initialScrollReady,
+    maxFrames: initialScrollMaxFrames,
+    onMissingTarget: onMissingInitialTarget,
+    onSettled: settleInitialScroll,
+    shouldScroll: shouldScrollToInitialTarget
+  });
+
+  usePreservePrependedScroll({
+    prependSnapshotRef,
+    startIndex
+  });
+
+  useExpandableReaderWindow({
+    edgePx,
+    expandCount,
+    expandOnMount: false,
+    isReady: windowReady,
+    itemCount,
+    prependSnapshotRef,
+    setRange
+  });
+
+  useEffect(() => {
+    if (!trackingReady || itemCount === 0) {
+      return;
+    }
+
+    let animationFrame = 0;
+
+    const updateActiveKeyFromAnchor = () => {
+      if (
+        !hasScrolledToInitialTargetRef.current
+        || prependSnapshotRef.current
+      ) {
+        return;
+      }
+
+      const currentChapter = findElementAtReadingAnchor(
+        [...document.querySelectorAll<HTMLElement>(chapterSelector)],
+        {
+          headerOffset,
+          minReadingAnchorOffset,
+          readingAnchorRatio
+        }
+      );
+      const currentKey = currentChapter ? getChapterKey(currentChapter) : null;
+
+      if (!currentKey || currentKey === activeKeyRef.current) {
+        return;
+      }
+
+      activeKeyRef.current = currentKey;
+      onActiveKeyChange(currentKey);
+    };
+
+    const scheduleLocationUpdate = () => {
+      if (animationFrame) {
+        return;
+      }
+
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = 0;
+        updateActiveKeyFromAnchor();
+      });
+    };
+
+    window.addEventListener("scroll", scheduleLocationUpdate, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", scheduleLocationUpdate);
+
+      if (animationFrame) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [
+    activeKeyRef,
+    chapterSelector,
+    getChapterKey,
+    hasScrolledToInitialTargetRef,
+    headerOffset,
+    itemCount,
+    minReadingAnchorOffset,
+    onActiveKeyChange,
+    prependSnapshotRef,
+    readingAnchorRatio,
+    trackingReady
+  ]);
+}
+
+function findElementAtReadingAnchor(
+  elements: HTMLElement[],
+  {
+    headerOffset,
+    minReadingAnchorOffset,
+    readingAnchorRatio
+  }: {
+    headerOffset: number;
+    minReadingAnchorOffset: number;
+    readingAnchorRatio: number;
+  }
+) {
+  const anchorY = Math.max(
+    headerOffset + 40,
+    Math.min(window.innerHeight * readingAnchorRatio, minReadingAnchorOffset)
+  );
+
+  return elements.find((element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.top <= anchorY && rect.bottom >= anchorY;
+  }) ?? elements.find((element) => element.getBoundingClientRect().top > anchorY)
+    ?? elements[elements.length - 1];
 }

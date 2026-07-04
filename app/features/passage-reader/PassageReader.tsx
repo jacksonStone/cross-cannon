@@ -13,9 +13,8 @@ import { Form, Link, useNavigation } from "@remix-run/react";
 import { PassageJump } from "~/features/passage-jump/PassageJump";
 import { ReaderCorpusSwitch } from "~/features/reader-switch/ReaderCorpusSwitch";
 import {
-  useExpandableReaderWindow,
-  useInitialTargetScroll,
-  usePreservePrependedScroll
+  DEFAULT_READER_SCROLL_WINDOW,
+  useReaderScrollWindow
 } from "~/features/reader-window/useReaderWindow";
 import { getCenteredWindowRange } from "~/features/reader-window/window-range";
 import { sortCanonicalBooks } from "~/features/search/canons";
@@ -29,14 +28,8 @@ import type { BrowserPassage } from "~/lib/scripture-cache.server";
 import { buildChapterIndex, chapterKey } from "./chapter-index";
 
 const TRANSLATION_ABBREVIATION = "WEB";
-const HEADER_SCROLL_OFFSET = 118;
-const READING_ANCHOR_RATIO = 0.38;
-const MIN_READING_ANCHOR_OFFSET = 220;
-const INITIAL_PREVIOUS_CHAPTERS = 10;
-const INITIAL_NEXT_CHAPTERS = 24;
-const CHAPTER_WINDOW_EXPAND_COUNT = 10;
-const CHAPTER_WINDOW_EDGE_PX = 2200;
-const INITIAL_SCROLL_MAX_FRAMES = 8;
+const INITIAL_PREVIOUS_CHAPTERS = DEFAULT_READER_SCROLL_WINDOW.initialBefore;
+const INITIAL_NEXT_CHAPTERS = DEFAULT_READER_SCROLL_WINDOW.initialAfter;
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -238,95 +231,40 @@ export function PassageReader({
     hasScrolledToInitialPassageRef.current = true;
     setHasCompletedInitialScroll(true);
   }, []);
-  const shouldScrollToInitialPassage = useCallback(
-    () => !hasScrolledToInitialPassageRef.current,
-    []
-  );
   const scrollToTopWhenInitialPassageMissing = useCallback(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, []);
+  const updateActiveChapterFromScroll = useCallback((chapterKey: string) => {
+    setActiveChapterKey(chapterKey);
+    onChapterChange?.(chapterKey);
+  }, [onChapterChange]);
+  const getRenderedChapterKey = useCallback((element: HTMLElement) => (
+    element.dataset.chapterKey
+  ), []);
 
-  useInitialTargetScroll({
-    findTarget: findInitialPassageTarget,
-    headerOffset: HEADER_SCROLL_OFFSET,
-    isReady: isScriptureReady && renderedChapterEntries.length > 0,
-    maxFrames: INITIAL_SCROLL_MAX_FRAMES,
-    onMissingTarget: scrollToTopWhenInitialPassageMissing,
-    onSettled: finishInitialPassageScroll,
-    shouldScroll: shouldScrollToInitialPassage
-  });
-
-  usePreservePrependedScroll({
-    prependSnapshotRef,
-    startIndex: renderedRange.startIndex
-  });
-
-  useExpandableReaderWindow({
-    edgePx: CHAPTER_WINDOW_EDGE_PX,
-    expandCount: CHAPTER_WINDOW_EXPAND_COUNT,
-    expandOnMount: false,
-    isReady: isScriptureReady && hasCompletedInitialScroll,
+  useReaderScrollWindow({
+    activeKeyRef: activeChapterKeyRef,
+    chapterSelector: ".reader-chapter",
+    edgePx: DEFAULT_READER_SCROLL_WINDOW.edgePx,
+    expandCount: DEFAULT_READER_SCROLL_WINDOW.expandCount,
+    findInitialTarget: findInitialPassageTarget,
+    getChapterKey: getRenderedChapterKey,
+    hasScrolledToInitialTargetRef: hasScrolledToInitialPassageRef,
+    headerOffset: DEFAULT_READER_SCROLL_WINDOW.headerOffset,
+    initialScrollMaxFrames: DEFAULT_READER_SCROLL_WINDOW.initialScrollMaxFrames,
+    initialScrollReady: isScriptureReady && renderedChapterEntries.length > 0,
     itemCount: orderedChapterEntries.length,
+    minReadingAnchorOffset: DEFAULT_READER_SCROLL_WINDOW.minReadingAnchorOffset,
+    onActiveKeyChange: updateActiveChapterFromScroll,
+    onInitialScrollSettled: finishInitialPassageScroll,
+    onMissingInitialTarget: scrollToTopWhenInitialPassageMissing,
     prependSnapshotRef,
-    setRange: setRenderedRange
+    readingAnchorRatio: DEFAULT_READER_SCROLL_WINDOW.readingAnchorRatio,
+    setRange: setRenderedRange,
+    startIndex: renderedRange.startIndex,
+    trackingReady: hasCompletedInitialScroll,
+    windowReady: isScriptureReady && hasCompletedInitialScroll
   });
-
-  useEffect(() => {
-    if (!hasCompletedInitialScroll || orderedChapterEntries.length === 0) {
-      return;
-    }
-
-    let animationFrame = 0;
-
-    const updateLocationFromHeaderAnchor = () => {
-      if (
-        !hasScrolledToInitialPassageRef.current
-        || prependSnapshotRef.current
-      ) {
-        return;
-      }
-
-      const chapterElements = [
-        ...document.querySelectorAll<HTMLElement>(".reader-chapter")
-      ];
-      const currentChapter = findElementAtReadingAnchor(chapterElements);
-      const currentChapterKey = currentChapter?.dataset.chapterKey;
-
-      if (!currentChapterKey || currentChapterKey === activeChapterKeyRef.current) {
-        return;
-      }
-
-      activeChapterKeyRef.current = currentChapterKey;
-      setActiveChapterKey(currentChapterKey);
-      onChapterChange?.(currentChapterKey);
-    };
-
-    const scheduleLocationUpdate = () => {
-      if (animationFrame) {
-        return;
-      }
-
-      animationFrame = window.requestAnimationFrame(() => {
-        animationFrame = 0;
-        updateLocationFromHeaderAnchor();
-      });
-    };
-
-    window.addEventListener("scroll", scheduleLocationUpdate, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", scheduleLocationUpdate);
-
-      if (animationFrame) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-    };
-  }, [
-    chapterIndex.chaptersByKey,
-    hasCompletedInitialScroll,
-    onChapterChange,
-    orderedChapterEntries.length
-  ]);
 
   const isSearchingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
@@ -859,23 +797,6 @@ function getInitialRenderedRange(initialChapterIndex: number, chapterCount: numb
 function findRenderedPassageElement(passageId: string) {
   return [...document.querySelectorAll<HTMLElement>(".reader-passage")]
     .find((element) => element.dataset.passageId === passageId) ?? null;
-}
-
-function findElementAtReadingAnchor(elements: HTMLElement[]) {
-  const anchorY = getReadingAnchorY();
-
-  return elements.find((element) => {
-    const rect = element.getBoundingClientRect();
-    return rect.top <= anchorY && rect.bottom >= anchorY;
-  }) ?? elements.find((element) => element.getBoundingClientRect().top > anchorY)
-    ?? elements[elements.length - 1];
-}
-
-function getReadingAnchorY() {
-  return Math.max(
-    HEADER_SCROLL_OFFSET + 40,
-    Math.min(window.innerHeight * READING_ANCHOR_RATIO, MIN_READING_ANCHOR_OFFSET)
-  );
 }
 
 function createPresetReaderSettings(
