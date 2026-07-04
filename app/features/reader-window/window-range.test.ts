@@ -46,3 +46,14 @@ test("expandWindowStart and expandWindowEnd clamp to available bounds", () => {
     { endIndex: 22, startIndex: 8 }
   );
 });
+
+test("expandWindowStart respects a minimum start index", () => {
+  assert.deepEqual(
+    expandWindowStart({ endIndex: 20, startIndex: 8 }, 10, 4),
+    { endIndex: 20, startIndex: 4 }
+  );
+  assert.deepEqual(
+    expandWindowStart({ endIndex: 20, startIndex: 4 }, 10, 4),
+    { endIndex: 20, startIndex: 4 }
+  );
+});

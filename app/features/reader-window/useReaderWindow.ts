@@ -66,6 +66,7 @@ export function useExpandableReaderWindow({
   expandOnMount = true,
   isReady,
   itemCount,
+  minStartIndex = 0,
   prependSnapshotRef,
   setRange
 }: {
@@ -74,6 +75,7 @@ export function useExpandableReaderWindow({
   expandOnMount?: boolean;
   isReady: boolean;
   itemCount: number;
+  minStartIndex?: number;
   prependSnapshotRef: MutableRefObject<PrependSnapshot | null>;
   setRange: (value: SetStateAction<WindowRange>) => void;
 }) {
@@ -93,7 +95,7 @@ export function useExpandableReaderWindow({
 
       if (distanceToTop < edgePx) {
         setRange((range) => {
-          const nextRange = expandWindowStart(range, expandCount);
+          const nextRange = expandWindowStart(range, expandCount, minStartIndex);
 
           if (nextRange === range) {
             return range;
@@ -140,6 +142,7 @@ export function useExpandableReaderWindow({
     expandOnMount,
     isReady,
     itemCount,
+    minStartIndex,
     prependSnapshotRef,
     setRange
   ]);
@@ -269,6 +272,7 @@ export function useReaderScrollWindow({
   initialScrollMaxFrames,
   initialScrollReady,
   itemCount,
+  minStartIndex,
   minReadingAnchorOffset,
   onActiveKeyChange,
   onInitialScrollSettled,
@@ -291,6 +295,7 @@ export function useReaderScrollWindow({
   initialScrollMaxFrames: number;
   initialScrollReady: boolean;
   itemCount: number;
+  minStartIndex?: number;
   minReadingAnchorOffset: number;
   onActiveKeyChange: (key: string) => void;
   onInitialScrollSettled: () => void;
@@ -332,6 +337,7 @@ export function useReaderScrollWindow({
     expandOnMount: false,
     isReady: windowReady,
     itemCount,
+    minStartIndex,
     prependSnapshotRef,
     setRange
   });

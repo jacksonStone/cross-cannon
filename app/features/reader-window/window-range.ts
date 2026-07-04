@@ -41,13 +41,16 @@ export function rangeContainsIndex(range: WindowRange, index: number) {
 
 export function expandWindowStart(
   range: WindowRange,
-  expandCount: number
+  expandCount: number,
+  minStartIndex = 0
 ): WindowRange {
-  if (range.startIndex <= 0) {
+  const safeMinStartIndex = Math.max(0, minStartIndex);
+
+  if (range.startIndex <= safeMinStartIndex) {
     return range;
   }
 
-  const startIndex = Math.max(0, range.startIndex - expandCount);
+  const startIndex = Math.max(safeMinStartIndex, range.startIndex - expandCount);
 
   return startIndex === range.startIndex
     ? range

@@ -184,6 +184,10 @@ export function PassageReader({
   const initialChapterIndex = initialChapterKey
     ? renderedChapterKeys.indexOf(initialChapterKey)
     : -1;
+  const activeBookStartIndex = findBookStartIndex(
+    activeChapterKey ? renderedChapterKeys.indexOf(activeChapterKey) : -1,
+    orderedChapterEntries
+  );
   const renderedChapterEntries = useMemo(
     () => {
       if (renderedRange.endIndex < renderedRange.startIndex) {
@@ -273,6 +277,7 @@ export function PassageReader({
     initialScrollMaxFrames: DEFAULT_READER_SCROLL_WINDOW.initialScrollMaxFrames,
     initialScrollReady: isScriptureReady && renderedChapterEntries.length > 0,
     itemCount: orderedChapterEntries.length,
+    minStartIndex: activeBookStartIndex,
     minReadingAnchorOffset: DEFAULT_READER_SCROLL_WINDOW.minReadingAnchorOffset,
     onActiveKeyChange: updateActiveChapterFromScroll,
     onInitialScrollSettled: finishInitialPassageScroll,
@@ -833,10 +838,26 @@ function clampRangeStartToBook(
   activeIndex: number,
   entries: Array<{ chapter: { book: string } }>
 ) {
+  const bookStartIndex = findBookStartIndex(activeIndex, entries);
+
+  if (bookStartIndex < 0) {
+    return range;
+  }
+
+  return {
+    ...range,
+    startIndex: Math.max(range.startIndex, bookStartIndex)
+  };
+}
+
+function findBookStartIndex(
+  activeIndex: number,
+  entries: Array<{ chapter: { book: string } }>
+) {
   const activeEntry = entries[activeIndex];
 
   if (!activeEntry) {
-    return range;
+    return -1;
   }
 
   let bookStartIndex = activeIndex;
@@ -848,10 +869,7 @@ function clampRangeStartToBook(
     bookStartIndex -= 1;
   }
 
-  return {
-    ...range,
-    startIndex: Math.max(range.startIndex, bookStartIndex)
-  };
+  return bookStartIndex;
 }
 
 function findRenderedPassageElement(passageId: string) {
