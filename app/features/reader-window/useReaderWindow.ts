@@ -178,7 +178,17 @@ export function useInitialTargetScroll({
     let frame = 0;
     let frameCount = 0;
     let didCancel = false;
+    let didSettle = false;
     let fontsSettled = document.fonts === undefined;
+
+    const settle = () => {
+      if (didSettle) {
+        return;
+      }
+
+      didSettle = true;
+      onSettled();
+    };
 
     const finishInitialScroll = () => {
       if (didCancel) {
@@ -186,16 +196,45 @@ export function useInitialTargetScroll({
       }
 
       scrollToTarget();
-      onSettled();
+      settle();
+    };
+
+    const abortInitialScroll = () => {
+      if (didCancel) {
+        return;
+      }
+
+      didCancel = true;
+
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+        frame = 0;
+      }
+
+      settle();
+    };
+
+    const abortInitialScrollForKey = (event: KeyboardEvent) => {
+      if (isScrollKey(event.key)) {
+        abortInitialScroll();
+      }
     };
 
     const scheduleScroll = () => {
+      if (didCancel) {
+        return;
+      }
+
       if (!frame) {
         frame = window.requestAnimationFrame(runScroll);
       }
     };
 
     const runScroll = () => {
+      if (didCancel) {
+        return;
+      }
+
       frame = 0;
       frameCount += 1;
 
@@ -217,6 +256,9 @@ export function useInitialTargetScroll({
     };
 
     scheduleScroll();
+    window.addEventListener("wheel", abortInitialScroll, { passive: true });
+    window.addEventListener("touchmove", abortInitialScroll, { passive: true });
+    window.addEventListener("keydown", abortInitialScrollForKey);
     void document.fonts?.ready
       .then(() => {
         fontsSettled = true;
@@ -229,6 +271,9 @@ export function useInitialTargetScroll({
 
     return () => {
       didCancel = true;
+      window.removeEventListener("wheel", abortInitialScroll);
+      window.removeEventListener("touchmove", abortInitialScroll);
+      window.removeEventListener("keydown", abortInitialScrollForKey);
 
       if (frame) {
         window.cancelAnimationFrame(frame);
@@ -243,4 +288,14 @@ export function useInitialTargetScroll({
     onSettled,
     shouldScroll
   ]);
+}
+
+function isScrollKey(key: string) {
+  return key === "ArrowDown"
+    || key === "ArrowUp"
+    || key === "End"
+    || key === "Home"
+    || key === "PageDown"
+    || key === "PageUp"
+    || key === " ";
 }

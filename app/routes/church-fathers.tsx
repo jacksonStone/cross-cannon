@@ -633,6 +633,7 @@ export default function ChurchFathersReaderRoute() {
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isJumpOpen, setIsJumpOpen] = useState(false);
   const [isAuthorFilterOpen, setIsAuthorFilterOpen] = useState(false);
+  const [hasCompletedInitialScroll, setHasCompletedInitialScroll] = useState(false);
   const [readerTextMode, setReaderTextMode] = useState<ReaderTextMode>("modernized");
   const [themeCorpus, setThemeCorpus] = useState<SearchTargetCorpus>("early-christian");
   const [canon, setCanon] = useState<CanonMode>(actionData?.canon ?? DEFAULT_CANON);
@@ -1055,6 +1056,7 @@ export default function ChurchFathersReaderRoute() {
         setSelectedPassageChapterId("");
         lastReportedChapterIdRef.current = resolvedActiveChapterId;
         hasScrolledToSelectionRef.current = false;
+        setHasCompletedInitialScroll(false);
       }
 
       return;
@@ -1086,6 +1088,7 @@ export default function ChurchFathersReaderRoute() {
 
     lastAppliedInitialTargetRef.current = initialTargetKey;
     hasScrolledToSelectionRef.current = false;
+    setHasCompletedInitialScroll(false);
     setRenderedRange(getChapterWindowRange(targetEntry.index, chapters.length));
     setActiveChapterId(initialChapterId);
     setSelectedPassage(initialPassageRange);
@@ -1188,14 +1191,14 @@ export default function ChurchFathersReaderRoute() {
     edgePx: CHAPTER_WINDOW_EDGE_PX,
     expandCount: CHAPTER_WINDOW_EXPAND_COUNT,
     expandOnMount: false,
-    isReady,
+    isReady: isReady && hasCompletedInitialScroll,
     itemCount: chapters.length,
     prependSnapshotRef,
     setRange: setRenderedRange
   });
 
   useEffect(() => {
-    if (!isReady || chapters.length === 0) {
+    if (!isReady || !hasCompletedInitialScroll || chapters.length === 0) {
       return;
     }
 
@@ -1243,6 +1246,7 @@ export default function ChurchFathersReaderRoute() {
     };
   }, [
     chapters.length,
+    hasCompletedInitialScroll,
     isReady,
     rememberReaderChapter
   ]);
@@ -1268,6 +1272,7 @@ export default function ChurchFathersReaderRoute() {
   const finishInitialChapterScroll = useCallback(() => {
     hasScrolledToSelectionRef.current = true;
     lastReportedChapterIdRef.current = resolvedActiveChapterId;
+    setHasCompletedInitialScroll(true);
   }, [resolvedActiveChapterId]);
   const shouldScrollToInitialChapter = useCallback(
     () => !hasScrolledToSelectionRef.current,
@@ -1337,6 +1342,7 @@ export default function ChurchFathersReaderRoute() {
     }
 
     hasScrolledToSelectionRef.current = false;
+    setHasCompletedInitialScroll(false);
     setRenderedRange(getChapterWindowRange(chapterEntry.index, chapters.length));
     setActiveChapterId(chapterId);
     setSelectedPassage(passageRange);
@@ -2628,24 +2634,17 @@ function findElementAtChapterUpdateLine(elements: HTMLElement[]) {
     return null;
   }
 
-  let firstVisibleElement: HTMLElement | null = null;
-  let activeElement: HTMLElement | null = null;
-
-  for (const element of elements) {
+  const elementAtAnchor = elements.find((element) => {
     const rect = element.getBoundingClientRect();
+    return rect.top <= CHAPTER_UPDATE_OFFSET && rect.bottom >= CHAPTER_UPDATE_OFFSET;
+  });
 
-    if (rect.bottom < 0 || rect.top > window.innerHeight) {
-      continue;
-    }
-
-    firstVisibleElement ??= element;
-
-    if (rect.top <= CHAPTER_UPDATE_OFFSET) {
-      activeElement = element;
-    }
+  if (elementAtAnchor) {
+    return elementAtAnchor;
   }
 
-  return activeElement ?? firstVisibleElement;
+  return elements.find((element) => element.getBoundingClientRect().top > CHAPTER_UPDATE_OFFSET)
+    ?? elements[elements.length - 1];
 }
 
 function rangeFromResult(result: EarlyChristianSearchResult) {
