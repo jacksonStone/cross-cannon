@@ -133,12 +133,16 @@ export function FilterModal({
               disabled={isSearching}
               hint="Choose up to 3 authors for early Christian similarity results. Leave blank to search every author."
               legend="Fathers authors"
+              maxVisibleOptions={18}
               maxSelected={3}
               onToggle={onToggleEarlyChristianAuthor}
               options={earlyChristianAuthors.map((author) => ({
                 label: author,
                 value: author
               }))}
+              searchable
+              searchLabel="Find author"
+              searchPlaceholder="Augustine"
               selectedValues={selectedEarlyChristianAuthors}
             />
           ) : null}

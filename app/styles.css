@@ -151,9 +151,70 @@ h1 {
   min-height: 38px;
 }
 
+.passage-jump-search {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  padding: 0 10px;
+}
+
 .ec-jump-modal .passage-jump-book select {
   width: 100%;
   max-width: 100%;
+}
+
+.ec-work-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  max-height: min(38vh, 360px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.ec-work-option {
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+  padding: 8px 10px;
+}
+
+.ec-work-option:hover,
+.ec-work-option.is-selected {
+  border-color: var(--control-active-border);
+  background: var(--control-active-bg);
+  color: var(--ink);
+}
+
+.ec-work-title,
+.ec-work-meta {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ec-work-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.ec-work-meta {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 .ec-jump-modal .passage-jump-options {
@@ -562,6 +623,28 @@ select:focus {
   line-height: 1.35;
 }
 
+.book-picker-search {
+  display: grid;
+  gap: 4px;
+}
+
+.book-picker-search span {
+  color: var(--muted);
+  font-size: 0.69rem;
+  font-weight: 800;
+}
+
+.book-picker-search input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  padding: 0 10px;
+}
+
 .book-options {
   display: grid;
   gap: 4px;
@@ -591,6 +674,14 @@ select:focus {
 
 .book-option:has(input:disabled) {
   color: var(--muted);
+}
+
+.book-picker-empty,
+.passage-jump-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 button {

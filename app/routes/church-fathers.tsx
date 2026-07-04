@@ -47,6 +47,7 @@ import {
   parseCanonMode
 } from "~/features/search/canons";
 import { FilterModal } from "~/features/search/FilterModal";
+import { keywordMatches } from "~/features/search/keyword-match";
 import { withCalibratedMatchStrength } from "~/features/search/match-strength";
 import {
   initialSearchModalFlowState,
@@ -744,8 +745,6 @@ export default function ChurchFathersReaderRoute() {
   const isSearching = navigation.state === "submitting";
   const isFindingSimilarFathers = isSearching
     && navigation.formData?.get("intent") === "similar-passage";
-  const isFindingSimilarScripture = isSearching
-    && navigation.formData?.get("intent") === "similar-scripture";
   const activeHeaderTitle = activeEntry
     ? `${activeEntry.book.name} ${activeEntry.chapter.chapter}`
     : "";
@@ -1540,30 +1539,6 @@ export default function ChurchFathersReaderRoute() {
                                     )}
                                   </button>
                                 </Form>
-                                <Form method="post">
-                                  <input type="hidden" name="intent" value="similar-scripture" />
-                                  <input type="hidden" name="targetCorpus" value="scripture" />
-                                  <input type="hidden" name="sourcePassageId" value={passage.key} />
-                                  <ChurchFathersScriptureFilterInputs
-                                    books={selectedBooksForCanon}
-                                    canon={canon}
-                                  />
-                                  <input type="hidden" name="matchCount" value={matchCount} />
-                                  <button
-                                    className="context-button"
-                                    disabled={isSearching}
-                                    type="submit"
-                                  >
-                                    {isFindingSimilarScripture ? (
-                                      <>
-                                        <span className="button-spinner" aria-hidden="true" />
-                                        Finding Bible
-                                      </>
-                                    ) : (
-                                      "Similar Bible passages"
-                                    )}
-                                  </button>
-                                </Form>
                                 {isSearching ? (
                                   <p className="reader-action-status" role="status">
                                     Searching similar passages...
@@ -2038,12 +2013,29 @@ function ChapterJump({
 }) {
   const activeEntry = chapters.find((entry) => entry.chapter.id === activeChapterId)
     ?? chapters[0];
+  const books = useMemo(() => dedupeBooks(chapters), [chapters]);
   const [selectedBookId, setSelectedBookId] = useState(activeEntry?.book.id ?? "");
-  const selectedBook = chapters.find((entry) => entry.book.id === selectedBookId)?.book
+  const [workQuery, setWorkQuery] = useState("");
+  const selectedBook = books.find((book) => book.id === selectedBookId)
     ?? activeEntry?.book;
   const bookChapters = selectedBook
     ? chapters.filter((entry) => entry.book.id === selectedBook.id)
     : [];
+  const visibleBooks = useMemo(() => {
+    const trimmedQuery = workQuery.trim();
+
+    if (trimmedQuery.length > 0) {
+      return books
+        .filter((book) => keywordMatches(trimmedQuery, getBookSearchText(book)))
+        .slice(0, 24);
+    }
+
+    const selectedBooks = selectedBook ? [selectedBook] : [];
+    const selectedBookIds = new Set(selectedBooks.map((book) => book.id));
+    const unselectedMatches = books.filter((book) => !selectedBookIds.has(book.id));
+
+    return [...selectedBooks, ...unselectedMatches].slice(0, 12);
+  }, [books, selectedBook, workQuery]);
 
   return (
     <div
@@ -2076,18 +2068,35 @@ function ChapterJump({
 
         <div className="passage-jump-modal-body">
           <label className="passage-jump-book">
-            <span>Work</span>
-            <select
-              value={selectedBook?.id ?? ""}
-              onChange={(event) => setSelectedBookId(event.target.value)}
-            >
-              {dedupeBooks(chapters).map((book) => (
-                <option key={book.id} value={book.id}>
-                  {formatBookOptionLabel(book)}
-                </option>
-              ))}
-            </select>
+            <span>Find work</span>
+            <input
+              autoComplete="off"
+              className="passage-jump-search"
+              onChange={(event) => setWorkQuery(event.currentTarget.value)}
+              placeholder="City of God"
+              type="search"
+              value={workQuery}
+            />
           </label>
+          <div className="ec-work-options" aria-label="Works">
+            {visibleBooks.length > 0 ? visibleBooks.map((book) => (
+              <button
+                className={[
+                  "ec-work-option",
+                  book.id === selectedBook?.id ? "is-selected" : ""
+                ].filter(Boolean).join(" ")}
+                key={book.id}
+                onClick={() => setSelectedBookId(book.id)}
+                title={formatBookOptionLabel(book)}
+                type="button"
+              >
+                <span className="ec-work-title">{book.name}</span>
+                <span className="ec-work-meta">{getBookAuthorLabel(book)}</span>
+              </button>
+            )) : (
+              <p className="passage-jump-empty">No matches</p>
+            )}
+          </div>
 
           <div className="passage-jump-group" aria-label="Chapter">
             <span>Chapter</span>
@@ -2620,6 +2629,18 @@ function dedupeBooks(chapters: ChapterEntry[]) {
 
 function formatBookOptionLabel(book: BookSummary) {
   return book.author ? `${book.name} - ${book.author}` : book.name;
+}
+
+function getBookSearchText(book: BookSummary) {
+  return [
+    book.name,
+    book.book,
+    book.author,
+    book.metadata.author,
+    book.metadata.source.id,
+    book.metadata.source.title,
+    book.metadata.authorshipDateRange
+  ].filter(Boolean).join(" ");
 }
 
 function getEarlyChristianAudio(
