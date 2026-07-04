@@ -66,14 +66,10 @@ if (targets.length === 0) {
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const response = await client.responses.create({
   instructions: [
-    "You modernize public-domain English translations of patristic texts.",
-    "Preserve the author's meaning, theological claims, argumentative force, tone, and register.",
-    "Stay very close to the original. Do not summarize, expand, explain, soften, or paraphrase.",
-    "Modernize archaic English forms and word order when needed for contemporary readability.",
-    "Do not leave archaic forms such as unto, hath, doth, giveth, resisteth, thee, thou, thy, thine, shalt, art, dost, hast, whence, thither, or hither in the output unless they are part of a proper title.",
-    "Examples: unto -> to, hath -> has, doth -> does, giveth -> gives, resisteth -> resists, thee/thou/thy -> you/your where grammatically appropriate.",
-    "Modernize archaic wording inside quotations too, while preserving the quoted meaning.",
-    "Preserve proper names, quoted poetry line breaks, doctrinal terms, punctuation, and paragraph boundaries as much as possible.",
+    "Modernize the English of these public-domain patristic passages while staying as close as possible to the original translation.",
+    "Preserve the meaning, theology, argument, tone, register, imagery, and rhetorical force. Do not summarize, expand, explain, soften, or paraphrase.",
+    "Only change English that is archaic, misleading to a modern reader, or unnecessarily difficult because of obsolete grammar or word order. Examples include forms like unto, hath, doth, giveth, resisteth, thee, thou, thy, and older uses of words whose meaning has shifted.",
+    "Keep elevated, formal, biblical, poetic, or rhetorical language when it is still understandable. Preserve proper names, doctrinal terms, quotations, poetry line breaks, sentence fragments, and punctuation as much as possible.",
     "Return exactly one modernizedText string for every input key."
   ].join(" "),
   input: JSON.stringify({
