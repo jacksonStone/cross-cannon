@@ -28,6 +28,7 @@ import type { BrowserPassage } from "~/lib/scripture-cache.server";
 import { buildChapterIndex, chapterKey } from "./chapter-index";
 
 const TRANSLATION_ABBREVIATION = "WEB";
+const TRANSLATION_NAME = "World English Bible";
 const INITIAL_PREVIOUS_CHAPTERS = DEFAULT_READER_SCROLL_WINDOW.initialBefore;
 const INITIAL_NEXT_CHAPTERS = DEFAULT_READER_SCROLL_WINDOW.initialAfter;
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
@@ -497,7 +498,9 @@ export function PassageReader({
             >
               <h2 className="reader-chapter-heading">
                 {chapter.book} {chapter.chapter}
-                <span title="World English Bible">{TRANSLATION_ABBREVIATION}</span>
+                <span title={TRANSLATION_NAME}>
+                  {TRANSLATION_ABBREVIATION} · {TRANSLATION_NAME}
+                </span>
               </h2>
               <div className="reader-chapter-passages">
                 {chapter.passages.map((passage) => {

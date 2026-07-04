@@ -989,9 +989,21 @@ button:disabled {
   color: var(--accent);
 }
 
+.match-strength,
 .match-dots {
   display: inline-flex;
   align-items: center;
+}
+
+.match-strength {
+  gap: 4px;
+}
+
+.match-strength-label {
+  color: var(--muted);
+}
+
+.match-dots {
   gap: 4px;
   min-height: 16px;
 }

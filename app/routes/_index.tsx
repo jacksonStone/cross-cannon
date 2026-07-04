@@ -416,16 +416,20 @@ function EarlyChristianCrossResults({
                 <span>{result.author ?? result.source.toUpperCase()}</span>
                 <span
                   aria-label={`${result.matchStrength} of 4 match strength`}
-                  className="match-dots"
+                  className="match-strength"
                   title={`${result.matchStrength} of 4 match strength`}
                 >
-                  {[1, 2, 3, 4].map((level) => (
-                    <span
-                      aria-hidden="true"
-                      className={level <= result.matchStrength ? "is-active" : undefined}
-                      key={level}
-                    />
-                  ))}
+                  <span className="match-strength-label" aria-hidden="true">
+                    Match strength
+                  </span>
+                  <span className="match-dots" aria-hidden="true">
+                    {[1, 2, 3, 4].map((level) => (
+                      <span
+                        className={level <= result.matchStrength ? "is-active" : undefined}
+                        key={level}
+                      />
+                    ))}
+                  </span>
                 </span>
               </span>
               <span className="scripture-result-text">

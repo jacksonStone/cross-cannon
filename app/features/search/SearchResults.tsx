@@ -8,6 +8,7 @@ import { DEFAULT_CANON, DEFAULT_MATCH_COUNT } from "./canons";
 import type { SearchActionData, SearchResult } from "./types";
 
 const TRANSLATION_ABBREVIATION = "WEB";
+const TRANSLATION_NAME = "World English Bible";
 
 type SearchResultsProps = {
   actionData?: SearchActionData;
@@ -87,19 +88,25 @@ export function SearchResults({
                 >
                   <span className="result-meta">
                     <span>{passage?.reference ?? result.reference}</span>
-                    <span title="World English Bible">{TRANSLATION_ABBREVIATION}</span>
+                    <span title={TRANSLATION_NAME}>
+                      {TRANSLATION_ABBREVIATION} · {TRANSLATION_NAME}
+                    </span>
                     <span
-                      className="match-dots"
+                      className="match-strength"
                       aria-label={`${result.matchStrength} of 4 match strength`}
                       title={`${result.matchStrength} of 4 match strength`}
                     >
-                      {[1, 2, 3, 4].map((level) => (
-                        <span
-                          aria-hidden="true"
-                          className={level <= result.matchStrength ? "is-active" : undefined}
-                          key={level}
-                        />
-                      ))}
+                      <span className="match-strength-label" aria-hidden="true">
+                        Match strength
+                      </span>
+                      <span className="match-dots" aria-hidden="true">
+                        {[1, 2, 3, 4].map((level) => (
+                          <span
+                            className={level <= result.matchStrength ? "is-active" : undefined}
+                            key={level}
+                          />
+                        ))}
+                      </span>
                     </span>
                   </span>
                   {passage?.verses.length ? (
