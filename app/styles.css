@@ -1629,16 +1629,42 @@ button:disabled {
 }
 
 .reader-text-toggle {
-  width: 164px;
-  flex: 0 0 auto;
+  position: fixed;
+  z-index: 12;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: max(12px, calc((100vw - var(--reader-content-width)) / 2));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  overflow: hidden;
+  border: 1px solid var(--reader-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--reader-panel) 92%, transparent);
+  box-shadow: 0 8px 24px rgba(36, 33, 29, 0.14);
+  padding: 2px;
 }
 
 .reader-text-toggle button {
-  min-height: 34px;
-  font-size: 0.72rem;
+  min-width: 42px;
+  min-height: 26px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--reader-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0 8px;
 }
 
-.reader-theme-contrast .reader-segmented-control button.is-active {
+.reader-text-toggle button:hover,
+.reader-text-toggle button.is-active {
+  background: var(--reader-control-active-bg);
+  color: var(--reader-ink);
+}
+
+.reader-theme-contrast .reader-segmented-control button.is-active,
+.reader-theme-contrast .reader-text-toggle button.is-active {
   color: #ffffff;
 }
 
@@ -2337,11 +2363,6 @@ button:disabled {
     width: 36px;
     min-width: 36px;
     min-height: 36px;
-  }
-
-  .reader-text-toggle {
-    width: 100%;
-    flex-basis: 100%;
   }
 
   .search-modal-backdrop {

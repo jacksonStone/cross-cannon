@@ -728,6 +728,12 @@ export default function ChurchFathersReaderRoute() {
   const activeAudioKey = activeAudio
     ? `${activeAudio.url}#${activeAudio.startSeconds ?? 0}`
     : null;
+  const activeChapterHasModernizedText = Boolean(
+    resolvedActiveChapterId
+    && loadedChapters.get(resolvedActiveChapterId)?.verses.some((verse) => (
+      Boolean(verse.modernizedText?.trim())
+    ))
+  );
   const isActiveChapterPlaying = Boolean(
     activeAudioKey && playingAudioKey === activeAudioKey
   );
@@ -1485,20 +1491,6 @@ export default function ChurchFathersReaderRoute() {
                   Jump
                 </button>
               </section>
-              <div className="reader-segmented-control reader-text-toggle" aria-label="Text version">
-                {(["modernized", "original"] as const).map((mode) => (
-                  <button
-                    aria-pressed={readerTextMode === mode}
-                    className={readerTextMode === mode ? "is-active" : ""}
-                    key={mode}
-                    onClick={() => setReaderTextMode(mode)}
-                    title={mode === "modernized" ? "Show modernized text" : "Show original translation"}
-                    type="button"
-                  >
-                    {mode === "modernized" ? "Modern" : "Original"}
-                  </button>
-                ))}
-              </div>
             </div>
           )}
         </header>
@@ -1651,6 +1643,22 @@ export default function ChurchFathersReaderRoute() {
             );
           })}
         </div>
+        {activeChapterHasModernizedText ? (
+          <div className="reader-text-toggle" aria-label="Text version">
+            {(["modernized", "original"] as const).map((mode) => (
+              <button
+                aria-pressed={readerTextMode === mode}
+                className={readerTextMode === mode ? "is-active" : ""}
+                key={mode}
+                onClick={() => setReaderTextMode(mode)}
+                title={mode === "modernized" ? "Show modernized text" : "Show original translation"}
+                type="button"
+              >
+                {mode === "modernized" ? "Mod" : "Orig"}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <ReaderCorpusSwitch current="fathers" />
       </section>
 
