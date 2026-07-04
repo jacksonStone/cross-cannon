@@ -9,6 +9,7 @@ import {
 import { searchScripture, searchSimilarScripture } from "~/lib/search.server";
 
 import { BOOKS_BY_CANON, DEFAULT_MATCH_COUNT, parseCanonMode, sortCanonicalBooks } from "./canons";
+import { withCalibratedMatchStrength } from "./match-strength";
 import type { CanonMode } from "./types";
 import type { SearchActionData } from "./types";
 
@@ -263,27 +264,4 @@ async function parseSearchFilters(formData: FormData): Promise<
   };
 }
 
-function withMatchStrength<T extends { score?: number }>(results: T[]) {
-  const scores = results
-    .map((result) => result.score)
-    .filter((score): score is number => typeof score === "number" && Number.isFinite(score));
-  const min = scores.length ? Math.min(...scores) : null;
-  const max = scores.length ? Math.max(...scores) : null;
-  const spread = min !== null && max !== null ? max - min : 0;
-  const denominator = Math.max(results.length - 1, 1);
-
-  return results.map((result, index) => {
-    let matchStrength = Math.max(1, 4 - Math.floor((index / denominator) * 4));
-
-    if (typeof result.score === "number" && Number.isFinite(result.score)) {
-      matchStrength = spread > 0
-        ? 1 + Math.round(((result.score - (min ?? result.score)) / spread) * 3)
-        : 4;
-    }
-
-    return {
-      ...result,
-      matchStrength: Math.max(1, Math.min(4, matchStrength))
-    };
-  });
-}
+const withMatchStrength = withCalibratedMatchStrength;

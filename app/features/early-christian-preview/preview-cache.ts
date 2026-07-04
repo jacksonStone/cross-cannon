@@ -1,5 +1,7 @@
+import { readReaderPosition } from "~/features/reader-position/reader-position";
+
 export const EARLY_CHRISTIAN_MANIFEST_URL = "/church-fathers-preview/manifest.json";
-export const EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION = "early-christian-preview-20260702a";
+export const EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION = "early-christian-preview-20260704a";
 export const EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY =
   "cross-cannon:church-fathers-position:v1";
 export const FIRST_FATHERS_WORK_ID = "anf09:xii.iv";
@@ -112,7 +114,7 @@ export function previewCacheKey(path: string, version: string) {
 }
 
 function findPreferredPreviewChapter(bookIndex: BookIndexLike) {
-  const rememberedChapterId = readRememberedEarlyChristianChapterId();
+  const rememberedChapterId = readReaderPosition(EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY);
   const rememberedChapter = rememberedChapterId
     ? findPreviewChapter(bookIndex, rememberedChapterId)
     : undefined;
@@ -133,12 +135,4 @@ function findPreviewChapter(bookIndex: BookIndexLike, chapterId: string) {
   }
 
   return undefined;
-}
-
-function readRememberedEarlyChristianChapterId() {
-  try {
-    return window.localStorage.getItem(EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY) ?? "";
-  } catch {
-    return "";
-  }
 }

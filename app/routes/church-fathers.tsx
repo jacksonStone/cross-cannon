@@ -18,6 +18,10 @@ import {
   rememberReaderCorpus
 } from "~/features/reader-switch/ReaderCorpusSwitch";
 import {
+  readReaderPosition,
+  rememberReaderPosition
+} from "~/features/reader-position/reader-position";
+import {
   EARLY_CHRISTIAN_MANIFEST_URL,
   EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION,
   EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY,
@@ -43,6 +47,7 @@ import {
   parseCanonMode
 } from "~/features/search/canons";
 import { FilterModal } from "~/features/search/FilterModal";
+import { withCalibratedMatchStrength } from "~/features/search/match-strength";
 import {
   initialSearchModalFlowState,
   searchModalFlowReducer
@@ -266,6 +271,7 @@ type ChapterAsset = {
   verses: Array<{
     book: string;
     chapter: number;
+    modernizedText?: string;
     verse: number;
     text: string;
   }>;
@@ -603,7 +609,7 @@ export default function ChurchFathersReaderRoute() {
     getCachedChapterAssets(previewAssetVersion)
   ));
   const [chapterLoadErrors, setChapterLoadErrors] = useState<Map<string, string>>(() => new Map());
-  const savedReaderPositionRef = useRef(readRememberedChapterId());
+  const savedReaderPositionRef = useRef(readReaderPosition(READER_POSITION_STORAGE_KEY));
   const [activeChapterId, setActiveChapterId] = useState(() => (
     initialChapterId || savedReaderPositionRef.current
   ));
@@ -703,12 +709,10 @@ export default function ChurchFathersReaderRoute() {
     });
   }, []);
   const rememberReaderChapter = useCallback((chapterId: string) => {
-    if (!chapterId || savedReaderPositionRef.current === chapterId) {
-      return;
-    }
-
-    savedReaderPositionRef.current = chapterId;
-    window.localStorage.setItem(READER_POSITION_STORAGE_KEY, chapterId);
+    rememberReaderPosition(READER_POSITION_STORAGE_KEY, chapterId, {
+      lastReportedRef: lastReportedChapterIdRef,
+      savedRef: savedReaderPositionRef
+    });
   }, []);
 
   useModalScrollLock(isSearchOpen || isJumpOpen || isAuthorFilterOpen);
@@ -1038,7 +1042,6 @@ export default function ChurchFathersReaderRoute() {
         hasScrolledToSelectionRef.current = false;
       }
 
-      rememberReaderChapter(resolvedActiveChapterId);
       return;
     }
   }, [
@@ -1046,7 +1049,6 @@ export default function ChurchFathersReaderRoute() {
     bookIndex,
     chapterById,
     chapters.length,
-    rememberReaderChapter,
     resolvedActiveChapterId
   ]);
 
@@ -1069,7 +1071,6 @@ export default function ChurchFathersReaderRoute() {
 
     lastAppliedInitialTargetRef.current = initialTargetKey;
     hasScrolledToSelectionRef.current = false;
-    lastReportedChapterIdRef.current = initialChapterId;
     setRenderedRange(getChapterWindowRange(targetEntry.index, chapters.length));
     setActiveChapterId(initialChapterId);
     setSelectedPassage(initialPassageRange);
@@ -1179,11 +1180,20 @@ export default function ChurchFathersReaderRoute() {
   });
 
   useEffect(() => {
-    if (!isReady) {
+    if (!isReady || chapters.length === 0) {
       return;
     }
 
-    const updateLocation = () => {
+    let animationFrame = 0;
+
+    const updateLocationFromHeaderAnchor = () => {
+      if (
+        !hasScrolledToSelectionRef.current
+        || prependSnapshotRef.current
+      ) {
+        return;
+      }
+
       const chapterElements = [
         ...document.querySelectorAll<HTMLElement>(".ec-reader-chapter")
       ];
@@ -1191,46 +1201,35 @@ export default function ChurchFathersReaderRoute() {
       const chapterId = currentChapter?.dataset.chapterId;
 
       if (chapterId && chapterId !== lastReportedChapterIdRef.current) {
-        lastReportedChapterIdRef.current = chapterId;
         rememberReaderChapter(chapterId);
         setActiveChapterId(chapterId);
-        updateUrl(
-          chapterId,
-          selectedPassageChapterId === chapterId ? selectedPassage : ""
-        );
       }
     };
 
-    const observer = typeof IntersectionObserver === "undefined"
-      ? null
-      : new IntersectionObserver(updateLocation, {
-        threshold: [0, 0.01, 0.5, 1]
-      });
+    const scheduleLocationUpdate = () => {
+      if (animationFrame) {
+        return;
+      }
 
-    for (const element of document.querySelectorAll<HTMLElement>(".ec-reader-chapter")) {
-      observer?.observe(element);
-    }
-
-    window.addEventListener("scroll", updateLocation, { passive: true });
-    document.addEventListener("scroll", updateLocation, {
-      capture: true,
-      passive: true
-    });
-    updateLocation();
-
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener("scroll", updateLocation);
-      document.removeEventListener("scroll", updateLocation, {
-        capture: true
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = 0;
+        updateLocationFromHeaderAnchor();
       });
     };
+
+    window.addEventListener("scroll", scheduleLocationUpdate, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", scheduleLocationUpdate);
+
+      if (animationFrame) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+    };
   }, [
+    chapters.length,
     isReady,
-    rememberReaderChapter,
-    renderedEntries,
-    selectedPassage,
-    selectedPassageChapterId
+    rememberReaderChapter
   ]);
 
   const findInitialChapterTarget = useCallback(() => {
@@ -1254,11 +1253,7 @@ export default function ChurchFathersReaderRoute() {
   const finishInitialChapterScroll = useCallback(() => {
     hasScrolledToSelectionRef.current = true;
     lastReportedChapterIdRef.current = resolvedActiveChapterId;
-
-    if (resolvedActiveChapterId) {
-      rememberReaderChapter(resolvedActiveChapterId);
-    }
-  }, [rememberReaderChapter, resolvedActiveChapterId]);
+  }, [resolvedActiveChapterId]);
   const shouldScrollToInitialChapter = useCallback(
     () => !hasScrolledToSelectionRef.current,
     []
@@ -1327,7 +1322,6 @@ export default function ChurchFathersReaderRoute() {
     }
 
     hasScrolledToSelectionRef.current = false;
-    lastReportedChapterIdRef.current = chapterId;
     setRenderedRange(getChapterWindowRange(chapterEntry.index, chapters.length));
     setActiveChapterId(chapterId);
     setSelectedPassage(passageRange);
@@ -1798,6 +1792,24 @@ export default function ChurchFathersReaderRoute() {
                       ) : null}
                     </div>
                   </div>
+                  <FilterModal
+                    canon={canon}
+                    earlyChristianAuthors={authorOptions}
+                    isOpen={isAuthorFilterOpen}
+                    isSearching={isSearching}
+                    matchCount={matchCount}
+                    selectedEarlyChristianAuthors={selectedAuthorFilters}
+                    selectedBooks={selectedBooksForCanon}
+                    showEarlyChristianAuthorFilters={showAuthorFilters}
+                    showScriptureFilters={showScriptureFilters}
+                    visibleBooks={visibleScriptureBooks}
+                    onCanonChange={updateCanon}
+                    onClearFilters={clearAuthorFilters}
+                    onClose={() => setIsAuthorFilterOpen(false)}
+                    onMatchCountChange={setMatchCount}
+                    onToggleBook={toggleSelectedBook}
+                    onToggleEarlyChristianAuthor={toggleSelectedAuthor}
+                  />
                 </Form>
               </section>
 
@@ -1835,25 +1847,6 @@ export default function ChurchFathersReaderRoute() {
           </section>
         </div>
       ) : null}
-
-      <FilterModal
-        canon={canon}
-        earlyChristianAuthors={authorOptions}
-        isOpen={isAuthorFilterOpen}
-        isSearching={isSearching}
-        matchCount={matchCount}
-        selectedEarlyChristianAuthors={selectedAuthorFilters}
-        selectedBooks={selectedBooksForCanon}
-        showEarlyChristianAuthorFilters={showAuthorFilters}
-        showScriptureFilters={showScriptureFilters}
-        visibleBooks={visibleScriptureBooks}
-        onCanonChange={updateCanon}
-        onClearFilters={clearAuthorFilters}
-        onClose={() => setIsAuthorFilterOpen(false)}
-        onMatchCountChange={setMatchCount}
-        onToggleBook={toggleSelectedBook}
-        onToggleEarlyChristianAuthor={toggleSelectedAuthor}
-      />
 
       {isJumpOpen ? (
         <ChapterJump
@@ -2184,18 +2177,6 @@ function readCachedBookIndex(manifestUrl: string, previewAssetVersion: string) {
   return cachedBookIndex ? sortBookIndex(cachedBookIndex) : null;
 }
 
-function readRememberedChapterId() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  try {
-    return window.localStorage.getItem(READER_POSITION_STORAGE_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-
 function resolveActiveChapterId({
   activeChapterId,
   chapterById,
@@ -2380,7 +2361,7 @@ function buildReaderPassage(chapter: ChapterAsset, verses: ChapterAsset["verses"
     key: `${chapter.id}:${first.verse}-${last.verse}`,
     rangeLabel,
     reference: `${chapter.book} ${chapter.chapter}:${rangeLabel}`,
-    text: verses.map((verse) => verse.text.trim()).join(" "),
+    text: verses.map((verse) => (verse.modernizedText ?? verse.text).trim()).join(" "),
     verseEnd: last.verse,
     verseStart: first.verse
   };
@@ -2764,30 +2745,7 @@ function churchFathersScriptureActionData(
   };
 }
 
-function withScriptureMatchStrength(results: Array<Omit<SearchResult, "matchStrength">>) {
-  const scores = results
-    .map((result) => result.score)
-    .filter((score): score is number => typeof score === "number" && Number.isFinite(score));
-  const min = scores.length ? Math.min(...scores) : null;
-  const max = scores.length ? Math.max(...scores) : null;
-  const spread = min !== null && max !== null ? max - min : 0;
-  const denominator = Math.max(results.length - 1, 1);
-
-  return results.map((result, index) => {
-    let matchStrength = Math.max(1, 4 - Math.floor((index / denominator) * 4));
-
-    if (typeof result.score === "number" && Number.isFinite(result.score)) {
-      matchStrength = spread > 0
-        ? 1 + Math.round(((result.score - (min ?? result.score)) / spread) * 3)
-        : 4;
-    }
-
-    return {
-      ...result,
-      matchStrength: Math.max(1, Math.min(4, matchStrength))
-    };
-  });
-}
+const withScriptureMatchStrength = withCalibratedMatchStrength;
 
 function headerScaleStyle(title: string) {
   return {

@@ -38,6 +38,10 @@ import {
   chapterKey,
   parsePassageLocation
 } from "~/features/passage-reader/chapter-index";
+import {
+  readReaderPosition,
+  rememberReaderPosition
+} from "~/features/reader-position/reader-position";
 
 const READER_POSITION_STORAGE_KEY = "cross-cannon:reader-position:v1";
 const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
@@ -93,7 +97,7 @@ export default function Index() {
     searchModalFlowReducer,
     initialSearchModalFlowState
   );
-  const savedReaderPositionRef = useRef(readSavedReaderPosition());
+  const savedReaderPositionRef = useRef(readReaderPosition(READER_POSITION_STORAGE_KEY));
   const [readerPassageId, setReaderPassageId] = useState("");
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
   const lastVisibleChapterKeyRef = useRef(savedReaderPositionRef.current);
@@ -175,9 +179,10 @@ export default function Index() {
     );
 
     if (initialChapterKey) {
-      savedReaderPositionRef.current = initialChapterKey;
-      lastVisibleChapterKeyRef.current = initialChapterKey;
-      window.localStorage.setItem(READER_POSITION_STORAGE_KEY, initialChapterKey);
+      rememberReaderPosition(READER_POSITION_STORAGE_KEY, initialChapterKey, {
+        lastReportedRef: lastVisibleChapterKeyRef,
+        savedRef: savedReaderPositionRef
+      });
     }
 
     setReaderPassageId(initialPassageId);
@@ -240,13 +245,10 @@ export default function Index() {
   });
 
   const rememberReaderChapter = useCallback((chapterKeyValue: string) => {
-    if (lastVisibleChapterKeyRef.current === chapterKeyValue) {
-      return;
-    }
-
-    savedReaderPositionRef.current = chapterKeyValue;
-    lastVisibleChapterKeyRef.current = chapterKeyValue;
-    window.localStorage.setItem(READER_POSITION_STORAGE_KEY, chapterKeyValue);
+    rememberReaderPosition(READER_POSITION_STORAGE_KEY, chapterKeyValue, {
+      lastReportedRef: lastVisibleChapterKeyRef,
+      savedRef: savedReaderPositionRef
+    });
   }, []);
 
   const jumpToReaderPassage = useCallback((passageId: string) => {
@@ -494,14 +496,6 @@ function getPassageChapterKey(passage: BrowserPassage | undefined) {
   const location = parsePassageLocation(passage.reference);
 
   return location ? chapterKey(location.book, location.chapter) : null;
-}
-
-function readSavedReaderPosition() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return window.localStorage.getItem(READER_POSITION_STORAGE_KEY) ?? "";
 }
 
 function readSavedReaderTheme(): ReaderTheme {
