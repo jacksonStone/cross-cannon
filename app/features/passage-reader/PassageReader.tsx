@@ -184,10 +184,6 @@ export function PassageReader({
   const initialChapterIndex = initialChapterKey
     ? renderedChapterKeys.indexOf(initialChapterKey)
     : -1;
-  const activeBookStartIndex = findBookStartIndex(
-    activeChapterKey ? renderedChapterKeys.indexOf(activeChapterKey) : -1,
-    orderedChapterEntries
-  );
   const renderedChapterEntries = useMemo(
     () => {
       if (renderedRange.endIndex < renderedRange.startIndex) {
@@ -277,7 +273,6 @@ export function PassageReader({
     initialScrollMaxFrames: DEFAULT_READER_SCROLL_WINDOW.initialScrollMaxFrames,
     initialScrollReady: isScriptureReady && renderedChapterEntries.length > 0,
     itemCount: orderedChapterEntries.length,
-    minStartIndex: activeBookStartIndex,
     minReadingAnchorOffset: DEFAULT_READER_SCROLL_WINDOW.minReadingAnchorOffset,
     onActiveKeyChange: updateActiveChapterFromScroll,
     onInitialScrollSettled: finishInitialPassageScroll,
@@ -823,53 +818,12 @@ function getInitialRenderedRange(
   initialChapterIndex: number,
   entries: Array<{ chapter: { book: string }; key: string }>
 ) {
-  const range = getCenteredWindowRange({
+  return getCenteredWindowRange({
     after: INITIAL_NEXT_CHAPTERS,
     before: INITIAL_PREVIOUS_CHAPTERS,
     count: entries.length,
     index: initialChapterIndex
   });
-
-  return clampRangeStartToBook(range, initialChapterIndex, entries);
-}
-
-function clampRangeStartToBook(
-  range: { endIndex: number; startIndex: number },
-  activeIndex: number,
-  entries: Array<{ chapter: { book: string } }>
-) {
-  const bookStartIndex = findBookStartIndex(activeIndex, entries);
-
-  if (bookStartIndex < 0) {
-    return range;
-  }
-
-  return {
-    ...range,
-    startIndex: Math.max(range.startIndex, bookStartIndex)
-  };
-}
-
-function findBookStartIndex(
-  activeIndex: number,
-  entries: Array<{ chapter: { book: string } }>
-) {
-  const activeEntry = entries[activeIndex];
-
-  if (!activeEntry) {
-    return -1;
-  }
-
-  let bookStartIndex = activeIndex;
-
-  while (
-    bookStartIndex > 0
-    && entries[bookStartIndex - 1]?.chapter.book === activeEntry.chapter.book
-  ) {
-    bookStartIndex -= 1;
-  }
-
-  return bookStartIndex;
 }
 
 function findRenderedPassageElement(passageId: string) {
