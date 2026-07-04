@@ -25,6 +25,7 @@ import {
 } from "~/lib/use-dialog-dismiss";
 import type { BrowserPassage } from "~/lib/scripture-cache.server";
 
+import { ReaderBookHeader, type ReaderBookHeaderDetail } from "./BookHeader";
 import { buildChapterIndex, chapterKey } from "./chapter-index";
 
 const TRANSLATION_ABBREVIATION = "WEB";
@@ -82,7 +83,14 @@ type ReaderSettings = {
 
 const DEFAULT_READER_SETTINGS = createPresetReaderSettings("default", "paper");
 
+type ReaderBookMetadata = {
+  description?: string | null;
+  details?: ReaderBookHeaderDetail[];
+  subtitle?: string | null;
+};
+
 type PassageReaderProps = {
+  bookMetadataByBook?: Map<string, ReaderBookMetadata>;
   filters: StoredFilters;
   initialPassageId: string;
   isScriptureReady: boolean;
@@ -94,6 +102,7 @@ type PassageReaderProps = {
 };
 
 export function PassageReader({
+  bookMetadataByBook,
   filters,
   initialPassageId,
   isScriptureReady,
@@ -154,6 +163,15 @@ export function PassageReader({
     () => orderedChapterEntries.map((entry) => entry.key),
     [orderedChapterEntries]
   );
+  const chapterCountByBook = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    for (const entry of orderedChapterEntries) {
+      counts.set(entry.chapter.book, (counts.get(entry.chapter.book) ?? 0) + 1);
+    }
+
+    return counts;
+  }, [orderedChapterEntries]);
   const initialLocation = chapterIndex.locationByPassageId.get(initialPassageId);
   const initialChapterKey = initialLocation
     ? chapterKey(initialLocation.book, initialLocation.chapter)
@@ -212,7 +230,7 @@ export function PassageReader({
   useBrowserLayoutEffect(() => {
     const nextRange = getInitialRenderedRange(
       initialChapterIndex,
-      orderedChapterEntries.length
+      orderedChapterEntries
     );
 
     setRenderedRange(nextRange);
@@ -490,12 +508,34 @@ export function PassageReader({
 
       <div className="reader-passages">
         {renderedChapterEntries.map(({ chapter, key: currentChapterKey }) => {
+          const globalChapterIndex = renderedChapterKeys.indexOf(currentChapterKey);
+          const previousChapter = globalChapterIndex > 0
+            ? orderedChapterEntries[globalChapterIndex - 1]?.chapter
+            : null;
+          const isBookBoundary = !previousChapter || previousChapter.book !== chapter.book;
+          const bookMetadata = getScriptureBookHeaderMetadata(
+            chapter.book,
+            chapterCountByBook.get(chapter.book) ?? 0,
+            bookMetadataByBook
+          );
+
           return (
             <section
-              className="reader-chapter"
+              className={[
+                "reader-chapter",
+                isBookBoundary ? "is-book-boundary" : ""
+              ].filter(Boolean).join(" ")}
               data-chapter-key={currentChapterKey}
               key={currentChapterKey}
             >
+              {isBookBoundary ? (
+                <ReaderBookHeader
+                  description={bookMetadata.description}
+                  details={bookMetadata.details}
+                  subtitle={bookMetadata.subtitle}
+                  title={chapter.book}
+                />
+              ) : null}
               <h2 className="reader-chapter-heading">
                 {chapter.book} {chapter.chapter}
                 <span title={TRANSLATION_NAME}>
@@ -585,6 +625,31 @@ export function PassageReader({
       <ReaderCorpusSwitch current="scripture" />
     </section>
   );
+}
+
+function getScriptureBookHeaderMetadata(
+  book: string,
+  chapterCount: number,
+  bookMetadataByBook?: Map<string, ReaderBookMetadata>
+): Required<ReaderBookMetadata> {
+  const metadata = bookMetadataByBook?.get(book);
+  const details = metadata?.details?.length
+    ? metadata.details
+    : [
+      { label: "Text", value: "Scripture" },
+      { label: "Translation", value: `${TRANSLATION_ABBREVIATION} · ${TRANSLATION_NAME}` },
+      { label: "Chapters", value: formatChapterCount(chapterCount) }
+    ];
+
+  return {
+    description: metadata?.description ?? null,
+    details,
+    subtitle: metadata?.subtitle ?? `${TRANSLATION_ABBREVIATION} · ${TRANSLATION_NAME}`
+  };
+}
+
+function formatChapterCount(count: number) {
+  return count === 1 ? "1 chapter" : `${count} chapters`;
 }
 
 function ReaderSettingsPanel({
@@ -749,13 +814,44 @@ function readSavedReaderSettings() {
   }
 }
 
-function getInitialRenderedRange(initialChapterIndex: number, chapterCount: number) {
-  return getCenteredWindowRange({
+function getInitialRenderedRange(
+  initialChapterIndex: number,
+  entries: Array<{ chapter: { book: string }; key: string }>
+) {
+  const range = getCenteredWindowRange({
     after: INITIAL_NEXT_CHAPTERS,
     before: INITIAL_PREVIOUS_CHAPTERS,
-    count: chapterCount,
+    count: entries.length,
     index: initialChapterIndex
   });
+
+  return clampRangeStartToBook(range, initialChapterIndex, entries);
+}
+
+function clampRangeStartToBook(
+  range: { endIndex: number; startIndex: number },
+  activeIndex: number,
+  entries: Array<{ chapter: { book: string } }>
+) {
+  const activeEntry = entries[activeIndex];
+
+  if (!activeEntry) {
+    return range;
+  }
+
+  let bookStartIndex = activeIndex;
+
+  while (
+    bookStartIndex > 0
+    && entries[bookStartIndex - 1]?.chapter.book === activeEntry.chapter.book
+  ) {
+    bookStartIndex -= 1;
+  }
+
+  return {
+    ...range,
+    startIndex: Math.max(range.startIndex, bookStartIndex)
+  };
 }
 
 function findRenderedPassageElement(passageId: string) {

@@ -32,6 +32,7 @@ import {
   loadPreviewJson,
   rememberCachedPreviewJson
 } from "~/features/early-christian-preview/preview-cache";
+import { ReaderBookHeader } from "~/features/passage-reader/BookHeader";
 import {
   DEFAULT_READER_SCROLL_WINDOW,
   useReaderScrollWindow
@@ -1042,7 +1043,7 @@ export default function ChurchFathersReaderRoute() {
       setRenderedRange((range) => (
         windowRangeContainsIndex(range, activeChapterIndex)
           ? range
-          : getChapterWindowRange(activeChapterIndex, chapters.length)
+          : getChapterWindowRange(activeChapterIndex, chapters)
       ));
 
       if (activeChapterId !== resolvedActiveChapterId) {
@@ -1085,7 +1086,7 @@ export default function ChurchFathersReaderRoute() {
     lastAppliedInitialTargetRef.current = initialTargetKey;
     hasScrolledToSelectionRef.current = false;
     setHasCompletedInitialScroll(false);
-    setRenderedRange(getChapterWindowRange(targetEntry.index, chapters.length));
+    setRenderedRange(getChapterWindowRange(targetEntry.index, chapters));
     activeChapterIdRef.current = initialChapterId;
     setActiveChapterId(initialChapterId);
     setSelectedPassage(initialPassageRange);
@@ -1289,7 +1290,7 @@ export default function ChurchFathersReaderRoute() {
 
     hasScrolledToSelectionRef.current = false;
     setHasCompletedInitialScroll(false);
-    setRenderedRange(getChapterWindowRange(chapterEntry.index, chapters.length));
+    setRenderedRange(getChapterWindowRange(chapterEntry.index, chapters));
     activeChapterIdRef.current = chapterId;
     setActiveChapterId(chapterId);
     setSelectedPassage(passageRange);
@@ -1459,13 +1460,27 @@ export default function ChurchFathersReaderRoute() {
           {renderedEntries.map((entry) => {
             const chapter = loadedChapters.get(entry.chapter.id);
             const chapterLoadError = chapterLoadErrors.get(entry.chapter.id);
+            const previousEntry = entry.index > 0 ? chapters[entry.index - 1] : null;
+            const isBookBoundary = !previousEntry || previousEntry.book.id !== entry.book.id;
 
             return (
               <section
-                className="reader-chapter ec-reader-chapter"
+                className={[
+                  "reader-chapter",
+                  "ec-reader-chapter",
+                  isBookBoundary ? "is-book-boundary" : ""
+                ].filter(Boolean).join(" ")}
                 data-chapter-id={entry.chapter.id}
                 key={entry.chapter.id}
               >
+                {isBookBoundary ? (
+                  <ReaderBookHeader
+                    description={getEarlyChristianBookDescription(entry.book)}
+                    details={getEarlyChristianBookHeaderDetails(entry.book)}
+                    subtitle={getBookAuthorLabel(entry.book)}
+                    title={entry.book.name}
+                  />
+                ) : null}
                 <h2
                   className="reader-chapter-heading"
                   style={chapterHeadingScaleStyle(`${entry.book.name} ${entry.chapter.chapter}`)}
@@ -2301,6 +2316,28 @@ function getBookAuthorLabel(book: BookSummary) {
     ?? book.name;
 }
 
+function getEarlyChristianBookDescription(book: BookSummary) {
+  if (book.book && book.book !== book.name) {
+    return book.book;
+  }
+
+  return null;
+}
+
+function getEarlyChristianBookHeaderDetails(book: BookSummary) {
+  return [
+    { label: "Author", value: book.author ?? book.metadata.author ?? "" },
+    { label: "Date", value: book.metadata.authorshipDateRange ?? "" },
+    { label: "Source", value: book.metadata.source.title },
+    { label: "Type", value: book.classification.bucket },
+    { label: "Chapters", value: formatChapterCount(book.chapters.length) }
+  ];
+}
+
+function formatChapterCount(count: number) {
+  return count === 1 ? "1 chapter" : `${count} chapters`;
+}
+
 function normalizeSortText(value: string) {
   return value
     .toLocaleLowerCase()
@@ -2309,13 +2346,41 @@ function normalizeSortText(value: string) {
     .trim();
 }
 
-function getChapterWindowRange(index: number, count: number) {
-  return getCenteredWindowRange({
+function getChapterWindowRange(index: number, entries: ChapterEntry[]) {
+  const range = getCenteredWindowRange({
     after: CHAPTER_WINDOW_AFTER,
     before: CHAPTER_WINDOW_BEFORE,
-    count,
+    count: entries.length,
     index
   });
+
+  return clampChapterWindowStartToBook(range, index, entries);
+}
+
+function clampChapterWindowStartToBook(
+  range: { endIndex: number; startIndex: number },
+  activeIndex: number,
+  entries: ChapterEntry[]
+) {
+  const activeEntry = entries[activeIndex];
+
+  if (!activeEntry) {
+    return range;
+  }
+
+  let bookStartIndex = activeIndex;
+
+  while (
+    bookStartIndex > 0
+    && entries[bookStartIndex - 1]?.book.id === activeEntry.book.id
+  ) {
+    bookStartIndex -= 1;
+  }
+
+  return {
+    ...range,
+    startIndex: Math.max(range.startIndex, bookStartIndex)
+  };
 }
 
 function groupChapterPassages(
