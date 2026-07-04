@@ -693,6 +693,7 @@ export default function ChurchFathersReaderRoute() {
   );
   const isReady = Boolean(bookIndex && activeEntry);
   const activeChapterIndex = activeEntry?.index;
+  const activeBookStartIndex = findChapterBookStartIndex(activeChapterIndex ?? -1, chapters);
   const selectedRangeForActiveChapter =
     selectedPassageChapterId === resolvedActiveChapterId ? selectedPassage : "";
   const isTargetWindowReady = Boolean(
@@ -1224,6 +1225,7 @@ export default function ChurchFathersReaderRoute() {
     initialScrollMaxFrames: INITIAL_SCROLL_MAX_FRAMES,
     initialScrollReady: isTargetWindowReady,
     itemCount: chapters.length,
+    minStartIndex: activeBookStartIndex,
     minReadingAnchorOffset: DEFAULT_READER_SCROLL_WINDOW.minReadingAnchorOffset,
     onActiveKeyChange: updateActiveChapterFromScroll,
     onInitialScrollSettled: finishInitialChapterScroll,
@@ -2362,10 +2364,23 @@ function clampChapterWindowStartToBook(
   activeIndex: number,
   entries: ChapterEntry[]
 ) {
+  const bookStartIndex = findChapterBookStartIndex(activeIndex, entries);
+
+  if (bookStartIndex < 0) {
+    return range;
+  }
+
+  return {
+    ...range,
+    startIndex: Math.max(range.startIndex, bookStartIndex)
+  };
+}
+
+function findChapterBookStartIndex(activeIndex: number, entries: ChapterEntry[]) {
   const activeEntry = entries[activeIndex];
 
   if (!activeEntry) {
-    return range;
+    return -1;
   }
 
   let bookStartIndex = activeIndex;
@@ -2377,10 +2392,7 @@ function clampChapterWindowStartToBook(
     bookStartIndex -= 1;
   }
 
-  return {
-    ...range,
-    startIndex: Math.max(range.startIndex, bookStartIndex)
-  };
+  return bookStartIndex;
 }
 
 function groupChapterPassages(
