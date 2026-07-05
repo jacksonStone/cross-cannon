@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { readReaderPosition, rememberReaderPosition } from "./reader-position";
+import {
+  createReaderLocation,
+  readReaderLocation,
+  readReaderPosition,
+  rememberReaderLocation,
+  rememberReaderPosition
+} from "./reader-position";
 
 test("rememberReaderPosition writes once and updates tracking refs", () => {
   const localStorage = createLocalStorage();
@@ -47,6 +53,51 @@ test("rememberReaderPosition writes when reported and saved refs diverge", () =>
   assert.equal(localStorage.getItem("reader:key"), "Psalms:60");
   assert.equal(savedRef.current, "Psalms:60");
   assert.equal(lastReportedRef.current, "Psalms:60");
+});
+
+test("readReaderLocation migrates legacy chapter keys", () => {
+  const localStorage = createLocalStorage();
+  setTestWindow(localStorage);
+  localStorage.setItem("reader:key", "Psalms\t149");
+
+  assert.deepEqual(readReaderLocation("reader:key", "scripture"), {
+    chapterKey: "Psalms\t149",
+    corpus: "scripture",
+    passageKey: undefined,
+    passageRange: undefined,
+    version: 2
+  });
+  assert.equal(readReaderPosition("reader:key"), "Psalms\t149");
+});
+
+test("rememberReaderLocation stores a versioned reader location", () => {
+  const localStorage = createLocalStorage();
+  setTestWindow(localStorage);
+
+  const savedRef = { current: "" };
+  const lastReportedRef = { current: "" };
+  const location = createReaderLocation({
+    chapterKey: "npnf101:vi.I_1.XIV",
+    corpus: "fathers",
+    passageRange: "11-13"
+  });
+
+  assert.equal(
+    rememberReaderLocation("reader:key", location, {
+      lastReportedRef,
+      savedRef
+    }),
+    true
+  );
+  assert.deepEqual(readReaderLocation("reader:key", "fathers"), location);
+  assert.equal(readReaderPosition("reader:key"), "npnf101:vi.I_1.XIV");
+  assert.equal(
+    rememberReaderLocation("reader:key", location, {
+      lastReportedRef,
+      savedRef
+    }),
+    false
+  );
 });
 
 function createLocalStorage() {

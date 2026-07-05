@@ -4,7 +4,8 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
-  useRef
+  useRef,
+  useState
 } from "react";
 
 import {
@@ -51,6 +52,167 @@ export const DEFAULT_READER_SCROLL_WINDOW = {
 
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+export function readReaderHeaderOffset({
+  fallback = DEFAULT_READER_SCROLL_WINDOW.headerOffset,
+  rootSelector = ".reader-page"
+}: {
+  fallback?: number;
+  rootSelector?: string;
+} = {}) {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  const root = document.querySelector<HTMLElement>(rootSelector);
+  const rawValue = root
+    ? window.getComputedStyle(root).getPropertyValue("--reader-header-offset").trim()
+    : "";
+  const parsedValue = Number.parseFloat(rawValue);
+
+  return Number.isFinite(parsedValue) ? parsedValue : fallback;
+}
+
+export function useReaderHeaderOffset({
+  fallback = DEFAULT_READER_SCROLL_WINDOW.headerOffset,
+  rootSelector = ".reader-page"
+}: {
+  fallback?: number;
+  rootSelector?: string;
+} = {}) {
+  const [headerOffset, setHeaderOffset] = useState(fallback);
+
+  useEffect(() => {
+    const updateHeaderOffset = () => {
+      setHeaderOffset(readReaderHeaderOffset({ fallback, rootSelector }));
+    };
+
+    updateHeaderOffset();
+    window.addEventListener("resize", updateHeaderOffset);
+    window.visualViewport?.addEventListener("resize", updateHeaderOffset);
+
+    return () => {
+      window.removeEventListener("resize", updateHeaderOffset);
+      window.visualViewport?.removeEventListener("resize", updateHeaderOffset);
+    };
+  }, [fallback, rootSelector]);
+
+  return headerOffset;
+}
+
+export function useAnchoredReaderWindow({
+  activeKey,
+  chapterSelector,
+  edgePx,
+  expandCount,
+  findInitialTarget,
+  getChapterKey,
+  headerOffset,
+  initialActiveKey,
+  initialRange,
+  initialScrollMaxFrames,
+  initialScrollReady,
+  itemCount,
+  minReadingAnchorOffset,
+  minStartIndex,
+  onActiveKeyChange,
+  onInitialScrollSettled,
+  onMissingInitialTarget,
+  onReset,
+  passageSelector = ".reader-passage",
+  readingAnchorRatio,
+  resetKey,
+  trackingReady = true,
+  windowReady = true
+}: {
+  activeKey: string | null;
+  chapterSelector: string;
+  edgePx: number;
+  expandCount: number;
+  findInitialTarget: () => HTMLElement | null;
+  getChapterKey: (element: HTMLElement) => string | null | undefined;
+  headerOffset: number;
+  initialActiveKey: string | null;
+  initialRange: WindowRange;
+  initialScrollMaxFrames: number;
+  initialScrollReady: boolean;
+  itemCount: number;
+  minReadingAnchorOffset: number;
+  minStartIndex?: number;
+  onActiveKeyChange: (key: string) => void;
+  onInitialScrollSettled?: () => void;
+  onMissingInitialTarget?: () => void;
+  onReset?: () => void;
+  passageSelector?: string;
+  readingAnchorRatio: number;
+  resetKey: string;
+  trackingReady?: boolean;
+  windowReady?: boolean;
+}) {
+  const activeKeyRef = useRef<string | null>(initialActiveKey);
+  const hasScrolledToInitialTargetRef = useRef(false);
+  const prependSnapshotRef = useRef<PrependSnapshot | null>(null);
+  const [hasCompletedInitialScroll, setHasCompletedInitialScroll] = useState(false);
+  const [renderedRange, setRenderedRange] = useState(initialRange);
+
+  useBrowserLayoutEffect(() => {
+    activeKeyRef.current = initialActiveKey;
+    hasScrolledToInitialTargetRef.current = false;
+    prependSnapshotRef.current = null;
+    setHasCompletedInitialScroll(false);
+    setRenderedRange(initialRange);
+    onReset?.();
+  }, [
+    initialActiveKey,
+    initialRange.endIndex,
+    initialRange.startIndex,
+    onReset,
+    resetKey
+  ]);
+
+  useEffect(() => {
+    activeKeyRef.current = activeKey;
+  }, [activeKey]);
+
+  const finishInitialScroll = useCallback(() => {
+    hasScrolledToInitialTargetRef.current = true;
+    setHasCompletedInitialScroll(true);
+    onInitialScrollSettled?.();
+  }, [onInitialScrollSettled]);
+
+  useReaderScrollWindow({
+    activeKeyRef,
+    chapterSelector,
+    edgePx,
+    expandCount,
+    findInitialTarget,
+    getChapterKey,
+    hasScrolledToInitialTargetRef,
+    headerOffset,
+    initialScrollMaxFrames,
+    initialScrollReady,
+    itemCount,
+    minStartIndex,
+    minReadingAnchorOffset,
+    onActiveKeyChange,
+    onInitialScrollSettled: finishInitialScroll,
+    onMissingInitialTarget,
+    passageSelector,
+    prependSnapshotRef,
+    readingAnchorRatio,
+    setRange: setRenderedRange,
+    startIndex: renderedRange.startIndex,
+    trackingReady,
+    windowReady: windowReady && hasCompletedInitialScroll
+  });
+
+  return {
+    activeKeyRef,
+    hasCompletedInitialScroll,
+    renderedRange,
+    setRenderedRange
+  };
+}
 
 export function usePreservePrependedScroll({
   prependSnapshotRef,
@@ -213,12 +375,18 @@ export function useInitialTargetScroll({
 
     let frame = 0;
     let frameCount = 0;
+    let settleTimer = 0;
     let didCancel = false;
     let fontsSettled = document.fonts === undefined;
 
     const finishInitialScroll = () => {
       if (didCancel) {
         return;
+      }
+
+      if (settleTimer) {
+        window.clearTimeout(settleTimer);
+        settleTimer = 0;
       }
 
       scrollToTarget();
@@ -253,6 +421,7 @@ export function useInitialTargetScroll({
     };
 
     scheduleScroll();
+    settleTimer = window.setTimeout(finishInitialScroll, 600);
     void document.fonts?.ready
       .then(() => {
         fontsSettled = true;
@@ -268,6 +437,10 @@ export function useInitialTargetScroll({
 
       if (frame) {
         window.cancelAnimationFrame(frame);
+      }
+
+      if (settleTimer) {
+        window.clearTimeout(settleTimer);
       }
     };
   }, [
@@ -298,6 +471,7 @@ export function useReaderScrollWindow({
   onActiveKeyChange,
   onInitialScrollSettled,
   onMissingInitialTarget,
+  passageSelector = ".reader-passage",
   prependSnapshotRef,
   readingAnchorRatio,
   setRange,
@@ -321,6 +495,7 @@ export function useReaderScrollWindow({
   onActiveKeyChange: (key: string) => void;
   onInitialScrollSettled: () => void;
   onMissingInitialTarget?: () => void;
+  passageSelector?: string;
   prependSnapshotRef: MutableRefObject<PrependSnapshot | null>;
   readingAnchorRatio: number;
   setRange: (value: SetStateAction<WindowRange>) => void;
@@ -347,12 +522,14 @@ export function useReaderScrollWindow({
   const captureCurrentReadingAnchor = useCallback(() => (
     captureReadingAnchorSnapshot({
       anchorOptions,
-      chapterSelector
+      chapterSelector,
+      passageSelector
     })
   ), [
     chapterSelector,
     headerOffset,
     minReadingAnchorOffset,
+    passageSelector,
     readingAnchorRatio
   ]);
 
@@ -463,6 +640,7 @@ export function useReaderScrollWindow({
     headerOffset,
     itemCount,
     minReadingAnchorOffset,
+    passageSelector,
     readingAnchorRatio,
     trackingReady
   ]);
@@ -472,12 +650,11 @@ export function useReaderScrollWindow({
       return;
     }
 
-    let animationFrame = 0;
+    let updateTimer = 0;
 
     const updateActiveKeyFromAnchor = () => {
       if (
-        !hasScrolledToInitialTargetRef.current
-        || prependSnapshotRef.current
+        prependSnapshotRef.current
         || isPreservingResizeRef.current
       ) {
         return;
@@ -499,23 +676,26 @@ export function useReaderScrollWindow({
     };
 
     const scheduleLocationUpdate = () => {
-      if (animationFrame) {
+      if (updateTimer) {
         return;
       }
 
-      animationFrame = window.requestAnimationFrame(() => {
-        animationFrame = 0;
+      updateTimer = window.setTimeout(() => {
+        updateTimer = 0;
         updateActiveKeyFromAnchor();
-      });
+      }, 0);
     };
 
     window.addEventListener("scroll", scheduleLocationUpdate, { passive: true });
+    document.addEventListener("scroll", scheduleLocationUpdate, { passive: true });
+    scheduleLocationUpdate();
 
     return () => {
       window.removeEventListener("scroll", scheduleLocationUpdate);
+      document.removeEventListener("scroll", scheduleLocationUpdate);
 
-      if (animationFrame) {
-        window.cancelAnimationFrame(animationFrame);
+      if (updateTimer) {
+        window.clearTimeout(updateTimer);
       }
     };
   }, [
@@ -528,6 +708,7 @@ export function useReaderScrollWindow({
     itemCount,
     minReadingAnchorOffset,
     onActiveKeyChange,
+    passageSelector,
     prependSnapshotRef,
     readingAnchorRatio,
     trackingReady
@@ -536,14 +717,16 @@ export function useReaderScrollWindow({
 
 function captureReadingAnchorSnapshot({
   anchorOptions,
-  chapterSelector
+  chapterSelector,
+  passageSelector
 }: {
   anchorOptions: ReadingAnchorOptions;
   chapterSelector: string;
+  passageSelector: string;
 }) {
   const anchorY = getReadingAnchorY(anchorOptions);
   const element = findElementAtReadingAnchor(
-    [...document.querySelectorAll<HTMLElement>(".reader-passage")],
+    [...document.querySelectorAll<HTMLElement>(passageSelector)],
     anchorOptions
   ) ?? findElementAtReadingAnchor(
     [...document.querySelectorAll<HTMLElement>(chapterSelector)],
@@ -568,7 +751,7 @@ function captureReadingAnchorSnapshot({
   return {
     ...stableKey,
     offsetRatio,
-    selector: element.matches(".reader-passage") ? ".reader-passage" : chapterSelector
+    selector: element.matches(passageSelector) ? passageSelector : chapterSelector
   };
 }
 

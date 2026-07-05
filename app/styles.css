@@ -1040,6 +1040,7 @@ button:disabled {
   --reader-muted: var(--muted);
   --reader-line: var(--line);
   --reader-header-bg: var(--paper);
+  --reader-header-offset: 96px;
   --reader-selected-bg: var(--accent-surface-subtle);
   --reader-selected-mark: var(--accent-surface-subtle);
   --reader-control-active-bg: var(--control-active-bg);
@@ -2429,6 +2430,10 @@ button:disabled {
 }
 
 @media (max-width: 700px) {
+  .reader-page {
+    --reader-header-offset: 128px;
+  }
+
   .page-shell {
     width: min(100% - 24px, 1040px);
     padding-top: 14px;

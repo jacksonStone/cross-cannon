@@ -39,15 +39,19 @@ import {
   parsePassageLocation
 } from "~/features/passage-reader/chapter-index";
 import {
+  createReaderLocation,
+  readReaderLocation,
   readReaderPosition,
-  rememberReaderPosition
+  readerLocationKey,
+  rememberReaderLocation
 } from "~/features/reader-position/reader-position";
+import {
+  type ReaderTheme,
+  isReaderTheme,
+  readSavedReaderTheme
+} from "~/features/reader-settings/reader-settings";
 
 const READER_POSITION_STORAGE_KEY = "cross-cannon:reader-position:v1";
-const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
-const READER_THEMES = ["paper", "sepia", "dark", "contrast"] as const;
-
-type ReaderTheme = typeof READER_THEMES[number];
 
 export async function loader({}: LoaderFunctionArgs) {
   const earlyChristianAuthorsPromise: Promise<string[]> = getEarlyChristianAuthors()
@@ -97,7 +101,8 @@ export default function Index() {
     searchModalFlowReducer,
     initialSearchModalFlowState
   );
-  const savedReaderPositionRef = useRef(readReaderPosition(READER_POSITION_STORAGE_KEY));
+  const savedReaderLocation = readReaderLocation(READER_POSITION_STORAGE_KEY, "scripture");
+  const savedReaderPositionRef = useRef(readerLocationKey(savedReaderLocation));
   const [readerPassageId, setReaderPassageId] = useState("");
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
   const lastVisibleChapterKeyRef = useRef(savedReaderPositionRef.current);
@@ -140,19 +145,6 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
-    if (!("scrollRestoration" in window.history)) {
-      return;
-    }
-
-    const previousScrollRestoration = window.history.scrollRestoration;
-    window.history.scrollRestoration = "manual";
-
-    return () => {
-      window.history.scrollRestoration = previousScrollRestoration;
-    };
-  }, []);
-
-  useEffect(() => {
     if (!scriptureLibrary.isReady) {
       return;
     }
@@ -167,7 +159,7 @@ export default function Index() {
     const initialPassageId =
       findFirstPassageIdForChapter(
         scriptureLibrary.passages,
-        savedReaderPositionRef.current
+        savedReaderLocation?.chapterKey ?? readReaderPosition(READER_POSITION_STORAGE_KEY)
       ) ?? findDefaultReaderPassageId(scriptureLibrary.passages);
 
     if (!initialPassageId) {
@@ -179,7 +171,10 @@ export default function Index() {
     );
 
     if (initialChapterKey) {
-      rememberReaderPosition(READER_POSITION_STORAGE_KEY, initialChapterKey, {
+      rememberReaderLocation(READER_POSITION_STORAGE_KEY, createReaderLocation({
+        chapterKey: initialChapterKey,
+        corpus: "scripture"
+      }), {
         lastReportedRef: lastVisibleChapterKeyRef,
         savedRef: savedReaderPositionRef
       });
@@ -245,7 +240,10 @@ export default function Index() {
   });
 
   const rememberReaderChapter = useCallback((chapterKeyValue: string) => {
-    rememberReaderPosition(READER_POSITION_STORAGE_KEY, chapterKeyValue, {
+    rememberReaderLocation(READER_POSITION_STORAGE_KEY, createReaderLocation({
+      chapterKey: chapterKeyValue,
+      corpus: "scripture"
+    }), {
       lastReportedRef: lastVisibleChapterKeyRef,
       savedRef: savedReaderPositionRef
     });
@@ -500,27 +498,4 @@ function getPassageChapterKey(passage: BrowserPassage | undefined) {
   const location = parsePassageLocation(passage.reference);
 
   return location ? chapterKey(location.book, location.chapter) : null;
-}
-
-function readSavedReaderTheme(): ReaderTheme {
-  if (typeof window === "undefined") {
-    return "paper";
-  }
-
-  try {
-    const savedSettings = window.localStorage.getItem(READER_SETTINGS_STORAGE_KEY);
-
-    if (!savedSettings) {
-      return "paper";
-    }
-
-    const parsedSettings = JSON.parse(savedSettings) as { theme?: unknown };
-    return isReaderTheme(parsedSettings.theme) ? parsedSettings.theme : "paper";
-  } catch {
-    return "paper";
-  }
-}
-
-function isReaderTheme(value: unknown): value is ReaderTheme {
-  return typeof value === "string" && READER_THEMES.includes(value as ReaderTheme);
 }

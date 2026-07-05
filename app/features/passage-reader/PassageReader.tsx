@@ -1,8 +1,6 @@
 import {
-  type CSSProperties,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState
@@ -14,9 +12,22 @@ import { PassageJump } from "~/features/passage-jump/PassageJump";
 import { ReaderCorpusSwitch } from "~/features/reader-switch/ReaderCorpusSwitch";
 import {
   DEFAULT_READER_SCROLL_WINDOW,
-  useReaderScrollWindow
+  useAnchoredReaderWindow,
+  useReaderHeaderOffset
 } from "~/features/reader-window/useReaderWindow";
 import { getCenteredWindowRange } from "~/features/reader-window/window-range";
+import {
+  DEFAULT_READER_SETTINGS,
+  READER_PRESETS,
+  READER_SETTINGS_STORAGE_KEY,
+  READER_THEMES,
+  type ReaderPreset,
+  type ReaderSettings,
+  type ReaderTheme,
+  createPresetReaderSettings,
+  readerSettingsStyle,
+  readSavedReaderSettings
+} from "~/features/reader-settings/reader-settings";
 import { sortCanonicalBooks } from "~/features/search/canons";
 import type { StoredFilters } from "~/features/search/types";
 import {
@@ -32,56 +43,6 @@ const TRANSLATION_ABBREVIATION = "WEB";
 const TRANSLATION_NAME = "World English Bible";
 const INITIAL_PREVIOUS_CHAPTERS = DEFAULT_READER_SCROLL_WINDOW.initialBefore;
 const INITIAL_NEXT_CHAPTERS = DEFAULT_READER_SCROLL_WINDOW.initialAfter;
-const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
-const useBrowserLayoutEffect =
-  typeof window === "undefined" ? useEffect : useLayoutEffect;
-
-const READER_PRESETS = {
-  default: {
-    label: "Default",
-    fontScale: 1,
-    lineHeight: 1.72,
-    contentWidth: 820
-  },
-  compact: {
-    label: "Compact",
-    fontScale: 0.94,
-    lineHeight: 1.54,
-    contentWidth: 880
-  },
-  open: {
-    label: "Open",
-    fontScale: 1.07,
-    lineHeight: 1.86,
-    contentWidth: 760
-  },
-  relaxed: {
-    label: "Relaxed",
-    fontScale: 1.14,
-    lineHeight: 1.96,
-    contentWidth: 700
-  }
-} as const;
-
-const READER_THEMES = {
-  paper: "Paper",
-  sepia: "Sepia",
-  dark: "Dark",
-  contrast: "Contrast"
-} as const;
-
-type ReaderPreset = keyof typeof READER_PRESETS;
-type ReaderTheme = keyof typeof READER_THEMES;
-
-type ReaderSettings = {
-  contentWidth: number;
-  fontScale: number;
-  lineHeight: number;
-  preset: ReaderPreset | "custom";
-  theme: ReaderTheme;
-};
-
-const DEFAULT_READER_SETTINGS = createPresetReaderSettings("default", "paper");
 
 type ReaderBookMetadata = {
   description?: string | null;
@@ -114,24 +75,13 @@ export function PassageReader({
 }: PassageReaderProps) {
   const navigation = useNavigation();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const activeChapterKeyRef = useRef<string | null>(null);
-  const hasScrolledToInitialPassageRef = useRef(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
+  const readerHeaderOffset = useReaderHeaderOffset();
   const [readerSettings, setReaderSettings] = useState(DEFAULT_READER_SETTINGS);
   const [hasLoadedReaderSettings, setHasLoadedReaderSettings] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isReaderToolsOpen, setIsReaderToolsOpen] = useState(false);
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
-  const [hasCompletedInitialScroll, setHasCompletedInitialScroll] = useState(false);
-  const [renderedRange, setRenderedRange] = useState({
-    endIndex: -1,
-    startIndex: 0
-  });
-
-  const prependSnapshotRef = useRef<{
-    scrollHeight: number;
-    scrollY: number;
-  } | null>(null);
   const chapterIndex = useMemo(() => buildChapterIndex(passages), [passages]);
   const orderedChapterEntries = useMemo(
     () => {
@@ -184,23 +134,17 @@ export function PassageReader({
   const initialChapterIndex = initialChapterKey
     ? renderedChapterKeys.indexOf(initialChapterKey)
     : -1;
-  const renderedChapterEntries = useMemo(
-    () => {
-      if (renderedRange.endIndex < renderedRange.startIndex) {
-        return [];
-      }
-
-      return orderedChapterEntries.slice(
-        Math.max(0, renderedRange.startIndex),
-        renderedRange.endIndex + 1
-      );
-    },
-    [orderedChapterEntries, renderedRange.endIndex, renderedRange.startIndex]
+  const initialRenderedRange = useMemo(
+    () => getInitialRenderedRange(
+      initialChapterIndex,
+      orderedChapterEntries
+    ),
+    [initialChapterIndex, orderedChapterEntries.length]
   );
-  const isInitialChapterReadyToRender = Boolean(
-    initialChapterKey
-    && renderedChapterEntries.some((entry) => entry.key === initialChapterKey)
-  );
+  const resetReaderWindow = useCallback(() => {
+    setActiveChapterKey(initialChapterKey);
+    setSelectedPassageId("");
+  }, [initialChapterKey]);
   const activeAudioUrl = activeChapter?.audioUrl ?? null;
   const passageJumpInitialPassageId =
     activeChapter?.passages[0]?.id ?? initialPassageId;
@@ -227,29 +171,10 @@ export function PassageReader({
       .catch(() => setPlayingAudioUrl(null));
   }, [activeAudioUrl, isActiveChapterPlaying]);
 
-  useBrowserLayoutEffect(() => {
-    const nextRange = getInitialRenderedRange(
-      initialChapterIndex,
-      orderedChapterEntries
-    );
-
-    setRenderedRange(nextRange);
-    activeChapterKeyRef.current = initialChapterKey;
-    setActiveChapterKey(initialChapterKey);
-    setSelectedPassageId("");
-    setHasCompletedInitialScroll(false);
-    prependSnapshotRef.current = null;
-    hasScrolledToInitialPassageRef.current = false;
-  }, [initialChapterIndex, initialChapterKey, initialPassageId, orderedChapterEntries.length]);
-
   const findInitialPassageTarget = useCallback(
     () => findRenderedPassageElement(initialPassageId),
     [initialPassageId]
   );
-  const finishInitialPassageScroll = useCallback(() => {
-    hasScrolledToInitialPassageRef.current = true;
-    setHasCompletedInitialScroll(true);
-  }, []);
   const scrollToTopWhenInitialPassageMissing = useCallback(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, []);
@@ -261,37 +186,49 @@ export function PassageReader({
     element.dataset.chapterKey
   ), []);
 
-  useReaderScrollWindow({
-    activeKeyRef: activeChapterKeyRef,
+  const { renderedRange } = useAnchoredReaderWindow({
+    activeKey: activeChapterKey,
     chapterSelector: ".reader-chapter",
     edgePx: DEFAULT_READER_SCROLL_WINDOW.edgePx,
     expandCount: DEFAULT_READER_SCROLL_WINDOW.expandCount,
     findInitialTarget: findInitialPassageTarget,
     getChapterKey: getRenderedChapterKey,
-    hasScrolledToInitialTargetRef: hasScrolledToInitialPassageRef,
-    headerOffset: DEFAULT_READER_SCROLL_WINDOW.headerOffset,
+    headerOffset: readerHeaderOffset,
+    initialActiveKey: initialChapterKey,
+    initialRange: initialRenderedRange,
     initialScrollMaxFrames: DEFAULT_READER_SCROLL_WINDOW.initialScrollMaxFrames,
-    initialScrollReady: isScriptureReady && renderedChapterEntries.length > 0,
+    initialScrollReady: isScriptureReady && orderedChapterEntries.length > 0,
     itemCount: orderedChapterEntries.length,
     minReadingAnchorOffset: DEFAULT_READER_SCROLL_WINDOW.minReadingAnchorOffset,
     onActiveKeyChange: updateActiveChapterFromScroll,
-    onInitialScrollSettled: finishInitialPassageScroll,
     onMissingInitialTarget: scrollToTopWhenInitialPassageMissing,
-    prependSnapshotRef,
+    onReset: resetReaderWindow,
     readingAnchorRatio: DEFAULT_READER_SCROLL_WINDOW.readingAnchorRatio,
-    setRange: setRenderedRange,
-    startIndex: renderedRange.startIndex,
-    trackingReady: hasCompletedInitialScroll,
-    windowReady: isScriptureReady && hasCompletedInitialScroll
+    resetKey: `${initialPassageId}|${initialChapterKey ?? ""}`,
+    trackingReady: true,
+    windowReady: isScriptureReady
   });
+  const renderedChapterEntries = useMemo(
+    () => {
+      if (renderedRange.endIndex < renderedRange.startIndex) {
+        return [];
+      }
+
+      return orderedChapterEntries.slice(
+        Math.max(0, renderedRange.startIndex),
+        renderedRange.endIndex + 1
+      );
+    },
+    [orderedChapterEntries, renderedRange.endIndex, renderedRange.startIndex]
+  );
+  const isInitialChapterReadyToRender = Boolean(
+    initialChapterKey
+    && renderedChapterEntries.some((entry) => entry.key === initialChapterKey)
+  );
 
   const isSearchingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
-  const readerStyle = {
-    "--reader-content-width": `${readerSettings.contentWidth}px`,
-    "--reader-font-scale": readerSettings.fontScale,
-    "--reader-line-height": readerSettings.lineHeight
-  } as CSSProperties;
+  const readerStyle = readerSettingsStyle(readerSettings);
 
   useEffect(() => {
     const savedSettings = readSavedReaderSettings();
@@ -781,39 +718,6 @@ function ReaderRange({
   );
 }
 
-function readSavedReaderSettings() {
-  try {
-    const savedSettings = window.localStorage.getItem(READER_SETTINGS_STORAGE_KEY);
-
-    if (!savedSettings) {
-      return null;
-    }
-
-    const parsedSettings = JSON.parse(savedSettings) as Partial<ReaderSettings>;
-
-    if (!parsedSettings || typeof parsedSettings !== "object") {
-      return null;
-    }
-
-    return {
-      ...DEFAULT_READER_SETTINGS,
-      contentWidth: clampNumber(parsedSettings.contentWidth, 620, 880),
-      fontScale: clampNumber(parsedSettings.fontScale, 0.86, 1.35),
-      lineHeight: clampNumber(parsedSettings.lineHeight, 1.42, 2.08),
-      preset: isReaderPreset(parsedSettings.preset)
-        ? parsedSettings.preset
-        : parsedSettings.preset === "custom"
-          ? "custom"
-          : DEFAULT_READER_SETTINGS.preset,
-      theme: isReaderTheme(parsedSettings.theme)
-        ? parsedSettings.theme
-        : DEFAULT_READER_SETTINGS.theme
-    };
-  } catch {
-    return null;
-  }
-}
-
 function getInitialRenderedRange(
   initialChapterIndex: number,
   entries: Array<{ chapter: { book: string }; key: string }>
@@ -829,37 +733,6 @@ function getInitialRenderedRange(
 function findRenderedPassageElement(passageId: string) {
   return [...document.querySelectorAll<HTMLElement>(".reader-passage")]
     .find((element) => element.dataset.passageId === passageId) ?? null;
-}
-
-function createPresetReaderSettings(
-  preset: ReaderPreset,
-  theme: ReaderTheme
-): ReaderSettings {
-  const { contentWidth, fontScale, lineHeight } = READER_PRESETS[preset];
-
-  return {
-    contentWidth,
-    fontScale,
-    lineHeight,
-    preset,
-    theme
-  };
-}
-
-function clampNumber(value: unknown, min: number, max: number) {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return min;
-  }
-
-  return Math.min(max, Math.max(min, value));
-}
-
-function isReaderPreset(value: unknown): value is ReaderPreset {
-  return typeof value === "string" && value in READER_PRESETS;
-}
-
-function isReaderTheme(value: unknown): value is ReaderTheme {
-  return typeof value === "string" && value in READER_THEMES;
 }
 
 function SearchFilterInputs({ filters }: { filters: StoredFilters }) {
