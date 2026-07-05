@@ -59,10 +59,14 @@ import {
   parseCanonMode
 } from "~/features/search/canons";
 import {
-  type ReaderTheme,
-  readSavedReaderTheme,
   readerSettingsStyle
 } from "~/features/reader-settings/reader-settings";
+import {
+  ReaderPassageArticle,
+  ReaderSettingsControl,
+  ReaderTools,
+  useStoredReaderSettings
+} from "~/features/reader-ui/ReaderControls";
 import { FilterModal } from "~/features/search/FilterModal";
 import { keywordMatches } from "~/features/search/keyword-match";
 import { withCalibratedMatchStrength } from "~/features/search/match-strength";
@@ -632,7 +636,9 @@ export default function ChurchFathersReaderRoute() {
     searchModalFlowReducer,
     initialSearchModalFlowState
   );
-  const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
+  const { readerSettings, setReaderSettings } = useStoredReaderSettings();
+  const readerTheme = readerSettings.theme;
+  const readerStyles = readerSettingsStyle(readerSettings);
   const readerHeaderOffset = useReaderHeaderOffset();
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isJumpOpen, setIsJumpOpen] = useState(false);
@@ -928,10 +934,6 @@ export default function ChurchFathersReaderRoute() {
       audio.addEventListener("loadedmetadata", playFromOffset, { once: true });
     }
   }, [activeAudio, activeAudioKey, activeAudioUrl, isActiveChapterPlaying]);
-
-  useEffect(() => {
-    setReaderTheme(readSavedReaderTheme());
-  }, []);
 
   useEffect(() => {
     if (actionData?.authors) {
@@ -1326,7 +1328,7 @@ export default function ChurchFathersReaderRoute() {
           aria-busy="true"
           aria-labelledby="reader-loading-title"
           className={`reader-page reader-theme-${readerTheme} reader-loading`}
-          style={readerStyle()}
+          style={readerStyles}
         >
           <header className="reader-header reader-loading-header">
             <div className="reader-header-title">
@@ -1348,7 +1350,7 @@ export default function ChurchFathersReaderRoute() {
       <section
         aria-labelledby="reader-title"
         className={`reader-page reader-theme-${readerTheme}`}
-        style={readerStyle()}
+        style={readerStyles}
       >
         <header className="reader-header">
           <audio
@@ -1385,31 +1387,14 @@ export default function ChurchFathersReaderRoute() {
               {activeHeaderTitle}
             </h1>
           </div>
-          {!isToolsOpen ? (
-            <button
-              aria-expanded={false}
-              aria-label="Open reader tools"
-              className="context-button reader-icon-button reader-tools-trigger"
-              onClick={() => setIsToolsOpen(true)}
-              title="Open reader tools"
-              type="button"
-            >
-              ⋮
-            </button>
-          ) : (
-            <div className="reader-header-actions">
-              <button
-                aria-label="Close reader tools"
-                className="context-button reader-icon-button reader-tools-close"
-                onClick={() => {
-                  setIsToolsOpen(false);
-                  setIsJumpOpen(false);
-                }}
-                title="Close reader tools"
-                type="button"
-              >
-                ×
-              </button>
+          <ReaderTools
+            isOpen={isToolsOpen}
+            onClose={() => {
+              setIsToolsOpen(false);
+              setIsJumpOpen(false);
+            }}
+            onOpen={() => setIsToolsOpen(true)}
+          >
               <button
                 aria-label={
                   activeAudio
@@ -1452,8 +1437,11 @@ export default function ChurchFathersReaderRoute() {
                   Jump
                 </button>
               </section>
-            </div>
-          )}
+              <ReaderSettingsControl
+                onChange={setReaderSettings}
+                settings={readerSettings}
+              />
+          </ReaderTools>
         </header>
 
         <div className="reader-passages">
@@ -1501,39 +1489,9 @@ export default function ChurchFathersReaderRoute() {
                         });
 
                         return (
-                          <article
-                            className={[
-                              "reader-passage",
-                              isSelected ? "is-selected" : ""
-                            ].filter(Boolean).join(" ")}
-                            data-passage-key={passage.key}
-                            data-passage-end={passage.verseEnd}
-                            data-passage-range={passage.rangeLabel}
-                            data-passage-start={passage.verseStart}
-                            key={passage.key}
-                          >
-                            <button
-                              aria-expanded={isSelected}
-                              className="reader-passage-button"
-                              onClick={() => {
-                                const nextRange = isSelected ? "" : passage.rangeLabel;
-                                setSelectedPassage(nextRange);
-                                setSelectedPassageChapterId(nextRange ? chapter.id : "");
-                                updateUrl(chapter.id, nextRange);
-                              }}
-                              type="button"
-                            >
-                              <span className="reader-passage-reference">
-                                {passage.rangeLabel}
-                              </span>
-                              <span className="reader-passage-text">
-                                <span className="reader-verse">
-                                  {renderReaderPassageText(passage)}
-                                </span>
-                              </span>
-                            </button>
-                            {isSelected ? (
-                              <div className="reader-passage-actions">
+                          <ReaderPassageArticle
+                            actions={
+                              <>
                                 <Form method="post">
                                   <input type="hidden" name="intent" value="similar-passage" />
                                   <input type="hidden" name="targetCorpus" value="early-christian" />
@@ -1559,9 +1517,29 @@ export default function ChurchFathersReaderRoute() {
                                     Searching similar passages...
                                   </p>
                                 ) : null}
-                              </div>
-                            ) : null}
-                          </article>
+                              </>
+                            }
+                            dataAttributes={{
+                              "data-passage-end": passage.verseEnd,
+                              "data-passage-key": passage.key,
+                              "data-passage-range": passage.rangeLabel,
+                              "data-passage-start": passage.verseStart
+                            }}
+                            isSelected={isSelected}
+                            key={passage.key}
+                            onToggle={() => {
+                              const nextRange = isSelected ? "" : passage.rangeLabel;
+                              setSelectedPassage(nextRange);
+                              setSelectedPassageChapterId(nextRange ? chapter.id : "");
+                              updateUrl(chapter.id, nextRange);
+                            }}
+                            reference={passage.rangeLabel}
+                            text={(
+                              <span className="reader-verse">
+                                {renderReaderPassageText(passage)}
+                              </span>
+                            )}
+                          />
                         );
                       })}
                     </div>
@@ -2605,14 +2583,6 @@ function distanceFromActiveChapter(
   return typeof activeChapterIndex === "number"
     ? Math.abs(entry.index - activeChapterIndex)
     : entry.index;
-}
-
-function readerStyle() {
-  return readerSettingsStyle({
-    contentWidth: 820,
-    fontScale: 1,
-    lineHeight: 1.72
-  });
 }
 
 function churchFathersScriptureActionData(
