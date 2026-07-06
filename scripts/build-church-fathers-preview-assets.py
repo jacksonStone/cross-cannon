@@ -9,7 +9,7 @@ INPUT = Path("data/public-domain/church-fathers/ccel/parsed/church-fathers.json"
 OUTPUT_DIR = Path("public/church-fathers-preview")
 CHAPTERS_DIR = OUTPUT_DIR / "chapters"
 BOOK_INDEX_PATH = OUTPUT_DIR / "books.json"
-PRESERVED_OUTPUT_FILES = ["confessions-audio-alignment.json"]
+AUDIO_SOURCES_PATH = Path("data/public-domain/church-fathers/audio-sources.json")
 
 DEFAULT_CLASSIFICATION = {
     "bucket": "Patristic / broadly orthodox",
@@ -114,11 +114,18 @@ CONCILIAR_TITLE_PATTERNS = [
 
 def main() -> int:
     data = json.loads(INPUT.read_text(encoding="utf-8"))
+    audio_sources = load_audio_sources()
+    preserved_file_names = sorted(
+        str(source["alignmentFile"])
+        for source in audio_sources
+        if source.get("alignmentFile")
+    )
     preserved_output_files = {
         file_name: (OUTPUT_DIR / file_name).read_bytes()
-        for file_name in PRESERVED_OUTPUT_FILES
+        for file_name in preserved_file_names
         if (OUTPUT_DIR / file_name).exists()
     }
+    audio_alignments = load_preserved_audio_alignments(preserved_output_files)
 
     if OUTPUT_DIR.exists():
         shutil.rmtree(OUTPUT_DIR)
@@ -183,11 +190,19 @@ def main() -> int:
                 "metadata": metadata,
                 "name": book_name,
             }
+            chapter_counts_by_source = chapter_counts_for_work(work, audio_sources)
 
             for chapter_index, chapter in enumerate(work["chapters"], start=1):
                 file_name = f"{safe_id(chapter['id'])}.json"
                 asset_path = f"/church-fathers-preview/chapters/{file_name}"
                 chapter_number = chapter_index
+                audio = audio_for_chapter(
+                    work["id"],
+                    chapter["id"],
+                    audio_sources,
+                    audio_alignments,
+                    chapter_counts_by_source,
+                )
                 chapter_payload = {
                     "author": author,
                     "book": book_name,
@@ -214,20 +229,23 @@ def main() -> int:
                         for verse in chapter["verses"]
                     ],
                 }
-
                 (CHAPTERS_DIR / file_name).write_text(
                     json.dumps(chapter_payload, ensure_ascii=False, separators=(",", ":")),
                     encoding="utf-8",
                 )
                 chapter_count += 1
 
-                book_summary["chapters"].append({
+                chapter_summary = {
                     "assetPath": asset_path,
                     "chapter": chapter_number,
                     "id": chapter["id"],
                     "title": chapter["title"],
                     "verseCount": len(chapter["verses"]),
-                })
+                }
+                if audio is not None:
+                    chapter_summary["audio"] = audio
+
+                book_summary["chapters"].append(chapter_summary)
                 manifest["chapterCount"] += 1
 
             book_index["books"].append(book_summary)
@@ -245,6 +263,254 @@ def main() -> int:
         f"Wrote {manifest['bookCount']} books and {chapter_count} chapter assets to {OUTPUT_DIR}"
     )
     return 0
+
+
+def load_audio_sources() -> list[dict]:
+    if not AUDIO_SOURCES_PATH.exists():
+        return []
+
+    payload = json.loads(AUDIO_SOURCES_PATH.read_text(encoding="utf-8"))
+    sources = payload.get("sources", [])
+
+    if not isinstance(sources, list):
+        return []
+
+    return [
+        source
+        for source in sources
+        if isinstance(source, dict) and source.get("workId")
+    ]
+
+
+def load_preserved_audio_alignments(preserved_output_files: dict):
+    alignments = {}
+
+    for file_name, content in preserved_output_files.items():
+        try:
+            payload = json.loads(content.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+
+        if isinstance(payload.get("chapters"), dict):
+            alignments[file_name] = payload["chapters"]
+
+    return alignments
+
+
+def audio_for_chapter(
+    work_id: str,
+    chapter_id: str,
+    audio_sources: list[dict],
+    audio_alignments: dict,
+    chapter_counts_by_source: dict,
+):
+    for source in audio_sources:
+        if source.get("workId") != work_id:
+            continue
+
+        alignment_file = source.get("alignmentFile")
+        aligned_audio = (
+            audio_alignments.get(alignment_file, {}).get(chapter_id)
+            if alignment_file
+            else None
+        )
+
+        if aligned_audio:
+            return normalize_audio(
+                aligned_audio.get("audioUrl") or aligned_audio.get("url"),
+                aligned_audio.get("label"),
+                aligned_audio.get("startSeconds", 0),
+                aligned_audio.get("endSeconds"),
+                aligned_audio.get("confidence"),
+            )
+
+        ranged_audio = chapter_range_audio_for_chapter(source, chapter_id)
+        if ranged_audio is not None:
+            return ranged_audio
+
+        parted_audio = part_audio_for_chapter(
+            source,
+            chapter_id,
+            chapter_counts_by_source.get(audio_source_key(source), {}),
+        )
+        if parted_audio is not None:
+            return parted_audio
+
+    return None
+
+
+def normalize_audio(audio_url, label, start_seconds=0, end_seconds=None, confidence=None):
+    if not audio_url or not label:
+        return None
+
+    audio = {
+        "label": str(label),
+        "startSeconds": round(float(start_seconds or 0), 3),
+        "url": str(audio_url),
+    }
+
+    if end_seconds is not None:
+        audio["endSeconds"] = round(float(end_seconds), 3)
+
+    if confidence is not None:
+        audio["confidence"] = round(float(confidence), 3)
+
+    return audio
+
+
+def chapter_range_audio_for_chapter(source: dict, chapter_id: str):
+    location = parse_audio_location(chapter_id, source.get("location"))
+
+    if location is None:
+        return None
+
+    book, chapter = location
+    for track in source.get("tracks", []):
+        if (
+            track["book"] == book
+            and track["chapterStart"] <= chapter
+            and track["chapterEnd"] >= chapter
+        ):
+            return normalize_audio(
+                f"{source['baseUrl']}/{track['fileName']}",
+                track["label"],
+            )
+
+    return None
+
+
+def part_audio_for_chapter(source: dict, chapter_id: str, chapter_counts: dict):
+    location = parse_audio_location(chapter_id, source.get("location"))
+
+    if location is None:
+        return None
+
+    book, chapter = location
+    parts = source.get("partsByBook", {}).get(str(book))
+    chapter_count = chapter_counts.get(book)
+
+    if not parts or not chapter_count:
+        return None
+
+    part_index = min(
+        len(parts) - 1,
+        max(0, ((chapter - 1) * len(parts)) // chapter_count),
+    )
+    part = parts[part_index]
+    label = source.get("labelTemplate", "Book {book:02d}, part {partLetter}").format(
+        book=book,
+        part=part,
+        partLetter=str(part)[-1].upper(),
+    )
+    file_name = source["fileTemplate"].replace("{part}", str(part))
+
+    return normalize_audio(
+        f"{source['baseUrl']}/{file_name}",
+        label,
+    )
+
+
+def chapter_counts_for_work(work: dict, audio_sources: list[dict]):
+    counts_by_source = {}
+
+    for source in audio_sources:
+        if source.get("workId") != work.get("id") or not source.get("partsByBook"):
+            continue
+
+        counts = {}
+        for chapter in work.get("chapters", []):
+            location = parse_audio_location(str(chapter.get("id") or ""), source.get("location"))
+            if location is None:
+                continue
+
+            book, chapter_number = location
+            counts[book] = max(counts.get(book, 0), chapter_number)
+
+        counts_by_source[audio_source_key(source)] = counts
+
+    return counts_by_source
+
+
+def audio_source_key(source: dict) -> str:
+    return str(
+        source.get("id")
+        or source.get("alignmentFile")
+        or f"{source.get('workId')}:{source.get('location')}"
+    )
+
+
+def parse_audio_location(chapter_id: str, location):
+    if location == "confessions":
+        return parse_confessions_location(chapter_id)
+
+    if location == "city-of-god":
+        return parse_city_of_god_location(chapter_id)
+
+    if location == "identity":
+        return None
+
+    return None
+
+
+def parse_confessions_location(chapter_id: str):
+    match = re.match(r"^npnf101:vi\.([IVXLCDM]+)(?:_1)?\.([IVXLCDM]+)$", chapter_id)
+
+    if not match:
+        return None
+
+    book = roman_numeral_to_number(match.group(1))
+    chapter = roman_numeral_to_number(match.group(2))
+
+    if not book or not chapter:
+        return None
+
+    return book, chapter
+
+
+def parse_city_of_god_location(chapter_id: str):
+    book_one_match = re.match(r"^npnf102:iv\.ii\.([ivxlcdm]+)$", chapter_id, re.IGNORECASE)
+
+    if book_one_match:
+        return 1, roman_numeral_to_number(book_one_match.group(1))
+
+    match = re.match(
+        r"^npnf102:iv\.([IVXLCDM]+)(?:_1)?\.([0-9]+|[ivxlcdm]+)$",
+        chapter_id,
+        re.IGNORECASE,
+    )
+
+    if not match:
+        return None
+
+    book = roman_numeral_to_number(match.group(1))
+    chapter_text = match.group(2)
+    chapter = int(chapter_text) if chapter_text.isdigit() else roman_numeral_to_number(chapter_text)
+
+    if not book or not chapter:
+        return None
+
+    return book, chapter
+
+
+def roman_numeral_to_number(value: str):
+    numerals = {
+        "C": 100,
+        "D": 500,
+        "I": 1,
+        "L": 50,
+        "M": 1000,
+        "V": 5,
+        "X": 10,
+    }
+    letters = list(value.upper())
+    total = 0
+
+    for index, letter in enumerate(letters):
+        current = numerals.get(letter, 0)
+        next_value = numerals.get(letters[index + 1], 0) if index + 1 < len(letters) else 0
+        total += -current if current < next_value else current
+
+    return total
 
 
 def safe_id(value: str) -> str:
