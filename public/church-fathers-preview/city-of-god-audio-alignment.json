@@ -1,0 +1,4654 @@
+{
+  "chapters": {
+    "npnf102:iv.ii.i": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 124.6,
+      "label": "Book 01, part A",
+      "startSeconds": 25.5
+    },
+    "npnf102:iv.ii.ii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 323.6,
+      "label": "Book 01, part A",
+      "startSeconds": 124.6
+    },
+    "npnf102:iv.ii.iii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 411.6,
+      "label": "Book 01, part A",
+      "startSeconds": 323.6
+    },
+    "npnf102:iv.ii.iv": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 628.5,
+      "label": "Book 01, part A",
+      "startSeconds": 411.6
+    },
+    "npnf102:iv.ii.v": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 763.5,
+      "label": "Book 01, part A",
+      "startSeconds": 628.5
+    },
+    "npnf102:iv.ii.vi": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 815,
+      "label": "Book 01, part A",
+      "startSeconds": 763.5
+    },
+    "npnf102:iv.ii.vii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 956.4,
+      "label": "Book 01, part A",
+      "startSeconds": 815
+    },
+    "npnf102:iv.ii.viii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1026.1,
+      "label": "Book 01, part A",
+      "startSeconds": 956.4
+    },
+    "npnf102:iv.ii.ix": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1232.5,
+      "label": "Book 01, part A",
+      "startSeconds": 1026.1
+    },
+    "npnf102:iv.ii.x": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1589.9,
+      "label": "Book 01, part A",
+      "startSeconds": 1232.5
+    },
+    "npnf102:iv.ii.xi": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2012.1,
+      "label": "Book 01, part A",
+      "startSeconds": 1589.9
+    },
+    "npnf102:iv.ii.xii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2113,
+      "label": "Book 01, part A",
+      "startSeconds": 2012.1
+    },
+    "npnf102:iv.ii.xiii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2311,
+      "label": "Book 01, part A",
+      "startSeconds": 2113
+    },
+    "npnf102:iv.ii.xiv": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2467.5,
+      "label": "Book 01, part A",
+      "startSeconds": 2311
+    },
+    "npnf102:iv.ii.xv": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2525.1,
+      "label": "Book 01, part A",
+      "startSeconds": 2467.5
+    },
+    "npnf102:iv.ii.xvi": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 30.4,
+      "label": "Book 01, part B",
+      "startSeconds": 30.4
+    },
+    "npnf102:iv.ii.xvii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 109.1,
+      "label": "Book 01, part B",
+      "startSeconds": 30.4
+    },
+    "npnf102:iv.ii.xviii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 203.2,
+      "label": "Book 01, part B",
+      "startSeconds": 109.1
+    },
+    "npnf102:iv.ii.xix": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 403.6,
+      "label": "Book 01, part B",
+      "startSeconds": 203.2
+    },
+    "npnf102:iv.ii.xx": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 748.2,
+      "label": "Book 01, part B",
+      "startSeconds": 403.6
+    },
+    "npnf102:iv.ii.xxi": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 909.6,
+      "label": "Book 01, part B",
+      "startSeconds": 748.2
+    },
+    "npnf102:iv.ii.xxii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1008.1,
+      "label": "Book 01, part B",
+      "startSeconds": 909.6
+    },
+    "npnf102:iv.ii.xxiii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1163.9,
+      "label": "Book 01, part B",
+      "startSeconds": 1008.1
+    },
+    "npnf102:iv.ii.xxiv": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1272.4,
+      "label": "Book 01, part B",
+      "startSeconds": 1163.9
+    },
+    "npnf102:iv.ii.xxv": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1452,
+      "label": "Book 01, part B",
+      "startSeconds": 1272.4
+    },
+    "npnf102:iv.ii.xxvi": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1558.8,
+      "label": "Book 01, part B",
+      "startSeconds": 1452
+    },
+    "npnf102:iv.ii.xxvii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1709.1,
+      "label": "Book 01, part B",
+      "startSeconds": 1558.8
+    },
+    "npnf102:iv.ii.xxviii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1863.9,
+      "label": "Book 01, part B",
+      "startSeconds": 1709.1
+    },
+    "npnf102:iv.ii.xxix": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2105.2,
+      "label": "Book 01, part B",
+      "startSeconds": 1863.9
+    },
+    "npnf102:iv.ii.xxx": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2189.4,
+      "label": "Book 01, part B",
+      "startSeconds": 2105.2
+    },
+    "npnf102:iv.ii.xxxi": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2327.4,
+      "label": "Book 01, part B",
+      "startSeconds": 2189.4
+    },
+    "npnf102:iv.ii.xxxii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2457.8,
+      "label": "Book 01, part B",
+      "startSeconds": 2327.4
+    },
+    "npnf102:iv.ii.xxxiii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2560.3,
+      "label": "Book 01, part B",
+      "startSeconds": 2457.8
+    },
+    "npnf102:iv.ii.xxxiv": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2654.8,
+      "label": "Book 01, part B",
+      "startSeconds": 2560.3
+    },
+    "npnf102:iv.ii.xxxv": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2704.2,
+      "label": "Book 01, part B",
+      "startSeconds": 2654.8
+    },
+    "npnf102:iv.ii.xxxvi": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2793.8,
+      "label": "Book 01, part B",
+      "startSeconds": 2704.2
+    },
+    "npnf102:iv.ii.xxxvii": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_01b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2908,
+      "label": "Book 01, part B",
+      "startSeconds": 2793.8
+    },
+    "npnf102:iv.II_1.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 341.6,
+      "label": "Book 02, part A",
+      "startSeconds": 29.4
+    },
+    "npnf102:iv.II_1.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 428.6,
+      "label": "Book 02, part A",
+      "startSeconds": 341.6
+    },
+    "npnf102:iv.II_1.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 594,
+      "label": "Book 02, part A",
+      "startSeconds": 460.8
+    },
+    "npnf102:iv.II_1.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 749,
+      "label": "Book 02, part A",
+      "startSeconds": 594
+    },
+    "npnf102:iv.II_1.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 866.9,
+      "label": "Book 02, part A",
+      "startSeconds": 749
+    },
+    "npnf102:iv.II_1.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1015,
+      "label": "Book 02, part A",
+      "startSeconds": 866.9
+    },
+    "npnf102:iv.II_1.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1111,
+      "label": "Book 02, part A",
+      "startSeconds": 1015
+    },
+    "npnf102:iv.II_1.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1288.3,
+      "label": "Book 02, part A",
+      "startSeconds": 1111
+    },
+    "npnf102:iv.II_1.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1386.9,
+      "label": "Book 02, part A",
+      "startSeconds": 1288.3
+    },
+    "npnf102:iv.II_1.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1540.1,
+      "label": "Book 02, part A",
+      "startSeconds": 1386.9
+    },
+    "npnf102:iv.II_1.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1626.6,
+      "label": "Book 02, part A",
+      "startSeconds": 1540.1
+    },
+    "npnf102:iv.II_1.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1814.5,
+      "label": "Book 02, part A",
+      "startSeconds": 1626.6
+    },
+    "npnf102:iv.II_1.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2090.5,
+      "label": "Book 02, part A",
+      "startSeconds": 1814.5
+    },
+    "npnf102:iv.II_1.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2162.6,
+      "label": "Book 02, part A",
+      "startSeconds": 2090.5
+    },
+    "npnf102:iv.II_1.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2230.1,
+      "label": "Book 02, part A",
+      "startSeconds": 2162.6
+    },
+    "npnf102:iv.II_1.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2435.5,
+      "label": "Book 02, part A",
+      "startSeconds": 2230.1
+    },
+    "npnf102:iv.II_1.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 334.8,
+      "label": "Book 02, part B",
+      "startSeconds": 24.7
+    },
+    "npnf102:iv.II_1.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 488,
+      "label": "Book 02, part B",
+      "startSeconds": 334.8
+    },
+    "npnf102:iv.II_1.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 668.3,
+      "label": "Book 02, part B",
+      "startSeconds": 488
+    },
+    "npnf102:iv.II_1.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1143.7,
+      "label": "Book 02, part B",
+      "startSeconds": 668.3
+    },
+    "npnf102:iv.II_1.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1340.9,
+      "label": "Book 02, part B",
+      "startSeconds": 1143.7
+    },
+    "npnf102:iv.II_1.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1613.3,
+      "label": "Book 02, part B",
+      "startSeconds": 1340.9
+    },
+    "npnf102:iv.II_1.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1871.5,
+      "label": "Book 02, part B",
+      "startSeconds": 1613.3
+    },
+    "npnf102:iv.II_1.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2101.2,
+      "label": "Book 02, part B",
+      "startSeconds": 1871.5
+    },
+    "npnf102:iv.II_1.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2337.8,
+      "label": "Book 02, part B",
+      "startSeconds": 2101.2
+    },
+    "npnf102:iv.II_1.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2463.7,
+      "label": "Book 02, part B",
+      "startSeconds": 2337.8
+    },
+    "npnf102:iv.II_1.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2531.7,
+      "label": "Book 02, part B",
+      "startSeconds": 2463.7
+    },
+    "npnf102:iv.II_1.29": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_02b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 2799.9,
+      "label": "Book 02, part B",
+      "startSeconds": 2531.7
+    },
+    "npnf102:iv.III.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 124.6,
+      "label": "Book 03, part A",
+      "startSeconds": 1
+    },
+    "npnf102:iv.III.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 266.6,
+      "label": "Book 03, part A",
+      "startSeconds": 124.6
+    },
+    "npnf102:iv.III.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 378.9,
+      "label": "Book 03, part A",
+      "startSeconds": 266.6
+    },
+    "npnf102:iv.III.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 431.5,
+      "label": "Book 03, part A",
+      "startSeconds": 378.9
+    },
+    "npnf102:iv.III.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 517.4,
+      "label": "Book 03, part A",
+      "startSeconds": 431.5
+    },
+    "npnf102:iv.III.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 630.3,
+      "label": "Book 03, part A",
+      "startSeconds": 517.4
+    },
+    "npnf102:iv.III.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 800.8,
+      "label": "Book 03, part A",
+      "startSeconds": 630.3
+    },
+    "npnf102:iv.III.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 836.8,
+      "label": "Book 03, part A",
+      "startSeconds": 800.8
+    },
+    "npnf102:iv.III.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 959,
+      "label": "Book 03, part A",
+      "startSeconds": 836.8
+    },
+    "npnf102:iv.III.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1159.8,
+      "label": "Book 03, part A",
+      "startSeconds": 959
+    },
+    "npnf102:iv.III.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1273.3,
+      "label": "Book 03, part A",
+      "startSeconds": 1159.8
+    },
+    "npnf102:iv.III.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1401.7,
+      "label": "Book 03, part A",
+      "startSeconds": 1273.3
+    },
+    "npnf102:iv.III.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1630.9,
+      "label": "Book 03, part A",
+      "startSeconds": 1401.7
+    },
+    "npnf102:iv.III.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2027.5,
+      "label": "Book 03, part A",
+      "startSeconds": 1630.9
+    },
+    "npnf102:iv.III.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2380,
+      "label": "Book 03, part A",
+      "startSeconds": 2027.5
+    },
+    "npnf102:iv.III.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2573.5,
+      "label": "Book 03, part A",
+      "startSeconds": 2380
+    },
+    "npnf102:iv.III.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 597.8,
+      "label": "Book 03, part B",
+      "startSeconds": 29
+    },
+    "npnf102:iv.III.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 0.8333333333333334,
+      "endSeconds": 850.8,
+      "label": "Book 03, part B",
+      "startSeconds": 597.8
+    },
+    "npnf102:iv.III.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1002.4,
+      "label": "Book 03, part B",
+      "startSeconds": 850.8
+    },
+    "npnf102:iv.III.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1267.4,
+      "label": "Book 03, part B",
+      "startSeconds": 1002.4
+    },
+    "npnf102:iv.III.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1494.7,
+      "label": "Book 03, part B",
+      "startSeconds": 1267.4
+    },
+    "npnf102:iv.III.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1584.8,
+      "label": "Book 03, part B",
+      "startSeconds": 1494.7
+    },
+    "npnf102:iv.III.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1656.2,
+      "label": "Book 03, part B",
+      "startSeconds": 1584.8
+    },
+    "npnf102:iv.III.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1734.8,
+      "label": "Book 03, part B",
+      "startSeconds": 1656.2
+    },
+    "npnf102:iv.III.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1865.8,
+      "label": "Book 03, part B",
+      "startSeconds": 1734.8
+    },
+    "npnf102:iv.III.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1955.7,
+      "label": "Book 03, part B",
+      "startSeconds": 1865.8
+    },
+    "npnf102:iv.III.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2059.7,
+      "label": "Book 03, part B",
+      "startSeconds": 1955.7
+    },
+    "npnf102:iv.III.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 2223.4,
+      "label": "Book 03, part B",
+      "startSeconds": 2059.7
+    },
+    "npnf102:iv.III.29": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 0.8333333333333334,
+      "endSeconds": 2308.2,
+      "label": "Book 03, part B",
+      "startSeconds": 2223.4
+    },
+    "npnf102:iv.III.30": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2452.8,
+      "label": "Book 03, part B",
+      "startSeconds": 2308.2
+    },
+    "npnf102:iv.III.31": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_03b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2676.5,
+      "label": "Book 03, part B",
+      "startSeconds": 2452.8
+    },
+    "npnf102:iv.IV.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 181.4,
+      "label": "Book 04, part A",
+      "startSeconds": 26
+    },
+    "npnf102:iv.IV.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 374.3,
+      "label": "Book 04, part A",
+      "startSeconds": 181.4
+    },
+    "npnf102:iv.IV.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 578.6,
+      "label": "Book 04, part A",
+      "startSeconds": 374.3
+    },
+    "npnf102:iv.IV.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 640.2,
+      "label": "Book 04, part A",
+      "startSeconds": 578.6
+    },
+    "npnf102:iv.IV.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 791.3,
+      "label": "Book 04, part A",
+      "startSeconds": 640.2
+    },
+    "npnf102:iv.IV.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 900.6,
+      "label": "Book 04, part A",
+      "startSeconds": 791.3
+    },
+    "npnf102:iv.IV.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1078.6,
+      "label": "Book 04, part A",
+      "startSeconds": 900.6
+    },
+    "npnf102:iv.IV.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1277.9,
+      "label": "Book 04, part A",
+      "startSeconds": 1078.6
+    },
+    "npnf102:iv.IV.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1339.6,
+      "label": "Book 04, part A",
+      "startSeconds": 1277.9
+    },
+    "npnf102:iv.IV.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1653.5,
+      "label": "Book 04, part A",
+      "startSeconds": 1339.6
+    },
+    "npnf102:iv.IV.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1994.5,
+      "label": "Book 04, part A",
+      "startSeconds": 1653.5
+    },
+    "npnf102:iv.IV.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2053.1,
+      "label": "Book 04, part A",
+      "startSeconds": 1994.5
+    },
+    "npnf102:iv.IV.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2130.1,
+      "label": "Book 04, part A",
+      "startSeconds": 2053.1
+    },
+    "npnf102:iv.IV.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2170.2,
+      "label": "Book 04, part A",
+      "startSeconds": 2130.1
+    },
+    "npnf102:iv.IV.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2307.1,
+      "label": "Book 04, part A",
+      "startSeconds": 2170.2
+    },
+    "npnf102:iv.IV.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2368,
+      "label": "Book 04, part A",
+      "startSeconds": 2307.1
+    },
+    "npnf102:iv.IV.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2440.7,
+      "label": "Book 04, part A",
+      "startSeconds": 2368
+    },
+    "npnf102:iv.IV.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2603.5,
+      "label": "Book 04, part A",
+      "startSeconds": 2440.7
+    },
+    "npnf102:iv.IV.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 86.6,
+      "label": "Book 04, part B",
+      "startSeconds": 24.8
+    },
+    "npnf102:iv.IV.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 208,
+      "label": "Book 04, part B",
+      "startSeconds": 86.6
+    },
+    "npnf102:iv.IV.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 468.7,
+      "label": "Book 04, part B",
+      "startSeconds": 208
+    },
+    "npnf102:iv.IV.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 552.4,
+      "label": "Book 04, part B",
+      "startSeconds": 468.7
+    },
+    "npnf102:iv.IV.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 954.6,
+      "label": "Book 04, part B",
+      "startSeconds": 552.4
+    },
+    "npnf102:iv.IV.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1022,
+      "label": "Book 04, part B",
+      "startSeconds": 954.6
+    },
+    "npnf102:iv.IV.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1116.8,
+      "label": "Book 04, part B",
+      "startSeconds": 1022
+    },
+    "npnf102:iv.IV.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1288.5,
+      "label": "Book 04, part B",
+      "startSeconds": 1116.8
+    },
+    "npnf102:iv.IV.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1483.3,
+      "label": "Book 04, part B",
+      "startSeconds": 1288.5
+    },
+    "npnf102:iv.IV.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1562.7,
+      "label": "Book 04, part B",
+      "startSeconds": 1483.3
+    },
+    "npnf102:iv.IV.29": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1779.4,
+      "label": "Book 04, part B",
+      "startSeconds": 1562.7
+    },
+    "npnf102:iv.IV.30": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1971.7,
+      "label": "Book 04, part B",
+      "startSeconds": 1779.4
+    },
+    "npnf102:iv.IV.31": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2214.1,
+      "label": "Book 04, part B",
+      "startSeconds": 1971.7
+    },
+    "npnf102:iv.IV.32": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2276.4,
+      "label": "Book 04, part B",
+      "startSeconds": 2214.1
+    },
+    "npnf102:iv.IV.33": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2347.5,
+      "label": "Book 04, part B",
+      "startSeconds": 2276.4
+    },
+    "npnf102:iv.IV.34": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_04b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 2504.3,
+      "label": "Book 04, part B",
+      "startSeconds": 2347.5
+    },
+    "npnf102:iv.V.i": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 70.2,
+      "label": "Book 05, part A",
+      "startSeconds": 0
+    },
+    "npnf102:iv.V.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 298.7,
+      "label": "Book 05, part A",
+      "startSeconds": 70.2
+    },
+    "npnf102:iv.V.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 483.1,
+      "label": "Book 05, part A",
+      "startSeconds": 298.7
+    },
+    "npnf102:iv.V.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 600.8,
+      "label": "Book 05, part A",
+      "startSeconds": 483.1
+    },
+    "npnf102:iv.V.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 702.1,
+      "label": "Book 05, part A",
+      "startSeconds": 600.8
+    },
+    "npnf102:iv.V.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 979.2,
+      "label": "Book 05, part A",
+      "startSeconds": 702.1
+    },
+    "npnf102:iv.V.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1138.7,
+      "label": "Book 05, part A",
+      "startSeconds": 979.2
+    },
+    "npnf102:iv.V.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1377.3,
+      "label": "Book 05, part A",
+      "startSeconds": 1138.7
+    },
+    "npnf102:iv.V.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1527.1,
+      "label": "Book 05, part A",
+      "startSeconds": 1377.3
+    },
+    "npnf102:iv.V.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2183.6,
+      "label": "Book 05, part A",
+      "startSeconds": 1527.1
+    },
+    "npnf102:iv.V.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2442.4,
+      "label": "Book 05, part A",
+      "startSeconds": 2183.6
+    },
+    "npnf102:iv.V.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2535.3,
+      "label": "Book 05, part A",
+      "startSeconds": 2442.4
+    },
+    "npnf102:iv.V.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 3230.9,
+      "label": "Book 05, part A",
+      "startSeconds": 2535.3
+    },
+    "npnf102:iv.V.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 161.3,
+      "label": "Book 05, part B",
+      "startSeconds": 0
+    },
+    "npnf102:iv.V.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 359.6,
+      "label": "Book 05, part B",
+      "startSeconds": 161.3
+    },
+    "npnf102:iv.V.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 433,
+      "label": "Book 05, part B",
+      "startSeconds": 359.6
+    },
+    "npnf102:iv.V.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 495.6,
+      "label": "Book 05, part B",
+      "startSeconds": 433
+    },
+    "npnf102:iv.V.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 687.3,
+      "label": "Book 05, part B",
+      "startSeconds": 495.6
+    },
+    "npnf102:iv.V.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1290.8,
+      "label": "Book 05, part B",
+      "startSeconds": 687.3
+    },
+    "npnf102:iv.V.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1582.1,
+      "label": "Book 05, part B",
+      "startSeconds": 1290.8
+    },
+    "npnf102:iv.V.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1748,
+      "label": "Book 05, part B",
+      "startSeconds": 1582.1
+    },
+    "npnf102:iv.V.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1905.9,
+      "label": "Book 05, part B",
+      "startSeconds": 1748
+    },
+    "npnf102:iv.V.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2066.2,
+      "label": "Book 05, part B",
+      "startSeconds": 1905.9
+    },
+    "npnf102:iv.V.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2247.3,
+      "label": "Book 05, part B",
+      "startSeconds": 2066.2
+    },
+    "npnf102:iv.V.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2364.7,
+      "label": "Book 05, part B",
+      "startSeconds": 2247.3
+    },
+    "npnf102:iv.V.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2457,
+      "label": "Book 05, part B",
+      "startSeconds": 2364.7
+    },
+    "npnf102:iv.V.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_05b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 2868.2,
+      "label": "Book 05, part B",
+      "startSeconds": 2457
+    },
+    "npnf102:iv.VI.i": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 121.6,
+      "label": "Book 06, part A",
+      "startSeconds": 22.8
+    },
+    "npnf102:iv.VI.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 547.4,
+      "label": "Book 06, part A",
+      "startSeconds": 121.6
+    },
+    "npnf102:iv.VI.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 746.8,
+      "label": "Book 06, part A",
+      "startSeconds": 547.4
+    },
+    "npnf102:iv.VI.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06a_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 894.6,
+      "label": "Book 06, part A",
+      "startSeconds": 746.8
+    },
+    "npnf102:iv.VI.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1178.9,
+      "label": "Book 06, part A",
+      "startSeconds": 894.6
+    },
+    "npnf102:iv.VI.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1472.9,
+      "label": "Book 06, part A",
+      "startSeconds": 1178.9
+    },
+    "npnf102:iv.VI.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1795,
+      "label": "Book 06, part A",
+      "startSeconds": 1472.9
+    },
+    "npnf102:iv.VI.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 408.9,
+      "label": "Book 06, part B",
+      "startSeconds": 27.2
+    },
+    "npnf102:iv.VI.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 647,
+      "label": "Book 06, part B",
+      "startSeconds": 408.9
+    },
+    "npnf102:iv.VI.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1167.6,
+      "label": "Book 06, part B",
+      "startSeconds": 647
+    },
+    "npnf102:iv.VI.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1562,
+      "label": "Book 06, part B",
+      "startSeconds": 1167.6
+    },
+    "npnf102:iv.VI.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1650.1,
+      "label": "Book 06, part B",
+      "startSeconds": 1562
+    },
+    "npnf102:iv.VI.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_06b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1791.5,
+      "label": "Book 06, part B",
+      "startSeconds": 1650.1
+    },
+    "npnf102:iv.VII.i": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 88.2,
+      "label": "Book 07, part A",
+      "startSeconds": 27.1
+    },
+    "npnf102:iv.VII.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 213.9,
+      "label": "Book 07, part A",
+      "startSeconds": 88.2
+    },
+    "npnf102:iv.VII.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 337.3,
+      "label": "Book 07, part A",
+      "startSeconds": 213.9
+    },
+    "npnf102:iv.VII.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 814.1,
+      "label": "Book 07, part A",
+      "startSeconds": 337.3
+    },
+    "npnf102:iv.VII.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 937.7,
+      "label": "Book 07, part A",
+      "startSeconds": 814.1
+    },
+    "npnf102:iv.VII.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1151.3,
+      "label": "Book 07, part A",
+      "startSeconds": 937.7
+    },
+    "npnf102:iv.VII.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1245,
+      "label": "Book 07, part A",
+      "startSeconds": 1151.3
+    },
+    "npnf102:iv.VII.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1377.9,
+      "label": "Book 07, part A",
+      "startSeconds": 1245
+    },
+    "npnf102:iv.VII.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1499.8,
+      "label": "Book 07, part A",
+      "startSeconds": 1377.9
+    },
+    "npnf102:iv.VII.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1779.5,
+      "label": "Book 07, part A",
+      "startSeconds": 1499.8
+    },
+    "npnf102:iv.VII.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1838.5,
+      "label": "Book 07, part A",
+      "startSeconds": 1779.5
+    },
+    "npnf102:iv.VII.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2001.9,
+      "label": "Book 07, part A",
+      "startSeconds": 1838.5
+    },
+    "npnf102:iv.VII.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2109.4,
+      "label": "Book 07, part A",
+      "startSeconds": 2001.9
+    },
+    "npnf102:iv.VII.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2212.7,
+      "label": "Book 07, part A",
+      "startSeconds": 2109.4
+    },
+    "npnf102:iv.VII.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2350.4,
+      "label": "Book 07, part A",
+      "startSeconds": 2212.7
+    },
+    "npnf102:iv.VII.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2500.7,
+      "label": "Book 07, part A",
+      "startSeconds": 2350.4
+    },
+    "npnf102:iv.VII.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 0.8333333333333334,
+      "endSeconds": 2653.6,
+      "label": "Book 07, part A",
+      "startSeconds": 2500.7
+    },
+    "npnf102:iv.VII.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2806.4,
+      "label": "Book 07, part A",
+      "startSeconds": 2653.6
+    },
+    "npnf102:iv.VII.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 91.7,
+      "label": "Book 07, part B",
+      "startSeconds": 28.1
+    },
+    "npnf102:iv.VII.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 286.1,
+      "label": "Book 07, part B",
+      "startSeconds": 91.7
+    },
+    "npnf102:iv.VII.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 347.2,
+      "label": "Book 07, part B",
+      "startSeconds": 286.1
+    },
+    "npnf102:iv.VII.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 464.1,
+      "label": "Book 07, part B",
+      "startSeconds": 347.2
+    },
+    "npnf102:iv.VII.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 587.1,
+      "label": "Book 07, part B",
+      "startSeconds": 464.1
+    },
+    "npnf102:iv.VII.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 894,
+      "label": "Book 07, part B",
+      "startSeconds": 587.1
+    },
+    "npnf102:iv.VII.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1197.8,
+      "label": "Book 07, part B",
+      "startSeconds": 894
+    },
+    "npnf102:iv.VII.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1274.8,
+      "label": "Book 07, part B",
+      "startSeconds": 1197.8
+    },
+    "npnf102:iv.VII.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1476.1,
+      "label": "Book 07, part B",
+      "startSeconds": 1274.8
+    },
+    "npnf102:iv.VII.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1673.4,
+      "label": "Book 07, part B",
+      "startSeconds": 1476.1
+    },
+    "npnf102:iv.VII.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1868.2,
+      "label": "Book 07, part B",
+      "startSeconds": 1673.4
+    },
+    "npnf102:iv.VII.29": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1908.6,
+      "label": "Book 07, part B",
+      "startSeconds": 1868.2
+    },
+    "npnf102:iv.VII.30": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2081.2,
+      "label": "Book 07, part B",
+      "startSeconds": 1908.6
+    },
+    "npnf102:iv.VII.31": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2145.6,
+      "label": "Book 07, part B",
+      "startSeconds": 2081.2
+    },
+    "npnf102:iv.VII.32": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2217.8,
+      "label": "Book 07, part B",
+      "startSeconds": 2145.6
+    },
+    "npnf102:iv.VII.33": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2327.4,
+      "label": "Book 07, part B",
+      "startSeconds": 2217.8
+    },
+    "npnf102:iv.VII.34": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2476.7,
+      "label": "Book 07, part B",
+      "startSeconds": 2327.4
+    },
+    "npnf102:iv.VII.35": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_07b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2716.9,
+      "label": "Book 07, part B",
+      "startSeconds": 2476.7
+    },
+    "npnf102:iv.VIII.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 186.1,
+      "label": "Book 08, part A",
+      "startSeconds": 21
+    },
+    "npnf102:iv.VIII.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 407.4,
+      "label": "Book 08, part A",
+      "startSeconds": 186.1
+    },
+    "npnf102:iv.VIII.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 596.6,
+      "label": "Book 08, part A",
+      "startSeconds": 407.4
+    },
+    "npnf102:iv.VIII.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 841.2,
+      "label": "Book 08, part A",
+      "startSeconds": 596.6
+    },
+    "npnf102:iv.VIII.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1174.1,
+      "label": "Book 08, part A",
+      "startSeconds": 841.2
+    },
+    "npnf102:iv.VIII.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1385,
+      "label": "Book 08, part A",
+      "startSeconds": 1174.1
+    },
+    "npnf102:iv.VIII.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1463.7,
+      "label": "Book 08, part A",
+      "startSeconds": 1385
+    },
+    "npnf102:iv.VIII.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1670.5,
+      "label": "Book 08, part A",
+      "startSeconds": 1463.7
+    },
+    "npnf102:iv.VIII.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1729.4,
+      "label": "Book 08, part A",
+      "startSeconds": 1670.5
+    },
+    "npnf102:iv.VIII.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1973.4,
+      "label": "Book 08, part A",
+      "startSeconds": 1729.4
+    },
+    "npnf102:iv.VIII.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2168.1,
+      "label": "Book 08, part A",
+      "startSeconds": 1973.4
+    },
+    "npnf102:iv.VIII.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2302.3,
+      "label": "Book 08, part A",
+      "startSeconds": 2168.1
+    },
+    "npnf102:iv.VIII.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2493.9,
+      "label": "Book 08, part A",
+      "startSeconds": 2302.3
+    },
+    "npnf102:iv.VIII.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2730.1,
+      "label": "Book 08, part A",
+      "startSeconds": 2493.9
+    },
+    "npnf102:iv.VIII.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 229.7,
+      "label": "Book 08, part B",
+      "startSeconds": 22.1
+    },
+    "npnf102:iv.VIII.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 406.2,
+      "label": "Book 08, part B",
+      "startSeconds": 229.7
+    },
+    "npnf102:iv.VIII.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 579.5,
+      "label": "Book 08, part B",
+      "startSeconds": 406.2
+    },
+    "npnf102:iv.VIII.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 673.2,
+      "label": "Book 08, part B",
+      "startSeconds": 579.5
+    },
+    "npnf102:iv.VIII.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 900.2,
+      "label": "Book 08, part B",
+      "startSeconds": 673.2
+    },
+    "npnf102:iv.VIII.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 987,
+      "label": "Book 08, part B",
+      "startSeconds": 900.2
+    },
+    "npnf102:iv.VIII.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1276.8,
+      "label": "Book 08, part B",
+      "startSeconds": 987
+    },
+    "npnf102:iv.VIII.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1399.9,
+      "label": "Book 08, part B",
+      "startSeconds": 1276.8
+    },
+    "npnf102:iv.VIII.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1829.6,
+      "label": "Book 08, part B",
+      "startSeconds": 1399.9
+    },
+    "npnf102:iv.VIII.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2403,
+      "label": "Book 08, part B",
+      "startSeconds": 1829.6
+    },
+    "npnf102:iv.VIII.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2456.8,
+      "label": "Book 08, part B",
+      "startSeconds": 2403
+    },
+    "npnf102:iv.VIII.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2780.2,
+      "label": "Book 08, part B",
+      "startSeconds": 2456.8
+    },
+    "npnf102:iv.VIII.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_08b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 3032.6,
+      "label": "Book 08, part B",
+      "startSeconds": 2780.2
+    },
+    "npnf102:iv.IX.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 135,
+      "label": "Book 09, part A",
+      "startSeconds": 28.8
+    },
+    "npnf102:iv.IX.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 200.7,
+      "label": "Book 09, part A",
+      "startSeconds": 135
+    },
+    "npnf102:iv.IX.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 328,
+      "label": "Book 09, part A",
+      "startSeconds": 200.7
+    },
+    "npnf102:iv.IX.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 727.5,
+      "label": "Book 09, part A",
+      "startSeconds": 328
+    },
+    "npnf102:iv.IX.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 894.6,
+      "label": "Book 09, part A",
+      "startSeconds": 727.5
+    },
+    "npnf102:iv.IX.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 961.3,
+      "label": "Book 09, part A",
+      "startSeconds": 894.6
+    },
+    "npnf102:iv.IX.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1097.6,
+      "label": "Book 09, part A",
+      "startSeconds": 961.3
+    },
+    "npnf102:iv.IX.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1281.3,
+      "label": "Book 09, part A",
+      "startSeconds": 1097.6
+    },
+    "npnf102:iv.IX.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1410.1,
+      "label": "Book 09, part A",
+      "startSeconds": 1281.3
+    },
+    "npnf102:iv.IX.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1476.9,
+      "label": "Book 09, part A",
+      "startSeconds": 1410.1
+    },
+    "npnf102:iv.IX.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1528.3,
+      "label": "Book 09, part A",
+      "startSeconds": 1476.9
+    },
+    "npnf102:iv.IX.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1650.6,
+      "label": "Book 09, part A",
+      "startSeconds": 1528.3
+    },
+    "npnf102:iv.IX.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 332.2,
+      "label": "Book 09, part B",
+      "startSeconds": 21.5
+    },
+    "npnf102:iv.IX.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 380.4,
+      "label": "Book 09, part B",
+      "startSeconds": 332.2
+    },
+    "npnf102:iv.IX.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 638.6,
+      "label": "Book 09, part B",
+      "startSeconds": 380.4
+    },
+    "npnf102:iv.IX.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 939.4,
+      "label": "Book 09, part B",
+      "startSeconds": 638.6
+    },
+    "npnf102:iv.IX.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1055.4,
+      "label": "Book 09, part B",
+      "startSeconds": 939.4
+    },
+    "npnf102:iv.IX.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1136.4,
+      "label": "Book 09, part B",
+      "startSeconds": 1055.4
+    },
+    "npnf102:iv.IX.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1205.8,
+      "label": "Book 09, part B",
+      "startSeconds": 1136.4
+    },
+    "npnf102:iv.IX.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1266.8,
+      "label": "Book 09, part B",
+      "startSeconds": 1205.8
+    },
+    "npnf102:iv.IX.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1374,
+      "label": "Book 09, part B",
+      "startSeconds": 1266.8
+    },
+    "npnf102:iv.IX.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1483.3,
+      "label": "Book 09, part B",
+      "startSeconds": 1374
+    },
+    "npnf102:iv.IX.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_09b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1789.2,
+      "label": "Book 09, part B",
+      "startSeconds": 1483.3
+    },
+    "npnf102:iv.X.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 387.1,
+      "label": "Book 10, part A",
+      "startSeconds": 27.6
+    },
+    "npnf102:iv.X.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 499.2,
+      "label": "Book 10, part A",
+      "startSeconds": 387.1
+    },
+    "npnf102:iv.X.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 717.5,
+      "label": "Book 10, part A",
+      "startSeconds": 499.2
+    },
+    "npnf102:iv.X.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 762.3,
+      "label": "Book 10, part A",
+      "startSeconds": 717.5
+    },
+    "npnf102:iv.X.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1020.5,
+      "label": "Book 10, part A",
+      "startSeconds": 762.3
+    },
+    "npnf102:iv.X.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1240.7,
+      "label": "Book 10, part A",
+      "startSeconds": 1020.5
+    },
+    "npnf102:iv.X.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1313.1,
+      "label": "Book 10, part A",
+      "startSeconds": 1240.7
+    },
+    "npnf102:iv.X.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1516.6,
+      "label": "Book 10, part A",
+      "startSeconds": 1313.1
+    },
+    "npnf102:iv.X.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1752.4,
+      "label": "Book 10, part A",
+      "startSeconds": 1516.6
+    },
+    "npnf102:iv.X.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1925.6,
+      "label": "Book 10, part A",
+      "startSeconds": 1752.4
+    },
+    "npnf102:iv.X.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2335.4,
+      "label": "Book 10, part A",
+      "startSeconds": 1925.6
+    },
+    "npnf102:iv.X.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2472.9,
+      "label": "Book 10, part A",
+      "startSeconds": 2335.4
+    },
+    "npnf102:iv.X.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2557.1,
+      "label": "Book 10, part A",
+      "startSeconds": 2472.9
+    },
+    "npnf102:iv.X.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2670.4,
+      "label": "Book 10, part A",
+      "startSeconds": 2557.1
+    },
+    "npnf102:iv.X.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2768.3,
+      "label": "Book 10, part A",
+      "startSeconds": 2670.4
+    },
+    "npnf102:iv.X.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 3102.4,
+      "label": "Book 10, part A",
+      "startSeconds": 2768.3
+    },
+    "npnf102:iv.X.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 3313.3,
+      "label": "Book 10, part A",
+      "startSeconds": 3102.4
+    },
+    "npnf102:iv.X.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 159.7,
+      "label": "Book 10, part B",
+      "startSeconds": 28.4
+    },
+    "npnf102:iv.X.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 292.7,
+      "label": "Book 10, part B",
+      "startSeconds": 159.7
+    },
+    "npnf102:iv.X.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 0.8333333333333334,
+      "endSeconds": 355.6,
+      "label": "Book 10, part B",
+      "startSeconds": 292.7
+    },
+    "npnf102:iv.X.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 519.8,
+      "label": "Book 10, part B",
+      "startSeconds": 355.6
+    },
+    "npnf102:iv.X.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 610.3,
+      "label": "Book 10, part B",
+      "startSeconds": 519.8
+    },
+    "npnf102:iv.X.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 715.1,
+      "label": "Book 10, part B",
+      "startSeconds": 610.3
+    },
+    "npnf102:iv.X.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 924,
+      "label": "Book 10, part B",
+      "startSeconds": 715.1
+    },
+    "npnf102:iv.X.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1278.2,
+      "label": "Book 10, part B",
+      "startSeconds": 924
+    },
+    "npnf102:iv.X.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1439.2,
+      "label": "Book 10, part B",
+      "startSeconds": 1278.2
+    },
+    "npnf102:iv.X.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1726.8,
+      "label": "Book 10, part B",
+      "startSeconds": 1439.2
+    },
+    "npnf102:iv.X.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1913.9,
+      "label": "Book 10, part B",
+      "startSeconds": 1726.8
+    },
+    "npnf102:iv.X.29": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2352.9,
+      "label": "Book 10, part B",
+      "startSeconds": 1913.9
+    },
+    "npnf102:iv.X.30": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2630.9,
+      "label": "Book 10, part B",
+      "startSeconds": 2352.9
+    },
+    "npnf102:iv.X.31": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2778.1,
+      "label": "Book 10, part B",
+      "startSeconds": 2630.9
+    },
+    "npnf102:iv.X.32": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_10b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 3524.7,
+      "label": "Book 10, part B",
+      "startSeconds": 2778.1
+    },
+    "npnf102:iv.XI.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 165.8,
+      "label": "Book 11, part A",
+      "startSeconds": 27.5
+    },
+    "npnf102:iv.XI.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 321.2,
+      "label": "Book 11, part A",
+      "startSeconds": 165.8
+    },
+    "npnf102:iv.XI.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 383.8,
+      "label": "Book 11, part A",
+      "startSeconds": 321.2
+    },
+    "npnf102:iv.XI.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 648.7,
+      "label": "Book 11, part A",
+      "startSeconds": 383.8
+    },
+    "npnf102:iv.XI.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 834.1,
+      "label": "Book 11, part A",
+      "startSeconds": 648.7
+    },
+    "npnf102:iv.XI.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 944.8,
+      "label": "Book 11, part A",
+      "startSeconds": 834.1
+    },
+    "npnf102:iv.XI.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1097.9,
+      "label": "Book 11, part A",
+      "startSeconds": 944.8
+    },
+    "npnf102:iv.XI.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1194.1,
+      "label": "Book 11, part A",
+      "startSeconds": 1097.9
+    },
+    "npnf102:iv.XI.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1485.5,
+      "label": "Book 11, part A",
+      "startSeconds": 1194.1
+    },
+    "npnf102:iv.XI.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 339.8,
+      "label": "Book 11, part B",
+      "startSeconds": 27.4
+    },
+    "npnf102:iv.XI.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 473.4,
+      "label": "Book 11, part B",
+      "startSeconds": 339.8
+    },
+    "npnf102:iv.XI.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 562,
+      "label": "Book 11, part B",
+      "startSeconds": 473.4
+    },
+    "npnf102:iv.XI.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 788,
+      "label": "Book 11, part B",
+      "startSeconds": 562
+    },
+    "npnf102:iv.XI.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 845,
+      "label": "Book 11, part B",
+      "startSeconds": 788
+    },
+    "npnf102:iv.XI.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 961.4,
+      "label": "Book 11, part B",
+      "startSeconds": 845
+    },
+    "npnf102:iv.XI.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1081.2,
+      "label": "Book 11, part B",
+      "startSeconds": 961.4
+    },
+    "npnf102:iv.XI.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1165.6,
+      "label": "Book 11, part B",
+      "startSeconds": 1081.2
+    },
+    "npnf102:iv.XI.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1264.3,
+      "label": "Book 11, part B",
+      "startSeconds": 1165.6
+    },
+    "npnf102:iv.XI.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1393.6,
+      "label": "Book 11, part B",
+      "startSeconds": 1264.3
+    },
+    "npnf102:iv.XI.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1483.8,
+      "label": "Book 11, part B",
+      "startSeconds": 1393.6
+    },
+    "npnf102:iv.XI.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1724.8,
+      "label": "Book 11, part B",
+      "startSeconds": 1483.8
+    },
+    "npnf102:iv.XI.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1944.1,
+      "label": "Book 11, part B",
+      "startSeconds": 1724.8
+    },
+    "npnf102:iv.XI.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 313.3,
+      "label": "Book 11, part C",
+      "startSeconds": 28.5
+    },
+    "npnf102:iv.XI.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 506.8,
+      "label": "Book 11, part C",
+      "startSeconds": 313.3
+    },
+    "npnf102:iv.XI.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 703.3,
+      "label": "Book 11, part C",
+      "startSeconds": 506.8
+    },
+    "npnf102:iv.XI.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 856.4,
+      "label": "Book 11, part C",
+      "startSeconds": 703.3
+    },
+    "npnf102:iv.XI.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1104.5,
+      "label": "Book 11, part C",
+      "startSeconds": 856.4
+    },
+    "npnf102:iv.XI.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1337.1,
+      "label": "Book 11, part C",
+      "startSeconds": 1104.5
+    },
+    "npnf102:iv.XI.29": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1471.3,
+      "label": "Book 11, part C",
+      "startSeconds": 1337.1
+    },
+    "npnf102:iv.XI.30": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1598.6,
+      "label": "Book 11, part C",
+      "startSeconds": 1471.3
+    },
+    "npnf102:iv.XI.31": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1743.4,
+      "label": "Book 11, part C",
+      "startSeconds": 1598.6
+    },
+    "npnf102:iv.XI.32": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1888,
+      "label": "Book 11, part C",
+      "startSeconds": 1743.4
+    },
+    "npnf102:iv.XI.33": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2134,
+      "label": "Book 11, part C",
+      "startSeconds": 1888
+    },
+    "npnf102:iv.XI.34": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_11c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2273.3,
+      "label": "Book 11, part C",
+      "startSeconds": 2134
+    },
+    "npnf102:iv.XII.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 331.8,
+      "label": "Book 12, part A",
+      "startSeconds": 27.4
+    },
+    "npnf102:iv.XII.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12a_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 419,
+      "label": "Book 12, part A",
+      "startSeconds": 331.8
+    },
+    "npnf102:iv.XII.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 581.6,
+      "label": "Book 12, part A",
+      "startSeconds": 419
+    },
+    "npnf102:iv.XII.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 774,
+      "label": "Book 12, part A",
+      "startSeconds": 581.6
+    },
+    "npnf102:iv.XII.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 843.8,
+      "label": "Book 12, part A",
+      "startSeconds": 774
+    },
+    "npnf102:iv.XII.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1250,
+      "label": "Book 12, part A",
+      "startSeconds": 843.8
+    },
+    "npnf102:iv.XII.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1339,
+      "label": "Book 12, part A",
+      "startSeconds": 1250
+    },
+    "npnf102:iv.XII.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12a_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1457.5,
+      "label": "Book 12, part A",
+      "startSeconds": 1339
+    },
+    "npnf102:iv.XII.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1782.9,
+      "label": "Book 12, part A",
+      "startSeconds": 1457.5
+    },
+    "npnf102:iv.XII.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 244.8,
+      "label": "Book 12, part B",
+      "startSeconds": 29.9
+    },
+    "npnf102:iv.XII.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 301.3,
+      "label": "Book 12, part B",
+      "startSeconds": 244.8
+    },
+    "npnf102:iv.XII.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 517.3,
+      "label": "Book 12, part B",
+      "startSeconds": 301.3
+    },
+    "npnf102:iv.XII.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 745.7,
+      "label": "Book 12, part B",
+      "startSeconds": 517.3
+    },
+    "npnf102:iv.XII.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 863.8,
+      "label": "Book 12, part B",
+      "startSeconds": 745.7
+    },
+    "npnf102:iv.XII.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1325,
+      "label": "Book 12, part B",
+      "startSeconds": 863.8
+    },
+    "npnf102:iv.XII.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1392.7,
+      "label": "Book 12, part B",
+      "startSeconds": 1325
+    },
+    "npnf102:iv.XII.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1690.3,
+      "label": "Book 12, part B",
+      "startSeconds": 1392.7
+    },
+    "npnf102:iv.XII.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1852.8,
+      "label": "Book 12, part B",
+      "startSeconds": 1690.3
+    },
+    "npnf102:iv.XII.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 150,
+      "label": "Book 12, part C",
+      "startSeconds": 27.8
+    },
+    "npnf102:iv.XII.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 702.3,
+      "label": "Book 12, part C",
+      "startSeconds": 150
+    },
+    "npnf102:iv.XII.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 809.3,
+      "label": "Book 12, part C",
+      "startSeconds": 702.3
+    },
+    "npnf102:iv.XII.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 871.1,
+      "label": "Book 12, part C",
+      "startSeconds": 809.3
+    },
+    "npnf102:iv.XII.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 968.3,
+      "label": "Book 12, part C",
+      "startSeconds": 871.1
+    },
+    "npnf102:iv.XII.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1037.8,
+      "label": "Book 12, part C",
+      "startSeconds": 968.3
+    },
+    "npnf102:iv.XII.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1288.6,
+      "label": "Book 12, part C",
+      "startSeconds": 1037.8
+    },
+    "npnf102:iv.XII.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1425.8,
+      "label": "Book 12, part C",
+      "startSeconds": 1288.6
+    },
+    "npnf102:iv.XII.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_12c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1568.5,
+      "label": "Book 12, part C",
+      "startSeconds": 1425.8
+    },
+    "npnf102:iv.XIII.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 66.7,
+      "label": "Book 13, part A",
+      "startSeconds": 27.1
+    },
+    "npnf102:iv.XIII.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 239.6,
+      "label": "Book 13, part A",
+      "startSeconds": 66.7
+    },
+    "npnf102:iv.XIII.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 439.9,
+      "label": "Book 13, part A",
+      "startSeconds": 239.6
+    },
+    "npnf102:iv.XIII.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 613,
+      "label": "Book 13, part A",
+      "startSeconds": 439.9
+    },
+    "npnf102:iv.XIII.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 732.9,
+      "label": "Book 13, part A",
+      "startSeconds": 613
+    },
+    "npnf102:iv.XIII.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 809.3,
+      "label": "Book 13, part A",
+      "startSeconds": 732.9
+    },
+    "npnf102:iv.XIII.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 953.3,
+      "label": "Book 13, part A",
+      "startSeconds": 809.3
+    },
+    "npnf102:iv.XIII.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1019.3,
+      "label": "Book 13, part A",
+      "startSeconds": 953.3
+    },
+    "npnf102:iv.XIII.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1148.1,
+      "label": "Book 13, part A",
+      "startSeconds": 1019.3
+    },
+    "npnf102:iv.XIII.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1296,
+      "label": "Book 13, part A",
+      "startSeconds": 1148.1
+    },
+    "npnf102:iv.XIII.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1644.5,
+      "label": "Book 13, part A",
+      "startSeconds": 1296
+    },
+    "npnf102:iv.XIII.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 115,
+      "label": "Book 13, part B",
+      "startSeconds": 27.9
+    },
+    "npnf102:iv.XIII.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13b_augustine_64kb.mp3",
+      "confidence": 0.7777777777777778,
+      "endSeconds": 186.7,
+      "label": "Book 13, part B",
+      "startSeconds": 115
+    },
+    "npnf102:iv.XIII.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 253.8,
+      "label": "Book 13, part B",
+      "startSeconds": 186.7
+    },
+    "npnf102:iv.XIII.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 399.3,
+      "label": "Book 13, part B",
+      "startSeconds": 253.8
+    },
+    "npnf102:iv.XIII.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 663.6,
+      "label": "Book 13, part B",
+      "startSeconds": 399.3
+    },
+    "npnf102:iv.XIII.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 965.5,
+      "label": "Book 13, part B",
+      "startSeconds": 663.6
+    },
+    "npnf102:iv.XIII.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1203.4,
+      "label": "Book 13, part B",
+      "startSeconds": 965.5
+    },
+    "npnf102:iv.XIII.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1468.4,
+      "label": "Book 13, part B",
+      "startSeconds": 1203.4
+    },
+    "npnf102:iv.XIII.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1638.1,
+      "label": "Book 13, part B",
+      "startSeconds": 1468.4
+    },
+    "npnf102:iv.XIII.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1801.2,
+      "label": "Book 13, part B",
+      "startSeconds": 1638.1
+    },
+    "npnf102:iv.XIII.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 117.8,
+      "label": "Book 13, part C",
+      "startSeconds": 28
+    },
+    "npnf102:iv.XIII.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 654.7,
+      "label": "Book 13, part C",
+      "startSeconds": 117.8
+    },
+    "npnf102:iv.XIII.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_13c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1493.5,
+      "label": "Book 13, part C",
+      "startSeconds": 654.7
+    },
+    "npnf102:iv.XIV.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 107.4,
+      "label": "Book 14, part A",
+      "startSeconds": 27
+    },
+    "npnf102:iv.XIV.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14a_augustine_64kb.mp3",
+      "confidence": 0.8,
+      "endSeconds": 266.6,
+      "label": "Book 14, part A",
+      "startSeconds": 107.4
+    },
+    "npnf102:iv.XIV.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 516,
+      "label": "Book 14, part A",
+      "startSeconds": 266.6
+    },
+    "npnf102:iv.XIV.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 783.6,
+      "label": "Book 14, part A",
+      "startSeconds": 516
+    },
+    "npnf102:iv.XIV.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 955,
+      "label": "Book 14, part A",
+      "startSeconds": 783.6
+    },
+    "npnf102:iv.XIV.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1049.3,
+      "label": "Book 14, part A",
+      "startSeconds": 955
+    },
+    "npnf102:iv.XIV.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1335.2,
+      "label": "Book 14, part A",
+      "startSeconds": 1049.3
+    },
+    "npnf102:iv.XIV.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 458.4,
+      "label": "Book 14, part B",
+      "startSeconds": 28.8
+    },
+    "npnf102:iv.XIV.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1117.9,
+      "label": "Book 14, part B",
+      "startSeconds": 458.4
+    },
+    "npnf102:iv.XIV.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1274.7,
+      "label": "Book 14, part B",
+      "startSeconds": 1117.9
+    },
+    "npnf102:iv.XIV.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1678.6,
+      "label": "Book 14, part B",
+      "startSeconds": 1274.7
+    },
+    "npnf102:iv.XIV.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1765.3,
+      "label": "Book 14, part B",
+      "startSeconds": 1678.6
+    },
+    "npnf102:iv.XIV.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 388.6,
+      "label": "Book 14, part C",
+      "startSeconds": 27.6
+    },
+    "npnf102:iv.XIV.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 448,
+      "label": "Book 14, part C",
+      "startSeconds": 388.6
+    },
+    "npnf102:iv.XIV.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 799.7,
+      "label": "Book 14, part C",
+      "startSeconds": 448
+    },
+    "npnf102:iv.XIV.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 908.4,
+      "label": "Book 14, part C",
+      "startSeconds": 799.7
+    },
+    "npnf102:iv.XIV.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1113.6,
+      "label": "Book 14, part C",
+      "startSeconds": 908.4
+    },
+    "npnf102:iv.XIV.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14c_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1219.8,
+      "label": "Book 14, part C",
+      "startSeconds": 1113.6
+    },
+    "npnf102:iv.XIV.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14c_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1363.6,
+      "label": "Book 14, part C",
+      "startSeconds": 1219.8
+    },
+    "npnf102:iv.XIV.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1476.7,
+      "label": "Book 14, part C",
+      "startSeconds": 1363.6
+    },
+    "npnf102:iv.XIV.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1603.3,
+      "label": "Book 14, part C",
+      "startSeconds": 1476.7
+    },
+    "npnf102:iv.XIV.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 174.8,
+      "label": "Book 14, part D",
+      "startSeconds": 28.5
+    },
+    "npnf102:iv.XIV.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 499.5,
+      "label": "Book 14, part D",
+      "startSeconds": 174.8
+    },
+    "npnf102:iv.XIV.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 754,
+      "label": "Book 14, part D",
+      "startSeconds": 499.5
+    },
+    "npnf102:iv.XIV.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 863.3,
+      "label": "Book 14, part D",
+      "startSeconds": 754
+    },
+    "npnf102:iv.XIV.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1142.3,
+      "label": "Book 14, part D",
+      "startSeconds": 863.3
+    },
+    "npnf102:iv.XIV.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1293.3,
+      "label": "Book 14, part D",
+      "startSeconds": 1142.3
+    },
+    "npnf102:iv.XIV.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_14d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1410.8,
+      "label": "Book 14, part D",
+      "startSeconds": 1293.3
+    },
+    "npnf102:iv.XV.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 272.3,
+      "label": "Book 15, part A",
+      "startSeconds": 26.2
+    },
+    "npnf102:iv.XV.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 487.5,
+      "label": "Book 15, part A",
+      "startSeconds": 272.3
+    },
+    "npnf102:iv.XV.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 591,
+      "label": "Book 15, part A",
+      "startSeconds": 487.5
+    },
+    "npnf102:iv.XV.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 724.3,
+      "label": "Book 15, part A",
+      "startSeconds": 591
+    },
+    "npnf102:iv.XV.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 921,
+      "label": "Book 15, part A",
+      "startSeconds": 724.3
+    },
+    "npnf102:iv.XV.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15a_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1100.7,
+      "label": "Book 15, part A",
+      "startSeconds": 921
+    },
+    "npnf102:iv.XV.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1642,
+      "label": "Book 15, part A",
+      "startSeconds": 1100.7
+    },
+    "npnf102:iv.XV.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 363.9,
+      "label": "Book 15, part B",
+      "startSeconds": 27.7
+    },
+    "npnf102:iv.XV.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 539.2,
+      "label": "Book 15, part B",
+      "startSeconds": 363.9
+    },
+    "npnf102:iv.XV.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 681.2,
+      "label": "Book 15, part B",
+      "startSeconds": 539.2
+    },
+    "npnf102:iv.XV.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 863.3,
+      "label": "Book 15, part B",
+      "startSeconds": 681.2
+    },
+    "npnf102:iv.XV.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1147.2,
+      "label": "Book 15, part B",
+      "startSeconds": 863.3
+    },
+    "npnf102:iv.XV.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1547.1,
+      "label": "Book 15, part B",
+      "startSeconds": 1147.2
+    },
+    "npnf102:iv.XV.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1824.3,
+      "label": "Book 15, part B",
+      "startSeconds": 1547.1
+    },
+    "npnf102:iv.XV.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15c_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 382.9,
+      "label": "Book 15, part C",
+      "startSeconds": 28
+    },
+    "npnf102:iv.XV.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 789,
+      "label": "Book 15, part C",
+      "startSeconds": 382.9
+    },
+    "npnf102:iv.XV.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1001.4,
+      "label": "Book 15, part C",
+      "startSeconds": 789
+    },
+    "npnf102:iv.XV.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1164.6,
+      "label": "Book 15, part C",
+      "startSeconds": 1001.4
+    },
+    "npnf102:iv.XV.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1261.4,
+      "label": "Book 15, part C",
+      "startSeconds": 1164.6
+    },
+    "npnf102:iv.XV.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15c_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1827.2,
+      "label": "Book 15, part C",
+      "startSeconds": 1261.4
+    },
+    "npnf102:iv.XV.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2055.1,
+      "label": "Book 15, part C",
+      "startSeconds": 1827.2
+    },
+    "npnf102:iv.XV.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 206.4,
+      "label": "Book 15, part D",
+      "startSeconds": 28.5
+    },
+    "npnf102:iv.XV.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15d_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 787.9,
+      "label": "Book 15, part D",
+      "startSeconds": 206.4
+    },
+    "npnf102:iv.XV.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 888.9,
+      "label": "Book 15, part D",
+      "startSeconds": 787.9
+    },
+    "npnf102:iv.XV.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 950.2,
+      "label": "Book 15, part D",
+      "startSeconds": 888.9
+    },
+    "npnf102:iv.XV.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1183,
+      "label": "Book 15, part D",
+      "startSeconds": 950.2
+    },
+    "npnf102:iv.XV.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_15d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1671.7,
+      "label": "Book 15, part D",
+      "startSeconds": 1183
+    },
+    "npnf102:iv.XVI.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 126.6,
+      "label": "Book 16, part A",
+      "startSeconds": 28.8
+    },
+    "npnf102:iv.XVI.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 547.2,
+      "label": "Book 16, part A",
+      "startSeconds": 126.6
+    },
+    "npnf102:iv.XVI.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 969.5,
+      "label": "Book 16, part A",
+      "startSeconds": 547.2
+    },
+    "npnf102:iv.XVI.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1217.3,
+      "label": "Book 16, part A",
+      "startSeconds": 969.5
+    },
+    "npnf102:iv.XVI.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16a_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1317.8,
+      "label": "Book 16, part A",
+      "startSeconds": 1217.3
+    },
+    "npnf102:iv.XVI.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1510,
+      "label": "Book 16, part A",
+      "startSeconds": 1317.8
+    },
+    "npnf102:iv.XVI.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1592.1,
+      "label": "Book 16, part A",
+      "startSeconds": 1510
+    },
+    "npnf102:iv.XVI.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1894.2,
+      "label": "Book 16, part A",
+      "startSeconds": 1592.1
+    },
+    "npnf102:iv.XVI.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 122.2,
+      "label": "Book 16, part B",
+      "startSeconds": 27.8
+    },
+    "npnf102:iv.XVI.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 438.7,
+      "label": "Book 16, part B",
+      "startSeconds": 122.2
+    },
+    "npnf102:iv.XVI.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 822.6,
+      "label": "Book 16, part B",
+      "startSeconds": 438.7
+    },
+    "npnf102:iv.XVI.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 943.9,
+      "label": "Book 16, part B",
+      "startSeconds": 822.6
+    },
+    "npnf102:iv.XVI.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1108.3,
+      "label": "Book 16, part B",
+      "startSeconds": 943.9
+    },
+    "npnf102:iv.XVI.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1173.2,
+      "label": "Book 16, part B",
+      "startSeconds": 1108.3
+    },
+    "npnf102:iv.XVI.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1505.2,
+      "label": "Book 16, part B",
+      "startSeconds": 1173.2
+    },
+    "npnf102:iv.XVI.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1637.4,
+      "label": "Book 16, part B",
+      "startSeconds": 1505.2
+    },
+    "npnf102:iv.XVI.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1763.5,
+      "label": "Book 16, part B",
+      "startSeconds": 1637.4
+    },
+    "npnf102:iv.XVI.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1801.8,
+      "label": "Book 16, part B",
+      "startSeconds": 1763.5
+    },
+    "npnf102:iv.XVI.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1868.1,
+      "label": "Book 16, part B",
+      "startSeconds": 1801.8
+    },
+    "npnf102:iv.XVI.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1931,
+      "label": "Book 16, part B",
+      "startSeconds": 1868.1
+    },
+    "npnf102:iv.XVI.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 231.7,
+      "label": "Book 16, part C",
+      "startSeconds": 30.5
+    },
+    "npnf102:iv.XVI.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 308.7,
+      "label": "Book 16, part C",
+      "startSeconds": 231.7
+    },
+    "npnf102:iv.XVI.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 412.3,
+      "label": "Book 16, part C",
+      "startSeconds": 308.7
+    },
+    "npnf102:iv.XVI.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 890.4,
+      "label": "Book 16, part C",
+      "startSeconds": 412.3
+    },
+    "npnf102:iv.XVI.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16c_augustine_64kb.mp3",
+      "confidence": 0.8333333333333334,
+      "endSeconds": 995.3,
+      "label": "Book 16, part C",
+      "startSeconds": 890.4
+    },
+    "npnf102:iv.XVI.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1178.9,
+      "label": "Book 16, part C",
+      "startSeconds": 995.3
+    },
+    "npnf102:iv.XVI.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1371.3,
+      "label": "Book 16, part C",
+      "startSeconds": 1178.9
+    },
+    "npnf102:iv.XVI.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1530,
+      "label": "Book 16, part C",
+      "startSeconds": 1371.3
+    },
+    "npnf102:iv.XVI.29": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1718.9,
+      "label": "Book 16, part C",
+      "startSeconds": 1530
+    },
+    "npnf102:iv.XVI.30": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1800.7,
+      "label": "Book 16, part C",
+      "startSeconds": 1718.9
+    },
+    "npnf102:iv.XVI.31": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1866,
+      "label": "Book 16, part C",
+      "startSeconds": 1800.7
+    },
+    "npnf102:iv.XVI.32": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 374.9,
+      "label": "Book 16, part D",
+      "startSeconds": 29.5
+    },
+    "npnf102:iv.XVI.33": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 422,
+      "label": "Book 16, part D",
+      "startSeconds": 374.9
+    },
+    "npnf102:iv.XVI.34": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 573.4,
+      "label": "Book 16, part D",
+      "startSeconds": 422
+    },
+    "npnf102:iv.XVI.35": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 691.6,
+      "label": "Book 16, part D",
+      "startSeconds": 573.4
+    },
+    "npnf102:iv.XVI.36": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 877,
+      "label": "Book 16, part D",
+      "startSeconds": 691.6
+    },
+    "npnf102:iv.XVI.37": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1120.6,
+      "label": "Book 16, part D",
+      "startSeconds": 877
+    },
+    "npnf102:iv.XVI.38": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1410.9,
+      "label": "Book 16, part D",
+      "startSeconds": 1120.6
+    },
+    "npnf102:iv.XVI.39": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1480.7,
+      "label": "Book 16, part D",
+      "startSeconds": 1410.9
+    },
+    "npnf102:iv.XVI.40": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1673.8,
+      "label": "Book 16, part D",
+      "startSeconds": 1480.7
+    },
+    "npnf102:iv.XVI.41": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1879.7,
+      "label": "Book 16, part D",
+      "startSeconds": 1673.8
+    },
+    "npnf102:iv.XVI.42": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1961.4,
+      "label": "Book 16, part D",
+      "startSeconds": 1879.7
+    },
+    "npnf102:iv.XVI.43": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_16d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2306.8,
+      "label": "Book 16, part D",
+      "startSeconds": 1961.4
+    },
+    "npnf102:iv.XVII.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 200.5,
+      "label": "Book 17, part A",
+      "startSeconds": 27.4
+    },
+    "npnf102:iv.XVII.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 372.4,
+      "label": "Book 17, part A",
+      "startSeconds": 200.5
+    },
+    "npnf102:iv.XVII.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 670.3,
+      "label": "Book 17, part A",
+      "startSeconds": 372.4
+    },
+    "npnf102:iv.XVII.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1890.6,
+      "label": "Book 17, part A",
+      "startSeconds": 670.3
+    },
+    "npnf102:iv.XVII.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 702.5,
+      "label": "Book 17, part B",
+      "startSeconds": 27.9
+    },
+    "npnf102:iv.XVII.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17b_augustine_64kb.mp3",
+      "confidence": 0.8333333333333334,
+      "endSeconds": 976.3,
+      "label": "Book 17, part B",
+      "startSeconds": 702.5
+    },
+    "npnf102:iv.XVII.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1369.4,
+      "label": "Book 17, part B",
+      "startSeconds": 976.3
+    },
+    "npnf102:iv.XVII.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1739.1,
+      "label": "Book 17, part B",
+      "startSeconds": 1369.4
+    },
+    "npnf102:iv.XVII.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17c_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 255.8,
+      "label": "Book 17, part C",
+      "startSeconds": 28.9
+    },
+    "npnf102:iv.XVII.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 404,
+      "label": "Book 17, part C",
+      "startSeconds": 255.8
+    },
+    "npnf102:iv.XVII.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 558.2,
+      "label": "Book 17, part C",
+      "startSeconds": 404
+    },
+    "npnf102:iv.XVII.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 917.3,
+      "label": "Book 17, part C",
+      "startSeconds": 558.2
+    },
+    "npnf102:iv.XVII.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1026.6,
+      "label": "Book 17, part C",
+      "startSeconds": 917.3
+    },
+    "npnf102:iv.XVII.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1171.2,
+      "label": "Book 17, part C",
+      "startSeconds": 1026.6
+    },
+    "npnf102:iv.XVII.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1256.8,
+      "label": "Book 17, part C",
+      "startSeconds": 1171.2
+    },
+    "npnf102:iv.XVII.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1680.2,
+      "label": "Book 17, part C",
+      "startSeconds": 1256.8
+    },
+    "npnf102:iv.XVII.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 217.3,
+      "label": "Book 17, part D",
+      "startSeconds": 29.3
+    },
+    "npnf102:iv.XVII.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 574.2,
+      "label": "Book 17, part D",
+      "startSeconds": 217.3
+    },
+    "npnf102:iv.XVII.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 670,
+      "label": "Book 17, part D",
+      "startSeconds": 574.2
+    },
+    "npnf102:iv.XVII.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1220.3,
+      "label": "Book 17, part D",
+      "startSeconds": 670
+    },
+    "npnf102:iv.XVII.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1354.2,
+      "label": "Book 17, part D",
+      "startSeconds": 1220.3
+    },
+    "npnf102:iv.XVII.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1423.6,
+      "label": "Book 17, part D",
+      "startSeconds": 1354.2
+    },
+    "npnf102:iv.XVII.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1544.1,
+      "label": "Book 17, part D",
+      "startSeconds": 1423.6
+    },
+    "npnf102:iv.XVII.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_17d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1654.4,
+      "label": "Book 17, part D",
+      "startSeconds": 1544.1
+    },
+    "npnf102:iv.XVIII.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 150.9,
+      "label": "Book 18, part A",
+      "startSeconds": 29.5
+    },
+    "npnf102:iv.XVIII.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 507,
+      "label": "Book 18, part A",
+      "startSeconds": 150.9
+    },
+    "npnf102:iv.XVIII.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 688.3,
+      "label": "Book 18, part A",
+      "startSeconds": 507
+    },
+    "npnf102:iv.XVIII.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18a_augustine_64kb.mp3",
+      "confidence": 0.7777777777777778,
+      "endSeconds": 798.7,
+      "label": "Book 18, part A",
+      "startSeconds": 688.3
+    },
+    "npnf102:iv.XVIII.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 920,
+      "label": "Book 18, part A",
+      "startSeconds": 798.7
+    },
+    "npnf102:iv.XVIII.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 999.6,
+      "label": "Book 18, part A",
+      "startSeconds": 920
+    },
+    "npnf102:iv.XVIII.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18a_augustine_64kb.mp3",
+      "confidence": 0.7777777777777778,
+      "endSeconds": 1046.9,
+      "label": "Book 18, part A",
+      "startSeconds": 999.6
+    },
+    "npnf102:iv.XVIII.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18a_augustine_64kb.mp3",
+      "confidence": 0.8333333333333334,
+      "endSeconds": 1280.3,
+      "label": "Book 18, part A",
+      "startSeconds": 1046.9
+    },
+    "npnf102:iv.XVIII.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1426.3,
+      "label": "Book 18, part A",
+      "startSeconds": 1280.3
+    },
+    "npnf102:iv.XVIII.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1583.7,
+      "label": "Book 18, part A",
+      "startSeconds": 1426.3
+    },
+    "npnf102:iv.XVIII.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18a_augustine_64kb.mp3",
+      "confidence": 0.8333333333333334,
+      "endSeconds": 1682.5,
+      "label": "Book 18, part A",
+      "startSeconds": 1583.7
+    },
+    "npnf102:iv.XVIII.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 306.5,
+      "label": "Book 18, part B",
+      "startSeconds": 28.8
+    },
+    "npnf102:iv.XVIII.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 537.5,
+      "label": "Book 18, part B",
+      "startSeconds": 337.4
+    },
+    "npnf102:iv.XVIII.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 28.9,
+      "label": "Book 18, part E",
+      "startSeconds": 28.9
+    },
+    "npnf102:iv.XVIII.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 752.8,
+      "label": "Book 18, part B",
+      "startSeconds": 625.1
+    },
+    "npnf102:iv.XVIII.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 852.8,
+      "label": "Book 18, part B",
+      "startSeconds": 752.8
+    },
+    "npnf102:iv.XVIII.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 933,
+      "label": "Book 18, part B",
+      "startSeconds": 852.8
+    },
+    "npnf102:iv.XVIII.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1318.7,
+      "label": "Book 18, part B",
+      "startSeconds": 933
+    },
+    "npnf102:iv.XVIII.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18b_augustine_64kb.mp3",
+      "confidence": 0.7777777777777778,
+      "endSeconds": 1432.2,
+      "label": "Book 18, part B",
+      "startSeconds": 1318.7
+    },
+    "npnf102:iv.XVIII.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1507.5,
+      "label": "Book 18, part B",
+      "startSeconds": 1432.2
+    },
+    "npnf102:iv.XVIII.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 1662.7,
+      "label": "Book 18, part B",
+      "startSeconds": 1507.5
+    },
+    "npnf102:iv.XVIII.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1782.2,
+      "label": "Book 18, part B",
+      "startSeconds": 1662.7
+    },
+    "npnf102:iv.XVIII.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18c_augustine_64kb.mp3",
+      "confidence": 0.8333333333333334,
+      "endSeconds": 405.9,
+      "label": "Book 18, part C",
+      "startSeconds": 24.1
+    },
+    "npnf102:iv.XVIII.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 533.8,
+      "label": "Book 18, part C",
+      "startSeconds": 405.9
+    },
+    "npnf102:iv.XVIII.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 627.6,
+      "label": "Book 18, part C",
+      "startSeconds": 533.8
+    },
+    "npnf102:iv.XVIII.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 699.5,
+      "label": "Book 18, part C",
+      "startSeconds": 627.6
+    },
+    "npnf102:iv.XVIII.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 847.2,
+      "label": "Book 18, part C",
+      "startSeconds": 699.5
+    },
+    "npnf102:iv.XVIII.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1029.8,
+      "label": "Book 18, part C",
+      "startSeconds": 847.2
+    },
+    "npnf102:iv.XVIII.29": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1114.9,
+      "label": "Book 18, part C",
+      "startSeconds": 1029.8
+    },
+    "npnf102:iv.XVIII.30": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1259.4,
+      "label": "Book 18, part C",
+      "startSeconds": 1114.9
+    },
+    "npnf102:iv.XVIII.31": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1482.2,
+      "label": "Book 18, part C",
+      "startSeconds": 1259.4
+    },
+    "npnf102:iv.XVIII.32": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 552.5,
+      "label": "Book 18, part D",
+      "startSeconds": 29.1
+    },
+    "npnf102:iv.XVIII.33": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 798.3,
+      "label": "Book 18, part D",
+      "startSeconds": 552.5
+    },
+    "npnf102:iv.XVIII.34": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 917.1,
+      "label": "Book 18, part D",
+      "startSeconds": 798.3
+    },
+    "npnf102:iv.XVIII.35": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1374.3,
+      "label": "Book 18, part D",
+      "startSeconds": 917.1
+    },
+    "npnf102:iv.XVIII.36": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1453.2,
+      "label": "Book 18, part D",
+      "startSeconds": 1374.3
+    },
+    "npnf102:iv.XVIII.37": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1620.7,
+      "label": "Book 18, part D",
+      "startSeconds": 1453.2
+    },
+    "npnf102:iv.XVIII.38": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1763.4,
+      "label": "Book 18, part D",
+      "startSeconds": 1620.7
+    },
+    "npnf102:iv.XVIII.39": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1885.8,
+      "label": "Book 18, part D",
+      "startSeconds": 1763.4
+    },
+    "npnf102:iv.XVIII.40": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18e_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 125.6,
+      "label": "Book 18, part E",
+      "startSeconds": 28.9
+    },
+    "npnf102:iv.XVIII.41": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18e_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 550.4,
+      "label": "Book 18, part E",
+      "startSeconds": 125.6
+    },
+    "npnf102:iv.XVIII.42": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 681.2,
+      "label": "Book 18, part E",
+      "startSeconds": 550.4
+    },
+    "npnf102:iv.XVIII.43": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 941.1,
+      "label": "Book 18, part E",
+      "startSeconds": 681.2
+    },
+    "npnf102:iv.XVIII.44": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18e_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1119.9,
+      "label": "Book 18, part E",
+      "startSeconds": 941.1
+    },
+    "npnf102:iv.XVIII.45": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1482.8,
+      "label": "Book 18, part E",
+      "startSeconds": 1119.9
+    },
+    "npnf102:iv.XVIII.46": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18e_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1695.3,
+      "label": "Book 18, part E",
+      "startSeconds": 1482.8
+    },
+    "npnf102:iv.XVIII.47": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18e_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1874.8,
+      "label": "Book 18, part E",
+      "startSeconds": 1695.3
+    },
+    "npnf102:iv.XVIII.48": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18f_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 191.9,
+      "label": "Book 18, part F",
+      "startSeconds": 29.5
+    },
+    "npnf102:iv.XVIII.49": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18f_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 325.5,
+      "label": "Book 18, part F",
+      "startSeconds": 191.9
+    },
+    "npnf102:iv.XVIII.50": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18f_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 463.1,
+      "label": "Book 18, part F",
+      "startSeconds": 325.5
+    },
+    "npnf102:iv.XVIII.51": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18f_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 754.2,
+      "label": "Book 18, part F",
+      "startSeconds": 463.1
+    },
+    "npnf102:iv.XVIII.52": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18f_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1038.9,
+      "label": "Book 18, part F",
+      "startSeconds": 754.2
+    },
+    "npnf102:iv.XVIII.53": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18f_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1286.8,
+      "label": "Book 18, part F",
+      "startSeconds": 1038.9
+    },
+    "npnf102:iv.XVIII.54": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_18f_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1698.5,
+      "label": "Book 18, part F",
+      "startSeconds": 1286.8
+    },
+    "npnf102:iv.XIX.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 638.1,
+      "label": "Book 19, part A",
+      "startSeconds": 28.5
+    },
+    "npnf102:iv.XIX.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 853.2,
+      "label": "Book 19, part A",
+      "startSeconds": 638.4
+    },
+    "npnf102:iv.XIX.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1206.7,
+      "label": "Book 19, part A",
+      "startSeconds": 853.2
+    },
+    "npnf102:iv.XIX.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2041.1,
+      "label": "Book 19, part A",
+      "startSeconds": 1216.7
+    },
+    "npnf102:iv.XIX.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 207.6,
+      "label": "Book 19, part B",
+      "startSeconds": 23.7
+    },
+    "npnf102:iv.XIX.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 432,
+      "label": "Book 19, part B",
+      "startSeconds": 207.6
+    },
+    "npnf102:iv.XIX.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 592.1,
+      "label": "Book 19, part B",
+      "startSeconds": 432
+    },
+    "npnf102:iv.XIX.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 783.6,
+      "label": "Book 19, part B",
+      "startSeconds": 592.1
+    },
+    "npnf102:iv.XIX.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 879.4,
+      "label": "Book 19, part B",
+      "startSeconds": 783.6
+    },
+    "npnf102:iv.XIX.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 981.7,
+      "label": "Book 19, part B",
+      "startSeconds": 879.4
+    },
+    "npnf102:iv.XIX.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1119.7,
+      "label": "Book 19, part B",
+      "startSeconds": 981.7
+    },
+    "npnf102:iv.XIX.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1693.4,
+      "label": "Book 19, part B",
+      "startSeconds": 1119.7
+    },
+    "npnf102:iv.XIX.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 378.1,
+      "label": "Book 19, part C",
+      "startSeconds": 24.3
+    },
+    "npnf102:iv.XIX.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 636.6,
+      "label": "Book 19, part C",
+      "startSeconds": 378.1
+    },
+    "npnf102:iv.XIX.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 850.7,
+      "label": "Book 19, part C",
+      "startSeconds": 636.6
+    },
+    "npnf102:iv.XIX.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1001.9,
+      "label": "Book 19, part C",
+      "startSeconds": 850.7
+    },
+    "npnf102:iv.XIX.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1298.1,
+      "label": "Book 19, part C",
+      "startSeconds": 1001.9
+    },
+    "npnf102:iv.XIX.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1374.1,
+      "label": "Book 19, part C",
+      "startSeconds": 1298.1
+    },
+    "npnf102:iv.XIX.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1557,
+      "label": "Book 19, part C",
+      "startSeconds": 1374.1
+    },
+    "npnf102:iv.XIX.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1628.7,
+      "label": "Book 19, part C",
+      "startSeconds": 1557
+    },
+    "npnf102:iv.XIX.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1980.3,
+      "label": "Book 19, part C",
+      "startSeconds": 1628.7
+    },
+    "npnf102:iv.XIX.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 109.8,
+      "label": "Book 19, part D",
+      "startSeconds": 29.3
+    },
+    "npnf102:iv.XIX.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 980.2,
+      "label": "Book 19, part D",
+      "startSeconds": 109.8
+    },
+    "npnf102:iv.XIX.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1101.6,
+      "label": "Book 19, part D",
+      "startSeconds": 980.2
+    },
+    "npnf102:iv.XIX.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1182.6,
+      "label": "Book 19, part D",
+      "startSeconds": 1101.6
+    },
+    "npnf102:iv.XIX.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1265.6,
+      "label": "Book 19, part D",
+      "startSeconds": 1182.6
+    },
+    "npnf102:iv.XIX.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1473.6,
+      "label": "Book 19, part D",
+      "startSeconds": 1265.6
+    },
+    "npnf102:iv.XIX.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_19d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1587.5,
+      "label": "Book 19, part D",
+      "startSeconds": 1473.6
+    },
+    "npnf102:iv.XX.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 261.2,
+      "label": "Book 20, part A",
+      "startSeconds": 27.5
+    },
+    "npnf102:iv.XX.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 494.9,
+      "label": "Book 20, part A",
+      "startSeconds": 261.2
+    },
+    "npnf102:iv.XX.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 703.1,
+      "label": "Book 20, part A",
+      "startSeconds": 494.9
+    },
+    "npnf102:iv.XX.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 788.8,
+      "label": "Book 20, part A",
+      "startSeconds": 703.1
+    },
+    "npnf102:iv.XX.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1211.7,
+      "label": "Book 20, part A",
+      "startSeconds": 788.8
+    },
+    "npnf102:iv.XX.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1609,
+      "label": "Book 20, part A",
+      "startSeconds": 1211.7
+    },
+    "npnf102:iv.XX.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 575.7,
+      "label": "Book 20, part B",
+      "startSeconds": 23.5
+    },
+    "npnf102:iv.XX.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1109.2,
+      "label": "Book 20, part B",
+      "startSeconds": 575.7
+    },
+    "npnf102:iv.XX.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1713.1,
+      "label": "Book 20, part B",
+      "startSeconds": 1109.2
+    },
+    "npnf102:iv.XX.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1872.1,
+      "label": "Book 20, part B",
+      "startSeconds": 1713.1
+    },
+    "npnf102:iv.XX.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2044.9,
+      "label": "Book 20, part B",
+      "startSeconds": 1872.1
+    },
+    "npnf102:iv.XX.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 117.8,
+      "label": "Book 20, part C",
+      "startSeconds": 31.1
+    },
+    "npnf102:iv.XX.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20c_augustine_64kb.mp3",
+      "confidence": 0.8,
+      "endSeconds": 410.5,
+      "label": "Book 20, part C",
+      "startSeconds": 117.8
+    },
+    "npnf102:iv.XX.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 682.6,
+      "label": "Book 20, part C",
+      "startSeconds": 410.5
+    },
+    "npnf102:iv.XX.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 898.6,
+      "label": "Book 20, part C",
+      "startSeconds": 682.6
+    },
+    "npnf102:iv.XX.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1058,
+      "label": "Book 20, part C",
+      "startSeconds": 898.6
+    },
+    "npnf102:iv.XX.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1339.6,
+      "label": "Book 20, part C",
+      "startSeconds": 1058
+    },
+    "npnf102:iv.XX.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1491.6,
+      "label": "Book 20, part C",
+      "startSeconds": 1339.6
+    },
+    "npnf102:iv.XX.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1956.1,
+      "label": "Book 20, part C",
+      "startSeconds": 1491.6
+    },
+    "npnf102:iv.XX.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 401.3,
+      "label": "Book 20, part D",
+      "startSeconds": 29.2
+    },
+    "npnf102:iv.XX.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1183.6,
+      "label": "Book 20, part D",
+      "startSeconds": 401.3
+    },
+    "npnf102:iv.XX.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1338,
+      "label": "Book 20, part D",
+      "startSeconds": 1183.6
+    },
+    "npnf102:iv.XX.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20d_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1586.5,
+      "label": "Book 20, part D",
+      "startSeconds": 1338
+    },
+    "npnf102:iv.XX.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2178.3,
+      "label": "Book 20, part D",
+      "startSeconds": 1586.5
+    },
+    "npnf102:iv.XX.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20e_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 206,
+      "label": "Book 20, part E",
+      "startSeconds": 28.6
+    },
+    "npnf102:iv.XX.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 586.3,
+      "label": "Book 20, part E",
+      "startSeconds": 206
+    },
+    "npnf102:iv.XX.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20e_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 625.4,
+      "label": "Book 20, part E",
+      "startSeconds": 586.3
+    },
+    "npnf102:iv.XX.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 813.7,
+      "label": "Book 20, part E",
+      "startSeconds": 625.4
+    },
+    "npnf102:iv.XX.29": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 971.2,
+      "label": "Book 20, part E",
+      "startSeconds": 814.6
+    },
+    "npnf102:iv.XX.30": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_20e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1834.9,
+      "label": "Book 20, part E",
+      "startSeconds": 971.2
+    },
+    "npnf102:iv.XXI.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 142,
+      "label": "Book 21, part A",
+      "startSeconds": 24
+    },
+    "npnf102:iv.XXI.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 232.2,
+      "label": "Book 21, part A",
+      "startSeconds": 142
+    },
+    "npnf102:iv.XXI.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 599.4,
+      "label": "Book 21, part A",
+      "startSeconds": 232.2
+    },
+    "npnf102:iv.XXI.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1114.8,
+      "label": "Book 21, part A",
+      "startSeconds": 599.4
+    },
+    "npnf102:iv.XXI.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1469.3,
+      "label": "Book 21, part A",
+      "startSeconds": 1114.8
+    },
+    "npnf102:iv.XXI.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1808.1,
+      "label": "Book 21, part A",
+      "startSeconds": 1469.3
+    },
+    "npnf102:iv.XXI.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 433.6,
+      "label": "Book 21, part B",
+      "startSeconds": 23.4
+    },
+    "npnf102:iv.XXI.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1012.2,
+      "label": "Book 21, part B",
+      "startSeconds": 433.6
+    },
+    "npnf102:iv.XXI.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1308.4,
+      "label": "Book 21, part B",
+      "startSeconds": 1012.2
+    },
+    "npnf102:iv.XXI.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1530.4,
+      "label": "Book 21, part B",
+      "startSeconds": 1308.4
+    },
+    "npnf102:iv.XXI.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1769.1,
+      "label": "Book 21, part B",
+      "startSeconds": 1530.4
+    },
+    "npnf102:iv.XXI.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1873.2,
+      "label": "Book 21, part B",
+      "startSeconds": 1769.1
+    },
+    "npnf102:iv.XXI.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21b_augustine_64kb.mp3",
+      "confidence": 0.8888888888888888,
+      "endSeconds": 2063.3,
+      "label": "Book 21, part B",
+      "startSeconds": 1873.2
+    },
+    "npnf102:iv.XXI.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2212.5,
+      "label": "Book 21, part B",
+      "startSeconds": 2063.3
+    },
+    "npnf102:iv.XXI.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 242.6,
+      "label": "Book 21, part C",
+      "startSeconds": 0
+    },
+    "npnf102:iv.XXI.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 493.1,
+      "label": "Book 21, part C",
+      "startSeconds": 242.6
+    },
+    "npnf102:iv.XXI.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 645.9,
+      "label": "Book 21, part C",
+      "startSeconds": 493.1
+    },
+    "npnf102:iv.XXI.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 943.4,
+      "label": "Book 21, part C",
+      "startSeconds": 645.9
+    },
+    "npnf102:iv.XXI.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 994.2,
+      "label": "Book 21, part C",
+      "startSeconds": 943.4
+    },
+    "npnf102:iv.XXI.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1054.3,
+      "label": "Book 21, part C",
+      "startSeconds": 994.2
+    },
+    "npnf102:iv.XXI.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1161.8,
+      "label": "Book 21, part C",
+      "startSeconds": 1054.3
+    },
+    "npnf102:iv.XXI.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1307.1,
+      "label": "Book 21, part C",
+      "startSeconds": 1161.8
+    },
+    "npnf102:iv.XXI.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1552.3,
+      "label": "Book 21, part C",
+      "startSeconds": 1307.1
+    },
+    "npnf102:iv.XXI.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2466.7,
+      "label": "Book 21, part C",
+      "startSeconds": 1552.3
+    },
+    "npnf102:iv.XXI.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 455.6,
+      "label": "Book 21, part D",
+      "startSeconds": 2.6
+    },
+    "npnf102:iv.XXI.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1197.1,
+      "label": "Book 21, part D",
+      "startSeconds": 455.6
+    },
+    "npnf102:iv.XXI.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_21d_augustine_64kb.mp3",
+      "confidence": 0.8,
+      "endSeconds": 2339.6,
+      "label": "Book 21, part D",
+      "startSeconds": 1197.1
+    },
+    "npnf102:iv.XXII.1": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 317.1,
+      "label": "Book 22, part A",
+      "startSeconds": 24
+    },
+    "npnf102:iv.XXII.2": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 559.6,
+      "label": "Book 22, part A",
+      "startSeconds": 317.1
+    },
+    "npnf102:iv.XXII.3": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22a_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 684.8,
+      "label": "Book 22, part A",
+      "startSeconds": 559.6
+    },
+    "npnf102:iv.XXII.4": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 879,
+      "label": "Book 22, part A",
+      "startSeconds": 684.8
+    },
+    "npnf102:iv.XXII.5": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1242.7,
+      "label": "Book 22, part A",
+      "startSeconds": 879
+    },
+    "npnf102:iv.XXII.6": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1787.7,
+      "label": "Book 22, part A",
+      "startSeconds": 1242.7
+    },
+    "npnf102:iv.XXII.7": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22a_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1888.7,
+      "label": "Book 22, part A",
+      "startSeconds": 1787.7
+    },
+    "npnf102:iv.XXII.8": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22b_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2388.7,
+      "label": "Book 22, part B",
+      "startSeconds": 27.3
+    },
+    "npnf102:iv.XXII.9": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22b_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 2508.1,
+      "label": "Book 22, part B",
+      "startSeconds": 2388.7
+    },
+    "npnf102:iv.XXII.10": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 231.4,
+      "label": "Book 22, part C",
+      "startSeconds": 0.8
+    },
+    "npnf102:iv.XXII.11": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 711.5,
+      "label": "Book 22, part C",
+      "startSeconds": 231.4
+    },
+    "npnf102:iv.XXII.12": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1018,
+      "label": "Book 22, part C",
+      "startSeconds": 711.5
+    },
+    "npnf102:iv.XXII.13": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1090.5,
+      "label": "Book 22, part C",
+      "startSeconds": 1018
+    },
+    "npnf102:iv.XXII.14": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1213.8,
+      "label": "Book 22, part C",
+      "startSeconds": 1090.5
+    },
+    "npnf102:iv.XXII.15": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1321.6,
+      "label": "Book 22, part C",
+      "startSeconds": 1213.8
+    },
+    "npnf102:iv.XXII.16": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1410.7,
+      "label": "Book 22, part C",
+      "startSeconds": 1321.6
+    },
+    "npnf102:iv.XXII.17": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1650.1,
+      "label": "Book 22, part C",
+      "startSeconds": 1410.7
+    },
+    "npnf102:iv.XXII.18": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22c_augustine_64kb.mp3",
+      "confidence": 0.9444444444444444,
+      "endSeconds": 1875,
+      "label": "Book 22, part C",
+      "startSeconds": 1650.1
+    },
+    "npnf102:iv.XXII.19": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22c_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2257.4,
+      "label": "Book 22, part C",
+      "startSeconds": 1875
+    },
+    "npnf102:iv.XXII.20": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 303.5,
+      "label": "Book 22, part D",
+      "startSeconds": 22
+    },
+    "npnf102:iv.XXII.21": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 501.1,
+      "label": "Book 22, part D",
+      "startSeconds": 303.5
+    },
+    "npnf102:iv.XXII.22": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1148.1,
+      "label": "Book 22, part D",
+      "startSeconds": 501.1
+    },
+    "npnf102:iv.XXII.23": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1355.8,
+      "label": "Book 22, part D",
+      "startSeconds": 1148.1
+    },
+    "npnf102:iv.XXII.24": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2457.4,
+      "label": "Book 22, part D",
+      "startSeconds": 1355.8
+    },
+    "npnf102:iv.XXII.25": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22d_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2684.4,
+      "label": "Book 22, part D",
+      "startSeconds": 2457.4
+    },
+    "npnf102:iv.XXII.26": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 248.5,
+      "label": "Book 22, part E",
+      "startSeconds": 0.9
+    },
+    "npnf102:iv.XXII.27": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 389.1,
+      "label": "Book 22, part E",
+      "startSeconds": 248.5
+    },
+    "npnf102:iv.XXII.28": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 588.6,
+      "label": "Book 22, part E",
+      "startSeconds": 389.1
+    },
+    "npnf102:iv.XXII.29": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 1643,
+      "label": "Book 22, part E",
+      "startSeconds": 588.6
+    },
+    "npnf102:iv.XXII.30": {
+      "audioUrl": "https://archive.org/download/city_of_god_ds_librivox/cityofgod_22e_augustine_64kb.mp3",
+      "confidence": 1,
+      "endSeconds": 2468.7,
+      "label": "Book 22, part E",
+      "startSeconds": 1643
+    }
+  },
+  "generatedAt": "2026-07-06T17:45:42.079Z",
+  "source": "https://archive.org/details/city_of_god_ds_librivox"
+}

@@ -18,6 +18,7 @@ import {
   searchEarlyChristianWorks,
   searchSimilarEarlyChristianPassages
 } from "~/lib/early-christian-search.server";
+import { parseJson } from "~/lib/json";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";
 import { searchScripture } from "~/lib/search.server";
@@ -210,7 +211,7 @@ async function readKnownPreviewChapterIds() {
     process.cwd(),
     "public/church-fathers-preview/books.json"
   );
-  const bookIndex = JSON.parse(await readFile(bookIndexPath, "utf8")) as BookIndex;
+  const bookIndex = parseJson(await readFile(bookIndexPath, "utf8")) as BookIndex;
   const chapterIds = new Set<string>();
 
   for (const book of bookIndex.books) {

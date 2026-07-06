@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { isRecord, isUnknownArray, parseJson } from "~/lib/json";
+
 import {
   BOOKS_BY_CANON,
   DEFAULT_CANON,
@@ -63,7 +65,13 @@ export function useSearchFilters({
         return;
       }
 
-      const parsedFilters = JSON.parse(rawFilters) as StoredFilters;
+      const parsedFilters = parseJson(rawFilters);
+
+      if (!isRecord(parsedFilters)) {
+        setHasLoadedStoredFilters(true);
+        return;
+      }
+
       const storedCanon = parseCanonMode(String(parsedFilters.canon ?? ""));
       const storedMatchCount = parsedFilters.matchCount;
       const indexedBooks = new Set(books);
@@ -79,7 +87,7 @@ export function useSearchFilters({
         setMatchCount(storedMatchCount);
       }
 
-      if (Array.isArray(parsedFilters.books)) {
+      if (isUnknownArray(parsedFilters.books)) {
         setSelectedBooks(
           parsedFilters.books
             .map((book) => String(book))
@@ -87,7 +95,7 @@ export function useSearchFilters({
         );
       }
 
-      if (Array.isArray(parsedFilters.earlyChristianAuthors)) {
+      if (isUnknownArray(parsedFilters.earlyChristianAuthors)) {
         const knownAuthors = new Set(earlyChristianAuthors);
         setSelectedEarlyChristianAuthors(
           parsedFilters.earlyChristianAuthors

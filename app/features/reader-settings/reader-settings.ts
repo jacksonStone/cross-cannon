@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+import { isRecord, parseJson } from "~/lib/json";
+
 export const READER_SETTINGS_STORAGE_KEY = "cross-cannon:reader-settings:v1";
 
 export const READER_PRESETS = {
@@ -76,9 +78,9 @@ export function readSavedReaderSettings() {
       return null;
     }
 
-    const parsedSettings = JSON.parse(savedSettings) as Partial<ReaderSettings>;
+    const parsedSettings = parseJson(savedSettings);
 
-    if (!parsedSettings || typeof parsedSettings !== "object") {
+    if (!isRecord(parsedSettings)) {
       return null;
     }
 

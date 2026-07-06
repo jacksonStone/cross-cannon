@@ -103,7 +103,7 @@ await writeFile(OUTPUT_PATH, `${JSON.stringify({
 console.log(`Wrote ${Object.keys(chapters).length} aligned section to ${OUTPUT_PATH}`);
 
 async function loadFirstClementSections() {
-  const index = JSON.parse(await readFile(BOOK_INDEX_PATH, "utf8")) as BookIndex;
+  const index = parseJson(await readFile(BOOK_INDEX_PATH, "utf8")) as BookIndex;
   const firstClement = index.books.find((book) => book.id === FIRST_CLEMENT_BOOK_ID);
 
   if (!firstClement) {
@@ -119,7 +119,7 @@ async function loadFirstClementSections() {
       continue;
     }
 
-    const asset = JSON.parse(
+    const asset = parseJson(
       await readFile(path.join("public", chapter.assetPath), "utf8")
     ) as ChapterAsset;
 
@@ -138,7 +138,7 @@ async function getTranscriptWords(client: OpenAI) {
   const cachePath = path.join(TRANSCRIPT_CACHE_DIR, `${TRACK.fileName}.json`);
 
   try {
-    const cached = JSON.parse(await readFile(cachePath, "utf8")) as { words?: TranscriptWord[] };
+    const cached = parseJson(await readFile(cachePath, "utf8")) as { words?: TranscriptWord[] };
 
     if (cached.words?.length) {
       return normalizeTranscriptWords(cached.words);
@@ -428,4 +428,9 @@ function toRomanNumeral(value: number) {
 
 function roundSeconds(value: number) {
   return Math.round(value * 10) / 10;
+}
+
+function parseJson(value: string): unknown {
+  const parsed: unknown = JSON.parse(value);
+  return parsed;
 }

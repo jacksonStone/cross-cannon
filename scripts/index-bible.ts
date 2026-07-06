@@ -66,7 +66,7 @@ if (options.archive) {
 const absoluteInputPath = path.resolve(options.inputPath);
 const raw = await readFile(absoluteInputPath, "utf8");
 const sourceHash = stableId(raw);
-const parsed = JSON.parse(raw);
+const parsed: unknown = JSON.parse(raw);
 const verses = normalizeBibleJson(parsed);
 const passages = buildPassages(verses)
   .filter((passage) =>

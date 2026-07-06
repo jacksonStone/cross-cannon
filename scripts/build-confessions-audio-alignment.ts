@@ -204,7 +204,7 @@ console.log(`Wrote ${Object.keys(alignedChapters).length} aligned sections to ${
 
 async function readExistingAlignments() {
   try {
-    const existing = JSON.parse(await readFile(OUTPUT_PATH, "utf8")) as {
+    const existing = parseJson(await readFile(OUTPUT_PATH, "utf8")) as {
       chapters?: Record<string, {
         audioUrl: string;
         confidence: number;
@@ -240,7 +240,7 @@ function sortAlignedChapters<T>(chapters: Record<string, T>, orderedSections: Se
 }
 
 async function loadConfessionsSections() {
-  const index = JSON.parse(await readFile(BOOK_INDEX_PATH, "utf8")) as BookIndex;
+  const index = parseJson(await readFile(BOOK_INDEX_PATH, "utf8")) as BookIndex;
   const confessions = index.books.find((book) => book.id === CONFESSIONS_BOOK_ID);
 
   if (!confessions) {
@@ -256,7 +256,7 @@ async function loadConfessionsSections() {
       continue;
     }
 
-    const asset = JSON.parse(
+    const asset = parseJson(
       await readFile(path.join("public", chapter.assetPath), "utf8")
     ) as ChapterAsset;
 
@@ -275,7 +275,7 @@ async function getTranscriptWords(client: OpenAI, track: Track, audioUrl: string
   const cachePath = path.join(TRANSCRIPT_CACHE_DIR, `${track.fileName}.json`);
 
   try {
-    const cached = JSON.parse(await readFile(cachePath, "utf8")) as { words?: TranscriptWord[] };
+    const cached = parseJson(await readFile(cachePath, "utf8")) as { words?: TranscriptWord[] };
 
     if (cached.words?.length) {
       return normalizeTranscriptWords(cached.words);
@@ -543,6 +543,11 @@ function toRomanNumeral(value: number) {
 
 function roundSeconds(value: number) {
   return Math.round(value * 10) / 10;
+}
+
+function parseJson(value: string): unknown {
+  const parsed: unknown = JSON.parse(value);
+  return parsed;
 }
 
 function parseArgs(rawArgs: string[]): Args {

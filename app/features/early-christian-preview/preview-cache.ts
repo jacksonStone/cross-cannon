@@ -1,4 +1,5 @@
 import { readReaderPosition } from "~/features/reader-position/reader-position";
+import { readJsonResponse } from "~/lib/json";
 
 export const EARLY_CHRISTIAN_MANIFEST_URL = "/church-fathers-preview/manifest.json";
 export const EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION = "early-christian-preview-20260704b";
@@ -52,23 +53,24 @@ export function loadPreviewJson<T>(path: string, version: string) {
     return Promise.resolve(cached);
   }
 
-  const existingLoad = previewJsonLoads.get(cacheKey) as Promise<T> | undefined;
+  const existingLoad = previewJsonLoads.get(cacheKey);
 
   if (existingLoad) {
-    return existingLoad;
+    return existingLoad.then((data) => data as T);
   }
 
-  const load = fetch(versionedPreviewUrl(path, version), { cache: "no-store" })
-    .then((response) => {
+  const load: Promise<T> = fetch(versionedPreviewUrl(path, version), { cache: "no-store" })
+    .then(async (response) => {
       if (!response.ok) {
         throw new Error(`Failed to load preview asset: ${response.status}`);
       }
 
-      return response.json() as Promise<T>;
+      return readJsonResponse(response);
     })
-    .then((data) => {
-      rememberCachedPreviewJson(path, version, data);
-      return data;
+    .then((data): T => {
+      const typedData = data as T;
+      rememberCachedPreviewJson(path, version, typedData);
+      return typedData;
     })
     .catch((error) => {
       previewJsonLoads.delete(cacheKey);

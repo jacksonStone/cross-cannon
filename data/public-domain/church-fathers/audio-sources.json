@@ -45,6 +45,7 @@
       "workId": "anf09:xii.iv"
     },
     {
+      "alignmentFile": "city-of-god-audio-alignment.json",
       "baseUrl": "https://archive.org/download/city_of_god_ds_librivox",
       "fileTemplate": "cityofgod_{part}_augustine_64kb.mp3",
       "labelTemplate": "Book {book:02d}, part {partLetter}",

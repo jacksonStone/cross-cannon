@@ -1,5 +1,7 @@
 import type { MutableRefObject } from "react";
 
+import { isRecord, parseJson } from "~/lib/json";
+
 type ReaderPositionRefs = {
   lastReportedRef?: MutableRefObject<string>;
   savedRef?: MutableRefObject<string>;
@@ -161,10 +163,10 @@ function parseReaderLocation(
   }
 
   try {
-    const parsedValue = JSON.parse(storedValue) as Partial<ReaderLocation>;
+    const parsedValue = parseJson(storedValue);
 
     if (
-      parsedValue
+      isRecord(parsedValue)
       && parsedValue.version === 2
       && isReaderCorpus(parsedValue.corpus)
       && typeof parsedValue.chapterKey === "string"

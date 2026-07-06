@@ -26,9 +26,13 @@ let downloaded = 0;
 let skipped = 0;
 let failed = 0;
 
-for (const row of response.rows as unknown as AudioRow[]) {
-  const audioUrl = String(row.audio_url);
-  const fileName = String(row.audio_file_name);
+for (const row of response.rows) {
+  const audioRow: AudioRow = {
+    audio_file_name: row.audio_file_name,
+    audio_url: row.audio_url
+  };
+  const audioUrl = String(audioRow.audio_url);
+  const fileName = String(audioRow.audio_file_name);
   const destination = path.join(outputDir, fileName);
 
   if (await hasUsableFile(destination)) {

@@ -22,6 +22,13 @@ type SearchActionResponse = {
   resultCount: number;
 };
 
+type SearchActionBody = {
+  earlyChristianResults?: unknown[];
+  error?: string;
+  results?: unknown[];
+  scriptureResults?: unknown[];
+};
+
 const stepResults: StepResult[] = [];
 
 async function main() {
@@ -114,12 +121,21 @@ async function exerciseBiblePositionPersistence(page: Page) {
     }
 
     const response = await fetch(`/scripture-cache/${cacheKey}.json`);
-    const cache = await response.json() as {
-      passages: Array<{ id: string; reference: string }>;
-    };
-    const psalm149 = cache.passages.find((passage) => (
+    const cache: unknown = await response.json();
+
+    if (
+      !cache
+      || typeof cache !== "object"
+      || !Array.isArray((cache as { passages?: unknown }).passages)
+    ) {
+      return "";
+    }
+
+    const passages = (cache as { passages: Array<{ id?: unknown; reference?: unknown }> })
+      .passages;
+    const psalm149 = passages.find((passage) => (
       passage.reference === "Psalms 149:1-7"
-      || passage.reference.startsWith("Psalms 149:")
+      || (typeof passage.reference === "string" && passage.reference.startsWith("Psalms 149:"))
     ));
 
     if (!psalm149) {
@@ -144,8 +160,14 @@ async function exerciseBiblePositionPersistence(page: Page) {
     const rawValue = window.localStorage.getItem("cross-cannon:reader-position:v1") ?? "";
 
     try {
-      const parsedValue = JSON.parse(rawValue) as { chapterKey?: unknown };
-      return typeof parsedValue.chapterKey === "string" ? parsedValue.chapterKey : rawValue;
+      const parsedValue: unknown = JSON.parse(rawValue);
+
+      if (parsedValue && typeof parsedValue === "object") {
+        const chapterKey = (parsedValue as { chapterKey?: unknown }).chapterKey;
+        return typeof chapterKey === "string" ? chapterKey : rawValue;
+      }
+
+      return rawValue;
     } catch {
       return rawValue;
     }
@@ -188,10 +210,14 @@ async function exerciseFathersPositionFallback(page: Page) {
     let savedChapterId = rawValue;
 
     try {
-      const parsedValue = JSON.parse(rawValue) as { chapterKey?: unknown };
-      savedChapterId = typeof parsedValue.chapterKey === "string"
-        ? parsedValue.chapterKey
-        : rawValue;
+      const parsedValue: unknown = JSON.parse(rawValue);
+
+      if (parsedValue && typeof parsedValue === "object") {
+        const chapterKey = (parsedValue as { chapterKey?: unknown }).chapterKey;
+        savedChapterId = typeof chapterKey === "string" ? chapterKey : rawValue;
+      } else {
+        savedChapterId = rawValue;
+      }
     } catch {
       savedChapterId = rawValue;
     }
@@ -419,12 +445,8 @@ async function waitForSearchActionResponse(page: Page): Promise<SearchActionResp
     && candidate.url().includes("_data=")
   ), { timeout: timeoutMs });
 
-  const body = await response.json().catch(() => null) as {
-    earlyChristianResults?: unknown[];
-    error?: string;
-    results?: unknown[];
-    scriptureResults?: unknown[];
-  } | null;
+  const bodyValue: unknown = await response.json().catch(() => null);
+  const body = isSearchActionBody(bodyValue) ? bodyValue : null;
 
   return {
     error: body?.error ?? "",
@@ -779,12 +801,11 @@ async function startReaderTitleRecorder(page: Page) {
 
 async function assertReaderTitleDidNotFlicker(page: Page, recorderKey: string) {
   const titles = await page.evaluate((recorderKey) => {
-    const recorder = (
-      window as unknown as Record<string, {
-        observer: MutationObserver;
-        titles: string[];
-      }>
-    )[recorderKey];
+    type RecorderWindow = Window & typeof globalThis & Record<string, {
+      observer: MutationObserver;
+      titles: string[];
+    }>;
+    const recorder = (window as RecorderWindow)[recorderKey];
 
     recorder?.observer.disconnect();
     return recorder?.titles ?? [];
@@ -868,6 +889,28 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(message);
   }
+}
+
+function isSearchActionBody(value: unknown): value is SearchActionBody {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (candidate.error === undefined || typeof candidate.error === "string")
+    && (candidate.results === undefined || isUnknownArray(candidate.results))
+    && (
+      candidate.scriptureResults === undefined
+      || isUnknownArray(candidate.scriptureResults)
+    )
+    && (
+      candidate.earlyChristianResults === undefined
+      || isUnknownArray(candidate.earlyChristianResults)
+    );
+}
+
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
 }
 
 function wait(ms: number) {

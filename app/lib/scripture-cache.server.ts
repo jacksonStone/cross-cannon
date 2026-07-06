@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { ensureDatabase, getDb } from "./db.server";
+import { isRecord, parseJson } from "./json";
 
 export type BrowserPassage = {
   audioUrl?: string;
@@ -30,14 +31,15 @@ export function getScriptureCachePayloadVersion(payload: { passages: BrowserPass
 
 export async function getScriptureCacheInfo() {
   try {
-    const manifest = JSON.parse(
+    const manifest = parseJson(
       await readFile(path.join(process.cwd(), "scripture-cache/manifest.json"), "utf8")
-    ) as {
-      version?: unknown;
-      jsonPath?: unknown;
-    };
+    );
 
-    if (typeof manifest.version === "string" && typeof manifest.jsonPath === "string") {
+    if (
+      isRecord(manifest)
+      && typeof manifest.version === "string"
+      && typeof manifest.jsonPath === "string"
+    ) {
       return {
         version: manifest.version,
         url: manifest.jsonPath

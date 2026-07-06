@@ -247,13 +247,17 @@ function publicAssetPath(assetPath: string) {
 }
 
 function parseModernizationResponse(raw: string): ModernizationResponse {
-  const parsed = JSON.parse(raw) as ModernizationResponse;
+  const parsed: unknown = JSON.parse(raw);
 
-  if (!Array.isArray(parsed.passages)) {
+  if (
+    !parsed
+    || typeof parsed !== "object"
+    || !Array.isArray((parsed as { passages?: unknown }).passages)
+  ) {
     throw new Error("Model response did not include a passages array.");
   }
 
-  return parsed;
+  return parsed as ModernizationResponse;
 }
 
 function chunks<T>(items: T[], size: number) {
@@ -267,5 +271,6 @@ function chunks<T>(items: T[], size: number) {
 }
 
 function readJson<T>(filePath: string): T {
-  return JSON.parse(fs.readFileSync(filePath, "utf8")) as T;
+  const parsed: unknown = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  return parsed as T;
 }

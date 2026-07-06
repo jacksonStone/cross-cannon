@@ -178,7 +178,7 @@ if (options.reset) {
 const absoluteInputPath = path.resolve(options.inputPath);
 const raw = await readFile(absoluteInputPath, "utf8");
 const sourceHash = stableId(raw);
-const workIndex = JSON.parse(raw) as WorkIndex;
+const workIndex = parseJson(raw) as WorkIndex;
 const indexData = await buildIndexData(workIndex, absoluteInputPath, sourceHash);
 const passages = indexData.passages;
 const selectedPassages = options.limit === null ? passages : passages.slice(0, options.limit);
@@ -377,7 +377,7 @@ async function buildIndexData(workIndex: WorkIndex, inputPath: string, sourceHas
         chapterSummary.assetPath.replace(/^\//, "public/")
       );
       const rawChapter = await readFile(assetPath, "utf8");
-      const chapterAsset = JSON.parse(rawChapter) as ChapterAsset;
+      const chapterAsset = parseJson(rawChapter) as ChapterAsset;
       const chapterText = chapterAsset.verses.map((verse) => verse.text.trim()).filter(Boolean).join(" ");
 
       chapters.push({
@@ -1080,6 +1080,11 @@ function stablePassageId(workId: string, chapterId: string, verseStart: number, 
 
 function stableId(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function parseJson(value: string): unknown {
+  const parsed: unknown = JSON.parse(value);
+  return parsed;
 }
 
 function toFileUrl(value: string) {

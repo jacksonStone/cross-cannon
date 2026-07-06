@@ -8,7 +8,7 @@ const PREVIEW_DIR = path.resolve(process.cwd(), "public/church-fathers-preview")
 export async function loader({ params }: LoaderFunctionArgs) {
   const assetFile = params.assetFile;
 
-  if (!assetFile || !/^(books|confessions-audio-alignment|manifest)\.json$/.test(assetFile)) {
+  if (!assetFile || !/^(books|city-of-god-audio-alignment|confessions-audio-alignment|first-clement-audio-alignment|manifest)\.json$/.test(assetFile)) {
     throw new Response("Not found", { status: 404 });
   }
 
