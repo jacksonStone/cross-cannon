@@ -1,0 +1,13 @@
+{
+  "chapters": {
+    "anf09:xii.iv.i": {
+      "audioUrl": "https://www.biblicalaudio.com/audio/music/CLEMENS/Clemens-01%7E03.mp3",
+      "confidence": 1,
+      "endSeconds": 175.3,
+      "label": "Chapters 01-03",
+      "startSeconds": 4.6
+    }
+  },
+  "generatedAt": "2026-07-05T21:20:23.256Z",
+  "source": "http://www.biblicalaudio.com/clement1.htm"
+}

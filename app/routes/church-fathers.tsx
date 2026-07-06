@@ -103,6 +103,8 @@ import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 const CONFESSIONS_AUDIO_ALIGNMENT_URL =
   "/church-fathers-preview/confessions-audio-alignment.json";
+const FIRST_CLEMENT_AUDIO_ALIGNMENT_URL =
+  "/church-fathers-preview/first-clement-audio-alignment.json";
 const MANIFEST_URL = EARLY_CHRISTIAN_MANIFEST_URL;
 const PREVIEW_ASSET_VERSION = EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION;
 const READER_POSITION_STORAGE_KEY = EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY;
@@ -122,6 +124,8 @@ const SEARCH_EXAMPLES = [
 ];
 const MAX_AUTHOR_FILTERS = 3;
 const CONFESSIONS_BOOK_ID = "npnf101:vi";
+const CITY_OF_GOD_BOOK_ID = "npnf102:iv";
+const FIRST_CLEMENT_BOOK_ID = "anf09:xii.iv";
 const WORK_CHRONOLOGY: Record<string, number> = {
   "anf09:xii.iv": 96,
   "anf09:xii.vi": 120
@@ -170,6 +174,8 @@ const AUTHOR_CHRONOLOGY: Record<string, number> = {
 };
 const CONFESSIONS_AUDIO_BASE_URL =
   "https://archive.org/download/confessions_augustine_0911_librivox";
+const CITY_OF_GOD_AUDIO_BASE_URL =
+  "https://archive.org/download/city_of_god_ds_librivox";
 const CONFESSIONS_AUDIO_TRACKS = [
   { book: 1, chapterEnd: 10, chapterStart: 1, fileName: "confessions_01_01-10_augustine_64kb.mp3", label: "Book 01, Chapters 01-10" },
   { book: 1, chapterEnd: 19, chapterStart: 11, fileName: "confessions_01_11-19_augustine_64kb.mp3", label: "Book 01, Chapters 11-19" },
@@ -203,6 +209,54 @@ const CONFESSIONS_AUDIO_TRACKS = [
   { book: 13, chapterEnd: 29, chapterStart: 21, fileName: "confessions_13_21-29_augustine_64kb.mp3", label: "Book 13, Chapters 21-29" },
   { book: 13, chapterEnd: 38, chapterStart: 30, fileName: "confessions_13_30-38_augustine_64kb.mp3", label: "Book 13, Chapters 30-38" }
 ] as const;
+const CITY_OF_GOD_AUDIO_PARTS: Record<number, string[]> = {
+  1: ["01a", "01b"],
+  2: ["02a", "02b"],
+  3: ["03a", "03b"],
+  4: ["04a", "04b"],
+  5: ["05a", "05b"],
+  6: ["06a", "06b"],
+  7: ["07a", "07b"],
+  8: ["08a", "08b"],
+  9: ["09a", "09b"],
+  10: ["10a", "10b"],
+  11: ["11a", "11b", "11c"],
+  12: ["12a", "12b", "12c"],
+  13: ["13a", "13b", "13c"],
+  14: ["14a", "14b", "14c", "14d"],
+  15: ["15a", "15b", "15c", "15d"],
+  16: ["16a", "16b", "16c", "16d"],
+  17: ["17a", "17b", "17c", "17d"],
+  18: ["18a", "18b", "18c", "18d", "18e", "18f"],
+  19: ["19a", "19b", "19c", "19d"],
+  20: ["20a", "20b", "20c", "20d", "20e"],
+  21: ["21a", "21b", "21c", "21d"],
+  22: ["22a", "22b", "22c", "22d", "22e"]
+};
+const CITY_OF_GOD_CHAPTER_COUNTS: Record<number, number> = {
+  1: 37,
+  2: 29,
+  3: 31,
+  4: 34,
+  5: 26,
+  6: 12,
+  7: 35,
+  8: 27,
+  9: 23,
+  10: 32,
+  11: 34,
+  12: 27,
+  13: 24,
+  14: 28,
+  15: 27,
+  16: 43,
+  17: 24,
+  18: 54,
+  19: 28,
+  20: 30,
+  21: 27,
+  22: 30
+};
 
 type WorkClassification = {
   bucket: string;
@@ -323,7 +377,7 @@ type ChurchFathersActionData = {
   targetCorpus?: SearchTargetCorpus;
 };
 
-type ConfessionsAudioAlignment = {
+type ChurchFathersAudioAlignment = {
   chapters: Record<string, {
     audioUrl: string;
     confidence?: number;
@@ -333,6 +387,14 @@ type ConfessionsAudioAlignment = {
   }>;
   generatedAt?: string | null;
   source?: string;
+};
+
+type EarlyChristianAudio = {
+  confidence?: number;
+  endSeconds?: number;
+  label: string;
+  startSeconds: number;
+  url: string;
 };
 
 export const meta: MetaFunction = () => [
@@ -608,7 +670,9 @@ export default function ChurchFathersReaderRoute() {
     readCachedBookIndex(manifestUrl, previewAssetVersion)
   ));
   const [confessionsAudioAlignment, setConfessionsAudioAlignment] =
-    useState<ConfessionsAudioAlignment | null>(null);
+    useState<ChurchFathersAudioAlignment | null>(null);
+  const [firstClementAudioAlignment, setFirstClementAudioAlignment] =
+    useState<ChurchFathersAudioAlignment | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadedChapters, setLoadedChapters] = useState<Map<string, ChapterAsset>>(() => (
     getCachedChapterAssets(previewAssetVersion)
@@ -658,6 +722,7 @@ export default function ChurchFathersReaderRoute() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const headerTitleRef = useRef<HTMLDivElement | null>(null);
   const isMountedRef = useRef(true);
+  const isToolsOpenRef = useRef(isToolsOpen);
   const lastAppliedInitialTargetRef = useRef("");
   const lastReportedChapterIdRef = useRef(savedReaderPositionRef.current);
   const loadingChapterIdsRef = useRef<Set<string>>(new Set());
@@ -749,7 +814,11 @@ export default function ChurchFathersReaderRoute() {
     ? findLoadedPassage(loadedChapters, focusedPassageKey, readerTextMode)
     : null;
   const activeAudio = activeEntry
-    ? getEarlyChristianAudio(activeEntry, confessionsAudioAlignment)
+    ? getEarlyChristianAudio(
+      activeEntry,
+      confessionsAudioAlignment,
+      firstClementAudioAlignment
+    )
     : null;
   const activeAudioUrl = activeAudio?.url ?? null;
   const activeAudioKey = activeAudio
@@ -981,15 +1050,24 @@ export default function ChurchFathersReaderRoute() {
   }, []);
 
   useBrowserLayoutEffect(() => {
+    isToolsOpenRef.current = isToolsOpen;
+  }, [isToolsOpen]);
+
+  useBrowserLayoutEffect(() => {
     const container = headerTitleRef.current;
     const title = readerTitleRef.current;
 
-    if (!container || !title) {
+    if (!container || !title || isToolsOpen) {
       return;
     }
 
     let frameId = 0;
+    let didCancel = false;
     const fitTitle = () => {
+      if (didCancel || isToolsOpenRef.current) {
+        return;
+      }
+
       title.style.fontSize = "";
 
       const availableWidth = container.clientWidth;
@@ -1012,27 +1090,20 @@ export default function ChurchFathersReaderRoute() {
       window.cancelAnimationFrame(frameId);
       frameId = window.requestAnimationFrame(fitTitle);
     };
-    const resizeObserver = typeof ResizeObserver === "undefined"
-      ? null
-      : new ResizeObserver(scheduleFit);
 
     scheduleFit();
-    resizeObserver?.observe(container);
-    window.addEventListener("resize", scheduleFit);
     void document.fonts?.ready.then(scheduleFit).catch(() => undefined);
 
     return () => {
+      didCancel = true;
       window.cancelAnimationFrame(frameId);
-      resizeObserver?.disconnect();
-      window.removeEventListener("resize", scheduleFit);
-      title.style.fontSize = "";
     };
-  }, [activeHeaderTitle]);
+  }, [activeHeaderTitle, isToolsOpen]);
 
   useEffect(() => {
     let ignore = false;
 
-    loadPreviewJson<ConfessionsAudioAlignment>(
+    loadPreviewJson<ChurchFathersAudioAlignment>(
       CONFESSIONS_AUDIO_ALIGNMENT_URL,
       previewAssetVersion
     )
@@ -1044,6 +1115,29 @@ export default function ChurchFathersReaderRoute() {
       .catch(() => {
         if (!ignore) {
           setConfessionsAudioAlignment(null);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [previewAssetVersion]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    loadPreviewJson<ChurchFathersAudioAlignment>(
+      FIRST_CLEMENT_AUDIO_ALIGNMENT_URL,
+      previewAssetVersion
+    )
+      .then((alignment) => {
+        if (!ignore) {
+          setFirstClementAudioAlignment(alignment);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setFirstClementAudioAlignment(null);
         }
       });
 
@@ -1382,7 +1476,6 @@ export default function ChurchFathersReaderRoute() {
               className="ec-reader-title"
               id="reader-title"
               ref={readerTitleRef}
-              style={headerScaleStyle(activeHeaderTitle)}
             >
               {activeHeaderTitle}
             </h1>
@@ -1395,24 +1488,17 @@ export default function ChurchFathersReaderRoute() {
             }}
             onOpen={() => setIsToolsOpen(true)}
           >
-              <button
-                aria-label={
-                  activeAudio
-                    ? `${isActiveChapterPlaying ? "Pause" : "Play"} Confessions audio covering ${activeAudio.label}`
-                    : `Audio unavailable for this ${activeEntry.book.name} section`
-                }
-                className="context-button reader-icon-button"
-                disabled={!activeAudioUrl}
-                onClick={toggleActiveChapterAudio}
-                title={
-                  activeAudio
-                    ? `${isActiveChapterPlaying ? "Pause" : "Play"} audio covering ${activeAudio.label}`
-                    : "Audio unavailable"
-                }
-                type="button"
-              >
-                {isActiveChapterPlaying ? "❚❚" : "🔊"}
-              </button>
+              {activeAudioUrl && activeAudio ? (
+                <button
+                  aria-label={`${isActiveChapterPlaying ? "Pause" : "Play"} audio covering ${activeAudio.label}`}
+                  className="context-button reader-icon-button"
+                  onClick={toggleActiveChapterAudio}
+                  title={`${isActiveChapterPlaying ? "Pause" : "Play"} audio covering ${activeAudio.label}`}
+                  type="button"
+                >
+                  {isActiveChapterPlaying ? "❚❚" : "🔊"}
+                </button>
+              ) : null}
               <button
                 aria-label="Search"
                 className="context-button reader-icon-button"
@@ -2430,12 +2516,14 @@ function getBookSearchText(book: BookSummary) {
 
 function getEarlyChristianAudio(
   entry: ChapterEntry,
-  alignment: ConfessionsAudioAlignment | null
-) {
-  if (entry.book.id !== CONFESSIONS_BOOK_ID) {
-    return null;
-  }
-
+  confessionsAlignment: ChurchFathersAudioAlignment | null,
+  firstClementAlignment: ChurchFathersAudioAlignment | null
+): EarlyChristianAudio | null {
+  const alignment = entry.book.id === CONFESSIONS_BOOK_ID
+    ? confessionsAlignment
+    : entry.book.id === FIRST_CLEMENT_BOOK_ID
+      ? firstClementAlignment
+      : null;
   const alignedAudio = alignment?.chapters[entry.chapter.id];
 
   if (alignedAudio) {
@@ -2446,6 +2534,12 @@ function getEarlyChristianAudio(
       startSeconds: alignedAudio.startSeconds,
       url: alignedAudio.audioUrl
     };
+  }
+
+  if (entry.book.id !== CONFESSIONS_BOOK_ID) {
+    return entry.book.id === CITY_OF_GOD_BOOK_ID
+      ? getCityOfGodAudio(entry.chapter.id)
+      : null;
   }
 
   const location = parseConfessionsLocation(entry.chapter.id);
@@ -2469,6 +2563,36 @@ function getEarlyChristianAudio(
     : null;
 }
 
+function getCityOfGodAudio(chapterId: string): EarlyChristianAudio | null {
+  const location = parseCityOfGodLocation(chapterId);
+
+  if (!location) {
+    return null;
+  }
+
+  const parts = CITY_OF_GOD_AUDIO_PARTS[location.book];
+  const chapterCount = CITY_OF_GOD_CHAPTER_COUNTS[location.book];
+
+  if (!parts || !chapterCount) {
+    return null;
+  }
+
+  const partIndex = Math.min(
+    parts.length - 1,
+    Math.max(
+      0,
+      Math.floor(((location.chapter - 1) * parts.length) / chapterCount)
+    )
+  );
+  const part = parts[partIndex];
+
+  return {
+    label: `Book ${String(location.book).padStart(2, "0")}, part ${part.slice(-1).toUpperCase()}`,
+    startSeconds: 0,
+    url: `${CITY_OF_GOD_AUDIO_BASE_URL}/cityofgod_${part}_augustine_64kb.mp3`
+  };
+}
+
 function parseConfessionsLocation(chapterId: string) {
   const match = chapterId.match(/^npnf101:vi\.([IVXLCDM]+)(?:_1)?\.([IVXLCDM]+)$/);
 
@@ -2478,6 +2602,36 @@ function parseConfessionsLocation(chapterId: string) {
 
   const book = romanNumeralToNumber(match[1]);
   const chapter = romanNumeralToNumber(match[2]);
+
+  if (!book || !chapter) {
+    return null;
+  }
+
+  return { book, chapter };
+}
+
+function parseCityOfGodLocation(chapterId: string) {
+  const bookOneMatch = chapterId.match(/^npnf102:iv\.ii\.([ivxlcdm]+)$/i);
+
+  if (bookOneMatch) {
+    return {
+      book: 1,
+      chapter: romanNumeralToNumber(bookOneMatch[1])
+    };
+  }
+
+  const match = chapterId.match(
+    /^npnf102:iv\.([IVXLCDM]+)(?:_1)?\.([0-9]+|[ivxlcdm]+)$/i
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const book = romanNumeralToNumber(match[1]);
+  const chapter = /^\d+$/.test(match[2])
+    ? Number(match[2])
+    : romanNumeralToNumber(match[2]);
 
   if (!book || !chapter) {
     return null;
@@ -2610,16 +2764,6 @@ function churchFathersScriptureActionData(
 }
 
 const withScriptureMatchStrength = withCalibratedMatchStrength;
-
-function headerScaleStyle(title: string) {
-  return {
-    "--ec-reader-title-scale": getTextScale(title.length, {
-      floor: 0.48,
-      startAt: 18,
-      step: 0.015
-    })
-  } as CSSProperties;
-}
 
 function chapterHeadingScaleStyle(title: string) {
   return {

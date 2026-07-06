@@ -280,9 +280,12 @@ async function jumpToFathersWork(page: Page) {
   });
 
   assert(clickedWork, "Could not find a Fathers work option to jump to.");
+  const titleRecorder = await startReaderTitleRecorder(page);
   await clickChapterButton(page, 2);
   await page.waitForSelector(".passage-jump-modal", { hidden: true });
   await waitForReader(page, "Early Christian");
+  await wait(500);
+  await assertReaderTitleDidNotFlicker(page, titleRecorder);
   await assertReaderHealthy(page);
 }
 
@@ -740,6 +743,58 @@ async function readerTitle(page: Page) {
 
   assert(title.length > 0, "Reader title is empty.");
   return title;
+}
+
+async function startReaderTitleRecorder(page: Page) {
+  return page.evaluate(() => {
+    const key = `readerTitleRecorder:${Date.now()}:${Math.random()}`;
+    const title = document.querySelector("#reader-title");
+    const titles = [title?.textContent?.trim() ?? ""].filter(Boolean);
+    const observer = new MutationObserver(() => {
+      const nextTitle = title?.textContent?.trim() ?? "";
+
+      if (nextTitle && titles.at(-1) !== nextTitle) {
+        titles.push(nextTitle);
+      }
+    });
+
+    if (title) {
+      observer.observe(title, {
+        characterData: true,
+        childList: true,
+        subtree: true
+      });
+    }
+
+    Object.assign(window, {
+      [key]: {
+        observer,
+        titles
+      }
+    });
+
+    return key;
+  });
+}
+
+async function assertReaderTitleDidNotFlicker(page: Page, recorderKey: string) {
+  const titles = await page.evaluate((recorderKey) => {
+    const recorder = (
+      window as unknown as Record<string, {
+        observer: MutationObserver;
+        titles: string[];
+      }>
+    )[recorderKey];
+
+    recorder?.observer.disconnect();
+    return recorder?.titles ?? [];
+  }, recorderKey);
+  const uniqueTitles = [...new Set(titles)];
+
+  assert(
+    uniqueTitles.length <= 2,
+    `Reader title changed through intermediate chapters during jump: ${uniqueTitles.join(" -> ")}.`
+  );
 }
 
 async function waitForReaderTitle(page: Page, expectedTitle: string) {

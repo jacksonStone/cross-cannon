@@ -1164,7 +1164,14 @@ button:disabled {
 }
 
 .reader-header-title {
+  overflow: hidden;
   min-width: 0;
+}
+
+.reader-header-title .eyebrow {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reader-header h1 {
@@ -1177,8 +1184,8 @@ button:disabled {
 }
 
 .reader-header h1.ec-reader-title {
-  font-size: calc(2.05rem * var(--ec-reader-title-scale, 1));
-  text-overflow: clip;
+  font-size: 2.05rem;
+  text-overflow: ellipsis;
 }
 
 .reader-header-actions {
@@ -2581,7 +2588,7 @@ button:disabled {
   }
 
   .reader-header h1.ec-reader-title {
-    font-size: calc(1.78rem * var(--ec-reader-title-scale, 1));
+    font-size: 1.78rem;
   }
 
   .reader-loading-header {

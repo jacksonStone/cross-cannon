@@ -179,6 +179,7 @@ export function useAnchoredReaderWindow({
     setHasCompletedInitialScroll(true);
     onInitialScrollSettled?.();
   }, [onInitialScrollSettled]);
+  const isLocationTrackingReady = trackingReady && hasCompletedInitialScroll;
 
   useReaderScrollWindow({
     activeKeyRef,
@@ -202,7 +203,7 @@ export function useAnchoredReaderWindow({
     readingAnchorRatio,
     setRange: setRenderedRange,
     startIndex: renderedRange.startIndex,
-    trackingReady,
+    trackingReady: isLocationTrackingReady,
     windowReady: windowReady && hasCompletedInitialScroll
   });
 
