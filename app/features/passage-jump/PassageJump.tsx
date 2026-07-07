@@ -2,30 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Link } from "@remix-run/react";
 
-import { parsePassageLocation } from "~/features/passage-reader/chapter-index";
-import { sortCanonicalBooks } from "~/features/search/canons";
+import {
+  buildChapterIndex,
+  findInitialJumpSelection
+} from "~/features/passage-reader/chapter-index";
 import type { StoredFilters } from "~/features/search/types";
 import {
   isBackdropClick,
   useEscapeDismiss
 } from "~/lib/use-dialog-dismiss";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
-import type { BrowserPassage } from "~/lib/scripture-cache.server";
-
-type VerseTarget = {
-  number: number;
-  passageId: string;
-};
-
-type ChapterOption = {
-  number: number;
-  verses: VerseTarget[];
-};
-
-type BookOption = {
-  name: string;
-  chapters: ChapterOption[];
-};
+import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
 type PassageJumpProps = {
   className?: string;
@@ -48,10 +35,10 @@ export function PassageJump({
   onJumpToPassage,
   passages
 }: PassageJumpProps) {
-  const jumpIndex = useMemo(() => buildJumpIndex(passages), [passages]);
+  const scriptureIndex = useMemo(() => buildChapterIndex(passages), [passages]);
   const initialSelection = useMemo(
-    () => findInitialSelection(jumpIndex, passages, initialPassageId),
-    [initialPassageId, jumpIndex, passages]
+    () => findInitialJumpSelection(scriptureIndex, initialPassageId),
+    [initialPassageId, scriptureIndex]
   );
   const [selectedBook, setSelectedBook] = useState("");
   const [selectedChapter, setSelectedChapter] = useState(0);
@@ -62,11 +49,11 @@ export function PassageJump({
     setSelectedChapter(initialSelection.chapter);
   }, [initialSelection.book, initialSelection.chapter]);
 
-  const book = jumpIndex.books.find((option) => option.name === selectedBook)
-    ?? jumpIndex.books[0];
+  const book = scriptureIndex.jumpBooks.find((option) => option.name === selectedBook)
+    ?? scriptureIndex.jumpBooks[0];
   const chapter = book?.chapters.find((option) => option.number === selectedChapter)
     ?? book?.chapters[0];
-  const isDisabled = !isScriptureReady || jumpIndex.books.length === 0;
+  const isDisabled = !isScriptureReady || scriptureIndex.jumpBooks.length === 0;
   const close = useCallback(() => setIsOpen(false), []);
 
   useModalScrollLock(isOpen && !isDisabled);
@@ -134,7 +121,7 @@ export function PassageJump({
                 <select
                   value={book.name}
                   onChange={(event) => {
-                    const nextBook = jumpIndex.books.find(
+                    const nextBook = scriptureIndex.jumpBooks.find(
                       (option) => option.name === event.target.value
                     );
 
@@ -146,7 +133,7 @@ export function PassageJump({
                     setSelectedChapter(nextBook.chapters[0]?.number ?? 1);
                   }}
                 >
-                  {jumpIndex.books.map((option) => (
+                  {scriptureIndex.jumpBooks.map((option) => (
                     <option key={option.name} value={option.name}>
                       {option.name}
                     </option>
@@ -206,77 +193,6 @@ export function PassageJump({
       ) : null}
     </>
   );
-}
-
-function buildJumpIndex(passages: BrowserPassage[]) {
-  const bookMap = new Map<
-    string,
-    {
-      chapters: Map<number, Map<number, string>>;
-      name: string;
-    }
-  >();
-
-  for (const passage of passages) {
-    const location = parsePassageLocation(passage.reference);
-
-    if (!location) {
-      continue;
-    }
-
-    const book = bookMap.get(location.book) ?? {
-      chapters: new Map<number, Map<number, string>>(),
-      name: location.book
-    };
-    const chapter = book.chapters.get(location.chapter) ?? new Map<number, string>();
-
-    for (const verse of passage.verses) {
-      if (!chapter.has(verse.number)) {
-        chapter.set(verse.number, passage.id);
-      }
-    }
-
-    book.chapters.set(location.chapter, chapter);
-    bookMap.set(location.book, book);
-  }
-
-  return {
-    books: sortCanonicalBooks([...bookMap.keys()]).map((bookName) => {
-      const book = bookMap.get(bookName);
-
-      return {
-        name: bookName,
-        chapters: [...(book?.chapters.entries() ?? [])]
-          .sort(([left], [right]) => left - right)
-          .map(([chapterNumber, verses]) => ({
-            number: chapterNumber,
-            verses: [...verses.entries()]
-              .sort(([left], [right]) => left - right)
-              .map(([number, passageId]) => ({ number, passageId }))
-          }))
-      };
-    })
-  };
-}
-
-function findInitialSelection(
-  jumpIndex: ReturnType<typeof buildJumpIndex>,
-  passages: BrowserPassage[],
-  initialPassageId?: string
-) {
-  const initialPassage = initialPassageId
-    ? passages.find((passage) => passage.id === initialPassageId)
-    : null;
-  const initialLocation = initialPassage
-    ? parsePassageLocation(initialPassage.reference)
-    : null;
-  const firstBook = jumpIndex.books[0];
-  const firstChapter = firstBook?.chapters[0];
-
-  return {
-    book: initialLocation?.book ?? firstBook?.name ?? "",
-    chapter: initialLocation?.chapter ?? firstChapter?.number ?? 0
-  };
 }
 
 function buildReaderUrl(passageId: string, filters?: StoredFilters) {

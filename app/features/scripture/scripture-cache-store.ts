@@ -1,4 +1,4 @@
-import type { BrowserPassage } from "~/lib/scripture-cache.server";
+import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
 const scriptureCacheLoads = new Map<string, Promise<BrowserPassage[]>>();
 const scriptureCacheData = new Map<string, BrowserPassage[]>();

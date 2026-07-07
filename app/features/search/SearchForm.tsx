@@ -4,7 +4,7 @@ import { Form, useNavigation } from "@remix-run/react";
 
 import { PassageJump } from "~/features/passage-jump/PassageJump";
 import type { PassageLookup } from "~/features/scripture/useScriptureLibrary";
-import type { BrowserPassage } from "~/lib/scripture-cache.server";
+import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
 import { DEFAULT_MATCH_COUNT } from "./canons";
 import { FilterModal } from "./FilterModal";

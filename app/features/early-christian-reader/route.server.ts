@@ -9,6 +9,10 @@ import {
   BOOKS_BY_CANON,
   parseCanonMode
 } from "~/features/search/canons";
+import {
+  parseSearchMatchCount,
+  validateSearchQuestion
+} from "~/features/search/search-request.server";
 import type { CanonMode } from "~/features/search/types";
 import { withCalibratedMatchStrength } from "~/features/search/match-strength";
 import { searchScriptureSimilarToFathers } from "~/lib/cross-corpus-search.server";
@@ -72,14 +76,19 @@ export async function churchFathersAction({ request }: ActionFunctionArgs) {
 
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "theme");
-  const matchCount = parseMatchCount(formData);
+  const matchCountResult = parseSearchMatchCount(formData.get("matchCount"), 10);
   const authorFilters = await parseEarlyChristianAuthorFilters(
     formData.getAll("authors")
   );
 
-  if ("response" in matchCount) {
-    return matchCount.response;
+  if ("error" in matchCountResult) {
+    return json<ChurchFathersActionData>(
+      { error: matchCountResult.error },
+      { status: matchCountResult.status }
+    );
   }
+
+  const matchCount = matchCountResult.matchCount;
 
   if ("error" in authorFilters) {
     return json<ChurchFathersActionData>(
@@ -92,7 +101,7 @@ export async function churchFathersAction({ request }: ActionFunctionArgs) {
     const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
     const similar = await searchSimilarEarlyChristianPassages(
       sourcePassageId,
-      matchCount.value,
+      matchCount,
       authorFilters.authors
     );
 
@@ -105,7 +114,7 @@ export async function churchFathersAction({ request }: ActionFunctionArgs) {
 
     return json<ChurchFathersActionData>({
       authors: authorFilters.authors,
-      matchCount: matchCount.value,
+      matchCount,
       mode: "similar",
       results: similar.results,
       similarSource: similar.source,
@@ -123,7 +132,7 @@ export async function churchFathersAction({ request }: ActionFunctionArgs) {
     const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
     const similar = await searchScriptureSimilarToFathers(
       sourcePassageId,
-      matchCount.value,
+      matchCount,
       scriptureFilters.searchBooks
     );
 
@@ -137,7 +146,7 @@ export async function churchFathersAction({ request }: ActionFunctionArgs) {
     return json<ChurchFathersActionData>({
       books: scriptureFilters.books,
       canon: scriptureFilters.canon,
-      matchCount: matchCount.value,
+      matchCount,
       mode: "similar-scripture",
       scriptureResults: withCalibratedMatchStrength(similar.results),
       similarScriptureSource: similar.source,
@@ -153,22 +162,25 @@ export async function churchFathersAction({ request }: ActionFunctionArgs) {
     }
 
     const question = String(formData.get("question") ?? "").trim();
-    const validationError = validateQuestion(question);
+    const validationError = validateSearchQuestion(question);
 
-    if (validationError) {
-      return validationError;
+    if ("error" in validationError) {
+      return json<ChurchFathersActionData>(
+        { error: validationError.error },
+        { status: validationError.status }
+      );
     }
 
     const results = await searchScripture(
       question,
-      matchCount.value,
+      matchCount,
       scriptureFilters.searchBooks
     );
 
     return json<ChurchFathersActionData>({
       books: scriptureFilters.books,
       canon: scriptureFilters.canon,
-      matchCount: matchCount.value,
+      matchCount,
       mode: "theme-scripture",
       question,
       scriptureResults: withCalibratedMatchStrength(results),
@@ -177,20 +189,23 @@ export async function churchFathersAction({ request }: ActionFunctionArgs) {
   }
 
   const question = String(formData.get("question") ?? "").trim();
-  const validationError = validateQuestion(question);
+  const validationError = validateSearchQuestion(question);
 
-  if (validationError) {
-    return validationError;
+  if ("error" in validationError) {
+    return json<ChurchFathersActionData>(
+      { error: validationError.error },
+      { status: validationError.status }
+    );
   }
 
   return json<ChurchFathersActionData>({
     authors: authorFilters.authors,
-    matchCount: matchCount.value,
+    matchCount,
     mode: "theme",
     question,
     results: await searchEarlyChristianWorks(
       question,
-      matchCount.value,
+      matchCount,
       authorFilters.authors
     ),
     targetCorpus: "early-christian"
@@ -253,39 +268,4 @@ function parseChurchFathersScriptureFilters(formData: FormData):
     canon,
     searchBooks: books.length > 0 ? books : Array.from(canonBooks)
   };
-}
-
-function parseMatchCount(formData: FormData):
-  | { value: number }
-  | { response: ReturnType<typeof json<ChurchFathersActionData>> } {
-  const matchCount = Number(formData.get("matchCount") ?? 10);
-
-  if (!Number.isInteger(matchCount) || matchCount < 5 || matchCount > 40) {
-    return {
-      response: json<ChurchFathersActionData>(
-        { error: "Choose between 5 and 40 matches." },
-        { status: 400 }
-      )
-    };
-  }
-
-  return { value: matchCount };
-}
-
-function validateQuestion(question: string) {
-  if (question.length < 3) {
-    return json<ChurchFathersActionData>(
-      { error: "Enter a longer question." },
-      { status: 400 }
-    );
-  }
-
-  if (question.length > 500) {
-    return json<ChurchFathersActionData>(
-      { error: "Keep the question under 500 characters." },
-      { status: 400 }
-    );
-  }
-
-  return null;
 }

@@ -7,13 +7,14 @@ import {
   vectorSql
 } from "./db.server";
 import { embedText, getDefaultEmbeddingConfig } from "./embeddings.server";
+import {
+  cosineSimilarity,
+  readStoredEmbedding,
+  type StoredEmbeddingRow
+} from "./vector-search.server";
 
 let vectorSearchTail = Promise.resolve();
 const EXACT_BOOK_SEARCH_LIMIT = 12;
-
-type StoredEmbeddingRow = {
-  embedding?: unknown;
-};
 
 type SearchEmbeddingOptions = {
   excludeIds?: string[];
@@ -527,45 +528,6 @@ async function runVectorSearchExclusive<T>(
 
 function placeholders(values: unknown[]) {
   return values.map(() => "?").join(", ");
-}
-
-function readStoredEmbedding(row: StoredEmbeddingRow) {
-  const vector = readEmbeddingBlob(row.embedding);
-
-  if (vector) {
-    return vector;
-  }
-
-  return null;
-}
-
-function readEmbeddingBlob(value: unknown) {
-  if (value instanceof ArrayBuffer) {
-    return value.byteLength % Float32Array.BYTES_PER_ELEMENT === 0
-      ? new Float32Array(value)
-      : null;
-  }
-
-  if (ArrayBuffer.isView(value)) {
-    const view = value as ArrayBufferView;
-
-    return view.byteLength % Float32Array.BYTES_PER_ELEMENT === 0
-      ? new Float32Array(view.buffer, view.byteOffset, view.byteLength / Float32Array.BYTES_PER_ELEMENT)
-      : null;
-  }
-
-  return null;
-}
-
-function cosineSimilarity(left: ArrayLike<number>, right: ArrayLike<number>) {
-  const length = Math.min(left.length, right.length);
-  let sum = 0;
-
-  for (let index = 0; index < length; index += 1) {
-    sum += left[index] * right[index];
-  }
-
-  return sum;
 }
 
 function createSearchTrace(question: string, limit: number, books: string[]) {

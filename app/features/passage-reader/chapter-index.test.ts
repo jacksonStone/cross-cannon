@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { BrowserPassage } from "~/lib/scripture-cache.server";
+import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
 import {
   buildChapterIndex,
   chapterKey,
+  findDefaultReaderPassageId,
+  findFirstPassageIdForChapter,
+  findInitialJumpSelection,
+  getPassageChapterKey,
   parsePassageLocation
 } from "./chapter-index";
 
@@ -73,4 +77,54 @@ test("buildChapterIndex orders chapter keys within each book", () => {
     chapterKey("Genesis", 1),
     chapterKey("Genesis", 2)
   ]);
+  assert.deepEqual(index.renderedChapterKeys, [
+    chapterKey("Genesis", 1),
+    chapterKey("Genesis", 2)
+  ]);
+  assert.deepEqual(
+    index.orderedChapterEntries.map((entry) => entry.chapter.chapter),
+    [1, 2]
+  );
+  assert.equal(index.chapterCountByBook.get("Genesis"), 2);
+});
+
+test("buildChapterIndex creates jump options from verse targets", () => {
+  const index = buildChapterIndex(passages);
+
+  assert.deepEqual(index.jumpBooks, [
+    {
+      name: "Genesis",
+      chapters: [
+        {
+          number: 1,
+          verses: [
+            { number: 1, passageId: "a" },
+            { number: 2, passageId: "a" },
+            { number: 3, passageId: "a" },
+            { number: 4, passageId: "b" },
+            { number: 5, passageId: "b" }
+          ]
+        },
+        {
+          number: 2,
+          verses: [{ number: 1, passageId: "c" }]
+        }
+      ]
+    }
+  ]);
+});
+
+test("reader index resolves saved chapters, passage chapter keys, and defaults", () => {
+  const index = buildChapterIndex(passages);
+
+  assert.equal(
+    findFirstPassageIdForChapter(index, chapterKey("Genesis", 2)),
+    "c"
+  );
+  assert.equal(getPassageChapterKey(index, "b"), chapterKey("Genesis", 1));
+  assert.equal(findDefaultReaderPassageId(index), "a");
+  assert.deepEqual(findInitialJumpSelection(index, "c"), {
+    book: "Genesis",
+    chapter: 2
+  });
 });

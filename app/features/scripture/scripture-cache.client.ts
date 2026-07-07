@@ -1,5 +1,5 @@
-import type { BrowserPassage } from "~/lib/scripture-cache.server";
-import { isRecord, isUnknownArray, readJsonResponse } from "~/lib/json";
+import { readJsonResponse } from "~/lib/json";
+import { isScriptureCachePayload } from "~/lib/scripture-cache-contract";
 
 import {
   forgetScriptureCacheLoad,
@@ -45,19 +45,4 @@ export function loadScriptureCache(scriptureCacheUrl: string) {
 
   rememberScriptureCacheLoad(scriptureCacheUrl, load);
   return load;
-}
-
-function isScriptureCachePayload(value: unknown): value is { passages: BrowserPassage[] } {
-  return isRecord(value)
-    && isUnknownArray(value.passages)
-    && value.passages.every(isBrowserPassage);
-}
-
-function isBrowserPassage(value: unknown): value is BrowserPassage {
-  return isRecord(value)
-    && typeof value.id === "string"
-    && typeof value.reference === "string"
-    && typeof value.text === "string"
-    && value.type === "paragraph"
-    && isUnknownArray(value.verses);
 }

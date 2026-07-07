@@ -4,7 +4,7 @@ import {
   useState
 } from "react";
 
-import type { BrowserPassage } from "~/lib/scripture-cache.server";
+import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
 import { loadScriptureCache } from "./scripture-cache.client";
 import { getLoadedScriptureCache } from "./scripture-cache-store";

@@ -9,12 +9,7 @@ import { Form, Link, useNavigation } from "@remix-run/react";
 
 import { PassageJump } from "~/features/passage-jump/PassageJump";
 import { ReaderCorpusSwitch } from "~/features/reader-switch/ReaderCorpusSwitch";
-import {
-  DEFAULT_READER_SCROLL_WINDOW,
-  useAnchoredReaderWindow,
-  useReaderHeaderOffset
-} from "~/features/reader-window/useReaderWindow";
-import { getCenteredWindowRange } from "~/features/reader-window/window-range";
+import { useScriptureReaderWindow } from "~/features/reader-window/useReaderWindow";
 import {
   type ReaderTheme,
   readerSettingsStyle
@@ -25,17 +20,17 @@ import {
   ReaderTools,
   useStoredReaderSettings
 } from "~/features/reader-ui/ReaderControls";
-import { sortCanonicalBooks } from "~/features/search/canons";
 import type { StoredFilters } from "~/features/search/types";
-import type { BrowserPassage } from "~/lib/scripture-cache.server";
+import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
 import { ReaderBookHeader, type ReaderBookHeaderDetail } from "./BookHeader";
-import { buildChapterIndex, chapterKey } from "./chapter-index";
+import {
+  buildChapterIndex,
+  getPassageChapterKey
+} from "./chapter-index";
 
 const TRANSLATION_ABBREVIATION = "WEB";
 const TRANSLATION_NAME = "World English Bible";
-const INITIAL_PREVIOUS_CHAPTERS = DEFAULT_READER_SCROLL_WINDOW.initialBefore;
-const INITIAL_NEXT_CHAPTERS = DEFAULT_READER_SCROLL_WINDOW.initialAfter;
 
 type ReaderBookMetadata = {
   description?: string | null;
@@ -68,56 +63,19 @@ export function PassageReader({
 }: PassageReaderProps) {
   const navigation = useNavigation();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const readerHeaderOffset = useReaderHeaderOffset();
   const { readerSettings, setReaderSettings } = useStoredReaderSettings({
     onThemeChange
   });
   const [isReaderToolsOpen, setIsReaderToolsOpen] = useState(false);
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
   const chapterIndex = useMemo(() => buildChapterIndex(passages), [passages]);
-  const orderedChapterEntries = useMemo(
-    () => {
-      const chapters = [...chapterIndex.chaptersByKey.values()];
-      const bookOrder = new Map(
-        sortCanonicalBooks([...new Set(chapters.map((chapter) => chapter.book))])
-          .map((book, index) => [book, index])
-      );
-
-      return chapters
-        .sort((left, right) => {
-          const leftBookOrder = bookOrder.get(left.book) ?? Number.MAX_SAFE_INTEGER;
-          const rightBookOrder = bookOrder.get(right.book) ?? Number.MAX_SAFE_INTEGER;
-
-          if (leftBookOrder !== rightBookOrder) {
-            return leftBookOrder - rightBookOrder;
-          }
-
-          return left.chapter - right.chapter;
-        })
-        .map((chapter) => ({
-          chapter,
-          key: chapterKey(chapter.book, chapter.chapter)
-        }));
-    },
-    [chapterIndex]
-  );
-  const renderedChapterKeys = useMemo(
-    () => orderedChapterEntries.map((entry) => entry.key),
-    [orderedChapterEntries]
-  );
-  const chapterCountByBook = useMemo(() => {
-    const counts = new Map<string, number>();
-
-    for (const entry of orderedChapterEntries) {
-      counts.set(entry.chapter.book, (counts.get(entry.chapter.book) ?? 0) + 1);
-    }
-
-    return counts;
-  }, [orderedChapterEntries]);
-  const initialLocation = chapterIndex.locationByPassageId.get(initialPassageId);
-  const initialChapterKey = initialLocation
-    ? chapterKey(initialLocation.book, initialLocation.chapter)
-    : orderedChapterEntries[0]?.key ?? null;
+  const orderedChapterEntries = chapterIndex.orderedChapterEntries;
+  const renderedChapterKeys = chapterIndex.renderedChapterKeys;
+  const chapterCountByBook = chapterIndex.chapterCountByBook;
+  const initialChapterKey =
+    getPassageChapterKey(chapterIndex, initialPassageId)
+    ?? orderedChapterEntries[0]?.key
+    ?? null;
   const [activeChapterKey, setActiveChapterKey] = useState(initialChapterKey);
   const [selectedPassageId, setSelectedPassageId] = useState("");
   const activeChapter = activeChapterKey
@@ -126,13 +84,6 @@ export function PassageReader({
   const initialChapterIndex = initialChapterKey
     ? renderedChapterKeys.indexOf(initialChapterKey)
     : -1;
-  const initialRenderedRange = useMemo(
-    () => getInitialRenderedRange(
-      initialChapterIndex,
-      orderedChapterEntries
-    ),
-    [initialChapterIndex, orderedChapterEntries.length]
-  );
   const resetReaderWindow = useCallback(() => {
     setActiveChapterKey(initialChapterKey);
     setSelectedPassageId("");
@@ -163,10 +114,6 @@ export function PassageReader({
       .catch(() => setPlayingAudioUrl(null));
   }, [activeAudioUrl, isActiveChapterPlaying]);
 
-  const findInitialPassageTarget = useCallback(
-    () => findRenderedPassageElement(initialPassageId),
-    [initialPassageId]
-  );
   const scrollToTopWhenInitialPassageMissing = useCallback(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, []);
@@ -174,31 +121,17 @@ export function PassageReader({
     setActiveChapterKey(chapterKey);
     onChapterChange?.(chapterKey);
   }, [onChapterChange]);
-  const getRenderedChapterKey = useCallback((element: HTMLElement) => (
-    element.dataset.chapterKey
-  ), []);
 
-  const { renderedRange } = useAnchoredReaderWindow({
-    activeKey: activeChapterKey,
-    chapterSelector: ".reader-chapter",
-    edgePx: DEFAULT_READER_SCROLL_WINDOW.edgePx,
-    expandCount: DEFAULT_READER_SCROLL_WINDOW.expandCount,
-    findInitialTarget: findInitialPassageTarget,
-    getChapterKey: getRenderedChapterKey,
-    headerOffset: readerHeaderOffset,
-    initialActiveKey: initialChapterKey,
-    initialRange: initialRenderedRange,
-    initialScrollMaxFrames: DEFAULT_READER_SCROLL_WINDOW.initialScrollMaxFrames,
-    initialScrollReady: isScriptureReady && orderedChapterEntries.length > 0,
+  const { renderedRange } = useScriptureReaderWindow({
+    activeChapterKey,
+    initialChapterIndex,
+    initialChapterKey,
+    initialPassageId,
+    isReady: isScriptureReady,
     itemCount: orderedChapterEntries.length,
-    minReadingAnchorOffset: DEFAULT_READER_SCROLL_WINDOW.minReadingAnchorOffset,
-    onActiveKeyChange: updateActiveChapterFromScroll,
-    onMissingInitialTarget: scrollToTopWhenInitialPassageMissing,
+    onActiveChapterChange: updateActiveChapterFromScroll,
+    onMissingInitialPassage: scrollToTopWhenInitialPassageMissing,
     onReset: resetReaderWindow,
-    readingAnchorRatio: DEFAULT_READER_SCROLL_WINDOW.readingAnchorRatio,
-    resetKey: `${initialPassageId}|${initialChapterKey ?? ""}`,
-    trackingReady: true,
-    windowReady: isScriptureReady
   });
   const renderedChapterEntries = useMemo(
     () => {
@@ -486,23 +419,6 @@ function getScriptureBookHeaderMetadata(
 
 function formatChapterCount(count: number) {
   return count === 1 ? "1 chapter" : `${count} chapters`;
-}
-
-function getInitialRenderedRange(
-  initialChapterIndex: number,
-  entries: Array<{ chapter: { book: string }; key: string }>
-) {
-  return getCenteredWindowRange({
-    after: INITIAL_NEXT_CHAPTERS,
-    before: INITIAL_PREVIOUS_CHAPTERS,
-    count: entries.length,
-    index: initialChapterIndex
-  });
-}
-
-function findRenderedPassageElement(passageId: string) {
-  return [...document.querySelectorAll<HTMLElement>(".reader-passage")]
-    .find((element) => element.dataset.passageId === passageId) ?? null;
 }
 
 function SearchFilterInputs({ filters }: { filters: StoredFilters }) {

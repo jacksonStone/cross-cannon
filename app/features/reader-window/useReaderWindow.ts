@@ -11,6 +11,7 @@ import {
 import {
   expandWindowEnd,
   expandWindowStart,
+  getCenteredWindowRange,
   type WindowRange
 } from "./window-range";
 
@@ -215,6 +216,66 @@ export function useAnchoredReaderWindow({
   };
 }
 
+export function useScriptureReaderWindow({
+  activeChapterKey,
+  initialChapterIndex,
+  initialChapterKey,
+  initialPassageId,
+  isReady,
+  itemCount,
+  onActiveChapterChange,
+  onMissingInitialPassage,
+  onReset
+}: {
+  activeChapterKey: string | null;
+  initialChapterIndex: number;
+  initialChapterKey: string | null;
+  initialPassageId: string;
+  isReady: boolean;
+  itemCount: number;
+  onActiveChapterChange: (chapterKey: string) => void;
+  onMissingInitialPassage?: () => void;
+  onReset?: () => void;
+}) {
+  const headerOffset = useReaderHeaderOffset();
+  const initialRange = getCenteredWindowRange({
+    after: DEFAULT_READER_SCROLL_WINDOW.initialAfter,
+    before: DEFAULT_READER_SCROLL_WINDOW.initialBefore,
+    count: itemCount,
+    index: initialChapterIndex
+  });
+  const findInitialPassageTarget = useCallback(
+    () => findRenderedPassageElement(initialPassageId),
+    [initialPassageId]
+  );
+  const getRenderedChapterKey = useCallback((element: HTMLElement) => (
+    element.dataset.chapterKey
+  ), []);
+
+  return useAnchoredReaderWindow({
+    activeKey: activeChapterKey,
+    chapterSelector: ".reader-chapter",
+    edgePx: DEFAULT_READER_SCROLL_WINDOW.edgePx,
+    expandCount: DEFAULT_READER_SCROLL_WINDOW.expandCount,
+    findInitialTarget: findInitialPassageTarget,
+    getChapterKey: getRenderedChapterKey,
+    headerOffset,
+    initialActiveKey: initialChapterKey,
+    initialRange,
+    initialScrollMaxFrames: DEFAULT_READER_SCROLL_WINDOW.initialScrollMaxFrames,
+    initialScrollReady: isReady && itemCount > 0,
+    itemCount,
+    minReadingAnchorOffset: DEFAULT_READER_SCROLL_WINDOW.minReadingAnchorOffset,
+    onActiveKeyChange: onActiveChapterChange,
+    onMissingInitialTarget: onMissingInitialPassage,
+    onReset,
+    readingAnchorRatio: DEFAULT_READER_SCROLL_WINDOW.readingAnchorRatio,
+    resetKey: `${initialPassageId}|${initialChapterKey ?? ""}`,
+    trackingReady: true,
+    windowReady: isReady
+  });
+}
+
 export function usePreservePrependedScroll({
   prependSnapshotRef,
   startIndex
@@ -242,6 +303,11 @@ export function usePreservePrependedScroll({
       });
     }
   }, [prependSnapshotRef, startIndex]);
+}
+
+function findRenderedPassageElement(passageId: string) {
+  return [...document.querySelectorAll<HTMLElement>(".reader-passage")]
+    .find((element) => element.dataset.passageId === passageId) ?? null;
 }
 
 export function useExpandableReaderWindow({

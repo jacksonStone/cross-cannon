@@ -7,11 +7,12 @@ import {
   type IndexedEmbeddingConfig
 } from "./db.server";
 import { embedText, getDefaultEmbeddingConfig } from "./embeddings.server";
+import {
+  cosineSimilarity,
+  readStoredEmbedding,
+  type StoredEmbeddingRow
+} from "./vector-search.server";
 import { withCalibratedMatchStrength } from "~/features/search/match-strength";
-
-type StoredEmbeddingRow = {
-  embedding?: unknown;
-};
 
 export type EarlyChristianSearchResult = {
   author: string | null;
@@ -742,35 +743,6 @@ function passageRangeLabel(verseStart: number | null, verseEnd: number | null) {
   }
 
   return `${verseStart}-${verseEnd}`;
-}
-
-function readStoredEmbedding(row: StoredEmbeddingRow) {
-  if (row.embedding instanceof ArrayBuffer) {
-    return row.embedding.byteLength % Float32Array.BYTES_PER_ELEMENT === 0
-      ? new Float32Array(row.embedding)
-      : null;
-  }
-
-  if (ArrayBuffer.isView(row.embedding)) {
-    const view = row.embedding as ArrayBufferView;
-
-    return view.byteLength % Float32Array.BYTES_PER_ELEMENT === 0
-      ? new Float32Array(view.buffer, view.byteOffset, view.byteLength / Float32Array.BYTES_PER_ELEMENT)
-      : null;
-  }
-
-  return null;
-}
-
-function cosineSimilarity(left: ArrayLike<number>, right: ArrayLike<number>) {
-  const length = Math.min(left.length, right.length);
-  let sum = 0;
-
-  for (let index = 0; index < length; index += 1) {
-    sum += left[index] * right[index];
-  }
-
-  return sum;
 }
 
 function placeholders(values: unknown[]) {

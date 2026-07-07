@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -25,8 +25,7 @@ import {
 } from "~/lib/early-christian-search.server";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import {
-  getScriptureCacheInfo,
-  type BrowserPassage
+  getScriptureCacheInfo
 } from "~/lib/scripture-cache.server";
 import {
   isBackdropClick,
@@ -35,8 +34,10 @@ import {
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 import {
-  chapterKey,
-  parsePassageLocation
+  buildChapterIndex,
+  findDefaultReaderPassageId,
+  findFirstPassageIdForChapter,
+  getPassageChapterKey
 } from "~/features/passage-reader/chapter-index";
 import {
   createReaderLocation,
@@ -109,6 +110,10 @@ export default function Index() {
   const scriptureLibrary = useScriptureLibrary({
     scriptureCacheUrl
   });
+  const scriptureIndex = useMemo(
+    () => buildChapterIndex(scriptureLibrary.passages),
+    [scriptureLibrary.passages]
+  );
   const focusedPassageId = searchFlow.focusedId;
   const isSearchOpen = searchFlow.isOpen;
   const closeSearch = useCallback(() => dispatchSearchFlow({ type: "close" }), []);
@@ -158,16 +163,17 @@ export default function Index() {
 
     const initialPassageId =
       findFirstPassageIdForChapter(
-        scriptureLibrary.passages,
+        scriptureIndex,
         savedReaderLocation?.chapterKey ?? readReaderPosition(READER_POSITION_STORAGE_KEY)
-      ) ?? findDefaultReaderPassageId(scriptureLibrary.passages);
+      ) ?? findDefaultReaderPassageId(scriptureIndex);
 
     if (!initialPassageId) {
       return;
     }
 
     const initialChapterKey = getPassageChapterKey(
-      scriptureLibrary.passageLookup.get(initialPassageId)
+      scriptureIndex,
+      initialPassageId
     );
 
     if (initialChapterKey) {
@@ -185,7 +191,8 @@ export default function Index() {
     readerPassageId,
     scriptureLibrary.isReady,
     scriptureLibrary.passageLookup,
-    scriptureLibrary.passages
+    scriptureLibrary.passages,
+    scriptureIndex
   ]);
 
   useEffect(() => {
@@ -253,7 +260,8 @@ export default function Index() {
     setReaderPassageId(passageId);
 
     const nextChapterKey = getPassageChapterKey(
-      scriptureLibrary.passageLookup.get(passageId)
+      scriptureIndex,
+      passageId
     );
 
     if (nextChapterKey) {
@@ -261,7 +269,7 @@ export default function Index() {
     }
 
     dispatchSearchFlow({ type: "close" });
-  }, [rememberReaderChapter, scriptureLibrary.passageLookup]);
+  }, [rememberReaderChapter, scriptureIndex]);
 
   const updateReaderTheme = useCallback((theme: string) => {
     if (isReaderTheme(theme)) {
@@ -467,35 +475,4 @@ function buildChurchFathersUrl(result: EarlyChristianSearchResult) {
   }
 
   return `/church-fathers?${searchParams.toString()}`;
-}
-
-function findDefaultReaderPassageId(passages: BrowserPassage[]) {
-  return passages.find((passage) => passage.reference === "Genesis 1:1-5")?.id
-    ?? passages.find((passage) => passage.reference.startsWith("Genesis 1:"))?.id
-    ?? passages[0]?.id
-    ?? "";
-}
-
-function findFirstPassageIdForChapter(passages: BrowserPassage[], chapterKeyValue: string) {
-  if (!chapterKeyValue) {
-    return null;
-  }
-
-  for (const passage of passages) {
-    if (getPassageChapterKey(passage) === chapterKeyValue) {
-      return passage.id;
-    }
-  }
-
-  return null;
-}
-
-function getPassageChapterKey(passage: BrowserPassage | undefined) {
-  if (!passage) {
-    return null;
-  }
-
-  const location = parsePassageLocation(passage.reference);
-
-  return location ? chapterKey(location.book, location.chapter) : null;
 }

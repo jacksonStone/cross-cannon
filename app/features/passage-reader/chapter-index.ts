@@ -1,4 +1,6 @@
-import type { BrowserPassage } from "~/lib/scripture-cache.server";
+import type { BrowserPassage } from "~/lib/scripture-cache-contract";
+
+import { sortCanonicalBooks } from "~/features/search/canons";
 
 export type PassageLocation = {
   book: string;
@@ -22,8 +24,33 @@ export type ChapterContext = {
 
 export type ChapterIndex = {
   chaptersByKey: Map<string, ChapterContext>;
-  orderedKeysByBook: Map<string, string[]>;
+  chapterCountByBook: Map<string, number>;
+  jumpBooks: JumpBookOption[];
   locationByPassageId: Map<string, PassageLocation>;
+  orderedChapterEntries: OrderedChapterEntry[];
+  orderedKeysByBook: Map<string, string[]>;
+  passageById: Map<string, BrowserPassage>;
+  renderedChapterKeys: string[];
+};
+
+export type OrderedChapterEntry = {
+  chapter: ChapterContext;
+  key: string;
+};
+
+export type JumpVerseTarget = {
+  number: number;
+  passageId: string;
+};
+
+export type JumpChapterOption = {
+  number: number;
+  verses: JumpVerseTarget[];
+};
+
+export type JumpBookOption = {
+  chapters: JumpChapterOption[];
+  name: string;
 };
 
 export function buildChapterIndex(passages: BrowserPassage[]): ChapterIndex {
@@ -37,8 +64,18 @@ export function buildChapterIndex(passages: BrowserPassage[]): ChapterIndex {
     }
   >();
   const locationByPassageId = new Map<string, PassageLocation>();
+  const passageById = new Map<string, BrowserPassage>();
+  const jumpBookBuilders = new Map<
+    string,
+    {
+      chapters: Map<number, Map<number, string>>;
+      name: string;
+    }
+  >();
 
   for (const passage of passages) {
+    passageById.set(passage.id, passage);
+
     const location = parsePassageLocation(passage.reference);
 
     if (!location || passage.verses.length === 0) {
@@ -63,6 +100,21 @@ export function buildChapterIndex(passages: BrowserPassage[]): ChapterIndex {
       verses: passage.verses
     });
     chapterBuilders.set(key, chapter);
+
+    const jumpBook = jumpBookBuilders.get(location.book) ?? {
+      chapters: new Map<number, Map<number, string>>(),
+      name: location.book
+    };
+    const jumpChapter = jumpBook.chapters.get(location.chapter) ?? new Map<number, string>();
+
+    for (const verse of passage.verses) {
+      if (!jumpChapter.has(verse.number)) {
+        jumpChapter.set(verse.number, passage.id);
+      }
+    }
+
+    jumpBook.chapters.set(location.chapter, jumpChapter);
+    jumpBookBuilders.set(location.book, jumpBook);
   }
 
   const chaptersByKey = new Map<string, ChapterContext>();
@@ -94,10 +146,77 @@ export function buildChapterIndex(passages: BrowserPassage[]): ChapterIndex {
     );
   }
 
+  const orderedChapterEntries = sortCanonicalBooks([...orderedKeysByBook.keys()])
+    .flatMap((book) => (
+      (orderedKeysByBook.get(book) ?? [])
+        .map((key) => {
+          const chapter = chaptersByKey.get(key);
+
+          return chapter ? { chapter, key } : null;
+        })
+        .filter((entry): entry is OrderedChapterEntry => Boolean(entry))
+    ));
+  const renderedChapterKeys = orderedChapterEntries.map((entry) => entry.key);
+  const chapterCountByBook = new Map<string, number>();
+
+  for (const entry of orderedChapterEntries) {
+    chapterCountByBook.set(
+      entry.chapter.book,
+      (chapterCountByBook.get(entry.chapter.book) ?? 0) + 1
+    );
+  }
+
   return {
     chaptersByKey,
+    chapterCountByBook,
+    jumpBooks: buildJumpBooks(jumpBookBuilders),
+    locationByPassageId,
+    orderedChapterEntries,
     orderedKeysByBook,
-    locationByPassageId
+    passageById,
+    renderedChapterKeys
+  };
+}
+
+export function findDefaultReaderPassageId(index: ChapterIndex) {
+  return [...index.passageById.values()]
+    .find((passage) => passage.reference === "Genesis 1:1-5")?.id
+    ?? [...index.passageById.values()]
+      .find((passage) => passage.reference.startsWith("Genesis 1:"))?.id
+    ?? index.orderedChapterEntries[0]?.chapter.passages[0]?.id
+    ?? "";
+}
+
+export function findFirstPassageIdForChapter(
+  index: ChapterIndex,
+  chapterKeyValue: string
+) {
+  if (!chapterKeyValue) {
+    return null;
+  }
+
+  return index.chaptersByKey.get(chapterKeyValue)?.passages[0]?.id ?? null;
+}
+
+export function getPassageChapterKey(index: ChapterIndex, passageId: string) {
+  const location = index.locationByPassageId.get(passageId);
+
+  return location ? chapterKey(location.book, location.chapter) : null;
+}
+
+export function findInitialJumpSelection(
+  index: ChapterIndex,
+  initialPassageId?: string
+) {
+  const initialLocation = initialPassageId
+    ? index.locationByPassageId.get(initialPassageId)
+    : null;
+  const firstBook = index.jumpBooks[0];
+  const firstChapter = firstBook?.chapters[0];
+
+  return {
+    book: initialLocation?.book ?? firstBook?.name ?? "",
+    chapter: initialLocation?.chapter ?? firstChapter?.number ?? 0
   };
 }
 
@@ -118,4 +237,30 @@ export function parsePassageLocation(reference: string): PassageLocation | null 
 
 export function chapterKey(book: string, chapter: number) {
   return `${book}\t${chapter}`;
+}
+
+function buildJumpBooks(
+  jumpBookBuilders: Map<
+    string,
+    {
+      chapters: Map<number, Map<number, string>>;
+      name: string;
+    }
+  >
+) {
+  return sortCanonicalBooks([...jumpBookBuilders.keys()]).map((bookName) => {
+    const book = jumpBookBuilders.get(bookName);
+
+    return {
+      name: bookName,
+      chapters: [...(book?.chapters.entries() ?? [])]
+        .sort(([left], [right]) => left - right)
+        .map(([chapterNumber, verses]) => ({
+          number: chapterNumber,
+          verses: [...verses.entries()]
+            .sort(([left], [right]) => left - right)
+            .map(([number, passageId]) => ({ number, passageId }))
+        }))
+    };
+  });
 }

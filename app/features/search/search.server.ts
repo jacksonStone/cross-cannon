@@ -10,6 +10,11 @@ import { searchScripture, searchSimilarScripture } from "~/lib/search.server";
 
 import { BOOKS_BY_CANON, DEFAULT_MATCH_COUNT, parseCanonMode, sortCanonicalBooks } from "./canons";
 import { withCalibratedMatchStrength } from "./match-strength";
+import {
+  isSearchSourcePassageId,
+  parseSearchMatchCount,
+  validateSearchQuestion
+} from "./search-request.server";
 import type { CanonMode } from "./types";
 import type { SearchActionData } from "./types";
 
@@ -57,18 +62,12 @@ export async function handleSearchRequest(formData: FormData) {
   }
 
   const question = String(formData.get("question") ?? "").trim();
+  const questionValidation = validateSearchQuestion(question);
 
-  if (question.length < 3) {
+  if ("error" in questionValidation) {
     return json<SearchActionData>(
-      { error: "Enter a longer question." },
-      { status: 400 }
-    );
-  }
-
-  if (question.length > 500) {
-    return json<SearchActionData>(
-      { error: "Keep the question under 500 characters." },
-      { status: 400 }
+      { error: questionValidation.error },
+      { status: questionValidation.status }
     );
   }
 
@@ -93,18 +92,12 @@ async function handleEarlyChristianThemeSearch(
   filters: ParsedSearchFilters
 ) {
   const question = String(formData.get("question") ?? "").trim();
+  const questionValidation = validateSearchQuestion(question);
 
-  if (question.length < 3) {
+  if ("error" in questionValidation) {
     return json<SearchActionData>(
-      { error: "Enter a longer question." },
-      { status: 400 }
-    );
-  }
-
-  if (question.length > 500) {
-    return json<SearchActionData>(
-      { error: "Keep the question under 500 characters." },
-      { status: 400 }
+      { error: questionValidation.error },
+      { status: questionValidation.status }
     );
   }
 
@@ -128,7 +121,7 @@ async function handleSimilarEarlyChristianSearch(
 ) {
   const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
 
-  if (!/^[a-f0-9]{24}$/.test(sourcePassageId)) {
+  if (!isSearchSourcePassageId(sourcePassageId)) {
     return json<SearchActionData>(
       { error: "Choose a passage to search from." },
       { status: 400 }
@@ -166,7 +159,7 @@ async function handleSimilarPassageSearch(
 ) {
   const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
 
-  if (!/^[a-f0-9]{24}$/.test(sourcePassageId)) {
+  if (!isSearchSourcePassageId(sourcePassageId)) {
     return json<SearchActionData>(
       { error: "Choose a passage to search from." },
       { status: 400 }
@@ -214,7 +207,10 @@ async function parseSearchFilters(formData: FormData): Promise<
     .getAll("books")
     .map((value) => String(value).trim())
     .filter(Boolean);
-  const matchCount = Number(formData.get("matchCount") ?? DEFAULT_MATCH_COUNT);
+  const matchCountResult = parseSearchMatchCount(
+    formData.get("matchCount"),
+    DEFAULT_MATCH_COUNT
+  );
   const authorFilters = await parseEarlyChristianAuthorFilters(
     formData.getAll("earlyChristianAuthors")
   );
@@ -228,14 +224,16 @@ async function parseSearchFilters(formData: FormData): Promise<
     };
   }
 
-  if (!Number.isInteger(matchCount) || matchCount < 5 || matchCount > 40) {
+  if ("error" in matchCountResult) {
     return {
       response: json<SearchActionData>(
-        { error: "Choose between 5 and 40 matches." },
-        { status: 400 }
+        { error: matchCountResult.error },
+        { status: matchCountResult.status }
       )
     };
   }
+
+  const { matchCount } = matchCountResult;
 
   const booksResponse = await getDb().execute("SELECT book FROM passages GROUP BY book");
   const indexedBooks = new Set(booksResponse.rows.map((row) => String(row.book)));

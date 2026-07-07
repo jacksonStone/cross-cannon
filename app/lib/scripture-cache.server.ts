@@ -4,25 +4,22 @@ import path from "node:path";
 
 import { ensureDatabase, getDb } from "./db.server";
 import { isRecord, parseJson } from "./json";
+import type {
+  BrowserPassage,
+  ScriptureCachePayload
+} from "./scripture-cache-contract";
 
-export type BrowserPassage = {
-  audioUrl?: string;
-  id: string;
-  reference: string;
-  text: string;
-  type: "paragraph";
-  verses: Array<{
-    number: number;
-    text: string;
-  }>;
-};
+export type {
+  BrowserPassage,
+  ScriptureCachePayload
+} from "./scripture-cache-contract";
 
 export async function getScriptureCacheVersion() {
   await ensureDatabase();
   return getScriptureCachePayloadVersion(await buildScriptureCachePayload());
 }
 
-export function getScriptureCachePayloadVersion(payload: { passages: BrowserPassage[] }) {
+export function getScriptureCachePayloadVersion(payload: ScriptureCachePayload) {
   return createHash("sha256")
     .update(JSON.stringify(payload))
     .digest("hex")
