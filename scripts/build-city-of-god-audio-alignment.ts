@@ -16,6 +16,7 @@ const DEFAULT_MIN_CONFIDENCE = 0.72;
 const MAX_DIRECT_TRANSCRIPTION_BYTES = 24 * 1024 * 1024;
 const TRANSCRIPTION_CHUNK_SECONDS = 20 * 60;
 const SOURCE_PAGE = "https://archive.org/details/city_of_god_ds_librivox";
+const CITY_BOUNDARY_OFFSET_SECONDS = 2;
 const execFileAsync = promisify(execFile);
 const archiveMirrorUrlCache = new Map<string, Promise<string[]>>();
 
@@ -84,6 +85,7 @@ type AlignedChapter = {
 };
 
 type AlignmentPayload = {
+  boundaryOffsetSeconds?: number;
   chapters?: Record<string, AlignedChapter>;
 };
 
@@ -176,8 +178,12 @@ for (const { sections: trackSections, track } of selectedTracks) {
   }
 }
 
+const sortedChapters = sortAlignedChapters(alignedChapters, sections);
+const adjustedChapters = applyCityBoundaryOffset(sortedChapters, sections);
+
 await writeFile(OUTPUT_PATH, `${JSON.stringify({
-  chapters: sortAlignedChapters(alignedChapters, sections),
+  boundaryOffsetSeconds: CITY_BOUNDARY_OFFSET_SECONDS,
+  chapters: adjustedChapters,
   generatedAt: new Date().toISOString(),
   source: SOURCE_PAGE
 }, null, 2)}\n`);
@@ -302,7 +308,9 @@ async function readExistingAlignments() {
   try {
     const existing = await readJsonFile(OUTPUT_PATH, isAlignmentPayload);
 
-    return existing.chapters ?? {};
+    return existing.boundaryOffsetSeconds === CITY_BOUNDARY_OFFSET_SECONDS
+      ? removeCityBoundaryOffset(existing.chapters ?? {}, sections)
+      : existing.chapters ?? {};
   } catch {
     return {};
   }
@@ -325,6 +333,48 @@ function sortAlignedChapters<T>(chapters: Record<string, T>, orderedSections: Se
   }
 
   return sorted;
+}
+
+function applyCityBoundaryOffset(
+  chapters: Record<string, AlignedChapter>,
+  orderedSections: Section[]
+) {
+  return shiftCityBoundaryOffset(chapters, orderedSections, CITY_BOUNDARY_OFFSET_SECONDS);
+}
+
+function removeCityBoundaryOffset(
+  chapters: Record<string, AlignedChapter>,
+  orderedSections: Section[]
+) {
+  return shiftCityBoundaryOffset(chapters, orderedSections, -CITY_BOUNDARY_OFFSET_SECONDS);
+}
+
+function shiftCityBoundaryOffset(
+  chapters: Record<string, AlignedChapter>,
+  orderedSections: Section[],
+  offsetSeconds: number
+) {
+  const shifted: Record<string, AlignedChapter> = {};
+  const alignedIds = orderedSections
+    .map((section) => section.id)
+    .filter((id) => Boolean(chapters[id]));
+  const lastIndex = alignedIds.length - 1;
+
+  for (const [id, chapter] of Object.entries(chapters)) {
+    const sectionIndex = alignedIds.indexOf(id);
+
+    shifted[id] = {
+      ...chapter,
+      endSeconds: sectionIndex >= 0 && sectionIndex < lastIndex
+        ? roundSeconds(chapter.endSeconds + offsetSeconds)
+        : chapter.endSeconds,
+      startSeconds: sectionIndex > 0
+        ? roundSeconds(chapter.startSeconds + offsetSeconds)
+        : chapter.startSeconds
+    };
+  }
+
+  return shifted;
 }
 
 async function readJsonFile<T>(filePath: string, isExpected: (value: unknown) => value is T) {
@@ -398,6 +448,10 @@ function isChapterAsset(value: unknown): value is ChapterAsset {
 
 function isAlignmentPayload(value: unknown): value is AlignmentPayload {
   return isRecord(value) &&
+    (
+      value.boundaryOffsetSeconds === undefined ||
+      typeof value.boundaryOffsetSeconds === "number"
+    ) &&
     (
       value.chapters === undefined ||
       (

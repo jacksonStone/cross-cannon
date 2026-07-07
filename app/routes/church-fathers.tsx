@@ -95,6 +95,15 @@ const CHAPTER_WINDOW_AFTER = DEFAULT_READER_SCROLL_WINDOW.initialAfter;
 const INITIAL_SCROLL_MAX_FRAMES = DEFAULT_READER_SCROLL_WINDOW.initialScrollMaxFrames;
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+type ChapterAudioPlayback = {
+  audio: NonNullable<ReturnType<typeof normalizeEarlyChristianAudio>>;
+  key: string;
+  preferContinuous?: boolean;
+};
+
+type ChapterAudioPlaybackResult = "continued" | "loaded" | null;
+
 export const meta: MetaFunction = () => [
   { title: "Early Christian Reader | Cross Canon" },
   {
@@ -175,6 +184,7 @@ export default function ChurchFathersReaderRoute() {
   const lastAppliedInitialTargetRef = useRef("");
   const lastReportedChapterIdRef = useRef(savedReaderPositionRef.current);
   const playingAudioEndSecondsRef = useRef<number | null>(null);
+  const suppressNextAudioPauseRef = useRef(false);
   const readerTitleRef = useRef<HTMLHeadingElement | null>(null);
 
   const scriptureLibrary = useScriptureLibrary({
@@ -421,33 +431,75 @@ export default function ChurchFathersReaderRoute() {
     setSelectedAuthors([]);
   }, []);
 
-  const toggleActiveChapterAudio = useCallback(() => {
+  const openChapter = useCallback((chapterId: string, passageRange = "") => {
+    const chapterEntry = chapterById.get(chapterId);
+
+    if (!chapterEntry) {
+      return false;
+    }
+
+    setRenderedRange(getChapterWindowRange(chapterEntry.index, chapters, {
+      after: CHAPTER_WINDOW_AFTER,
+      before: CHAPTER_WINDOW_BEFORE
+    }));
+    setActiveChapterId(chapterId);
+    setTargetChapterId(chapterId);
+    setTargetPassageRange(passageRange);
+    setSelectedPassage(passageRange);
+    setSelectedPassageChapterId(passageRange ? chapterId : "");
+    rememberReaderChapter(chapterId, passageRange);
+    updateUrl(chapterId, passageRange);
+    return true;
+  }, [chapterById, chapters, rememberReaderChapter]);
+
+  const playChapterAudio = useCallback(({
+    audio: chapterAudio,
+    key,
+    preferContinuous = false
+  }: ChapterAudioPlayback): ChapterAudioPlaybackResult => {
     const audio = audioRef.current;
 
-    if (!audio || !activeAudio || !activeAudioKey || !activeAudioUrl) {
-      return;
+    if (!audio) {
+      return null;
     }
 
-    if (isActiveChapterPlaying) {
-      audio.pause();
-      playingAudioEndSecondsRef.current = null;
-      setPlayingAudioKey(null);
-      return;
+    const nextAudioUrl = new URL(chapterAudio.url, window.location.href).href;
+    const canContinueCurrentSource = preferContinuous && audio.currentSrc === nextAudioUrl;
+    playingAudioEndSecondsRef.current = chapterAudio.endSeconds ?? null;
+
+    if (canContinueCurrentSource) {
+      setPlayingAudioKey(key);
+
+      if (audio.paused) {
+        try {
+          audio.currentTime = Math.max(0, chapterAudio.startSeconds ?? 0);
+        } catch {
+          // Some browsers reject seeking until enough metadata is available.
+        }
+
+        void audio.play()
+          .then(() => setPlayingAudioKey(key))
+          .catch(() => {
+            playingAudioEndSecondsRef.current = null;
+            setPlayingAudioKey(null);
+          });
+      }
+
+      return "continued";
     }
 
-    audio.src = activeAudioUrl;
+    audio.src = chapterAudio.url;
     audio.load();
-    playingAudioEndSecondsRef.current = activeAudio.endSeconds ?? null;
 
     const playFromOffset = () => {
       try {
-        audio.currentTime = Math.max(0, activeAudio.startSeconds ?? 0);
+        audio.currentTime = Math.max(0, chapterAudio.startSeconds ?? 0);
       } catch {
         // Some browsers reject seeking until enough metadata is available.
       }
 
       void audio.play()
-        .then(() => setPlayingAudioKey(activeAudioKey))
+        .then(() => setPlayingAudioKey(key))
         .catch(() => {
           playingAudioEndSecondsRef.current = null;
           setPlayingAudioKey(null);
@@ -459,7 +511,49 @@ export default function ChurchFathersReaderRoute() {
     } else {
       audio.addEventListener("loadedmetadata", playFromOffset, { once: true });
     }
-  }, [activeAudio, activeAudioKey, activeAudioUrl, isActiveChapterPlaying]);
+
+    return "loaded";
+  }, []);
+
+  const playNextChapterAudio = useCallback(() => {
+    if (typeof activeChapterIndex !== "number") {
+      return null;
+    }
+
+    const nextEntry = chapters[activeChapterIndex + 1];
+    const nextAudio = normalizeEarlyChristianAudio(nextEntry?.chapter.audio);
+
+    if (!nextEntry || !nextAudio) {
+      return null;
+    }
+
+    openChapter(nextEntry.chapter.id);
+    return playChapterAudio({
+      audio: nextAudio,
+      key: `${nextAudio.url}#${nextAudio.startSeconds ?? 0}`,
+      preferContinuous: true
+    });
+  }, [activeChapterIndex, chapters, openChapter, playChapterAudio]);
+
+  const toggleActiveChapterAudio = useCallback(() => {
+    const audio = audioRef.current;
+
+    if (!audio || !activeAudio || !activeAudioKey) {
+      return;
+    }
+
+    if (isActiveChapterPlaying) {
+      audio.pause();
+      playingAudioEndSecondsRef.current = null;
+      setPlayingAudioKey(null);
+      return;
+    }
+
+    playChapterAudio({
+      audio: activeAudio,
+      key: activeAudioKey
+    });
+  }, [activeAudio, activeAudioKey, isActiveChapterPlaying, playChapterAudio]);
 
   useEffect(() => {
     if (actionData?.authors) {
@@ -659,27 +753,6 @@ export default function ChurchFathersReaderRoute() {
     actionData?.similarSource?.id
   ]);
 
-  const openChapter = useCallback((chapterId: string, passageRange = "") => {
-    const chapterEntry = chapterById.get(chapterId);
-
-    if (!chapterEntry) {
-      return false;
-    }
-
-    setRenderedRange(getChapterWindowRange(chapterEntry.index, chapters, {
-      after: CHAPTER_WINDOW_AFTER,
-      before: CHAPTER_WINDOW_BEFORE
-    }));
-    setActiveChapterId(chapterId);
-    setTargetChapterId(chapterId);
-    setTargetPassageRange(passageRange);
-    setSelectedPassage(passageRange);
-    setSelectedPassageChapterId(passageRange ? chapterId : "");
-    rememberReaderChapter(chapterId, passageRange);
-    updateUrl(chapterId, passageRange);
-    return true;
-  }, [chapterById, chapters.length, rememberReaderChapter]);
-
   const openResult = useCallback((result: EarlyChristianSearchResult) => {
     const passageRange = rangeFromResult(result);
 
@@ -739,10 +812,22 @@ export default function ChurchFathersReaderRoute() {
           isActiveChapterPlaying={isActiveChapterPlaying}
           isToolsOpen={isToolsOpen}
           onAudioEnded={() => {
+            const playbackResult = playNextChapterAudio();
+
+            if (playbackResult) {
+              suppressNextAudioPauseRef.current = playbackResult === "loaded";
+              return;
+            }
+
             playingAudioEndSecondsRef.current = null;
             setPlayingAudioKey(null);
           }}
           onAudioPause={() => {
+            if (suppressNextAudioPauseRef.current) {
+              suppressNextAudioPauseRef.current = false;
+              return;
+            }
+
             playingAudioEndSecondsRef.current = null;
             setPlayingAudioKey(null);
           }}
@@ -750,6 +835,13 @@ export default function ChurchFathersReaderRoute() {
             const endSeconds = playingAudioEndSecondsRef.current;
 
             if (!endSeconds || event.currentTarget.currentTime < endSeconds) {
+              return;
+            }
+
+            const playbackResult = playNextChapterAudio();
+
+            if (playbackResult) {
+              suppressNextAudioPauseRef.current = playbackResult === "loaded";
               return;
             }
 
