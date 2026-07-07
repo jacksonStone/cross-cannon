@@ -6,6 +6,7 @@ import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 import {
   buildChapterIndex,
   chapterKey,
+  filterJumpBooksByCanon,
   findDefaultReaderPassageId,
   findFirstPassageIdForChapter,
   findInitialJumpSelection,
@@ -112,6 +113,36 @@ test("buildChapterIndex creates jump options from verse targets", () => {
       ]
     }
   ]);
+});
+
+test("filterJumpBooksByCanon keeps only books in the selected canon", () => {
+  const jumpBooks = [
+    { chapters: [], name: "Genesis" },
+    { chapters: [], name: "Tobit" },
+    { chapters: [], name: "1 Esdras" }
+  ];
+
+  assert.deepEqual(
+    filterJumpBooksByCanon(jumpBooks, "protestant").map((book) => book.name),
+    ["Genesis"]
+  );
+  assert.deepEqual(
+    filterJumpBooksByCanon(jumpBooks, "catholic").map((book) => book.name),
+    ["Genesis", "Tobit"]
+  );
+  assert.deepEqual(
+    filterJumpBooksByCanon(jumpBooks, "orthodox").map((book) => book.name),
+    ["Genesis", "Tobit", "1 Esdras"]
+  );
+});
+
+test("filterJumpBooksByCanon leaves jump books unfiltered without a canon", () => {
+  const jumpBooks = [
+    { chapters: [], name: "Genesis" },
+    { chapters: [], name: "Tobit" }
+  ];
+
+  assert.equal(filterJumpBooksByCanon(jumpBooks, undefined), jumpBooks);
 });
 
 test("reader index resolves saved chapters, passage chapter keys, and defaults", () => {

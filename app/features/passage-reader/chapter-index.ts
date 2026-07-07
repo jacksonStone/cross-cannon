@@ -1,6 +1,10 @@
 import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
-import { sortCanonicalBooks } from "~/features/search/canons";
+import {
+  BOOKS_BY_CANON,
+  parseCanonMode,
+  sortCanonicalBooks
+} from "~/features/search/canons";
 
 export type PassageLocation = {
   book: string;
@@ -218,6 +222,18 @@ export function findInitialJumpSelection(
     book: initialLocation?.book ?? firstBook?.name ?? "",
     chapter: initialLocation?.chapter ?? firstChapter?.number ?? 0
   };
+}
+
+export function filterJumpBooksByCanon(
+  jumpBooks: JumpBookOption[],
+  canon: string | null | undefined
+) {
+  if (!canon) {
+    return jumpBooks;
+  }
+
+  const canonBooks = BOOKS_BY_CANON[parseCanonMode(canon)];
+  return jumpBooks.filter((book) => canonBooks.has(book.name));
 }
 
 export function parsePassageLocation(reference: string): PassageLocation | null {

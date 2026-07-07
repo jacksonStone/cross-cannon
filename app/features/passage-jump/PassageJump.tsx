@@ -4,6 +4,7 @@ import { Link } from "@remix-run/react";
 
 import {
   buildChapterIndex,
+  filterJumpBooksByCanon,
   findInitialJumpSelection
 } from "~/features/passage-reader/chapter-index";
 import type { StoredFilters } from "~/features/search/types";
@@ -36,6 +37,10 @@ export function PassageJump({
   passages
 }: PassageJumpProps) {
   const scriptureIndex = useMemo(() => buildChapterIndex(passages), [passages]);
+  const jumpBooks = useMemo(
+    () => filterJumpBooksByCanon(scriptureIndex.jumpBooks, filters?.canon),
+    [filters?.canon, scriptureIndex.jumpBooks]
+  );
   const initialSelection = useMemo(
     () => findInitialJumpSelection(scriptureIndex, initialPassageId),
     [initialPassageId, scriptureIndex]
@@ -49,12 +54,26 @@ export function PassageJump({
     setSelectedChapter(initialSelection.chapter);
   }, [initialSelection.book, initialSelection.chapter]);
 
-  const book = scriptureIndex.jumpBooks.find((option) => option.name === selectedBook)
-    ?? scriptureIndex.jumpBooks[0];
+  const book = jumpBooks.find((option) => option.name === selectedBook)
+    ?? jumpBooks[0];
   const chapter = book?.chapters.find((option) => option.number === selectedChapter)
     ?? book?.chapters[0];
-  const isDisabled = !isScriptureReady || scriptureIndex.jumpBooks.length === 0;
+  const isDisabled = !isScriptureReady || jumpBooks.length === 0;
   const close = useCallback(() => setIsOpen(false), []);
+
+  useEffect(() => {
+    if (!isOpen || jumpBooks.length === 0) {
+      return;
+    }
+
+    const nextBook = jumpBooks.find((option) => option.name === selectedBook)
+      ?? jumpBooks[0];
+
+    if (nextBook.name !== selectedBook) {
+      setSelectedBook(nextBook.name);
+      setSelectedChapter(nextBook.chapters[0]?.number ?? 1);
+    }
+  }, [isOpen, jumpBooks, selectedBook]);
 
   useModalScrollLock(isOpen && !isDisabled);
   useEscapeDismiss({
@@ -121,7 +140,7 @@ export function PassageJump({
                 <select
                   value={book.name}
                   onChange={(event) => {
-                    const nextBook = scriptureIndex.jumpBooks.find(
+                    const nextBook = jumpBooks.find(
                       (option) => option.name === event.target.value
                     );
 
@@ -133,7 +152,7 @@ export function PassageJump({
                     setSelectedChapter(nextBook.chapters[0]?.number ?? 1);
                   }}
                 >
-                  {scriptureIndex.jumpBooks.map((option) => (
+                  {jumpBooks.map((option) => (
                     <option key={option.name} value={option.name}>
                       {option.name}
                     </option>

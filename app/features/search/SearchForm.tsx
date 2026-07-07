@@ -163,6 +163,12 @@ export function SearchForm({
         {showJump ? (
           <PassageJump
             className="search-form-jump"
+            filters={{
+              books: selectedBooksForCanon,
+              canon,
+              earlyChristianAuthors: selectedEarlyChristianAuthors,
+              matchCount
+            }}
             initialPassageId={jumpInitialPassageId}
             isScriptureReady={isScriptureReady}
             label="Jump to specific passage"

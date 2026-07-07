@@ -6,10 +6,32 @@ search source material from lower-level browser or storage mechanics.
 
 ## Language
 
+**Book**:
+A named text within a reader corpus, containing ordered chapters. In Scripture,
+a Book belongs to a Canon; for non-scriptural texts, prefer Early Christian Work
+when referring to the work as a whole.
+_Avoid_: File, asset, source row
+
+**Chapter**:
+An ordered division of a Book or Early Christian Work. A Chapter is the stable
+reader unit used to group passages and describe a reader location.
+_Avoid_: Page, section file, scroll region
+
+**Passage**:
+A contiguous unit of readable text inside a Chapter, often spanning one or more
+verses. A Passage can be read, searched, selected, opened, or used as the source
+for a similar-passage search.
+_Avoid_: Result, snippet, row
+
 **Scripture Passage**:
-A paragraph-level portion of Scripture that can be read, searched, opened, or
-used as the source for a similar-passage search.
+A Passage whose source corpus is Scripture.
 _Avoid_: Result text, paragraph row, Bible snippet
+
+**Canon**:
+A tradition-specific set and order of Scripture Books available for Scripture
+reading and search. Canon describes Scripture scope; it does not include Early
+Christian Works.
+_Avoid_: Corpus, filter preset, denomination
 
 **Focused Passage**:
 A passage the user has selected as the source context for a similar-passage
