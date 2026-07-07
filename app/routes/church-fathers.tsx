@@ -13,31 +13,19 @@ import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
 
 import {
   type EarlyChristianReaderTextMode as ReaderTextMode,
-  findLoadedPassage,
-  findPassageTargetInChapter
+  findLoadedPassage
 } from "~/features/early-christian-reader/reader-passages";
 import {
   ReaderCorpusSwitch,
   rememberReaderCorpus
 } from "~/features/reader-switch/ReaderCorpusSwitch";
 import {
-  createReaderLocation,
-  readReaderLocation,
-  readReaderPosition,
-  readerLocationKey,
-  rememberReaderLocation
-} from "~/features/reader-position/reader-position";
-import {
   EARLY_CHRISTIAN_MANIFEST_URL,
   EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION,
   EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY
 } from "~/features/early-christian-preview/preview-cache";
 import {
-  findChapterBookStartIndex,
-  flattenChapters,
-  getChapterWindowRange,
   MAX_AUTHOR_FILTERS,
-  resolveActiveChapterId,
   SEARCH_EXAMPLES
 } from "~/features/early-christian-reader/book-index";
 import { ChapterList } from "~/features/early-christian-reader/ChapterList";
@@ -55,10 +43,8 @@ import {
   useRenderedChapterAssetLoader
 } from "~/features/early-christian-reader/useEarlyChristianReaderAssets";
 import {
-  DEFAULT_READER_SCROLL_WINDOW,
-  useAnchoredReaderWindow,
-  useReaderHeaderOffset
-} from "~/features/reader-window/useReaderWindow";
+  useEarlyChristianReaderNavigation
+} from "~/features/early-christian-reader/useEarlyChristianReaderNavigation";
 import {
   BOOKS_BY_CANON,
   DEFAULT_CANON,
@@ -88,9 +74,6 @@ import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 const MANIFEST_URL = EARLY_CHRISTIAN_MANIFEST_URL;
 const PREVIEW_ASSET_VERSION = EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION;
 const READER_POSITION_STORAGE_KEY = EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY;
-const CHAPTER_WINDOW_BEFORE = DEFAULT_READER_SCROLL_WINDOW.initialBefore;
-const CHAPTER_WINDOW_AFTER = DEFAULT_READER_SCROLL_WINDOW.initialAfter;
-const INITIAL_SCROLL_MAX_FRAMES = DEFAULT_READER_SCROLL_WINDOW.initialScrollMaxFrames;
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -127,24 +110,6 @@ export default function ChurchFathersReaderRoute() {
     setChapterLoadErrors,
     setLoadedChapters
   } = useEarlyChristianChapterAssets(previewAssetVersion);
-  const savedReaderLocation = readReaderLocation(READER_POSITION_STORAGE_KEY, "fathers");
-  const initialStoredChapterId =
-    savedReaderLocation?.chapterKey ?? readReaderPosition(READER_POSITION_STORAGE_KEY);
-  const initialStoredPassageRange = savedReaderLocation?.passageRange ?? "";
-  const initialActiveChapterId = initialChapterId || initialStoredChapterId;
-  const initialSelectedPassage = initialPassageRange || (
-    initialChapterId ? "" : initialStoredPassageRange
-  );
-  const savedReaderPositionRef = useRef(readerLocationKey(savedReaderLocation));
-  const [activeChapterId, setActiveChapterId] = useState(() => (
-    initialActiveChapterId
-  ));
-  const [targetChapterId, setTargetChapterId] = useState(() => initialActiveChapterId);
-  const [targetPassageRange, setTargetPassageRange] = useState(initialSelectedPassage);
-  const [selectedPassage, setSelectedPassage] = useState(initialSelectedPassage);
-  const [selectedPassageChapterId, setSelectedPassageChapterId] = useState(
-    initialSelectedPassage ? initialActiveChapterId : ""
-  );
   const [searchFlow, dispatchSearchFlow] = useReducer(
     searchModalFlowReducer,
     initialSearchModalFlowState
@@ -152,7 +117,6 @@ export default function ChurchFathersReaderRoute() {
   const { readerSettings, setReaderSettings } = useStoredReaderSettings();
   const readerTheme = readerSettings.theme;
   const readerStyles = readerSettingsStyle(readerSettings);
-  const readerHeaderOffset = useReaderHeaderOffset();
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isJumpOpen, setIsJumpOpen] = useState(false);
   const [isAuthorFilterOpen, setIsAuthorFilterOpen] = useState(false);
@@ -169,69 +133,29 @@ export default function ChurchFathersReaderRoute() {
   const [exampleIndex, setExampleIndex] = useState(0);
   const headerTitleRef = useRef<HTMLDivElement | null>(null);
   const isToolsOpenRef = useRef(isToolsOpen);
-  const lastAppliedInitialTargetRef = useRef("");
-  const lastReportedChapterIdRef = useRef(savedReaderPositionRef.current);
   const readerTitleRef = useRef<HTMLHeadingElement | null>(null);
 
   const scriptureLibrary = useScriptureLibrary({
     scriptureCacheUrl
   });
-
-  const chapters = useMemo(() => flattenChapters(bookIndex), [bookIndex]);
-  const chapterById = useMemo(
-    () => new Map(chapters.map((entry) => [entry.chapter.id, entry])),
-    [chapters]
-  );
-  const resolvedActiveChapterId = useMemo(() => (
-    resolveActiveChapterId({
-      activeChapterId,
-      chapterById,
-      chapters,
-      initialChapterId
-    })
-  ), [activeChapterId, chapterById, chapters, initialChapterId]);
-  const activeEntry = resolvedActiveChapterId
-    ? chapterById.get(resolvedActiveChapterId)
-    : undefined;
-  const resolvedTargetChapterId = targetChapterId && chapterById.has(targetChapterId)
-    ? targetChapterId
-    : resolvedActiveChapterId;
-  const targetEntry = resolvedTargetChapterId
-    ? chapterById.get(resolvedTargetChapterId)
-    : undefined;
-  const targetChapterIndex = targetEntry?.index;
-  const initialWindowRange = useMemo(
-    () => typeof targetChapterIndex === "number"
-      ? getChapterWindowRange(targetChapterIndex, chapters, {
-        after: CHAPTER_WINDOW_AFTER,
-        before: CHAPTER_WINDOW_BEFORE
-      })
-      : { endIndex: -1, startIndex: 0 },
-    [chapters, targetChapterIndex]
-  );
-  const readerWindowResetKey = `${resolvedTargetChapterId}|${targetPassageRange}`;
-  const targetWindowEntries = useMemo(
-    () => initialWindowRange.endIndex >= initialWindowRange.startIndex
-      ? chapters.slice(
-        Math.max(0, initialWindowRange.startIndex),
-        initialWindowRange.endIndex + 1
-      )
-      : [],
-    [chapters, initialWindowRange.endIndex, initialWindowRange.startIndex]
-  );
-  const isReady = Boolean(bookIndex && activeEntry);
-  const activeChapterIndex = activeEntry?.index;
-  const activeBookStartIndex = findChapterBookStartIndex(activeChapterIndex ?? -1, chapters);
-  const selectedRangeForTargetChapter =
-    selectedPassageChapterId === resolvedTargetChapterId ? selectedPassage : targetPassageRange;
-  const isTargetWindowReady = Boolean(
-    resolvedTargetChapterId
-    && typeof targetChapterIndex === "number"
-    && targetWindowEntries.some((entry) => entry.chapter.id === resolvedTargetChapterId)
-    && targetWindowEntries.every((entry) => (
-      entry.index > targetChapterIndex || loadedChapters.has(entry.chapter.id)
-    ))
-  );
+  const {
+    activeChapterIndex,
+    activeEntry,
+    chapters,
+    isReady,
+    openChapter,
+    renderedEntries,
+    resolvedActiveChapterId,
+    selectPassage,
+    selectedPassage,
+    selectedPassageChapterId
+  } = useEarlyChristianReaderNavigation({
+    bookIndex,
+    initialChapterId,
+    initialPassageRange,
+    loadedChapters,
+    positionStorageKey: READER_POSITION_STORAGE_KEY
+  });
   const focusedPassageKey = searchFlow.focusedId;
   const isSearchOpen = searchFlow.isOpen;
   const closeSearch = useCallback(() => {
@@ -245,17 +169,6 @@ export default function ChurchFathersReaderRoute() {
       type: "set-focused"
     });
   }, []);
-  const rememberReaderChapter = useCallback((chapterId: string, passageRange = "") => {
-    rememberReaderLocation(READER_POSITION_STORAGE_KEY, createReaderLocation({
-      chapterKey: chapterId,
-      corpus: "fathers",
-      passageRange: passageRange || undefined
-    }), {
-      lastReportedRef: lastReportedChapterIdRef,
-      savedRef: savedReaderPositionRef
-    });
-  }, []);
-
   useModalScrollLock(isSearchOpen || isJumpOpen || isAuthorFilterOpen);
   const focusedPassage = focusedPassageKey
     ? findLoadedPassage(loadedChapters, focusedPassageKey, readerTextMode)
@@ -294,69 +207,6 @@ export default function ChurchFathersReaderRoute() {
   const activeFilterCount = (matchCount === DEFAULT_MATCH_COUNT ? 0 : 1)
     + (showScriptureFilters ? selectedBooksForCanon.length : 0)
     + (showAuthorFilters ? selectedAuthorFilters.length : 0);
-  const findInitialChapterTarget = useCallback(() => {
-    if (!resolvedTargetChapterId) {
-      return null;
-    }
-
-    const chapterElement = document.querySelector<HTMLElement>(
-      `[data-chapter-id="${cssEscape(resolvedTargetChapterId)}"]`
-    );
-
-    if (!chapterElement || !selectedRangeForTargetChapter) {
-      return chapterElement;
-    }
-
-    return findPassageTargetInChapter(
-      chapterElement,
-      selectedRangeForTargetChapter
-    ) ?? chapterElement;
-  }, [resolvedTargetChapterId, selectedRangeForTargetChapter]);
-  const updateActiveChapterFromScroll = useCallback((chapterId: string) => {
-    rememberReaderChapter(chapterId);
-    setActiveChapterId(chapterId);
-  }, [rememberReaderChapter]);
-  const getRenderedChapterId = useCallback((element: HTMLElement) => (
-    element.dataset.chapterId
-  ), []);
-  const resetReaderWindow = useCallback(() => {
-    setSelectedPassage(targetPassageRange);
-    setSelectedPassageChapterId(targetPassageRange && resolvedTargetChapterId
-      ? resolvedTargetChapterId
-      : "");
-  }, [resolvedTargetChapterId, targetPassageRange]);
-  const { renderedRange, setRenderedRange } = useAnchoredReaderWindow({
-    activeKey: resolvedActiveChapterId,
-    chapterSelector: ".ec-reader-chapter",
-    edgePx: DEFAULT_READER_SCROLL_WINDOW.edgePx,
-    expandCount: DEFAULT_READER_SCROLL_WINDOW.expandCount,
-    findInitialTarget: findInitialChapterTarget,
-    getChapterKey: getRenderedChapterId,
-    headerOffset: readerHeaderOffset,
-    initialActiveKey: resolvedTargetChapterId,
-    initialRange: initialWindowRange,
-    initialScrollMaxFrames: INITIAL_SCROLL_MAX_FRAMES,
-    initialScrollReady: isReady && isTargetWindowReady,
-    itemCount: chapters.length,
-    minStartIndex: activeBookStartIndex,
-    minReadingAnchorOffset: DEFAULT_READER_SCROLL_WINDOW.minReadingAnchorOffset,
-    onActiveKeyChange: updateActiveChapterFromScroll,
-    onReset: resetReaderWindow,
-    passageSelector: ".ec-reader-chapter .reader-passage",
-    readingAnchorRatio: DEFAULT_READER_SCROLL_WINDOW.readingAnchorRatio,
-    resetKey: readerWindowResetKey,
-    trackingReady: isReady,
-    windowReady: isReady
-  });
-  const renderedEntries = useMemo(
-    () => renderedRange.endIndex >= renderedRange.startIndex
-      ? chapters.slice(
-        Math.max(0, renderedRange.startIndex),
-        renderedRange.endIndex + 1
-      )
-      : [],
-    [chapters, renderedRange.endIndex, renderedRange.startIndex]
-  );
   useRenderedChapterAssetLoader({
     activeChapterIndex,
     bookIndex,
@@ -406,27 +256,6 @@ export default function ChurchFathersReaderRoute() {
     setSelectedScriptureBooks([]);
     setSelectedAuthors([]);
   }, []);
-
-  const openChapter = useCallback((chapterId: string, passageRange = "") => {
-    const chapterEntry = chapterById.get(chapterId);
-
-    if (!chapterEntry) {
-      return false;
-    }
-
-    setRenderedRange(getChapterWindowRange(chapterEntry.index, chapters, {
-      after: CHAPTER_WINDOW_AFTER,
-      before: CHAPTER_WINDOW_BEFORE
-    }));
-    setActiveChapterId(chapterId);
-    setTargetChapterId(chapterId);
-    setTargetPassageRange(passageRange);
-    setSelectedPassage(passageRange);
-    setSelectedPassageChapterId(passageRange ? chapterId : "");
-    rememberReaderChapter(chapterId, passageRange);
-    updateUrl(chapterId, passageRange);
-    return true;
-  }, [chapterById, chapters, rememberReaderChapter]);
 
   const {
     activeAudio,
@@ -532,65 +361,6 @@ export default function ChurchFathersReaderRoute() {
       window.cancelAnimationFrame(frameId);
     };
   }, [activeHeaderTitle, isToolsOpen]);
-
-  useBrowserLayoutEffect(() => {
-    if (!bookIndex) {
-      return;
-    }
-
-    if (resolvedActiveChapterId && chapterById.has(resolvedActiveChapterId)) {
-      if (activeChapterId !== resolvedActiveChapterId) {
-        setActiveChapterId(resolvedActiveChapterId);
-        setTargetChapterId(resolvedActiveChapterId);
-        setTargetPassageRange("");
-        setSelectedPassage("");
-        setSelectedPassageChapterId("");
-        rememberReaderChapter(resolvedActiveChapterId);
-      }
-
-      return;
-    }
-  }, [
-    activeChapterId,
-    bookIndex,
-    chapterById,
-    chapters.length,
-    rememberReaderChapter,
-    resolvedActiveChapterId
-  ]);
-
-  useBrowserLayoutEffect(() => {
-    if (!bookIndex || !initialChapterId || !chapterById.has(initialChapterId)) {
-      return;
-    }
-
-    const initialTargetKey = `${initialChapterId}|${initialPassageRange}`;
-
-    if (lastAppliedInitialTargetRef.current === initialTargetKey) {
-      return;
-    }
-
-    const targetEntry = chapterById.get(initialChapterId);
-
-    if (!targetEntry) {
-      return;
-    }
-
-    lastAppliedInitialTargetRef.current = initialTargetKey;
-    setActiveChapterId(initialChapterId);
-    setTargetChapterId(initialChapterId);
-    setTargetPassageRange(initialPassageRange);
-    setSelectedPassage(initialPassageRange);
-    setSelectedPassageChapterId(initialPassageRange ? initialChapterId : "");
-    rememberReaderChapter(initialChapterId, initialPassageRange);
-  }, [
-    bookIndex,
-    chapterById,
-    chapters.length,
-    initialChapterId,
-    initialPassageRange,
-    rememberReaderChapter
-  ]);
 
   useEscapeDismiss({
     isOpen: isSearchOpen,
@@ -735,9 +505,7 @@ export default function ChurchFathersReaderRoute() {
           selectedPassage={selectedPassage}
           selectedPassageChapterId={selectedPassageChapterId}
           setChapterLoadErrors={setChapterLoadErrors}
-          setSelectedPassage={setSelectedPassage}
-          setSelectedPassageChapterId={setSelectedPassageChapterId}
-          updateUrl={updateUrl}
+          onSelectPassage={selectPassage}
         />
         {activeChapterHasModernizedText ? (
           <div className="reader-text-toggle" aria-label="Text version">
@@ -818,26 +586,4 @@ function rangeFromResult(result: EarlyChristianSearchResult) {
   }
 
   return end && end !== start ? `${start}-${end}` : String(start);
-}
-
-function updateUrl(chapterId: string, passageRange = "") {
-  const params = new URLSearchParams();
-
-  if (chapterId) {
-    params.set("chapter", chapterId);
-  }
-
-  if (passageRange) {
-    params.set("passage", passageRange);
-  }
-
-  window.history.replaceState(null, "", `/church-fathers?${params.toString()}`);
-}
-
-function cssEscape(value: string) {
-  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
-    return CSS.escape(value);
-  }
-
-  return value.replace(/["\\]/g, "\\$&");
 }

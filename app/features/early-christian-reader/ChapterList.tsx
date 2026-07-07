@@ -25,9 +25,7 @@ export function ChapterList({
   selectedPassage,
   selectedPassageChapterId,
   setChapterLoadErrors,
-  setSelectedPassage,
-  setSelectedPassageChapterId,
-  updateUrl
+  onSelectPassage
 }: {
   chapterLoadErrors: Map<string, string>;
   chapters: ChapterEntry[];
@@ -40,9 +38,7 @@ export function ChapterList({
   selectedPassage: string;
   selectedPassageChapterId: string;
   setChapterLoadErrors: Dispatch<SetStateAction<Map<string, string>>>;
-  setSelectedPassage: (range: string) => void;
-  setSelectedPassageChapterId: (chapterId: string) => void;
-  updateUrl: (chapterId: string, passageRange?: string) => void;
+  onSelectPassage: (chapterId: string, passageRange?: string) => void;
 }) {
   return (
     <div className="reader-passages">
@@ -122,9 +118,7 @@ export function ChapterList({
                         key={passage.key}
                         onToggle={() => {
                           const nextRange = isSelected ? "" : passage.rangeLabel;
-                          setSelectedPassage(nextRange);
-                          setSelectedPassageChapterId(nextRange ? chapter.id : "");
-                          updateUrl(chapter.id, nextRange);
+                          onSelectPassage(chapter.id, nextRange);
                         }}
                         reference={passage.rangeLabel}
                         text={(
