@@ -181,13 +181,14 @@ h1 {
   min-width: 0;
   min-height: 56px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 3px;
-  align-content: center;
+  align-items: stretch;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--ink);
   text-align: left;
-  padding: 8px 10px;
+  padding: 0;
 }
 
 .ec-work-option:hover,
@@ -195,6 +196,34 @@ h1 {
   border-color: var(--control-active-border);
   background: var(--control-active-bg);
   color: var(--ink);
+}
+
+.ec-work-select {
+  min-width: 0;
+  min-height: 54px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.ec-work-favorite {
+  width: 42px;
+  min-width: 42px;
+  min-height: 54px;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.ec-work-favorite.is-favorite {
+  color: var(--accent);
 }
 
 .ec-work-title,

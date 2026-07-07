@@ -40,9 +40,6 @@ import {
   resolveActiveChapterId,
   SEARCH_EXAMPLES
 } from "~/features/early-christian-reader/book-index";
-import {
-  normalizeEarlyChristianAudio
-} from "~/features/early-christian-reader/chapter-assets";
 import { ChapterList } from "~/features/early-christian-reader/ChapterList";
 import { ChapterJump } from "~/features/early-christian-reader/ChapterJump";
 import {
@@ -51,6 +48,7 @@ import {
 } from "~/features/early-christian-reader/route.server";
 import { EarlyChristianReaderHeader } from "~/features/early-christian-reader/ReaderHeader";
 import { SearchDialog } from "~/features/early-christian-reader/SearchDialog";
+import { useEarlyChristianAudioPlayback } from "~/features/early-christian-reader/useEarlyChristianAudioPlayback";
 import {
   useEarlyChristianBookIndex,
   useEarlyChristianChapterAssets,
@@ -95,14 +93,6 @@ const CHAPTER_WINDOW_AFTER = DEFAULT_READER_SCROLL_WINDOW.initialAfter;
 const INITIAL_SCROLL_MAX_FRAMES = DEFAULT_READER_SCROLL_WINDOW.initialScrollMaxFrames;
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
-
-type ChapterAudioPlayback = {
-  audio: NonNullable<ReturnType<typeof normalizeEarlyChristianAudio>>;
-  key: string;
-  preferContinuous?: boolean;
-};
-
-type ChapterAudioPlaybackResult = "continued" | "loaded" | null;
 
 export const meta: MetaFunction = () => [
   { title: "Early Christian Reader | Cross Canon" },
@@ -177,14 +167,10 @@ export default function ChurchFathersReaderRoute() {
     actionData?.authors ?? []
   ));
   const [exampleIndex, setExampleIndex] = useState(0);
-  const [playingAudioKey, setPlayingAudioKey] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const headerTitleRef = useRef<HTMLDivElement | null>(null);
   const isToolsOpenRef = useRef(isToolsOpen);
   const lastAppliedInitialTargetRef = useRef("");
   const lastReportedChapterIdRef = useRef(savedReaderPositionRef.current);
-  const playingAudioEndSecondsRef = useRef<number | null>(null);
-  const suppressNextAudioPauseRef = useRef(false);
   const readerTitleRef = useRef<HTMLHeadingElement | null>(null);
 
   const scriptureLibrary = useScriptureLibrary({
@@ -274,21 +260,11 @@ export default function ChurchFathersReaderRoute() {
   const focusedPassage = focusedPassageKey
     ? findLoadedPassage(loadedChapters, focusedPassageKey, readerTextMode)
     : null;
-  const activeAudio = activeEntry
-    ? normalizeEarlyChristianAudio(activeEntry.chapter.audio)
-    : null;
-  const activeAudioUrl = activeAudio?.url ?? null;
-  const activeAudioKey = activeAudio
-    ? `${activeAudio.url}#${activeAudio.startSeconds ?? 0}`
-    : null;
   const activeChapterHasModernizedText = Boolean(
     resolvedActiveChapterId
     && loadedChapters.get(resolvedActiveChapterId)?.verses.some((verse) => (
       Boolean(verse.modernizedText?.trim())
     ))
-  );
-  const isActiveChapterPlaying = Boolean(
-    activeAudioKey && playingAudioKey === activeAudioKey
   );
   const isSearching = navigation.state === "submitting";
   const isFindingSimilarFathers = isSearching
@@ -452,108 +428,22 @@ export default function ChurchFathersReaderRoute() {
     return true;
   }, [chapterById, chapters, rememberReaderChapter]);
 
-  const playChapterAudio = useCallback(({
-    audio: chapterAudio,
-    key,
-    preferContinuous = false
-  }: ChapterAudioPlayback): ChapterAudioPlaybackResult => {
-    const audio = audioRef.current;
-
-    if (!audio) {
-      return null;
-    }
-
-    const nextAudioUrl = new URL(chapterAudio.url, window.location.href).href;
-    const canContinueCurrentSource = preferContinuous && audio.currentSrc === nextAudioUrl;
-    playingAudioEndSecondsRef.current = chapterAudio.endSeconds ?? null;
-
-    if (canContinueCurrentSource) {
-      setPlayingAudioKey(key);
-
-      if (audio.paused) {
-        try {
-          audio.currentTime = Math.max(0, chapterAudio.startSeconds ?? 0);
-        } catch {
-          // Some browsers reject seeking until enough metadata is available.
-        }
-
-        void audio.play()
-          .then(() => setPlayingAudioKey(key))
-          .catch(() => {
-            playingAudioEndSecondsRef.current = null;
-            setPlayingAudioKey(null);
-          });
-      }
-
-      return "continued";
-    }
-
-    audio.src = chapterAudio.url;
-    audio.load();
-
-    const playFromOffset = () => {
-      try {
-        audio.currentTime = Math.max(0, chapterAudio.startSeconds ?? 0);
-      } catch {
-        // Some browsers reject seeking until enough metadata is available.
-      }
-
-      void audio.play()
-        .then(() => setPlayingAudioKey(key))
-        .catch(() => {
-          playingAudioEndSecondsRef.current = null;
-          setPlayingAudioKey(null);
-        });
-    };
-
-    if (audio.readyState >= 1) {
-      playFromOffset();
-    } else {
-      audio.addEventListener("loadedmetadata", playFromOffset, { once: true });
-    }
-
-    return "loaded";
-  }, []);
-
-  const playNextChapterAudio = useCallback(() => {
-    if (typeof activeChapterIndex !== "number") {
-      return null;
-    }
-
-    const nextEntry = chapters[activeChapterIndex + 1];
-    const nextAudio = normalizeEarlyChristianAudio(nextEntry?.chapter.audio);
-
-    if (!nextEntry || !nextAudio) {
-      return null;
-    }
-
-    openChapter(nextEntry.chapter.id);
-    return playChapterAudio({
-      audio: nextAudio,
-      key: `${nextAudio.url}#${nextAudio.startSeconds ?? 0}`,
-      preferContinuous: true
-    });
-  }, [activeChapterIndex, chapters, openChapter, playChapterAudio]);
-
-  const toggleActiveChapterAudio = useCallback(() => {
-    const audio = audioRef.current;
-
-    if (!audio || !activeAudio || !activeAudioKey) {
-      return;
-    }
-
-    if (isActiveChapterPlaying) {
-      audio.pause();
-      playingAudioEndSecondsRef.current = null;
-      setPlayingAudioKey(null);
-      return;
-    }
-
-    playChapterAudio({
-      audio: activeAudio,
-      key: activeAudioKey
-    });
-  }, [activeAudio, activeAudioKey, isActiveChapterPlaying, playChapterAudio]);
+  const {
+    activeAudio,
+    activeAudioUrl,
+    audioRef,
+    handleAudioEnded,
+    handleAudioPause,
+    handleAudioTimeUpdate,
+    isActiveChapterPlaying,
+    toggleActiveChapterAudio
+  } = useEarlyChristianAudioPlayback({
+    activeChapterIndex,
+    activeEntry,
+    chapters,
+    onOpenChapter: openChapter,
+    resolvedActiveChapterId
+  });
 
   useEffect(() => {
     if (actionData?.authors) {
@@ -811,44 +701,9 @@ export default function ChurchFathersReaderRoute() {
           headerTitleRef={headerTitleRef}
           isActiveChapterPlaying={isActiveChapterPlaying}
           isToolsOpen={isToolsOpen}
-          onAudioEnded={() => {
-            const playbackResult = playNextChapterAudio();
-
-            if (playbackResult) {
-              suppressNextAudioPauseRef.current = playbackResult === "loaded";
-              return;
-            }
-
-            playingAudioEndSecondsRef.current = null;
-            setPlayingAudioKey(null);
-          }}
-          onAudioPause={() => {
-            if (suppressNextAudioPauseRef.current) {
-              suppressNextAudioPauseRef.current = false;
-              return;
-            }
-
-            playingAudioEndSecondsRef.current = null;
-            setPlayingAudioKey(null);
-          }}
-          onAudioTimeUpdate={(event) => {
-            const endSeconds = playingAudioEndSecondsRef.current;
-
-            if (!endSeconds || event.currentTarget.currentTime < endSeconds) {
-              return;
-            }
-
-            const playbackResult = playNextChapterAudio();
-
-            if (playbackResult) {
-              suppressNextAudioPauseRef.current = playbackResult === "loaded";
-              return;
-            }
-
-            event.currentTarget.pause();
-            playingAudioEndSecondsRef.current = null;
-            setPlayingAudioKey(null);
-          }}
+          onAudioEnded={handleAudioEnded}
+          onAudioPause={handleAudioPause}
+          onAudioTimeUpdate={handleAudioTimeUpdate}
           onCloseTools={() => {
             setIsToolsOpen(false);
             setIsJumpOpen(false);

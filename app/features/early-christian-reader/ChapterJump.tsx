@@ -9,7 +9,8 @@ import {
   getBookAuthorLabel,
   getBookSearchText
 } from "./book-index";
-import type { ChapterEntry } from "./types";
+import { useFavoriteEarlyChristianBooks } from "./favorite-books";
+import type { BookSummary, ChapterEntry } from "./types";
 
 export function ChapterJump({
   activeChapterId,
@@ -25,28 +26,55 @@ export function ChapterJump({
   const activeEntry = chapters.find((entry) => entry.chapter.id === activeChapterId)
     ?? chapters[0];
   const books = useMemo(() => dedupeBooks(chapters), [chapters]);
+  const bookIds = useMemo(() => books.map((book) => book.id), [books]);
+  const {
+    favoriteBookIds,
+    isFavoriteBook,
+    toggleFavoriteBook
+  } = useFavoriteEarlyChristianBooks(bookIds);
   const [selectedBookId, setSelectedBookId] = useState(activeEntry?.book.id ?? "");
+  const [selectedAuthor, setSelectedAuthor] = useState("");
   const [workQuery, setWorkQuery] = useState("");
   const selectedBook = books.find((book) => book.id === selectedBookId)
     ?? activeEntry?.book;
   const bookChapters = selectedBook
     ? chapters.filter((entry) => entry.book.id === selectedBook.id)
     : [];
+  const authorOptions = useMemo(() => (
+    Array.from(new Set(books.map((book) => getBookAuthorLabel(book))))
+      .sort((left, right) => left.localeCompare(right))
+  ), [books]);
   const visibleBooks = useMemo(() => {
     const trimmedQuery = workQuery.trim();
+    const authorMatches = (book: typeof books[number]) => (
+      !selectedAuthor || getBookAuthorLabel(book) === selectedAuthor
+    );
 
     if (trimmedQuery.length > 0) {
       return books
-        .filter((book) => keywordMatches(trimmedQuery, getBookSearchText(book)))
+        .filter((book) => authorMatches(book) && keywordMatches(trimmedQuery, getBookSearchText(book)))
         .slice(0, 24);
     }
 
-    const selectedBooks = selectedBook ? [selectedBook] : [];
-    const selectedBookIds = new Set(selectedBooks.map((book) => book.id));
-    const unselectedMatches = books.filter((book) => !selectedBookIds.has(book.id));
+    const favoriteBooks = favoriteBookIds
+      .map((bookId) => books.find((book) => book.id === bookId))
+      .filter((book): book is BookSummary => {
+        if (!book) {
+          return false;
+        }
 
-    return [...selectedBooks, ...unselectedMatches].slice(0, 12);
-  }, [books, selectedBook, workQuery]);
+        return authorMatches(book);
+      });
+    const selectedBooks = selectedBook && authorMatches(selectedBook) ? [selectedBook] : [];
+    const promotedBookIds = new Set(
+      [...favoriteBooks, ...selectedBooks].map((book) => book.id)
+    );
+    const unselectedMatches = books.filter((book) => (
+      authorMatches(book) && !promotedBookIds.has(book.id)
+    ));
+
+    return [...favoriteBooks, ...selectedBooks, ...unselectedMatches].slice(0, 12);
+  }, [books, favoriteBookIds, selectedAuthor, selectedBook, workQuery]);
 
   return (
     <div
@@ -89,21 +117,52 @@ export function ChapterJump({
               value={workQuery}
             />
           </label>
+          <label className="passage-jump-book">
+            <span>Author</span>
+            <select
+              className="passage-jump-search"
+              onChange={(event) => setSelectedAuthor(event.currentTarget.value)}
+              value={selectedAuthor}
+            >
+              <option value="">All authors</option>
+              {authorOptions.map((author) => (
+                <option key={author} value={author}>
+                  {author}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="ec-work-options" aria-label="Works">
             {visibleBooks.length > 0 ? visibleBooks.map((book) => (
-              <button
+              <div
                 className={[
                   "ec-work-option",
                   book.id === selectedBook?.id ? "is-selected" : ""
                 ].filter(Boolean).join(" ")}
                 key={book.id}
-                onClick={() => setSelectedBookId(book.id)}
                 title={formatBookOptionLabel(book)}
-                type="button"
               >
-                <span className="ec-work-title">{book.name}</span>
-                <span className="ec-work-meta">{getBookAuthorLabel(book)}</span>
-              </button>
+                <button
+                  className="ec-work-select"
+                  onClick={() => setSelectedBookId(book.id)}
+                  type="button"
+                >
+                  <span className="ec-work-title">{book.name}</span>
+                  <span className="ec-work-meta">{getBookAuthorLabel(book)}</span>
+                </button>
+                <button
+                  aria-label={`${isFavoriteBook(book.id) ? "Remove" : "Add"} ${book.name} ${isFavoriteBook(book.id) ? "from" : "to"} favorites`}
+                  className={[
+                    "ec-work-favorite",
+                    isFavoriteBook(book.id) ? "is-favorite" : ""
+                  ].filter(Boolean).join(" ")}
+                  onClick={() => toggleFavoriteBook(book.id)}
+                  title={isFavoriteBook(book.id) ? "Remove favorite" : "Favorite work"}
+                  type="button"
+                >
+                  {isFavoriteBook(book.id) ? "★" : "☆"}
+                </button>
+              </div>
             )) : (
               <p className="passage-jump-empty">No matches</p>
             )}

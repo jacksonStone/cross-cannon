@@ -8,14 +8,8 @@ import {
   isSelectedReaderPassage,
   renderReaderPassageText
 } from "~/features/early-christian-reader/reader-passages";
-import { ReaderBookHeader } from "~/features/passage-reader/BookHeader";
 import { ReaderPassageArticle } from "~/features/reader-ui/ReaderControls";
 
-import {
-  getBookAuthorLabel,
-  getEarlyChristianBookDescription,
-  getEarlyChristianBookHeaderDetails
-} from "./book-index";
 import { EarlyChristianAuthorInputs } from "./SearchFields";
 import type { ChapterAsset, ChapterEntry } from "./types";
 
@@ -68,14 +62,6 @@ export function ChapterList({
             data-chapter-id={entry.chapter.id}
             key={entry.chapter.id}
           >
-            {isBookBoundary ? (
-              <ReaderBookHeader
-                description={getEarlyChristianBookDescription(entry.book)}
-                details={getEarlyChristianBookHeaderDetails(entry.book)}
-                subtitle={getBookAuthorLabel(entry.book)}
-                title={entry.book.name}
-              />
-            ) : null}
             <h2
               className="reader-chapter-heading"
               style={chapterHeadingScaleStyle(`${entry.book.name} ${entry.chapter.chapter}`)}
