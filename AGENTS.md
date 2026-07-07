@@ -89,3 +89,21 @@ task.
   after deploys.
 - Read this file, `README.md`, and `docs/architecture.md` before broad repo
   exploration.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs are tracked as local markdown under `.scratch/<feature-slug>/`;
+external PRs are not a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the default local status strings: `needs-triage`, `needs-info`,
+`ready-for-agent`, `ready-for-human`, and `wontfix`. See
+`docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: root `CONTEXT.md` plus `docs/adr/`, created lazily when
+domain terms or decisions are resolved. See `docs/agents/domain.md`.
