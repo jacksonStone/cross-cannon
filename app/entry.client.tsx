@@ -7,7 +7,16 @@ if ("scrollRestoration" in window.history) {
 }
 
 if ("serviceWorker" in navigator) {
-  void navigator.serviceWorker.register("/cross-canon-sw.js").catch(() => undefined);
+  const releaseAsset = [
+    ...document.querySelectorAll<HTMLLinkElement>("link[rel='modulepreload']"),
+  ].find((link) => link.href.includes("/assets/manifest-"));
+  const releaseId = releaseAsset
+    ? new URL(releaseAsset.href).pathname.split("/").at(-1) ?? "current"
+    : "current";
+
+  void navigator.serviceWorker
+    .register(`/cross-canon-sw.js?release=${encodeURIComponent(releaseId)}`)
+    .catch(() => undefined);
 }
 
 startTransition(() => {

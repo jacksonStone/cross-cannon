@@ -5,34 +5,45 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState
+  useState,
 } from "react";
 
 type OfflineContextValue = {
+  hasCheckedReachability: boolean;
   isOffline: boolean;
 };
 
-const OfflineContext = createContext<OfflineContextValue>({ isOffline: false });
+const OfflineContext = createContext<OfflineContextValue>({
+  hasCheckedReachability: false,
+  isOffline: false,
+});
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
   // Keep the server and the browser's first render identical. Reachability is
   // established immediately after hydration, including on an offline startup.
   const [isOffline, setIsOffline] = useState(false);
-  const value = useMemo(() => ({ isOffline }), [isOffline]);
+  const [hasCheckedReachability, setHasCheckedReachability] = useState(false);
+  const value = useMemo(
+    () => ({ hasCheckedReachability, isOffline }),
+    [hasCheckedReachability, isOffline]
+  );
   const checkReachability = useCallback(async () => {
     if (!navigator.onLine) {
       setIsOffline(true);
+      setHasCheckedReachability(true);
       return;
     }
 
     try {
       const response = await fetch("/?offline-health=1", {
         cache: "no-store",
-        method: "HEAD"
+        method: "HEAD",
       });
       setIsOffline(!response.ok);
     } catch {
       setIsOffline(true);
+    } finally {
+      setHasCheckedReachability(true);
     }
   }, []);
 
@@ -63,13 +74,19 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
 
     window.addEventListener("online", markOnline);
     window.addEventListener("offline", markOffline);
-    navigator.serviceWorker?.addEventListener("message", onServiceWorkerMessage);
+    navigator.serviceWorker?.addEventListener(
+      "message",
+      onServiceWorkerMessage
+    );
     void checkReachability();
 
     return () => {
       window.removeEventListener("online", markOnline);
       window.removeEventListener("offline", markOffline);
-      navigator.serviceWorker?.removeEventListener("message", onServiceWorkerMessage);
+      navigator.serviceWorker?.removeEventListener(
+        "message",
+        onServiceWorkerMessage
+      );
     };
   }, [checkReachability]);
 
@@ -96,7 +113,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   return (
     <OfflineContext.Provider value={value}>
       {children}
-      {isOffline ? <div className="offline-indicator" role="status">Offline</div> : null}
+      {isOffline ? (
+        <div className="offline-indicator" role="status">
+          Offline
+        </div>
+      ) : null}
     </OfflineContext.Provider>
   );
 }

@@ -5,36 +5,34 @@ import {
   useMemo,
   useReducer,
   useRef,
-  useState
+  useState,
 } from "react";
 
 import type { MetaFunction } from "@remix-run/node";
-import { Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
 
 import {
   type EarlyChristianReaderTextMode as ReaderTextMode,
-  findLoadedPassage
+  findLoadedPassage,
 } from "~/features/early-christian-reader/reader-passages";
 import {
   ReaderCorpusSwitch,
-  rememberReaderCorpus
+  rememberReaderCorpus,
 } from "~/features/reader-switch/ReaderCorpusSwitch";
 import {
   EARLY_CHRISTIAN_MANIFEST_URL,
   EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION,
-  EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY
+  EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY,
 } from "~/features/early-christian-preview/preview-cache";
-import { useOfflineStatus } from "~/features/offline/OfflineProvider";
-import { useEarlyChristianWorkDownloads } from "~/features/offline/early-christian-work-downloads";
+import { EarlyChristianOfflineState } from "~/features/offline/EarlyChristianOfflineState";
+import { useEarlyChristianOfflineReader } from "~/features/offline/useEarlyChristianOfflineReader";
 import { useOfflineSubmitGuard } from "~/features/offline/useOfflineSubmitGuard";
-import {
-  SEARCH_EXAMPLES
-} from "~/features/early-christian-reader/book-index";
+import { SEARCH_EXAMPLES } from "~/features/early-christian-reader/book-index";
 import { ChapterList } from "~/features/early-christian-reader/ChapterList";
 import { ChapterJump } from "~/features/early-christian-reader/ChapterJump";
 import {
   churchFathersAction,
-  churchFathersLoader
+  churchFathersLoader,
 } from "~/features/early-christian-reader/route.server";
 import { EarlyChristianReaderHeader } from "~/features/early-christian-reader/ReaderHeader";
 import { SearchDialog } from "~/features/early-christian-reader/SearchDialog";
@@ -42,29 +40,21 @@ import { useEarlyChristianAudioPlayback } from "~/features/early-christian-reade
 import {
   useEarlyChristianBookIndex,
   useEarlyChristianChapterAssets,
-  useRenderedChapterAssetLoader
+  useRenderedChapterAssetLoader,
 } from "~/features/early-christian-reader/useEarlyChristianReaderAssets";
-import {
-  useEarlyChristianReaderNavigation
-} from "~/features/early-christian-reader/useEarlyChristianReaderNavigation";
+import { useEarlyChristianReaderNavigation } from "~/features/early-christian-reader/useEarlyChristianReaderNavigation";
 import { BOOKS_BY_CANON } from "~/features/search/canons";
-import {
-  readerSettingsStyle
-} from "~/features/reader-settings/reader-settings";
+import { readerSettingsStyle } from "~/features/reader-settings/reader-settings";
 import { fitSingleLineText } from "~/features/reader-ui/fit-single-line-text";
 import { useStoredReaderSettings } from "~/features/reader-ui/ReaderControls";
 import {
   initialSearchModalFlowState,
-  searchModalFlowReducer
+  searchModalFlowReducer,
 } from "~/features/search/search-modal-flow";
 import { useSearchDialogState } from "~/features/search/useSearchDialogState";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
-import {
-  type EarlyChristianSearchResult,
-} from "~/lib/early-christian-search.server";
-import {
-  useEscapeDismiss
-} from "~/lib/use-dialog-dismiss";
+import { type EarlyChristianSearchResult } from "~/lib/early-christian-search.server";
+import { useEscapeDismiss } from "~/lib/use-dialog-dismiss";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 const MANIFEST_URL = EARLY_CHRISTIAN_MANIFEST_URL;
@@ -78,8 +68,8 @@ export const meta: MetaFunction = () => [
   { title: "Early Christian Reader | Cross Canon" },
   {
     name: "description",
-    content: "Read and search early Christian works in chapter context."
-  }
+    content: "Read and search early Christian works in chapter context.",
+  },
 ];
 
 export const loader = churchFathersLoader;
@@ -93,17 +83,14 @@ export default function ChurchFathersReaderRoute() {
     manifestUrl,
     previewAssetVersion,
     scriptureCacheKey,
-    scriptureCacheUrl
+    scriptureCacheUrl,
   } = useLoaderData<typeof loader>();
-  const [readerLinkChapterId, setReaderLinkChapterId] = useState(initialChapterId);
-  const [readerLinkPassageRange, setReaderLinkPassageRange] = useState(initialPassageRange);
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const { bookIndex, loadError } = useEarlyChristianBookIndex({
     manifestUrl,
-    previewAssetVersion
+    previewAssetVersion,
   });
-  const { isOffline } = useOfflineStatus();
   const {
     availableOfflineWorkId,
     cancelDownload,
@@ -111,27 +98,22 @@ export default function ChurchFathersReaderRoute() {
     downloadWork,
     downloadedWorkIds,
     hasValidatedRecords,
-    removeWork
-  } = useEarlyChristianWorkDownloads({
-    bookIndex,
     isOffline,
-    previewAssetVersion
+    readerBookIndex,
+    readerLinkChapterId,
+    readerLinkPassageRange,
+    removeWork,
+  } = useEarlyChristianOfflineReader({
+    bookIndex,
+    initialChapterId,
+    initialPassageRange,
+    previewAssetVersion,
   });
-  const readerBookIndex = useMemo(() => {
-    if (!bookIndex || !isOffline || !hasValidatedRecords) {
-      return bookIndex;
-    }
-
-    return {
-      ...bookIndex,
-      books: bookIndex.books.filter((book) => downloadedWorkIds.has(book.id))
-    };
-  }, [bookIndex, downloadedWorkIds, hasValidatedRecords, isOffline]);
   const {
     chapterLoadErrors,
     loadedChapters,
     setChapterLoadErrors,
-    setLoadedChapters
+    setLoadedChapters,
   } = useEarlyChristianChapterAssets(previewAssetVersion);
   const [searchFlow, dispatchSearchFlow] = useReducer(
     searchModalFlowReducer,
@@ -142,14 +124,15 @@ export default function ChurchFathersReaderRoute() {
   const readerStyles = readerSettingsStyle(readerSettings);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isJumpOpen, setIsJumpOpen] = useState(false);
-  const [readerTextMode, setReaderTextMode] = useState<ReaderTextMode>("modernized");
+  const [readerTextMode, setReaderTextMode] =
+    useState<ReaderTextMode>("modernized");
   const [exampleIndex, setExampleIndex] = useState(0);
   const headerTitleRef = useRef<HTMLDivElement | null>(null);
   const isToolsOpenRef = useRef(isToolsOpen);
   const readerTitleRef = useRef<HTMLHeadingElement | null>(null);
 
   const scriptureLibrary = useScriptureLibrary({
-    scriptureCacheUrl
+    scriptureCacheUrl,
   });
   const {
     activeChapterIndex,
@@ -161,60 +144,66 @@ export default function ChurchFathersReaderRoute() {
     resolvedActiveChapterId,
     selectPassage,
     selectedPassage,
-    selectedPassageChapterId
+    selectedPassageChapterId,
   } = useEarlyChristianReaderNavigation({
     bookIndex: readerBookIndex,
     initialChapterId: readerLinkChapterId,
     initialPassageRange: readerLinkPassageRange,
     loadedChapters,
-    positionStorageKey: READER_POSITION_STORAGE_KEY
+    positionStorageKey: READER_POSITION_STORAGE_KEY,
   });
   const focusedPassageKey = searchFlow.focusedId;
   const isSearchOpen = searchFlow.isOpen;
-  const openSearch = useCallback(() => dispatchSearchFlow({ type: "open" }), []);
+  const openSearch = useCallback(
+    () => dispatchSearchFlow({ type: "open" }),
+    []
+  );
   const setFocusedPassageKey = useCallback((focusedId: string | null) => {
     dispatchSearchFlow({
       focusedId,
-      type: "set-focused"
+      type: "set-focused",
     });
   }, []);
   const focusedPassage = focusedPassageKey
     ? findLoadedPassage(loadedChapters, focusedPassageKey, readerTextMode)
     : null;
   const activeChapterHasModernizedText = Boolean(
-    resolvedActiveChapterId
-    && loadedChapters.get(resolvedActiveChapterId)?.verses.some((verse) => (
-      Boolean(verse.modernizedText?.trim())
-    ))
+    resolvedActiveChapterId &&
+      loadedChapters
+        .get(resolvedActiveChapterId)
+        ?.verses.some((verse) => Boolean(verse.modernizedText?.trim()))
   );
   const isSearching = navigation.state === "submitting";
-  const isFindingSimilarFathers = isSearching
-    && navigation.formData?.get("intent") === "similar-passage";
+  const isFindingSimilarFathers =
+    isSearching && navigation.formData?.get("intent") === "similar-passage";
   const activeHeaderTitle = activeEntry
     ? `${activeEntry.book.name} ${activeEntry.chapter.chapter}`
     : "";
-  const filterActionData = useMemo(() => ({
-    books: actionData?.books,
-    canon: actionData?.canon,
-    earlyChristianAuthors: actionData?.authors,
-    matchCount: actionData?.matchCount,
-    mode: actionData?.mode,
-    targetCorpus: actionData?.targetCorpus
-  }), [
-    actionData?.authors,
-    actionData?.books,
-    actionData?.canon,
-    actionData?.matchCount,
-    actionData?.mode,
-    actionData?.targetCorpus
-  ]);
+  const filterActionData = useMemo(
+    () => ({
+      books: actionData?.books,
+      canon: actionData?.canon,
+      earlyChristianAuthors: actionData?.authors,
+      matchCount: actionData?.matchCount,
+      mode: actionData?.mode,
+      targetCorpus: actionData?.targetCorpus,
+    }),
+    [
+      actionData?.authors,
+      actionData?.books,
+      actionData?.canon,
+      actionData?.matchCount,
+      actionData?.mode,
+      actionData?.targetCorpus,
+    ]
+  );
   const searchDialog = useSearchDialogState({
     actionData: filterActionData,
     books: SCRIPTURE_BOOKS,
     earlyChristianAuthors: authorOptions,
     focusedPassageId: focusedPassageKey,
     persistFilters: false,
-    readerCorpus: "early-christian"
+    readerCorpus: "early-christian",
   });
   const selectedAuthorFilters = searchDialog.selectedEarlyChristianAuthors;
   const closeSearchFilters = searchDialog.closeFilters;
@@ -229,19 +218,9 @@ export default function ChurchFathersReaderRoute() {
   const handleNetworkDependentSubmit = useOfflineSubmitGuard({
     isOffline,
     isSubmitting: navigation.state !== "idle",
-    onBlocked: closeNetworkInteractions
+    onBlocked: closeNetworkInteractions,
   });
   useModalScrollLock(isSearchOpen || isJumpOpen || searchDialog.isFilterOpen);
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const requestedChapterId = searchParams.get("chapter") ?? "";
-
-    setReaderLinkChapterId(requestedChapterId);
-    setReaderLinkPassageRange(
-      requestedChapterId ? searchParams.get("passage") ?? "" : ""
-    );
-  }, [initialChapterId, initialPassageRange]);
 
   useRenderedChapterAssetLoader({
     activeChapterIndex,
@@ -251,7 +230,7 @@ export default function ChurchFathersReaderRoute() {
     previewAssetVersion,
     renderedEntries,
     setChapterLoadErrors,
-    setLoadedChapters
+    setLoadedChapters,
   });
   const {
     activeAudio,
@@ -261,13 +240,13 @@ export default function ChurchFathersReaderRoute() {
     handleAudioPause,
     handleAudioTimeUpdate,
     isActiveChapterPlaying,
-    toggleActiveChapterAudio
+    toggleActiveChapterAudio,
   } = useEarlyChristianAudioPlayback({
     activeChapterIndex,
     activeEntry,
     chapters,
     onOpenChapter: openChapter,
-    resolvedActiveChapterId
+    resolvedActiveChapterId,
   });
 
   useEffect(() => {
@@ -301,7 +280,9 @@ export default function ChurchFathersReaderRoute() {
         return;
       }
 
-      const baseFontSize = Number.parseFloat(window.getComputedStyle(title).fontSize);
+      const baseFontSize = Number.parseFloat(
+        window.getComputedStyle(title).fontSize
+      );
 
       fitSingleLineText({
         availableWidth,
@@ -309,16 +290,17 @@ export default function ChurchFathersReaderRoute() {
         measureWidth: () => title.scrollWidth,
         setFontSize: (fontSize) => {
           title.style.fontSize = `${fontSize}px`;
-        }
+        },
       });
     };
     const scheduleFit = () => {
       window.cancelAnimationFrame(frameId);
       frameId = window.requestAnimationFrame(fitTitle);
     };
-    const resizeObserver = typeof ResizeObserver === "undefined"
-      ? null
-      : new ResizeObserver(scheduleFit);
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(scheduleFit);
 
     scheduleFit();
     resizeObserver?.observe(container);
@@ -335,7 +317,7 @@ export default function ChurchFathersReaderRoute() {
 
   useEscapeDismiss({
     isOpen: isSearchOpen,
-    onDismiss: closeSearch
+    onDismiss: closeSearch,
   });
 
   useEffect(() => {
@@ -348,12 +330,12 @@ export default function ChurchFathersReaderRoute() {
 
   useEffect(() => {
     if (
-      navigation.state === "submitting"
-      && navigation.formData?.get("intent") === "similar-passage"
+      navigation.state === "submitting" &&
+      navigation.formData?.get("intent") === "similar-passage"
     ) {
       dispatchSearchFlow({
         focusedId: String(navigation.formData.get("sourcePassageId") ?? ""),
-        type: "submitting-similar"
+        type: "submitting-similar",
       });
     }
   }, [navigation.formData, navigation.state]);
@@ -362,15 +344,18 @@ export default function ChurchFathersReaderRoute() {
     if (actionData?.mode === "similar" && actionData.similarSource) {
       dispatchSearchFlow({
         focusedId: actionData.similarSource.id,
-        type: "similar-results"
+        type: "similar-results",
       });
       return;
     }
 
-    if (actionData?.mode === "similar-scripture" && actionData.similarScriptureSource) {
+    if (
+      actionData?.mode === "similar-scripture" &&
+      actionData.similarScriptureSource
+    ) {
       dispatchSearchFlow({
         focusedId: actionData.similarScriptureSource.id,
-        type: "similar-results"
+        type: "similar-results",
       });
       return;
     }
@@ -381,16 +366,19 @@ export default function ChurchFathersReaderRoute() {
   }, [
     actionData?.mode,
     actionData?.similarScriptureSource?.id,
-    actionData?.similarSource?.id
+    actionData?.similarSource?.id,
   ]);
 
-  const openResult = useCallback((result: EarlyChristianSearchResult) => {
-    const passageRange = rangeFromResult(result);
+  const openResult = useCallback(
+    (result: EarlyChristianSearchResult) => {
+      const passageRange = rangeFromResult(result);
 
-    if (openChapter(result.chapterId, passageRange)) {
-      closeSearch();
-    }
-  }, [closeSearch, openChapter]);
+      if (openChapter(result.chapterId, passageRange)) {
+        closeSearch();
+      }
+    },
+    [closeSearch, openChapter]
+  );
 
   if (loadError) {
     return (
@@ -403,33 +391,28 @@ export default function ChurchFathersReaderRoute() {
     );
   }
 
-  if (isOffline && hasValidatedRecords && readerBookIndex && readerBookIndex.books.length === 0) {
+  if (
+    isOffline &&
+    hasValidatedRecords &&
+    readerBookIndex &&
+    readerBookIndex.books.length === 0
+  ) {
     return (
-      <main className={`reader-shell reader-theme-${readerTheme}`}>
-        <section className="reader-empty" role="status">
-          <p>No Early Christian works are available offline.</p>
-          <ReaderCorpusSwitch current="fathers" />
-        </section>
-      </main>
+      <EarlyChristianOfflineState kind="empty" readerTheme={readerTheme} />
     );
   }
 
   if (
-    isOffline
-    && readerLinkChapterId
-    && hasValidatedRecords
-    && !chapters.some((entry) => entry.chapter.id === readerLinkChapterId)
+    isOffline &&
+    readerLinkChapterId &&
+    hasValidatedRecords &&
+    !chapters.some((entry) => entry.chapter.id === readerLinkChapterId)
   ) {
     return (
-      <main className={`reader-shell reader-theme-${readerTheme}`}>
-        <section className="reader-empty" role="status">
-          <p>This work isn’t available offline.</p>
-          <Link className="context-button" reloadDocument to="/church-fathers">
-            Open downloaded works
-          </Link>
-          <ReaderCorpusSwitch current="fathers" />
-        </section>
-      </main>
+      <EarlyChristianOfflineState
+        kind="unavailable"
+        readerTheme={readerTheme}
+      />
     );
   }
 
@@ -496,7 +479,11 @@ export default function ChurchFathersReaderRoute() {
           }}
           onOpenTools={() => setIsToolsOpen(true)}
           onRemoveDownload={() => {
-            if (!window.confirm(`Remove ${activeEntry.book.name} from offline reading?`)) {
+            if (
+              !window.confirm(
+                `Remove ${activeEntry.book.name} from offline reading?`
+              )
+            ) {
               return;
             }
 
@@ -534,7 +521,11 @@ export default function ChurchFathersReaderRoute() {
                 className={readerTextMode === mode ? "is-active" : ""}
                 key={mode}
                 onClick={() => setReaderTextMode(mode)}
-                title={mode === "modernized" ? "Show modernized text" : "Show original translation"}
+                title={
+                  mode === "modernized"
+                    ? "Show modernized text"
+                    : "Show original translation"
+                }
                 type="button"
               >
                 {mode === "modernized" ? "Mod" : "Orig"}

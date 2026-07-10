@@ -131,10 +131,11 @@ smoke-checks a search POST, and then stops the server process. Use
 
 `npm run verify:offline` builds the production app, starts it on an isolated
 local port, and runs the Puppeteer offline-reader journey. The journey exercises
-service-worker startup, whole-Work download progress/locking/cancellation,
-quota recovery, failed-origin behavior, direct Reader Links, downloaded-only
-navigation, removal, and mobile/desktop offline UI without requiring a
-separately running server.
+atomic service-worker updates, whole-Work download progress and cancellation,
+interrupted-update resume, manual priority over background refreshes, quota
+recovery, missing-Chapter eviction and repair, failed-origin behavior, direct
+Reader Links, downloaded-only navigation, removal, and mobile/desktop offline
+UI without requiring a separately running server.
 
 `npm run verify-prod` smoke-checks production without building or starting
 anything locally. It checks the remote `cross-cannon` systemd service over SSH,

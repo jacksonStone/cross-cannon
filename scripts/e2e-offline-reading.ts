@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import { setTimeout as wait } from "node:timers/promises";
 
-import puppeteer, { type Page } from "puppeteer";
+import puppeteer, { type Browser, type Page } from "puppeteer";
 
 const manageServer = process.env.E2E_MANAGE_SERVER === "1";
 const managedPort = Number(
@@ -52,7 +52,6 @@ try {
   await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".reader-page");
   await page.evaluate(async () => {
-    await navigator.serviceWorker.register("/cross-canon-sw.js");
     await navigator.serviceWorker.ready;
   });
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -63,6 +62,100 @@ try {
     {
       timeout: 5_000,
     }
+  );
+
+  await page.evaluate(() => {
+    (0, eval)("globalThis.__name = value => value");
+  });
+  const shellUpdate = await page.evaluate(async () => {
+    const meta = await caches.open("cross-canon-offline-meta-v1");
+    const activeUrl = new URL("/__cross-canon/active-shell", location.origin)
+      .href;
+    const readActive = async () => (await meta.match(activeUrl))?.text() ?? "";
+    const before = await readActive();
+    const failedRegistration = await navigator.serviceWorker.register(
+      "/cross-canon-sw-release-test.js?release=e2e-failed&failStage=1"
+    );
+
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      if (!failedRegistration.installing && !failedRegistration.waiting) {
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    const afterFailure = await readActive();
+    const successfulRegistration = await navigator.serviceWorker.register(
+      "/cross-canon-sw-release-test.js?release=e2e-success"
+    );
+    let successfulState = false;
+
+    for (let attempt = 0; attempt < 300; attempt += 1) {
+      if (
+        successfulRegistration.waiting?.scriptURL.includes(
+          "release=e2e-success"
+        )
+      ) {
+        successfulState = true;
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    const afterSuccess = await readActive();
+
+    return {
+      afterFailure,
+      afterSuccess,
+      before,
+      registration: {
+        active: successfulRegistration.active?.scriptURL ?? "",
+        installing: successfulRegistration.installing?.scriptURL ?? "",
+        waiting: successfulRegistration.waiting?.scriptURL ?? "",
+      },
+      successfulState,
+    };
+  });
+  assert(
+    shellUpdate.afterFailure === shellUpdate.before,
+    `Expected a failed shell stage to preserve the active generation: ${JSON.stringify(
+      shellUpdate
+    )}`
+  );
+  assert(
+    shellUpdate.successfulState &&
+      shellUpdate.afterSuccess === shellUpdate.before,
+    `Expected a complete shell/Scripture generation to wait without disrupting the current session: ${JSON.stringify(
+      shellUpdate
+    )}`
+  );
+  await page.goto("about:blank");
+  await wait(1_000);
+  await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".reader-page");
+  const activatedShell = await page.evaluate(async () => {
+    const meta = await caches.open("cross-canon-offline-meta-v1");
+    const activeUrl = new URL("/__cross-canon/active-shell", location.origin)
+      .href;
+    const activeResponse = await meta.match(activeUrl);
+    const activeCacheName = activeResponse ? await activeResponse.text() : "";
+    const activeCache = await caches.open(activeCacheName);
+    const activePaths = (await activeCache.keys()).map(
+      (request) => new URL(request.url).pathname
+    );
+
+    return { activeCacheName, activePaths };
+  });
+  assert(
+    activatedShell.activeCacheName.includes("e2e-success") &&
+      activatedShell.activePaths.includes("/") &&
+      activatedShell.activePaths.includes("/church-fathers") &&
+      activatedShell.activePaths.some((pathname) =>
+        pathname.startsWith("/scripture-cache/")
+      ),
+    `Expected the complete shell/Scripture generation to activate on the next session: ${JSON.stringify(
+      activatedShell
+    )}`
   );
 
   await page.waitForSelector("#reader-title");
@@ -77,7 +170,7 @@ try {
     ".passage-jump-verse",
     (link) => (link as HTMLAnchorElement).href
   );
-  const downloadedWorkUrl = `${baseUrl}/church-fathers?chapter=anf05%3Aiv.vi.i`;
+  const downloadedWorkUrl = `${baseUrl}/church-fathers?chapter=anf05%3Aiii.iv.i.vi.i`;
   await page.goto(downloadedWorkUrl, {
     waitUntil: "domcontentloaded",
   });
@@ -157,13 +250,6 @@ try {
     15_000
   );
   assert(quotaRetryCompleted, "Expected the quota retry to complete.");
-  const retryRecords = await page.evaluate(() =>
-    localStorage.getItem("cross-cannon:offline-early-christian-works:v1")
-  );
-  assert(
-    retryRecords === null || retryRecords.startsWith("{"),
-    "Expected Work metadata to remain valid JSON after the quota retry."
-  );
   const quotaRetryRemainsComplete = await waitForEnabledButton(
     page,
     "Remove download",
@@ -324,6 +410,7 @@ try {
     `Expected one downloaded Work offline, got ${offlineWorkCount}.`
   );
   await clickButtonByText(page, "Close");
+  await installInterruptedChapterFetch(page);
 
   if (manageServer) {
     managedServer = await startManagedServer(managedPort, timeoutMs);
@@ -353,11 +440,35 @@ try {
     indicatorCleared,
     "Expected the Offline indicator to clear after origin recovery."
   );
-  await openReaderTools(page);
-  await page.waitForSelector("button[aria-label='Search']");
-  await page.$eval("button[aria-label='Close reader tools']", (button) =>
-    (button as HTMLButtonElement).click()
+  await waitForReaderTools(page, 5_000);
+  await page.waitForFunction(() =>
+    document.body.textContent?.includes("Download interrupted. Try again.")
   );
+  await restoreInterruptedChapterFetch(page);
+  const interruptedUpdate = await readOnlyDownloadedWorkStorage(page);
+  assert(
+    interruptedUpdate.version === "prior-complete-version" &&
+      interruptedUpdate.complete &&
+      interruptedUpdate.pendingVersion !== "" &&
+      interruptedUpdate.pendingCachedCount > 0 &&
+      interruptedUpdate.pendingCachedCount < interruptedUpdate.pendingTotal,
+    `Expected an interrupted update to preserve the prior Work and a resumable partial generation: ${JSON.stringify(
+      interruptedUpdate
+    )}`
+  );
+  await wait(2_000);
+  const stableInterruptedUpdate = await readOnlyDownloadedWorkStorage(page);
+  assert(
+    stableInterruptedUpdate.version === "prior-complete-version" &&
+      stableInterruptedUpdate.pendingCachedCount > 0,
+    `Expected one background update attempt per online session: ${JSON.stringify(
+      stableInterruptedUpdate
+    )}`
+  );
+  await page.setOfflineMode(true);
+  await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+  await page.waitForSelector(".offline-indicator");
+
   if (managedServer) {
     await stopServer(managedServer);
     await waitForServerStop(baseUrl, timeoutMs);
@@ -365,6 +476,203 @@ try {
   } else {
     await page.setOfflineMode(true);
   }
+  const stoppedOriginUpdate = await readOnlyDownloadedWorkStorage(page);
+  assert(
+    stoppedOriginUpdate.version === "prior-complete-version" &&
+      stoppedOriginUpdate.pendingCachedCount > 0,
+    `Expected stopping the origin to preserve the interrupted Work generation: ${JSON.stringify(
+      stoppedOriginUpdate
+    )}`
+  );
+
+  await page.goto(downloadedWorkUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    (expectedTitle) =>
+      document.querySelector("#reader-title")?.textContent?.trim() ===
+      expectedTitle,
+    {},
+    downloadedWorkTitle
+  );
+  await page.waitForSelector(".offline-indicator");
+  const offlineResumeBaseline = await readOnlyDownloadedWorkStorage(page);
+  assert(
+    offlineResumeBaseline.version === "prior-complete-version" &&
+      offlineResumeBaseline.pendingCachedCount > 0,
+    `Expected offline startup to leave the interrupted Work generation untouched: ${JSON.stringify(
+      offlineResumeBaseline
+    )}`
+  );
+  await installNetworkDelayedChapterFetch(page);
+
+  if (manageServer) {
+    managedServer = await startManagedServer(managedPort, timeoutMs);
+  }
+  await page.setOfflineMode(false);
+  await page.evaluate(async () => {
+    await fetch("/?offline-health=e2e-resume", {
+      cache: "no-store",
+      method: "HEAD",
+    });
+    window.dispatchEvent(new Event("online"));
+  });
+  await waitForReaderTools(page, 5_000);
+  const resumedPartialUpdate = await waitForBodyText(
+    page,
+    "Updating 1/2",
+    10_000
+  );
+  if (!resumedPartialUpdate) {
+    throw new Error(
+      `Expected the partial Work update to resume: ${JSON.stringify({
+        body: await page.evaluate(
+          () => document.body.textContent?.trim().slice(0, 800) ?? ""
+        ),
+        storage: await readOnlyDownloadedWorkStorage(page),
+        url: page.url(),
+      })}`
+    );
+  }
+  await clickButtonByText(page, "Jump");
+  await page.waitForSelector(".ec-jump-modal");
+  await chooseAnotherWorkInOpenJump(page);
+  await openReaderTools(page);
+  const backgroundPriorityState = await page.evaluate(() => {
+    const button = [
+      ...document.querySelectorAll<HTMLButtonElement>("button"),
+    ].find((candidate) => candidate.textContent?.trim() === "Download work");
+    return {
+      disabled: button?.disabled ?? true,
+      status:
+        document
+          .querySelector(".offline-download-status")
+          ?.textContent?.trim() ?? "",
+    };
+  });
+  assert(
+    !backgroundPriorityState.disabled &&
+      backgroundPriorityState.status.includes("Updating"),
+    `Expected a manual Work download to remain available during a background update: ${JSON.stringify(
+      backgroundPriorityState
+    )}`
+  );
+  await clickButtonByText(page, "Download work");
+  await page.waitForFunction(
+    () =>
+      document.body.textContent?.includes("Downloading") &&
+      !document.body.textContent?.includes("Updating")
+  );
+  await clickButtonByText(page, "Cancel download");
+  const manualCancelCompleted = await waitForEnabledButton(
+    page,
+    "Download work",
+    20_000
+  );
+  if (!manualCancelCompleted) {
+    throw new Error(
+      `Expected the preempting manual download to cancel cleanly: ${JSON.stringify(
+        {
+          body: await page.evaluate(
+            () => document.body.textContent?.trim().slice(0, 500) ?? ""
+          ),
+          storage: await readOnlyDownloadedWorkStorage(page),
+          url: page.url(),
+        }
+      )}`
+    );
+  }
+  await restoreDelayedChapterFetch(page);
+  await page.goto(downloadedWorkUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#reader-title");
+  await page.setOfflineMode(true);
+  await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+  await page.waitForSelector(".offline-indicator");
+  await page.setOfflineMode(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  assert(
+    await waitForMissingSelector(page, ".offline-indicator", 10_000),
+    "Expected the update retry to return online."
+  );
+  await waitForReaderTools(page, 5_000);
+  assert(
+    await waitForEnabledButton(page, "Remove download", 15_000),
+    "Expected the resumed Work update to activate."
+  );
+  const activatedWorkUpdate = await readOnlyDownloadedWorkStorage(page);
+  assert(
+    activatedWorkUpdate.complete &&
+      activatedWorkUpdate.version !== "prior-complete-version" &&
+      activatedWorkUpdate.pendingVersion === "" &&
+      activatedWorkUpdate.activeCachedCount === activatedWorkUpdate.activeTotal,
+    `Expected only the complete current Work generation to become active: ${JSON.stringify(
+      activatedWorkUpdate
+    )}`
+  );
+
+  await page.setOfflineMode(true);
+  await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+  await page.waitForSelector(".offline-indicator");
+  await evictOneActiveWorkChapter(page);
+  if (managedServer) {
+    await stopServer(managedServer);
+    await waitForServerStop(baseUrl, timeoutMs);
+    managedServer = null;
+  } else {
+    await page.setOfflineMode(true);
+  }
+  await page.goto(downloadedWorkUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".reader-empty");
+  const missingChapterState = await page.$eval(
+    ".reader-empty",
+    (state) => state.textContent?.trim() ?? ""
+  );
+  const evictedWork = await readOnlyDownloadedWorkStorage(page);
+  assert(
+    (missingChapterState.includes("This work isn’t available offline") ||
+      missingChapterState.includes(
+        "No Early Christian works are available offline"
+      )) &&
+      !evictedWork.complete,
+    `Expected a Work with a missing Chapter to be evicted offline: ${JSON.stringify(
+      { missingChapterState, evictedWork }
+    )}`
+  );
+
+  if (manageServer) {
+    managedServer = await startManagedServer(managedPort, timeoutMs);
+  }
+  await page.setOfflineMode(false);
+  await page.evaluate(async () => {
+    await fetch("/?offline-health=e2e-repair", {
+      cache: "no-store",
+      method: "HEAD",
+    });
+    window.dispatchEvent(new Event("online"));
+  });
+  await page.waitForSelector("#reader-title", { timeout: 15_000 });
+  const repairedWork = await waitForCompleteDownloadedWorkStorage(page, 15_000);
+  assert(
+    repairedWork?.complete &&
+      repairedWork.activeCachedCount === repairedWork.activeTotal,
+    `Expected reconnect to repair the evicted Work: ${JSON.stringify(
+      repairedWork
+    )}`
+  );
+
+  if (managedServer) {
+    await stopServer(managedServer);
+    await waitForServerStop(baseUrl, timeoutMs);
+    managedServer = null;
+  } else {
+    await page.setOfflineMode(true);
+  }
+  await page.goto(downloadedWorkUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    (expectedTitle) =>
+      document.querySelector("#reader-title")?.textContent?.trim() ===
+      expectedTitle,
+    {},
+    downloadedWorkTitle
+  );
 
   await page.goto(unavailableWorkUrl, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".reader-empty");
@@ -447,8 +755,12 @@ try {
   console.log(
     JSON.stringify(
       {
+        atomicShellUpdate: true,
         emptyState: true,
         downloadLifecycle: canceledWorkTitle,
+        interruptedUpdateResume: true,
+        manualDownloadPriority: true,
+        missingChapterRepair: true,
         offlineWorkCount,
         passed: true,
         priorCompleteVersion: true,
@@ -462,10 +774,32 @@ try {
     )
   );
 } finally {
-  await browser.close();
+  await closeBrowser(browser);
   if (managedServer) {
     await stopServer(managedServer);
   }
+}
+
+async function closeBrowser(browser: Browser) {
+  const browserProcess = browser.process();
+  const closeResult = browser.close().then(
+    () => true,
+    () => true
+  );
+  const closed = await Promise.race([
+    closeResult,
+    wait(5_000, undefined, { ref: false }).then(() => false),
+  ]);
+
+  if (browserProcess && browserProcess.exitCode === null) {
+    browserProcess.kill("SIGKILL");
+  }
+
+  if (!closed) {
+    await Promise.race([closeResult, wait(2_000)]);
+  }
+
+  browserProcess?.unref();
 }
 
 async function openReaderTools(page: Page) {
@@ -541,7 +875,10 @@ async function installDelayedChapterFetch(page: Page) {
           ? input.url
           : input.href;
 
-      if (!url.includes("/church-fathers-preview/chapters/")) {
+      if (
+        !url.includes("/church-fathers-preview/chapters/") ||
+        new Headers(init?.headers).get("X-Cross-Canon-Download") !== "1"
+      ) {
         return originalFetch(input, init);
       }
 
@@ -593,6 +930,117 @@ async function restoreDelayedChapterFetch(page: Page) {
       window.fetch = scope.__crossCanonOriginalFetch;
       delete scope.__crossCanonOriginalFetch;
     }
+  });
+}
+
+async function installInterruptedChapterFetch(page: Page) {
+  await page.evaluate(() => {
+    const scope = window as typeof window & {
+      __crossCanonInterruptedFetchCount?: number;
+      __crossCanonOriginalFetch?: typeof window.fetch;
+    };
+    const originalFetch = window.fetch;
+    scope.__crossCanonOriginalFetch = originalFetch;
+    scope.__crossCanonInterruptedFetchCount = 0;
+    window.fetch = (input, init) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof Request
+          ? input.url
+          : input.href;
+
+      if (
+        !url.includes("/church-fathers-preview/chapters/") ||
+        new Headers(init?.headers).get("X-Cross-Canon-Download") !== "1"
+      ) {
+        return originalFetch(input, init);
+      }
+
+      scope.__crossCanonInterruptedFetchCount =
+        (scope.__crossCanonInterruptedFetchCount ?? 0) + 1;
+
+      if (scope.__crossCanonInterruptedFetchCount === 1) {
+        return originalFetch(input, init);
+      }
+
+      return new Promise<Response>((_resolve, reject) => {
+        const timer = window.setTimeout(() => {
+          reject(new TypeError("Intentional interrupted Work update."));
+        }, 2_000);
+        init?.signal?.addEventListener(
+          "abort",
+          () => {
+            window.clearTimeout(timer);
+            reject(new DOMException("Download canceled", "AbortError"));
+          },
+          { once: true }
+        );
+      });
+    };
+  });
+}
+
+async function restoreInterruptedChapterFetch(page: Page) {
+  await page.evaluate(() => {
+    const scope = window as typeof window & {
+      __crossCanonInterruptedFetchCount?: number;
+      __crossCanonOriginalFetch?: typeof window.fetch;
+    };
+
+    if (scope.__crossCanonOriginalFetch) {
+      window.fetch = scope.__crossCanonOriginalFetch;
+      delete scope.__crossCanonOriginalFetch;
+    }
+
+    delete scope.__crossCanonInterruptedFetchCount;
+  });
+}
+
+async function installNetworkDelayedChapterFetch(page: Page) {
+  await page.evaluate(async () => {
+    (0, eval)("globalThis.__name = value => value");
+    const scope = window as typeof window & {
+      __crossCanonOriginalFetch?: typeof window.fetch;
+    };
+    const originalFetch = window.fetch;
+    scope.__crossCanonOriginalFetch = originalFetch;
+    await caches.delete("cross-canon-content-v2");
+
+    window.fetch = (input, init) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof Request
+          ? input.url
+          : input.href;
+
+      if (!url.includes("/church-fathers-preview/chapters/")) {
+        return originalFetch(input, init);
+      }
+
+      if (new Headers(init?.headers).get("X-Cross-Canon-Download") !== "1") {
+        return Promise.resolve(
+          new Response("Temporarily unavailable", {
+            status: 503,
+          })
+        );
+      }
+
+      return new Promise<Response>((resolve, reject) => {
+        const timer = window.setTimeout(() => {
+          void originalFetch(input, init).then(resolve, reject);
+        }, 60_000);
+        init?.signal?.addEventListener(
+          "abort",
+          () => {
+            window.clearTimeout(timer);
+            reject(new DOMException("Download canceled", "AbortError"));
+          },
+          { once: true }
+        );
+      });
+    };
   });
 }
 
@@ -675,20 +1123,35 @@ async function restoreCacheWrites(page: Page) {
 
 async function stagePriorCompleteWorkVersion(page: Page) {
   await page.evaluate(async () => {
-    const storageKey = "cross-cannon:offline-early-christian-works:v1";
-    const records = JSON.parse(
-      localStorage.getItem(storageKey) ?? "{}"
-    ) as Record<
+    const meta = await caches.open("cross-canon-offline-meta-v1");
+    const registryUrl = new URL("/__cross-canon/work-registry", location.origin)
+      .href;
+    const registryResponse = await meta.match(registryUrl);
+
+    if (!registryResponse) {
+      throw new Error("Expected the offline Work registry.");
+    }
+
+    const records = (await registryResponse.json()) as Record<
       string,
-      { chapterUrls: string[]; complete?: boolean; version: string }
+      {
+        cacheName: string;
+        chapterUrls: string[];
+        complete: boolean;
+        completedAt: number;
+        version: string;
+      }
     >;
-    const cache = await caches.open("cross-canon-content-v1");
+    const generalCache = await caches.open("cross-canon-content-v2");
 
     for (const record of Object.values(records)) {
+      const currentCache = await caches.open(record.cacheName);
+      const priorCacheName = `${record.cacheName}-prior-complete`;
+      const priorCache = await caches.open(priorCacheName);
       const priorUrls: string[] = [];
 
       for (const chapterUrl of record.chapterUrls) {
-        const response = await cache.match(chapterUrl);
+        const response = await currentCache.match(chapterUrl);
         if (!response) {
           throw new Error(
             `Expected completed Chapter ${chapterUrl} before staging.`
@@ -696,17 +1159,154 @@ async function stagePriorCompleteWorkVersion(page: Page) {
         }
         const priorUrl = new URL(chapterUrl, location.origin);
         priorUrl.searchParams.set("v", "prior-complete-version");
-        await cache.put(priorUrl.href, response.clone());
-        await cache.delete(chapterUrl);
+        await priorCache.put(priorUrl.href, response.clone());
         priorUrls.push(priorUrl.href);
+        await generalCache.delete(chapterUrl, { ignoreSearch: true });
       }
 
+      await caches.delete(record.cacheName);
+      record.cacheName = priorCacheName;
       record.chapterUrls = priorUrls;
       record.complete = true;
       record.version = "prior-complete-version";
     }
 
-    localStorage.setItem(storageKey, JSON.stringify(records));
+    await meta.put(
+      registryUrl,
+      new Response(JSON.stringify(records), {
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+  });
+}
+
+type DownloadedWorkStorageState = {
+  activeCachedCount: number;
+  activeTotal: number;
+  complete: boolean;
+  pendingCachedCount: number;
+  pendingTotal: number;
+  pendingVersion: string;
+  version: string;
+};
+
+async function readOnlyDownloadedWorkStorage(
+  page: Page
+): Promise<DownloadedWorkStorageState> {
+  return page.evaluate(async () => {
+    const meta = await caches.open("cross-canon-offline-meta-v1");
+    const registryUrl = new URL("/__cross-canon/work-registry", location.origin)
+      .href;
+    const response = await meta.match(registryUrl);
+    const records = response
+      ? ((await response.json()) as Record<
+          string,
+          {
+            cacheName: string;
+            chapterUrls: string[];
+            complete: boolean;
+            pending?: {
+              cacheName: string;
+              chapterUrls: string[];
+              version: string;
+            };
+            version: string;
+          }
+        >)
+      : {};
+    const entries = Object.values(records);
+
+    if (entries.length !== 1) {
+      throw new Error(`Expected one downloaded Work, found ${entries.length}.`);
+    }
+
+    const record = entries[0];
+    const activeCache = await caches.open(record.cacheName);
+    const pendingCache = record.pending
+      ? await caches.open(record.pending.cacheName)
+      : null;
+    let activeCachedCount = 0;
+    let pendingCachedCount = 0;
+
+    for (const url of record.chapterUrls) {
+      if (await activeCache.match(url)) {
+        activeCachedCount += 1;
+      }
+    }
+
+    if (pendingCache && record.pending) {
+      for (const url of record.pending.chapterUrls) {
+        if (await pendingCache.match(url)) {
+          pendingCachedCount += 1;
+        }
+      }
+    }
+
+    return {
+      activeCachedCount,
+      activeTotal: record.chapterUrls.length,
+      complete: record.complete,
+      pendingCachedCount,
+      pendingTotal: record.pending?.chapterUrls.length ?? 0,
+      pendingVersion: record.pending?.version ?? "",
+      version: record.version,
+    };
+  });
+}
+
+async function waitForCompleteDownloadedWorkStorage(
+  page: Page,
+  timeout: number
+) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeout) {
+    const state = await readOnlyDownloadedWorkStorage(page).catch(() => null);
+
+    if (state?.complete && state.activeCachedCount === state.activeTotal) {
+      return state;
+    }
+
+    await wait(100);
+  }
+
+  return null;
+}
+
+async function evictOneActiveWorkChapter(page: Page) {
+  await page.evaluate(async () => {
+    const meta = await caches.open("cross-canon-offline-meta-v1");
+    const registryUrl = new URL("/__cross-canon/work-registry", location.origin)
+      .href;
+    const response = await meta.match(registryUrl);
+
+    if (!response) {
+      throw new Error("Expected the offline Work registry.");
+    }
+
+    const records = (await response.json()) as Record<
+      string,
+      {
+        cacheName: string;
+        chapterUrls: string[];
+      }
+    >;
+    const entries = Object.values(records);
+
+    if (entries.length !== 1 || entries[0].chapterUrls.length < 2) {
+      throw new Error("Expected one multi-Chapter offline Work.");
+    }
+
+    const chapterUrl = entries[0].chapterUrls.at(-1);
+
+    if (!chapterUrl) {
+      throw new Error("Expected a Chapter to evict.");
+    }
+
+    const activeCache = await caches.open(entries[0].cacheName);
+    const generalCache = await caches.open("cross-canon-content-v2");
+    await activeCache.delete(chapterUrl);
+    await generalCache.delete(chapterUrl, { ignoreSearch: true });
   });
 }
 
@@ -775,6 +1375,27 @@ async function waitForMissingSelector(
       .catch(() => false);
 
     if (isMissing) {
+      return true;
+    }
+
+    await wait(100);
+  }
+
+  return false;
+}
+
+async function waitForBodyText(page: Page, text: string, timeout: number) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeout) {
+    const found = await page
+      .evaluate(
+        (expected) => document.body.textContent?.includes(expected) ?? false,
+        text
+      )
+      .catch(() => false);
+
+    if (found) {
       return true;
     }
 
@@ -855,10 +1476,22 @@ async function stopServer(server: ChildProcess) {
   }
 
   server.kill("SIGTERM");
-  await Promise.race([
-    new Promise<void>((resolve) => server.once("exit", () => resolve())),
-    wait(5_000).then(() => undefined),
+  const exitResult = new Promise<boolean>((resolve) =>
+    server.once("exit", () => resolve(true))
+  );
+  const exited = await Promise.race([
+    exitResult,
+    wait(5_000, undefined, { ref: false }).then(() => false),
   ]);
+
+  if (!exited && server.exitCode === null) {
+    server.kill("SIGKILL");
+    await Promise.race([exitResult, wait(2_000)]);
+  }
+
+  server.stdout?.destroy();
+  server.stderr?.destroy();
+  server.unref();
 }
 
 async function waitForServerStop(url: string, timeout: number) {

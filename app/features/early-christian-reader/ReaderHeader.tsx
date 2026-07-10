@@ -2,7 +2,7 @@ import type { ComponentProps, Ref, SyntheticEvent } from "react";
 
 import {
   ReaderSettingsControl,
-  ReaderTools
+  ReaderTools,
 } from "~/features/reader-ui/ReaderControls";
 import { useOfflineStatus } from "~/features/offline/OfflineProvider";
 import type { WorkDownloadState } from "~/features/offline/early-christian-work-downloads";
@@ -36,7 +36,7 @@ export function EarlyChristianReaderHeader({
   setReaderSettings,
   toggleActiveChapterAudio,
   downloadState,
-  isWorkDownloaded
+  isWorkDownloaded,
 }: {
   activeAudio: EarlyChristianAudio | null;
   activeAudioUrl: string | null;
@@ -65,12 +65,16 @@ export function EarlyChristianReaderHeader({
   isWorkDownloaded: boolean;
 }) {
   const { isOffline } = useOfflineStatus();
-  const isThisWorkDownloading = downloadState.kind === "downloading"
-    && downloadState.workId === activeWork.id;
-  const isAnotherWorkDownloading = downloadState.kind === "downloading"
-    && downloadState.workId !== activeWork.id;
-  const hasDownloadError = downloadState.kind === "error"
-    && downloadState.workId === activeWork.id;
+  const isThisWorkDownloading =
+    downloadState.kind === "downloading" &&
+    downloadState.workId === activeWork.id;
+  const isAnotherWorkDownloading =
+    downloadState.kind === "downloading" &&
+    downloadState.workId !== activeWork.id;
+  const isManualDownloadBlocking =
+    isAnotherWorkDownloading && downloadState.source === "manual";
+  const hasDownloadError =
+    downloadState.kind === "error" && downloadState.workId === activeWork.id;
 
   return (
     <header className="reader-header">
@@ -83,11 +87,7 @@ export function EarlyChristianReaderHeader({
       />
       <div className="reader-header-title" ref={headerTitleRef}>
         <p className="eyebrow">Early Christian Works</p>
-        <h1
-          className="ec-reader-title"
-          id="reader-title"
-          ref={readerTitleRef}
-        >
+        <h1 className="ec-reader-title" id="reader-title" ref={readerTitleRef}>
           {activeHeaderTitle}
         </h1>
       </div>
@@ -98,36 +98,47 @@ export function EarlyChristianReaderHeader({
       >
         {!isOffline && activeAudioUrl && activeAudio ? (
           <button
-            aria-label={`${isActiveChapterPlaying ? "Pause" : "Play"} audio covering ${activeAudio.label}`}
+            aria-label={`${
+              isActiveChapterPlaying ? "Pause" : "Play"
+            } audio covering ${activeAudio.label}`}
             className="context-button reader-icon-button"
             onClick={toggleActiveChapterAudio}
-            title={`${isActiveChapterPlaying ? "Pause" : "Play"} audio covering ${activeAudio.label}`}
+            title={`${
+              isActiveChapterPlaying ? "Pause" : "Play"
+            } audio covering ${activeAudio.label}`}
             type="button"
           >
             {isActiveChapterPlaying ? "❚❚" : "🔊"}
           </button>
         ) : null}
-        {!isOffline ? <button
-          aria-label="Search"
-          className="context-button reader-icon-button"
-          onClick={onOpenSearch}
-          title="Search"
-          type="button"
-        >
-          🔍
-        </button> : null}
+        {!isOffline ? (
+          <button
+            aria-label="Search"
+            className="context-button reader-icon-button"
+            onClick={onOpenSearch}
+            title="Search"
+            type="button"
+          >
+            🔍
+          </button>
+        ) : null}
         {isThisWorkDownloading ? (
           <button className="context-button" disabled type="button">
-            Downloading {downloadState.completed}/{downloadState.total}
+            {downloadState.source === "background" ? "Updating" : "Downloading"}{" "}
+            {downloadState.completed}/{downloadState.total}
           </button>
         ) : isWorkDownloaded ? (
-          <button className="context-button" onClick={onRemoveDownload} type="button">
+          <button
+            className="context-button"
+            onClick={onRemoveDownload}
+            type="button"
+          >
             Remove download
           </button>
         ) : !isOffline ? (
           <button
             className="context-button"
-            disabled={isAnotherWorkDownloading}
+            disabled={isManualDownloadBlocking}
             onClick={onDownloadWork}
             type="button"
           >
@@ -137,15 +148,27 @@ export function EarlyChristianReaderHeader({
         {isAnotherWorkDownloading ? (
           <>
             <span className="offline-download-status">
-              Downloading {downloadState.workName} {downloadState.completed}/{downloadState.total}
+              {downloadState.source === "background"
+                ? "Updating"
+                : "Downloading"}{" "}
+              {downloadState.workName} {downloadState.completed}/
+              {downloadState.total}
             </span>
-            <button className="context-button" onClick={onCancelDownload} type="button">
+            <button
+              className="context-button"
+              onClick={onCancelDownload}
+              type="button"
+            >
               Cancel download
             </button>
           </>
         ) : null}
         {isThisWorkDownloading ? (
-          <button className="context-button" onClick={onCancelDownload} type="button">
+          <button
+            className="context-button"
+            onClick={onCancelDownload}
+            type="button"
+          >
             Cancel download
           </button>
         ) : null}
@@ -160,11 +183,7 @@ export function EarlyChristianReaderHeader({
           </span>
         ) : null}
         <section className="passage-jump-launcher is-inline" aria-label="Jump">
-          <button
-            className="context-button"
-            onClick={onOpenJump}
-            type="button"
-          >
+          <button className="context-button" onClick={onOpenJump} type="button">
             Jump
           </button>
         </section>
