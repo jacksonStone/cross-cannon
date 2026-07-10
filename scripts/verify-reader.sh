@@ -65,6 +65,7 @@ server_pid="$!"
 
 run_step "Wait for ${base_url}" wait_for_server
 run_step "Reader kitchen sink" env E2E_BASE_URL="$base_url" npm run e2e:reader
+run_step "Fathers saved passage selection" env E2E_BASE_URL="$base_url" npm run e2e:fathers-passage-selection
 
 echo
 echo "Reader verification passed."

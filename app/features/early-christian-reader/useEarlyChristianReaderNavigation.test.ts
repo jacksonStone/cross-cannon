@@ -110,7 +110,7 @@ test("navigation resolution falls back to first chapter when no saved target exi
   assert.equal(navigation.resolvedTargetChapterId, "first");
 });
 
-test("navigation keeps selected range only for the current target chapter", () => {
+test("navigation keeps the explicit target range stable when selection changes", () => {
   const chapters = createChapterEntries(["first", "second"]);
   const navigation = resolveEarlyChristianReaderNavigation({
     chapters,
@@ -118,13 +118,13 @@ test("navigation keeps selected range only for the current target chapter", () =
     navigationState: {
       activeChapterId: "first",
       selectedPassage: "4-6",
-      selectedPassageChapterId: "second",
+      selectedPassageChapterId: "first",
       targetChapterId: "first",
       targetPassageRange: "1-3"
     }
   });
 
-  assert.equal(navigation.selectedRangeForTargetChapter, "1-3");
+  assert.equal(navigation.targetPassageRange, "1-3");
 });
 
 test("open state selects the requested passage and target chapter", () => {

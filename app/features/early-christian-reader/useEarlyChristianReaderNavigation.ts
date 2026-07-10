@@ -122,10 +122,10 @@ export function resolveEarlyChristianReaderNavigation({
     : { endIndex: -1, startIndex: 0 };
   const activeChapterIndex = activeEntry?.index;
   const activeBookStartIndex = findChapterBookStartIndex(activeChapterIndex ?? -1, chapters);
-  const selectedRangeForTargetChapter =
-    navigationState.selectedPassageChapterId === resolvedTargetChapterId
-      ? navigationState.selectedPassage
-      : navigationState.targetPassageRange;
+  const targetPassageRange =
+    navigationState.targetChapterId === resolvedTargetChapterId
+      ? navigationState.targetPassageRange
+      : "";
 
   return {
     activeBookStartIndex,
@@ -135,7 +135,7 @@ export function resolveEarlyChristianReaderNavigation({
     initialWindowRange,
     resolvedActiveChapterId,
     resolvedTargetChapterId,
-    selectedRangeForTargetChapter,
+    targetPassageRange,
     targetChapterIndex
   };
 }
@@ -251,7 +251,7 @@ export function useEarlyChristianReaderNavigation({
   const { renderedRange, setRenderedRange } = useEarlyChristianReaderWindow({
     activeChapterId: navigationPlan.resolvedActiveChapterId,
     initialChapterId: navigationPlan.resolvedTargetChapterId,
-    initialPassageRange: navigationPlan.selectedRangeForTargetChapter,
+    initialPassageRange: navigationPlan.targetPassageRange,
     initialRange: navigationPlan.initialWindowRange,
     isReady,
     isTargetWindowReady,
