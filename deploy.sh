@@ -36,7 +36,7 @@ ssh -i "$EC2_PEM_PATH" ubuntu@"$EC2_PUBLIC_IP" << EOF
     mv .temp/cross-cannon-storage cross-cannon/storage
   fi
   cd cross-cannon
-  npm ci --omit=dev
+  npm ci --omit=dev --legacy-peer-deps
   sudo systemctl restart cross-cannon
 EOF
 
