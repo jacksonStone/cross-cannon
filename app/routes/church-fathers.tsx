@@ -48,6 +48,7 @@ import { BOOKS_BY_CANON } from "~/features/search/canons";
 import {
   readerSettingsStyle
 } from "~/features/reader-settings/reader-settings";
+import { fitSingleLineText } from "~/features/reader-ui/fit-single-line-text";
 import { useStoredReaderSettings } from "~/features/reader-ui/ReaderControls";
 import {
   initialSearchModalFlowState,
@@ -252,26 +253,34 @@ export default function ChurchFathersReaderRoute() {
       }
 
       const baseFontSize = Number.parseFloat(window.getComputedStyle(title).fontSize);
-      const naturalWidth = title.scrollWidth;
 
-      if (!Number.isFinite(baseFontSize) || baseFontSize <= 0 || naturalWidth <= 0) {
-        return;
-      }
-
-      const fitScale = Math.min(1, Math.max(0.28, (availableWidth - 2) / naturalWidth));
-      title.style.fontSize = `${baseFontSize * fitScale}px`;
+      fitSingleLineText({
+        availableWidth,
+        baseFontSize,
+        measureWidth: () => title.scrollWidth,
+        setFontSize: (fontSize) => {
+          title.style.fontSize = `${fontSize}px`;
+        }
+      });
     };
     const scheduleFit = () => {
       window.cancelAnimationFrame(frameId);
       frameId = window.requestAnimationFrame(fitTitle);
     };
+    const resizeObserver = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(scheduleFit);
 
     scheduleFit();
+    resizeObserver?.observe(container);
+    window.addEventListener("resize", scheduleFit);
     void document.fonts?.ready.then(scheduleFit).catch(() => undefined);
 
     return () => {
       didCancel = true;
       window.cancelAnimationFrame(frameId);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", scheduleFit);
     };
   }, [activeHeaderTitle, isToolsOpen]);
 
