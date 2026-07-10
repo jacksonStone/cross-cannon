@@ -168,22 +168,41 @@ scripture-cache/manifest.json
 The cache route serves these artifacts with long-lived immutable cache headers
 and gzip when the browser accepts it.
 
-## Confessions Audio Alignment
+## Early Christian Audio Alignment
 
-The Early Christian reader links Confessions audio instead of downloading MP3s
-into the app. LibriVox tracks do not map cleanly to the parsed chapter names, so
-audio support is produced as a timestamp alignment file:
+The Early Christian reader links remote audio instead of downloading MP3s into
+the app. Audio tracks do not always map cleanly to parsed Chapter names, so audio
+support is produced as a Chapter Audio Alignment selected by exact CCEL Work ID:
 
 ```bash
-npm run build:confessions-audio-alignment -- --track confessions_01_11-19_augustine_64kb.mp3
+npm run build:church-fathers-audio-alignment -- --work-id npnf101:vi
+npm run build:church-fathers-audio-alignment -- --work-id npnf102:iv
+npm run build:church-fathers-audio-alignment -- --work-id anf09:xii.iv
 ```
 
-The script downloads the selected Archive.org MP3 to a temp file, sends it to
-OpenAI `whisper-1` with `verbose_json` and word timestamps, archives the raw API
-JSON under `storage/church-fathers-audio/transcripts/`, then fuzzy-aligns parsed
-Confessions chapter text against the timestamped transcript. Cached transcript
-JSON is reused on later runs, so rerunning the same track does not call the API
-unless the cache is missing.
+Use `--track <file-name>` or `--limit <count>` for an incremental run,
+`--book <number>` to select one Book inside a Work, `--dry-run` to inspect the
+selection without OpenAI, and `--reset` to discard the selected Work's existing
+alignment. Runs merge into the existing artifact unless `--reset` is present:
+
+```bash
+npm run build:church-fathers-audio-alignment -- \
+  --work-id npnf101:vi \
+  --track confessions_01_11-19_augustine_64kb.mp3
+
+npm run build:church-fathers-audio-alignment -- \
+  --work-id npnf102:iv \
+  --book 1 \
+  --limit 1 \
+  --dry-run
+```
+
+The shared module downloads each selected track to a temp file, retries remote
+downloads, uses Archive.org mirrors when available, and automatically chunks
+oversized audio with `ffmpeg`. It sends audio to OpenAI `whisper-1` with
+`verbose_json` and word timestamps, archives the raw response under
+`storage/church-fathers-audio/transcripts/`, then applies the selected Work's
+Alignment Policy. Cached transcript JSON is reused on later runs.
 
 The deployed browser asset is:
 
@@ -212,6 +231,11 @@ It has this shape:
 Treat `audioUrl`, `startSeconds`, and `endSeconds` as the playback contract.
 Track labels and parsed chapter names are metadata only; do not assume they
 align exactly.
+
+Work-specific Chapter-ID parsing, matching preference, hints, confidence, and
+offset adjustments live in small Alignment Policy adapters under
+`scripts/audio-alignment-policies/`. Source URLs, tracks, and output artifact
+names live in `data/public-domain/church-fathers/audio-sources.json`.
 
 On production startup, `app/entry.server.tsx` warms the indexed-books cache.
 The browser loads the full immutable scripture cache before enabling reader and

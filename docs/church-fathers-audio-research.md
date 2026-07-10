@@ -219,26 +219,20 @@ Current precise alignment:
 - MP3 label: `Chapters 01-03`
 - Timestamp window: 4.6s to 175.3s
 
-The builder script loads First Clement chapters 1-3 and can locate starts for
-the track, but currently writes only chapter 1 because
-`OUTPUT_CHAPTER_LIMIT = 1` in
-`scripts/build-first-clement-audio-alignment.ts`.
+The checked-in artifact predates the shared builder. The First Clement Alignment
+Policy now loads Chapters 1-3 and writes every Chapter whose alignment passes;
+the next non-dry run will merge those results into the artifact.
 
 ## Integration Notes
 
-- `README.md` documents only the Confessions alignment workflow.
-- `scripts/build-confessions-audio-alignment.ts` supports `--track`, `--limit`,
-  `--min-confidence`, and `--dry-run`.
-- `scripts/build-first-clement-audio-alignment.ts` has no CLI filtering and is
-  currently scoped to one BiblicalAudio track.
-- `scripts/build-church-fathers-preview-assets.py` preserves
-  `confessions-audio-alignment.json` when regenerating preview assets, but does
-  not list `first-clement-audio-alignment.json` in `PRESERVED_OUTPUT_FILES`.
-- `app/routes/church-fathers-preview.$assetFile.ts` currently whitelists
-  `books.json`, `confessions-audio-alignment.json`, and `manifest.json`, but not
-  `first-clement-audio-alignment.json`. The React route tries to fetch First
-  Clement alignment, so that file may 404 through the Remix asset route unless
-  served directly as a static public file by the deployment setup.
+- `npm run build:church-fathers-audio-alignment -- --work-id <CCEL-ID>` handles
+  Confessions, City of God, and First Clement through one interface.
+- `--track`, `--book`, `--limit`, `--min-confidence`, `--dry-run`, and `--reset`
+  apply consistently to every configured Early Christian Work.
+- Partial runs merge by default. `--reset` discards the selected Work's existing
+  artifact before writing new alignments.
+- Preview asset preservation derives alignment filenames from the shared audio
+  source catalog; the preview route currently recognizes all three artifacts.
 
 ## What To Add Next
 
@@ -247,9 +241,8 @@ For additional Fathers audio, the implementation pattern is:
 1. Identify a public-domain remote audio source for a parsed work.
 2. Decide whether the source is already segmented by parsed chapter or by larger
    chapter ranges.
-3. Add a builder script or extend the existing alignment builder to download the
-   remote MP3 to temp storage, transcribe/cached word timestamps, and map parsed
-   chapter IDs to `{ audioUrl, startSeconds, endSeconds }`.
-4. Preserve the generated alignment JSON during preview asset rebuilds.
-5. Whitelist the generated alignment JSON in the preview asset route if it is
-   loaded through Remix.
+3. Add the source, tracks, source page, and artifact name to
+   `data/public-domain/church-fathers/audio-sources.json`.
+4. Add a small TypeScript Alignment Policy adapter for Chapter-ID parsing and
+   Work-specific matching preferences.
+5. Run the shared builder with the new CCEL Work ID.

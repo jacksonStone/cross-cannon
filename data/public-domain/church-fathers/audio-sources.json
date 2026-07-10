@@ -4,6 +4,7 @@
       "alignmentFile": "confessions-audio-alignment.json",
       "baseUrl": "https://archive.org/download/confessions_augustine_0911_librivox",
       "location": "confessions",
+      "sourcePage": "https://archive.org/details/confessions_augustine_0911_librivox",
       "tracks": [
         { "book": 1, "chapterEnd": 10, "chapterStart": 1, "fileName": "confessions_01_01-10_augustine_64kb.mp3", "label": "Book 01, Chapters 01-10" },
         { "book": 1, "chapterEnd": 19, "chapterStart": 11, "fileName": "confessions_01_11-19_augustine_64kb.mp3", "label": "Book 01, Chapters 11-19" },
@@ -42,6 +43,17 @@
     {
       "alignmentFile": "first-clement-audio-alignment.json",
       "location": "identity",
+      "sourcePage": "http://www.biblicalaudio.com/clement1.htm",
+      "tracks": [
+        {
+          "book": 1,
+          "chapterEnd": 3,
+          "chapterStart": 1,
+          "fileName": "Clemens-01~03.mp3",
+          "label": "Chapters 01-03",
+          "url": "https://www.biblicalaudio.com/audio/music/CLEMENS/Clemens-01%7E03.mp3"
+        }
+      ],
       "workId": "anf09:xii.iv"
     },
     {
@@ -50,6 +62,7 @@
       "fileTemplate": "cityofgod_{part}_augustine_64kb.mp3",
       "labelTemplate": "Book {book:02d}, part {partLetter}",
       "location": "city-of-god",
+      "sourcePage": "https://archive.org/details/city_of_god_ds_librivox",
       "partsByBook": {
         "1": ["01a", "01b"],
         "2": ["02a", "02b"],

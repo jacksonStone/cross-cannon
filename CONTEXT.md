@@ -64,3 +64,13 @@ _Avoid_: Database cache, search index, static JSON
 A non-scriptural early Christian text presented for reading and search alongside
 Scripture, with author, source, classification, and chapter structure.
 _Avoid_: Church fathers asset, preview book, fathers file
+
+**Chapter Audio Alignment**:
+A mapping from Chapters in an Early Christian Work to their playable time ranges
+within one or more audio tracks.
+_Avoid_: Audio offset file, timestamp map
+
+**Alignment Policy**:
+The Work-specific rules that rank matching evidence and adjust the resulting
+Chapter Audio Alignment.
+_Avoid_: Preference filter, matching mode
