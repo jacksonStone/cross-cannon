@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cross Canon Offline Reader</title>
+    <style>
+      :root { color-scheme: light dark; font-family: Georgia, serif; }
+      body { margin: 0; background: #fbfaf7; color: #24211d; }
+      main { box-sizing: border-box; width: min(100%, 820px); min-height: 100vh; margin: 0 auto; padding: 28px 20px 88px; }
+      h1 { margin: 0 0 18px; font: 600 clamp(1.5rem, 6vw, 2.25rem)/1.05 Inter, system-ui, sans-serif; }
+      p { font-size: 1.2rem; line-height: 1.8; }
+      nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 28px; }
+      button { border: 1px solid #bbaea0; border-radius: 999px; background: #fff; color: inherit; padding: 8px 14px; font: 600 .95rem Inter, system-ui, sans-serif; }
+      button:disabled { opacity: .45; }
+      .offline { position: fixed; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); border-radius: 999px; background: #24211d; color: #fff; padding: 7px 12px; font: 600 .82rem Inter, system-ui, sans-serif; }
+      .error { max-width: 34rem; }
+      @media (prefers-color-scheme: dark) { body { background: #171717; color: #eee9de; } button { background: #222; border-color: #514b42; } .offline { background: #eee9de; color: #171717; } }
+    </style>
+  </head>
+  <body>
+    <main id="reader" aria-live="polite"></main>
+    <div class="offline">Offline</div>
+    <script src="/offline-reader.js"></script>
+  </body>
+</html>

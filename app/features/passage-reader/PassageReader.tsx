@@ -8,6 +8,7 @@ import {
 import { Form, Link, useNavigation } from "@remix-run/react";
 
 import { PassageJump } from "~/features/passage-jump/PassageJump";
+import { useOfflineStatus } from "~/features/offline/OfflineProvider";
 import { useScriptureReaderNavigation } from "~/features/reader-navigation/useScriptureReaderNavigation";
 import { ReaderCorpusSwitch } from "~/features/reader-switch/ReaderCorpusSwitch";
 import {
@@ -56,6 +57,7 @@ export function PassageReader({
   passages
 }: PassageReaderProps) {
   const navigation = useNavigation();
+  const { isOffline } = useOfflineStatus();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { readerSettings, setReaderSettings } = useStoredReaderSettings({
     onThemeChange
@@ -179,7 +181,7 @@ export function PassageReader({
           onClose={() => setIsReaderToolsOpen(false)}
           onOpen={() => setIsReaderToolsOpen(true)}
         >
-            <button
+            {!isOffline ? <button
               aria-label={
                 activeAudioUrl
                   ? `${isActiveChapterPlaying ? "Pause" : "Play"} ${activeChapter.book} ${activeChapter.chapter} audio`
@@ -196,8 +198,8 @@ export function PassageReader({
               type="button"
             >
               {isActiveChapterPlaying ? "❚❚" : "🔊"}
-            </button>
-            {onOpenSearch ? (
+            </button> : null}
+            {!isOffline && onOpenSearch ? (
               <button
                 aria-label="Search"
                 className="context-button reader-icon-button"
@@ -210,7 +212,7 @@ export function PassageReader({
               >
                 🔍
               </button>
-            ) : (
+            ) : !isOffline ? (
               <Link
                 aria-label="Search"
                 className="context-button reader-icon-button"
@@ -219,7 +221,7 @@ export function PassageReader({
               >
                 🔍
               </Link>
-            )}
+            ) : null}
             <PassageJump
               filters={filters}
               initialPassageId={passageJumpInitialPassageId}
@@ -276,7 +278,7 @@ export function PassageReader({
 
                   return (
                     <ReaderPassageArticle
-                      actions={
+                      actions={isOffline ? undefined : (
                         <>
                           <Form action="/?index" method="post">
                             <input
@@ -316,7 +318,7 @@ export function PassageReader({
                             </p>
                           ) : null}
                         </>
-                      }
+                      )}
                       dataAttributes={{ "data-passage-id": passage.id }}
                       isSelected={isSelected}
                       key={passage.id}

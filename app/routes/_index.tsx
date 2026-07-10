@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState
+} from "react";
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -9,6 +17,7 @@ import {
 } from "@remix-run/react";
 
 import { PassageReader } from "~/features/passage-reader/PassageReader";
+import { useOfflineStatus } from "~/features/offline/OfflineProvider";
 import { buildEarlyChristianReaderUrl } from "~/features/reader-navigation/reader-links";
 import { rememberReaderCorpus } from "~/features/reader-switch/ReaderCorpusSwitch";
 import { SearchForm } from "~/features/search/SearchForm";
@@ -102,6 +111,7 @@ export default function Index() {
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
+  const { isOffline } = useOfflineStatus();
   const [searchFlow, dispatchSearchFlow] = useReducer(
     searchModalFlowReducer,
     initialSearchModalFlowState
@@ -111,6 +121,7 @@ export default function Index() {
   const [readerPassageId, setReaderPassageId] = useState("");
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
   const lastVisibleChapterKeyRef = useRef(savedReaderPositionRef.current);
+  const networkActionAttemptedRef = useRef(false);
   const scriptureLibrary = useScriptureLibrary({
     scriptureCacheUrl
   });
@@ -128,8 +139,26 @@ export default function Index() {
       type: "set-focused"
     });
   }, []);
+  const handleNetworkDependentSubmit = useCallback((event: FormEvent<HTMLElement>) => {
+    if (isOffline) {
+      event.preventDefault();
+      closeSearch();
+      return;
+    }
+
+    networkActionAttemptedRef.current = true;
+  }, [closeSearch, isOffline]);
 
   useModalScrollLock(isSearchOpen);
+
+  useEffect(() => {
+    if (!isOffline || !networkActionAttemptedRef.current) {
+      return;
+    }
+
+    networkActionAttemptedRef.current = false;
+    closeSearch();
+  }, [closeSearch, isOffline]);
 
   useEffect(() => {
     setReaderTheme(readSavedReaderTheme());
@@ -267,7 +296,10 @@ export default function Index() {
   }, []);
 
   return (
-    <main className={`reader-shell reader-theme-${readerTheme}`}>
+    <main
+      className={`reader-shell reader-theme-${readerTheme}`}
+      onSubmitCapture={handleNetworkDependentSubmit}
+    >
       <data value={scriptureCacheKey} data-scripture-cache-key hidden />
       <PassageReader
         filters={{}}

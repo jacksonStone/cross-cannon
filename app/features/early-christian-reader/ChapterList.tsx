@@ -8,6 +8,7 @@ import {
   isSelectedReaderPassage,
   renderReaderPassageText
 } from "~/features/early-christian-reader/reader-passages";
+import { useOfflineStatus } from "~/features/offline/OfflineProvider";
 import { ReaderPassageArticle } from "~/features/reader-ui/ReaderControls";
 
 import { EarlyChristianAuthorInputs } from "./SearchFields";
@@ -40,6 +41,8 @@ export function ChapterList({
   setChapterLoadErrors: Dispatch<SetStateAction<Map<string, string>>>;
   onSelectPassage: (chapterId: string, passageRange?: string) => void;
 }) {
+  const { isOffline } = useOfflineStatus();
+
   return (
     <div className="reader-passages">
       {renderedEntries.map((entry) => {
@@ -79,7 +82,7 @@ export function ChapterList({
 
                     return (
                       <ReaderPassageArticle
-                        actions={
+                        actions={isOffline ? undefined : (
                           <>
                             <Form method="post">
                               <input type="hidden" name="intent" value="similar-passage" />
@@ -107,7 +110,7 @@ export function ChapterList({
                               </p>
                             ) : null}
                           </>
-                        }
+                        )}
                         dataAttributes={{
                           "data-passage-end": passage.verseEnd,
                           "data-passage-key": passage.key,

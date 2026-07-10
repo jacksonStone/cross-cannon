@@ -6,10 +6,12 @@ import {
   Scripts
 } from "@remix-run/react";
 
+import { OfflineProvider } from "./features/offline/OfflineProvider";
 import stylesheet from "./styles.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
+  { rel: "manifest", href: "/manifest.webmanifest" },
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
   { rel: "apple-touch-icon", href: "/favicon-512.png" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -55,7 +57,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <OfflineProvider>{children}</OfflineProvider>
         <Scripts />
       </body>
     </html>

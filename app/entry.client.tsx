@@ -6,6 +6,10 @@ if ("scrollRestoration" in window.history) {
   window.history.scrollRestoration = "manual";
 }
 
+if ("serviceWorker" in navigator) {
+  void navigator.serviceWorker.register("/cross-canon-sw.js").catch(() => undefined);
+}
+
 startTransition(() => {
   hydrateRoot(
     document,

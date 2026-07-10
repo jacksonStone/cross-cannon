@@ -15,11 +15,13 @@ import type { BookSummary, ChapterEntry } from "./types";
 export function ChapterJump({
   activeChapterId,
   chapters,
+  downloadedWorkIds,
   onClose,
   onJump
 }: {
   activeChapterId: string;
   chapters: ChapterEntry[];
+  downloadedWorkIds: ReadonlySet<string>;
   onClose: () => void;
   onJump: (chapterId: string) => void;
 }) {
@@ -150,6 +152,15 @@ export function ChapterJump({
                   <span className="ec-work-title">{book.name}</span>
                   <span className="ec-work-meta">{getBookAuthorLabel(book)}</span>
                 </button>
+                {downloadedWorkIds.has(book.id) ? (
+                  <span
+                    aria-label={`${book.name} is available offline`}
+                    className="ec-work-download"
+                    title="Available offline"
+                  >
+                    ↓
+                  </span>
+                ) : null}
                 <button
                   aria-label={`${isFavoriteBook(book.id) ? "Remove" : "Add"} ${book.name} ${isFavoriteBook(book.id) ? "from" : "to"} favorites`}
                   className={[
