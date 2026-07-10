@@ -78,9 +78,10 @@ export function useEarlyChristianWorkDownloads({
     const validatedRecords: OfflineWorkRecords = {};
 
     for (const [workId, record] of Object.entries(currentRecords)) {
-      const isComplete = await every(record.chapterUrls, async (url) => (
-        Boolean(await cache.match(url))
-      ));
+      const isComplete = await every(record.chapterUrls, async (url) => {
+        const response = await cache.match(url);
+        return Boolean(response && await isValidEarlyChristianChapterResponse(response));
+      });
 
       validatedRecords[workId] = {
         ...record,
@@ -122,9 +123,11 @@ export function useEarlyChristianWorkDownloads({
       await requestPersistentStorageOnce();
     }
 
-    const chapterUrls = book.chapters.map((chapter) => (
-      versionedPreviewUrl(chapter.assetPath, previewAssetVersion)
-    ));
+    const chapterDownloads = book.chapters.map((chapter) => ({
+      chapterId: chapter.id,
+      url: versionedPreviewUrl(chapter.assetPath, previewAssetVersion)
+    }));
+    const chapterUrls = chapterDownloads.map((chapter) => chapter.url);
     const previousRecord = recordsRef.current[book.id];
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -141,11 +144,11 @@ export function useEarlyChristianWorkDownloads({
       const cache = await caches.open(CONTENT_CACHE);
       let completed = 0;
       let nextIndex = 0;
-      const workerCount = Math.min(CHAPTER_DOWNLOAD_CONCURRENCY, chapterUrls.length);
+      const workerCount = Math.min(CHAPTER_DOWNLOAD_CONCURRENCY, chapterDownloads.length);
 
       await Promise.all(Array.from({ length: workerCount }, async () => {
-        while (nextIndex < chapterUrls.length) {
-          const url = chapterUrls[nextIndex];
+        while (nextIndex < chapterDownloads.length) {
+          const chapter = chapterDownloads[nextIndex];
           nextIndex += 1;
 
           if (controller.signal.aborted) {
@@ -153,10 +156,15 @@ export function useEarlyChristianWorkDownloads({
           }
 
           try {
-            const cached = await cache.match(url);
+            let cached = await cache.match(chapter.url);
+
+            if (cached && !await isValidEarlyChristianChapterResponse(cached, chapter.chapterId)) {
+              await cache.delete(chapter.url);
+              cached = undefined;
+            }
 
             if (!cached) {
-              const response = await fetch(url, {
+              const response = await fetch(chapter.url, {
                 cache: "no-store",
                 signal: controller.signal
               });
@@ -165,7 +173,11 @@ export function useEarlyChristianWorkDownloads({
                 throw new Error(`Failed to download chapter: ${response.status}`);
               }
 
-              await cache.put(url, response.clone());
+              if (!await isValidEarlyChristianChapterResponse(response, chapter.chapterId)) {
+                throw new Error("Downloaded Chapter was invalid.");
+              }
+
+              await cache.put(chapter.url, response.clone());
             }
 
             completed += 1;
@@ -407,4 +419,46 @@ function isAbortError(error: unknown) {
 
 function isQuotaExceeded(error: unknown) {
   return error instanceof DOMException && error.name === "QuotaExceededError";
+}
+
+export async function isValidEarlyChristianChapterResponse(
+  response: Response,
+  expectedId?: string
+) {
+  try {
+    const value: unknown = await response.clone().json();
+
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+
+    const chapter = value as {
+      id?: unknown;
+      verses?: unknown;
+    };
+
+    return typeof chapter.id === "string"
+      && (!expectedId || chapter.id === expectedId)
+      && Array.isArray(chapter.verses)
+      && chapter.verses.every((verse) => {
+        if (!verse || typeof verse !== "object" || Array.isArray(verse)) {
+          return false;
+        }
+
+        const typedVerse = verse as {
+          modernizedText?: unknown;
+          text?: unknown;
+          verse?: unknown;
+        };
+
+        return typeof typedVerse.text === "string"
+          && typeof typedVerse.verse === "number"
+          && (
+            typedVerse.modernizedText === undefined
+            || typeof typedVerse.modernizedText === "string"
+          );
+      });
+  } catch {
+    return false;
+  }
 }

@@ -1,5 +1,4 @@
 import {
-  type FormEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -27,6 +26,7 @@ import {
 } from "~/features/early-christian-preview/preview-cache";
 import { useOfflineStatus } from "~/features/offline/OfflineProvider";
 import { useEarlyChristianWorkDownloads } from "~/features/offline/early-christian-work-downloads";
+import { useOfflineSubmitGuard } from "~/features/offline/useOfflineSubmitGuard";
 import {
   SEARCH_EXAMPLES
 } from "~/features/early-christian-reader/book-index";
@@ -146,7 +146,6 @@ export default function ChurchFathersReaderRoute() {
   const [exampleIndex, setExampleIndex] = useState(0);
   const headerTitleRef = useRef<HTMLDivElement | null>(null);
   const isToolsOpenRef = useRef(isToolsOpen);
-  const networkActionAttemptedRef = useRef(false);
   const readerTitleRef = useRef<HTMLHeadingElement | null>(null);
 
   const scriptureLibrary = useScriptureLibrary({
@@ -223,16 +222,15 @@ export default function ChurchFathersReaderRoute() {
     closeSearchFilters();
     dispatchSearchFlow({ type: "close" });
   }, [closeSearchFilters]);
-  const handleNetworkDependentSubmit = useCallback((event: FormEvent<HTMLElement>) => {
-    if (isOffline) {
-      event.preventDefault();
-      closeSearch();
-      setIsJumpOpen(false);
-      return;
-    }
-
-    networkActionAttemptedRef.current = true;
-  }, [closeSearch, isOffline]);
+  const closeNetworkInteractions = useCallback(() => {
+    closeSearch();
+    setIsJumpOpen(false);
+  }, [closeSearch]);
+  const handleNetworkDependentSubmit = useOfflineSubmitGuard({
+    isOffline,
+    isSubmitting: navigation.state !== "idle",
+    onBlocked: closeNetworkInteractions
+  });
   useModalScrollLock(isSearchOpen || isJumpOpen || searchDialog.isFilterOpen);
 
   useEffect(() => {
@@ -245,15 +243,6 @@ export default function ChurchFathersReaderRoute() {
     );
   }, [initialChapterId, initialPassageRange]);
 
-  useEffect(() => {
-    if (!isOffline || !networkActionAttemptedRef.current) {
-      return;
-    }
-
-    networkActionAttemptedRef.current = false;
-    closeSearch();
-    setIsJumpOpen(false);
-  }, [closeSearch, isOffline]);
   useRenderedChapterAssetLoader({
     activeChapterIndex,
     bookIndex: readerBookIndex,

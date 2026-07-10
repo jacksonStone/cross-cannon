@@ -17,20 +17,7 @@ const browserErrors: string[] = [];
 const errorResponses: string[] = [];
 
 if (manageServer) {
-  managedServer = spawn(
-    path.resolve("node_modules/.bin/remix-serve"),
-    ["./build/server/index.js"],
-    {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      NODE_ENV: "production",
-      PORT: String(managedPort)
-    },
-      stdio: ["ignore", "pipe", "pipe"]
-    }
-  );
-  await waitForServer(baseUrl, managedServer, timeoutMs);
+  managedServer = await startManagedServer(managedPort, timeoutMs);
 }
 
 const browser = await puppeteer.launch({
@@ -136,21 +123,14 @@ try {
   ));
   await restoreCacheWrites(page);
   await clickButtonByText(page, "Retry download");
-  const quotaRetryCompleted = await page.waitForFunction(() => (
-    [...document.querySelectorAll("button")].some((button) => (
-      button.textContent?.includes("Remove download")
-    ))
-  ), { timeout: 15_000 }).then(() => true).catch(() => false);
-  if (!quotaRetryCompleted) {
-    const retryState = await page.evaluate(() => ({
-      body: document.body.textContent?.trim().slice(0, 600),
-      buttons: [...document.querySelectorAll("button")].map((button) => (
-        button.textContent?.trim()
-      )),
+  /* obsolete diagnostic
       records: localStorage.getItem("cross-cannon:offline-early-christian-works:v1")
     }));
     throw new Error(`Quota retry did not complete: ${JSON.stringify(retryState)}`);
   }
+  */
+  const quotaRetryCompleted = await waitForEnabledButton(page, "Remove download", 15_000);
+  assert(quotaRetryCompleted, "Expected the quota retry to complete.");
   await page.waitForFunction(() => document.body.textContent?.includes("Available offline"));
   await page.$eval("button[aria-label='Search']", (button) => (
     (button as HTMLButtonElement).click()
@@ -270,6 +250,34 @@ try {
   assert(offlineWorkCount === 1, `Expected one downloaded Work offline, got ${offlineWorkCount}.`);
   await clickButtonByText(page, "Close");
 
+  if (manageServer) {
+    managedServer = await startManagedServer(managedPort, timeoutMs);
+  } else {
+    await page.setOfflineMode(false);
+  }
+  const recoveredHealthStatus = await page.evaluate(async () => (
+    (await fetch("/?offline-health=e2e-recovery", {
+      cache: "no-store",
+      method: "HEAD"
+    })).status
+  ));
+  assert(recoveredHealthStatus === 200, `Expected recovered origin health, got ${recoveredHealthStatus}.`);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  const indicatorCleared = await waitForMissingSelector(page, ".offline-indicator", 10_000);
+  assert(indicatorCleared, "Expected the Offline indicator to clear after origin recovery.");
+  await openReaderTools(page);
+  await page.waitForSelector("button[aria-label='Search']");
+  await page.$eval("button[aria-label='Close reader tools']", (button) => (
+    (button as HTMLButtonElement).click()
+  ));
+  if (managedServer) {
+    await stopServer(managedServer);
+    await waitForServerStop(baseUrl, timeoutMs);
+    managedServer = null;
+  } else {
+    await page.setOfflineMode(true);
+  }
+
   await page.goto(unavailableWorkUrl, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".reader-empty");
   const unavailableState = await page.$eval(".reader-empty", (state) => (
@@ -337,6 +345,7 @@ try {
     passed: true,
     priorCompleteVersion: true,
     quotaRecovery: true,
+    reachabilityRecovery: true,
     scripture: scriptureChapter,
     unavailableWork: true
   }, null, 2));
@@ -621,6 +630,24 @@ async function waitForEnabledButton(page: Page, text: string, timeout: number) {
   return false;
 }
 
+async function waitForMissingSelector(page: Page, selector: string, timeout: number) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeout) {
+    const isMissing = await page.evaluate((candidate) => (
+      !document.querySelector(candidate)
+    ), selector).catch(() => false);
+
+    if (isMissing) {
+      return true;
+    }
+
+    await wait(100);
+  }
+
+  return false;
+}
+
 async function clickButtonByText(page: Page, text: string) {
   const clicked = await page.evaluate((text: string) => {
     const button = [...document.querySelectorAll<HTMLButtonElement>("button")]
@@ -659,6 +686,24 @@ async function waitForServer(url: string, server: ChildProcess, timeout: number)
   }
 
   throw new Error(`Timed out waiting for managed E2E server at ${url}.`);
+}
+
+async function startManagedServer(port: number, timeout: number) {
+  const server = spawn(
+    path.resolve("node_modules/.bin/remix-serve"),
+    ["./build/server/index.js"],
+    {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        PORT: String(port)
+      },
+      stdio: ["ignore", "pipe", "pipe"]
+    }
+  );
+  await waitForServer(baseUrl, server, timeout);
+  return server;
 }
 
 async function stopServer(server: ChildProcess) {

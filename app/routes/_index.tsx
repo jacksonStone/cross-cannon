@@ -1,5 +1,4 @@
 import {
-  type FormEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -18,6 +17,7 @@ import {
 
 import { PassageReader } from "~/features/passage-reader/PassageReader";
 import { useOfflineStatus } from "~/features/offline/OfflineProvider";
+import { useOfflineSubmitGuard } from "~/features/offline/useOfflineSubmitGuard";
 import { buildEarlyChristianReaderUrl } from "~/features/reader-navigation/reader-links";
 import { rememberReaderCorpus } from "~/features/reader-switch/ReaderCorpusSwitch";
 import { SearchForm } from "~/features/search/SearchForm";
@@ -121,7 +121,6 @@ export default function Index() {
   const [readerPassageId, setReaderPassageId] = useState("");
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
   const lastVisibleChapterKeyRef = useRef(savedReaderPositionRef.current);
-  const networkActionAttemptedRef = useRef(false);
   const scriptureLibrary = useScriptureLibrary({
     scriptureCacheUrl
   });
@@ -139,26 +138,13 @@ export default function Index() {
       type: "set-focused"
     });
   }, []);
-  const handleNetworkDependentSubmit = useCallback((event: FormEvent<HTMLElement>) => {
-    if (isOffline) {
-      event.preventDefault();
-      closeSearch();
-      return;
-    }
-
-    networkActionAttemptedRef.current = true;
-  }, [closeSearch, isOffline]);
+  const handleNetworkDependentSubmit = useOfflineSubmitGuard({
+    isOffline,
+    isSubmitting: navigation.state !== "idle",
+    onBlocked: closeSearch
+  });
 
   useModalScrollLock(isSearchOpen);
-
-  useEffect(() => {
-    if (!isOffline || !networkActionAttemptedRef.current) {
-      return;
-    }
-
-    networkActionAttemptedRef.current = false;
-    closeSearch();
-  }, [closeSearch, isOffline]);
 
   useEffect(() => {
     setReaderTheme(readSavedReaderTheme());

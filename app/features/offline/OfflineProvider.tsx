@@ -1,6 +1,7 @@
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -18,24 +19,24 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   // established immediately after hydration, including on an offline startup.
   const [isOffline, setIsOffline] = useState(false);
   const value = useMemo(() => ({ isOffline }), [isOffline]);
+  const checkReachability = useCallback(async () => {
+    if (!navigator.onLine) {
+      setIsOffline(true);
+      return;
+    }
+
+    try {
+      const response = await fetch("/?offline-health=1", {
+        cache: "no-store",
+        method: "HEAD"
+      });
+      setIsOffline(!response.ok);
+    } catch {
+      setIsOffline(true);
+    }
+  }, []);
 
   useEffect(() => {
-    const checkReachability = async () => {
-      if (!navigator.onLine) {
-        setIsOffline(true);
-        return;
-      }
-
-      try {
-        const response = await fetch("/?offline-health=1", {
-          cache: "no-store",
-          method: "HEAD"
-        });
-        setIsOffline(!response.ok);
-      } catch {
-        setIsOffline(true);
-      }
-    };
     const markOnline = () => void checkReachability();
     const markOffline = () => setIsOffline(true);
     const onServiceWorkerMessage = (event: MessageEvent<unknown>) => {
@@ -70,7 +71,27 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("offline", markOffline);
       navigator.serviceWorker?.removeEventListener("message", onServiceWorkerMessage);
     };
-  }, []);
+  }, [checkReachability]);
+
+  useEffect(() => {
+    if (!isOffline) {
+      return;
+    }
+
+    const interval = window.setInterval(() => void checkReachability(), 5_000);
+    const checkWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void checkReachability();
+      }
+    };
+
+    document.addEventListener("visibilitychange", checkWhenVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", checkWhenVisible);
+    };
+  }, [checkReachability, isOffline]);
 
   return (
     <OfflineContext.Provider value={value}>

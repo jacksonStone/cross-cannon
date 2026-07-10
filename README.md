@@ -31,6 +31,9 @@ the browser loads the full passage text from a versioned static scripture cache.
    renders a bounded chapter window around the current passage, includes prior
    chapters for backtracking, expands the window as the user scrolls up or down,
    and preserves scroll position when chapters are prepended.
+7. A service worker retains the Scripture reader and lets readers download
+   complete, text-only Early Christian Works for offline reading from the
+   reader tools menu.
 
 The current index shape is paragraph-only. The `paragraph_verses` table stores
 individual verse text and embeddings for highlight selection inside each
@@ -60,6 +63,7 @@ app/features/search/SearchResults.tsx         passage result cards
 app/features/search/canons.ts                 canon book lists and canonical sorting
 app/features/search/types.ts                  shared search feature types
 app/features/scripture/                       browser scripture cache resource and lookup helpers
+app/features/offline/                         reachability and Early Christian Work downloads
 app/lib/search.server.ts                      embedding/vector search engine
 app/lib/scripture-cache.server.ts             static scripture cache metadata/routes
 app/entry.server.tsx                          production cache warmers
@@ -110,6 +114,7 @@ Useful checks:
 
 ```bash
 npm run verify
+npm run verify:offline
 npm run verify-prod
 npm run ship
 ```
@@ -123,6 +128,13 @@ builds the Remix app using the existing scripture cache artifacts, starts the
 production server, waits for it to respond, smoke-checks the homepage,
 smoke-checks a search POST, and then stops the server process. Use
 `VERIFY_PORT=<port>` if port `3005` is already in use.
+
+`npm run verify:offline` builds the production app, starts it on an isolated
+local port, and runs the Puppeteer offline-reader journey. The journey exercises
+service-worker startup, whole-Work download progress/locking/cancellation,
+quota recovery, failed-origin behavior, direct Reader Links, downloaded-only
+navigation, removal, and mobile/desktop offline UI without requiring a
+separately running server.
 
 `npm run verify-prod` smoke-checks production without building or starting
 anything locally. It checks the remote `cross-cannon` systemd service over SSH,
