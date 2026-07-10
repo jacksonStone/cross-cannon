@@ -1,4 +1,9 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import {
+  createServer,
+  request as createHttpRequest,
+  type Server as HttpServer,
+} from "node:http";
 import path from "node:path";
 import { setTimeout as wait } from "node:timers/promises";
 
@@ -13,7 +18,12 @@ const baseUrl = (
   `http://127.0.0.1:${manageServer ? managedPort : 3005}`
 ).replace(/\/$/, "");
 const timeoutMs = Number(process.env.E2E_TIMEOUT_MS ?? 30_000);
-let managedServer: ChildProcess | null = null;
+type ManagedServer = {
+  app: ChildProcess;
+  proxy: HttpServer;
+};
+
+let managedServer: ManagedServer | null = null;
 const failedRequests: string[] = [];
 const browserErrors: string[] = [];
 const errorResponses: string[] = [];
@@ -64,9 +74,7 @@ try {
     }
   );
 
-  await page.evaluate(() => {
-    (0, eval)("globalThis.__name = value => value");
-  });
+  await installBrowserEvaluationNameShim(page);
   const shellUpdate = await page.evaluate(async () => {
     const meta = await caches.open("cross-canon-offline-meta-v1");
     const activeUrl = new URL("/__cross-canon/active-shell", location.origin)
@@ -262,39 +270,45 @@ try {
   await page.waitForFunction(() =>
     document.body.textContent?.includes("Available offline")
   );
-  const outageChapter = await page.evaluate(async () => {
-    const response = await fetch(
-      "/church-fathers-preview/chapters/anf05_iii.iv.i.vi.i.json?__crossCanonE2eOutage=1",
-      { cache: "no-store" }
+  if (manageServer) {
+    const outageChapter = await page.evaluate(async () => {
+      const response = await fetch(
+        "/church-fathers-preview/chapters/anf05_iii.iv.i.vi.i.json?__crossCanonE2eOutage=1",
+        { cache: "no-store" }
+      );
+      const chapter = await response.json();
+      return { id: chapter.id ?? "", status: response.status };
+    });
+    assert(
+      outageChapter.status === 200 &&
+        outageChapter.id === "anf05:iii.iv.i.vi.i",
+      `Expected an HTTP outage to fall back to the active Work generation: ${JSON.stringify(
+        outageChapter
+      )}`
     );
-    const chapter = await response.json();
-    return { id: chapter.id ?? "", status: response.status };
-  });
+    await page.goto(`${baseUrl}/?__crossCanonE2eOutage=1`, {
+      waitUntil: "domcontentloaded",
+    });
+    await page.waitForSelector(".reader-page");
+    const outageNavigationTitle = await page.$eval(
+      "#reader-title",
+      (heading) => heading.textContent?.trim() ?? ""
+    );
+    assert(
+      outageNavigationTitle === scriptureChapter,
+      `Expected an HTTP outage navigation to use the active reader shell: ${outageNavigationTitle}`
+    );
+    await page.goto(downloadedWorkUrl, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("#reader-title");
+    assert(
+      await waitForMissingSelector(page, ".offline-indicator", 10_000),
+      "Expected a successful navigation to recover after an HTTP outage."
+    );
+  }
   assert(
-    outageChapter.status === 200 && outageChapter.id === "anf05:iii.iv.i.vi.i",
-    `Expected an HTTP outage to fall back to the active Work generation: ${JSON.stringify(
-      outageChapter
-    )}`
+    await waitForReaderTools(page, 5_000),
+    "Expected reader tools after HTTP outage recovery."
   );
-  await page.goto(`${baseUrl}/?__crossCanonE2eOutage=1`, {
-    waitUntil: "domcontentloaded",
-  });
-  await page.waitForSelector(".reader-page");
-  const outageNavigationTitle = await page.$eval(
-    "#reader-title",
-    (heading) => heading.textContent?.trim() ?? ""
-  );
-  assert(
-    outageNavigationTitle === scriptureChapter,
-    `Expected an HTTP outage navigation to use the active reader shell: ${outageNavigationTitle}`
-  );
-  await page.goto(downloadedWorkUrl, { waitUntil: "domcontentloaded" });
-  await page.waitForSelector("#reader-title");
-  assert(
-    await waitForMissingSelector(page, ".offline-indicator", 10_000),
-    "Expected a successful navigation to recover after an HTTP outage."
-  );
-  await openReaderTools(page);
   await page.$eval("button[aria-label='Search']", (button) =>
     (button as HTMLButtonElement).click()
   );
@@ -637,6 +651,54 @@ try {
       stagedWorkUpdate.pendingCachedCount === stagedWorkUpdate.pendingTotal,
     `Expected the completed replacement to wait for a later navigation or reload: ${JSON.stringify(
       stagedWorkUpdate
+    )}`
+  );
+  await page.setOfflineMode(true);
+  await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+  await page.waitForSelector(".offline-indicator");
+  await evictOnePendingWorkChapter(page);
+  const evictedPendingUpdate = await readOnlyDownloadedWorkStorage(page);
+  assert(
+    evictedPendingUpdate.pendingCachedCount < evictedPendingUpdate.pendingTotal,
+    `Expected the pending Work fixture to lose one Chapter: ${JSON.stringify(
+      evictedPendingUpdate
+    )}`
+  );
+  if (managedServer) {
+    await stopServer(managedServer);
+    await waitForServerStop(baseUrl, timeoutMs);
+    managedServer = null;
+  }
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#reader-title");
+  await page.waitForSelector(".offline-indicator");
+  const rejectedPendingUpdate = await readOnlyDownloadedWorkStorage(page);
+  assert(
+    rejectedPendingUpdate.version === "prior-complete-version" &&
+      rejectedPendingUpdate.pendingVersion !== "" &&
+      rejectedPendingUpdate.pendingCachedCount <
+        rejectedPendingUpdate.pendingTotal,
+    `Expected an evicted pending replacement to preserve the prior complete Work: ${JSON.stringify(
+      rejectedPendingUpdate
+    )}`
+  );
+  if (manageServer) {
+    managedServer = await startManagedServer(managedPort, timeoutMs);
+  }
+  await page.setOfflineMode(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  assert(
+    await waitForMissingSelector(page, ".offline-indicator", 10_000),
+    "Expected the evicted pending Work update to repair online."
+  );
+  const repairedPendingUpdate = await waitForCompletedPendingWorkStorage(
+    page,
+    15_000
+  );
+  assert(
+    repairedPendingUpdate?.version === "prior-complete-version",
+    `Expected the repaired replacement to remain staged until reload: ${JSON.stringify(
+      repairedPendingUpdate
     )}`
   );
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -1043,8 +1105,8 @@ async function restoreInterruptedChapterFetch(page: Page) {
 }
 
 async function installNetworkDelayedChapterFetch(page: Page) {
+  await installBrowserEvaluationNameShim(page);
   await page.evaluate(async () => {
-    (0, eval)("globalThis.__name = value => value");
     const scope = window as typeof window & {
       __crossCanonOriginalFetch?: typeof window.fetch;
     };
@@ -1086,6 +1148,14 @@ async function installNetworkDelayedChapterFetch(page: Page) {
         );
       });
     };
+  });
+}
+
+async function installBrowserEvaluationNameShim(page: Page) {
+  // tsx names nested browser-evaluation functions through this helper, which
+  // does not exist inside Chromium's fresh execution contexts.
+  await page.evaluate(() => {
+    (0, eval)("globalThis.__name = value => value");
   });
 }
 
@@ -1230,6 +1300,7 @@ type DownloadedWorkStorageState = {
   activeTotal: number;
   complete: boolean;
   pendingCachedCount: number;
+  pendingComplete: boolean;
   pendingTotal: number;
   pendingVersion: string;
   version: string;
@@ -1253,6 +1324,7 @@ async function readOnlyDownloadedWorkStorage(
             pending?: {
               cacheName: string;
               chapterUrls: string[];
+              complete?: boolean;
               version: string;
             };
             version: string;
@@ -1292,6 +1364,7 @@ async function readOnlyDownloadedWorkStorage(
       activeTotal: record.chapterUrls.length,
       complete: record.complete,
       pendingCachedCount,
+      pendingComplete: record.pending?.complete === true,
       pendingTotal: record.pending?.chapterUrls.length ?? 0,
       pendingVersion: record.pending?.version ?? "",
       version: record.version,
@@ -1316,6 +1389,57 @@ async function waitForCompleteDownloadedWorkStorage(
   }
 
   return null;
+}
+
+async function waitForCompletedPendingWorkStorage(page: Page, timeout: number) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeout) {
+    const state = await readOnlyDownloadedWorkStorage(page).catch(() => null);
+
+    if (
+      state?.pendingComplete &&
+      state.pendingCachedCount === state.pendingTotal
+    ) {
+      return state;
+    }
+
+    await wait(100);
+  }
+
+  return null;
+}
+
+async function evictOnePendingWorkChapter(page: Page) {
+  await page.evaluate(async () => {
+    const meta = await caches.open("cross-canon-offline-meta-v1");
+    const registryUrl = new URL("/__cross-canon/work-registry", location.origin)
+      .href;
+    const response = await meta.match(registryUrl);
+
+    if (!response) {
+      throw new Error("Expected the offline Work registry.");
+    }
+
+    const records = (await response.json()) as Record<
+      string,
+      {
+        pending?: { cacheName: string; chapterUrls: string[] };
+      }
+    >;
+    const entries = Object.values(records);
+    const pending = entries.length === 1 ? entries[0].pending : undefined;
+    const chapterUrl = pending?.chapterUrls.at(-1);
+
+    if (!pending || !chapterUrl) {
+      throw new Error("Expected one completed pending Work generation.");
+    }
+
+    const pendingCache = await caches.open(pending.cacheName);
+    const generalCache = await caches.open("cross-canon-content-v2");
+    await pendingCache.delete(chapterUrl);
+    await generalCache.delete(chapterUrl, { ignoreSearch: true });
+  });
 }
 
 async function evictOneActiveWorkChapter(page: Page) {
@@ -1498,7 +1622,8 @@ async function waitForServer(
 }
 
 async function startManagedServer(port: number, timeout: number) {
-  const server = spawn(
+  const appPort = port + 10_000;
+  const app = spawn(
     path.resolve("node_modules/.bin/remix-serve"),
     ["./build/server/index.js"],
     {
@@ -1506,16 +1631,66 @@ async function startManagedServer(port: number, timeout: number) {
       env: {
         ...process.env,
         NODE_ENV: "production",
-        PORT: String(port),
+        PORT: String(appPort),
       },
       stdio: ["ignore", "pipe", "pipe"],
     }
   );
-  await waitForServer(baseUrl, server, timeout);
-  return server;
+  await waitForServer(`http://127.0.0.1:${appPort}`, app, timeout);
+  const proxy = createServer((incoming, outgoing) => {
+    const requestUrl = new URL(
+      incoming.url ?? "/",
+      `http://${incoming.headers.host ?? `127.0.0.1:${port}`}`
+    );
+
+    if (requestUrl.searchParams.get("__crossCanonE2eOutage") === "1") {
+      outgoing.writeHead(503, { "Content-Type": "text/plain" });
+      outgoing.end("Intentional local E2E outage");
+      return;
+    }
+
+    const upstream = createHttpRequest(
+      {
+        headers: {
+          ...incoming.headers,
+          host: `127.0.0.1:${appPort}`,
+        },
+        hostname: "127.0.0.1",
+        method: incoming.method,
+        path: incoming.url,
+        port: appPort,
+      },
+      (response) => {
+        outgoing.writeHead(response.statusCode ?? 502, response.headers);
+        response.pipe(outgoing);
+      }
+    );
+    upstream.on("error", () => {
+      if (!outgoing.headersSent) {
+        outgoing.writeHead(502, { "Content-Type": "text/plain" });
+      }
+      outgoing.end("Managed E2E upstream unavailable");
+    });
+    incoming.pipe(upstream);
+  });
+  await new Promise<void>((resolve, reject) => {
+    proxy.once("error", reject);
+    proxy.listen(port, "127.0.0.1", () => {
+      proxy.off("error", reject);
+      resolve();
+    });
+  });
+  await waitForServer(baseUrl, app, timeout);
+  return { app, proxy };
 }
 
-async function stopServer(server: ChildProcess) {
+async function stopServer(server: ManagedServer) {
+  server.proxy.close();
+  server.proxy.closeAllConnections();
+  await stopChildProcess(server.app);
+}
+
+async function stopChildProcess(server: ChildProcess) {
   if (server.exitCode !== null) {
     return;
   }

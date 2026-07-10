@@ -87,7 +87,12 @@ export function useEarlyChristianWorkDownloads({
     let ignore = false;
 
     void readOfflineWorkRecords()
-      .then(promoteCompletedWorkGenerations)
+      .then((loadedRecords) =>
+        promoteCompletedWorkGenerations(
+          loadedRecords,
+          validatePendingWorkGeneration
+        )
+      )
       .then(validateOfflineWorkRecords)
       .then(async (loadedRecords) => {
         await writeOfflineWorkRecords(loadedRecords);
@@ -527,6 +532,18 @@ async function validateOfflineWorkRecords(records: OfflineWorkRecords) {
   }
 
   return validated;
+}
+
+async function validatePendingWorkGeneration(
+  generation: NonNullable<OfflineWorkRecord["pending"]>
+) {
+  const cache = await caches.open(generation.cacheName);
+  return every(generation.chapterUrls, async (url) => {
+    const response = await cache.match(url);
+    return Boolean(
+      response && (await isValidEarlyChristianChapterResponse(response))
+    );
+  });
 }
 
 async function requestPersistentStorageOnce() {

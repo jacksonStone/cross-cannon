@@ -33,7 +33,6 @@ import {
   type EarlyChristianSearchResult,
 } from "~/lib/early-christian-search.server";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
-import { isLocalE2eOutageRequest } from "~/lib/local-e2e-outage.server";
 import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";
 import { isBackdropClick, useEscapeDismiss } from "~/lib/use-dialog-dismiss";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
@@ -59,11 +58,7 @@ import {
 
 const READER_POSITION_STORAGE_KEY = "cross-cannon:reader-position:v1";
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  if (isLocalE2eOutageRequest(request)) {
-    throw new Response("Intentional local E2E outage", { status: 503 });
-  }
-
+export async function loader({}: LoaderFunctionArgs) {
   const earlyChristianAuthorsPromise: Promise<string[]> =
     getEarlyChristianAuthors().catch(() => []);
   const [books, earlyChristianAuthors, scriptureCache] = await Promise.all([

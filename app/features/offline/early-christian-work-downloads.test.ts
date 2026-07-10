@@ -41,7 +41,7 @@ test("rejects corrupt or unexpected Chapter responses", async () => {
   );
 });
 
-test("promotes only fully staged Work replacements on the next reader mount", () => {
+test("promotes only validated Work replacements on the next reader mount", async () => {
   const active = {
     cacheName: "cross-canon-work-v1-work-old",
     chapterUrls: ["/old"],
@@ -49,26 +49,53 @@ test("promotes only fully staged Work replacements on the next reader mount", ()
     completedAt: 1,
     version: "old",
   };
-  const staged = promoteCompletedWorkGenerations({
-    ready: {
-      ...active,
-      pending: {
-        cacheName: "cross-canon-work-v1-work-new",
-        chapterUrls: ["/new"],
-        complete: true,
-        completedAt: 2,
-        version: "new",
+  const staged = await promoteCompletedWorkGenerations(
+    {
+      ready: {
+        ...active,
+        pending: {
+          cacheName: "cross-canon-work-v1-work-new",
+          chapterUrls: ["/new"],
+          complete: true,
+          completedAt: 2,
+          version: "new",
+        },
+      },
+      evicted: {
+        ...active,
+        pending: {
+          cacheName: "cross-canon-work-v1-work-evicted",
+          chapterUrls: ["/evicted"],
+          complete: true,
+          version: "new",
+        },
+      },
+      validationError: {
+        ...active,
+        pending: {
+          cacheName: "cross-canon-work-v1-work-error",
+          chapterUrls: ["/error"],
+          complete: true,
+          version: "new",
+        },
+      },
+      interrupted: {
+        ...active,
+        pending: {
+          cacheName: "cross-canon-work-v1-work-partial",
+          chapterUrls: ["/partial"],
+          version: "new",
+        },
       },
     },
-    interrupted: {
-      ...active,
-      pending: {
-        cacheName: "cross-canon-work-v1-work-partial",
-        chapterUrls: ["/partial"],
-        version: "new",
-      },
-    },
-  });
+    async (generation) => {
+      if (generation.cacheName.endsWith("-error")) {
+        throw new Error("Cache unavailable");
+      }
+
+      return generation.cacheName.endsWith("-new");
+    }
+  );
 
   assert.deepEqual(staged.ready, {
     cacheName: "cross-canon-work-v1-work-new",
@@ -77,6 +104,9 @@ test("promotes only fully staged Work replacements on the next reader mount", ()
     completedAt: 2,
     version: "new",
   });
+  assert.equal(staged.evicted.version, "old");
+  assert.equal(staged.evicted.pending?.version, "new");
+  assert.equal(staged.validationError.version, "old");
   assert.equal(staged.interrupted.version, "old");
   assert.equal(staged.interrupted.pending?.version, "new");
 });

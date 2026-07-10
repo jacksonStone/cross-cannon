@@ -3,22 +3,16 @@ import path from "node:path";
 
 import type { LoaderFunctionArgs } from "@remix-run/node";
 
-import { isLocalE2eOutageRequest } from "~/lib/local-e2e-outage.server";
-
 const CHAPTERS_DIR = path.resolve(
   process.cwd(),
   "public/church-fathers-preview/chapters"
 );
 
-export async function loader({ params, request }: LoaderFunctionArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
   const chapterFile = params.chapterFile;
 
   if (!chapterFile || !/^[A-Za-z0-9_.-]+\.json$/.test(chapterFile)) {
     throw new Response("Not found", { status: 404 });
-  }
-
-  if (isLocalE2eOutageRequest(request)) {
-    throw new Response("Intentional local E2E outage", { status: 503 });
   }
 
   const filePath = path.join(CHAPTERS_DIR, chapterFile);

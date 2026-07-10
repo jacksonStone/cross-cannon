@@ -82,29 +82,39 @@ export async function cleanupInactiveWorkGenerations(
   );
 }
 
-export function promoteCompletedWorkGenerations(
-  records: OfflineWorkRecords
-): OfflineWorkRecords {
-  return Object.fromEntries(
-    Object.entries(records).map(([workId, record]) => {
-      const pending = record.pending;
+export async function promoteCompletedWorkGenerations(
+  records: OfflineWorkRecords,
+  validate: (generation: PendingOfflineWorkGeneration) => Promise<boolean>
+): Promise<OfflineWorkRecords> {
+  const promoted: OfflineWorkRecords = {};
 
-      if (!pending?.complete) {
-        return [workId, record];
+  for (const [workId, record] of Object.entries(records)) {
+    const pending = record.pending;
+    let isValid = false;
+
+    if (pending?.complete) {
+      try {
+        isValid = await validate(pending);
+      } catch {
+        isValid = false;
       }
+    }
 
-      return [
-        workId,
-        {
-          cacheName: pending.cacheName,
-          chapterUrls: pending.chapterUrls,
-          complete: true,
-          completedAt: pending.completedAt ?? record.completedAt,
-          version: pending.version,
-        },
-      ];
-    })
-  );
+    if (!pending?.complete || !isValid) {
+      promoted[workId] = record;
+      continue;
+    }
+
+    promoted[workId] = {
+      cacheName: pending.cacheName,
+      chapterUrls: pending.chapterUrls,
+      complete: true,
+      completedAt: pending.completedAt ?? record.completedAt,
+      version: pending.version,
+    };
+  }
+
+  return promoted;
 }
 
 function parseOfflineWorkRecords(value: unknown): OfflineWorkRecords {
