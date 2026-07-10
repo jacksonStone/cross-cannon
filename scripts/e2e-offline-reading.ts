@@ -5,10 +5,12 @@ import { setTimeout as wait } from "node:timers/promises";
 import puppeteer, { type Page } from "puppeteer";
 
 const manageServer = process.env.E2E_MANAGE_SERVER === "1";
-const managedPort = Number(process.env.E2E_PORT ?? (30_000 + (process.pid % 10_000)));
+const managedPort = Number(
+  process.env.E2E_PORT ?? 30_000 + (process.pid % 10_000)
+);
 const baseUrl = (
-  process.env.E2E_BASE_URL
-  ?? `http://127.0.0.1:${manageServer ? managedPort : 3005}`
+  process.env.E2E_BASE_URL ??
+  `http://127.0.0.1:${manageServer ? managedPort : 3005}`
 ).replace(/\/$/, "");
 const timeoutMs = Number(process.env.E2E_TIMEOUT_MS ?? 30_000);
 let managedServer: ChildProcess | null = null;
@@ -22,22 +24,24 @@ if (manageServer) {
 
 const browser = await puppeteer.launch({
   headless: true,
-  args: ["--no-sandbox", "--disable-setuid-sandbox"]
+  args: ["--no-sandbox", "--disable-setuid-sandbox"],
 });
 
 try {
   const page = await browser.newPage();
-  page.on("requestfailed", (request) => failedRequests.push(
-    `${request.url()} (${request.failure()?.errorText ?? "failed"})`
-  ));
+  page.on("requestfailed", (request) =>
+    failedRequests.push(
+      `${request.url()} (${request.failure()?.errorText ?? "failed"})`
+    )
+  );
   page.on("console", (message) => {
     if (message.type() === "error") {
       browserErrors.push(message.text());
     }
   });
-  page.on("pageerror", (error) => browserErrors.push(
-    error instanceof Error ? error.message : String(error)
-  ));
+  page.on("pageerror", (error) =>
+    browserErrors.push(error instanceof Error ? error.message : String(error))
+  );
   page.on("response", (response) => {
     if (response.status() >= 400) {
       errorResponses.push(`${response.status()} ${response.url()}`);
@@ -54,87 +58,127 @@ try {
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector(".reader-page");
 
-  await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller), {
-    timeout: 5_000
-  });
+  await page.waitForFunction(
+    () => Boolean(navigator.serviceWorker?.controller),
+    {
+      timeout: 5_000,
+    }
+  );
 
   await page.waitForSelector("#reader-title");
-  const scriptureChapter = await page.$eval("#reader-title", (heading) => (
-    heading.textContent?.trim() ?? ""
-  ));
+  const scriptureChapter = await page.$eval(
+    "#reader-title",
+    (heading) => heading.textContent?.trim() ?? ""
+  );
   await openReaderTools(page);
   await clickButtonByText(page, "Jump");
   await page.waitForSelector(".passage-jump-verse");
-  const scriptureReaderUrl = await page.$eval(".passage-jump-verse", (link) => (
-    (link as HTMLAnchorElement).href
-  ));
+  const scriptureReaderUrl = await page.$eval(
+    ".passage-jump-verse",
+    (link) => (link as HTMLAnchorElement).href
+  );
   const downloadedWorkUrl = `${baseUrl}/church-fathers?chapter=anf05%3Aiv.vi.i`;
   await page.goto(downloadedWorkUrl, {
-    waitUntil: "domcontentloaded"
+    waitUntil: "domcontentloaded",
   });
   await page.waitForSelector("#reader-title");
   const unavailableWorkUrl = await captureAnotherWorkUrl(page);
-  const canceledWorkTitle = await page.$eval("#reader-title", (heading) => (
-    heading.textContent?.trim() ?? ""
-  ));
+  const canceledWorkTitle = await page.$eval(
+    "#reader-title",
+    (heading) => heading.textContent?.trim() ?? ""
+  );
   await openReaderTools(page);
   await installDelayedChapterFetch(page);
   await clickButtonByText(page, "Download work");
-  await page.waitForFunction(() => document.body.textContent?.includes("Downloading"));
-  await page.$eval("button[aria-label='Close reader tools']", (button) => (
+  await page.waitForFunction(() =>
+    document.body.textContent?.includes("Downloading")
+  );
+  await page.$eval("button[aria-label='Close reader tools']", (button) =>
     (button as HTMLButtonElement).click()
-  ));
+  );
   await openReaderTools(page);
   await clickButtonByText(page, "Jump");
   await page.waitForSelector(".ec-jump-modal");
   await chooseAnotherWorkInOpenJump(page);
   await openReaderTools(page);
   const competingDownloadState = await page.evaluate(() => {
-    const downloadButton = [...document.querySelectorAll<HTMLButtonElement>("button")]
-      .find((button) => button.textContent?.trim() === "Download work");
+    const downloadButton = [
+      ...document.querySelectorAll<HTMLButtonElement>("button"),
+    ].find((button) => button.textContent?.trim() === "Download work");
 
     return {
       disabled: downloadButton?.disabled ?? false,
-      status: document.querySelector(".offline-download-status")?.textContent?.trim() ?? ""
+      status:
+        document
+          .querySelector(".offline-download-status")
+          ?.textContent?.trim() ?? "",
     };
   });
   assert(
-    competingDownloadState.disabled
-      && competingDownloadState.status.includes("Downloading"),
-    `Expected the active Work download to follow navigation and lock a second download: ${JSON.stringify(competingDownloadState)}`
+    competingDownloadState.disabled &&
+      competingDownloadState.status.includes("Downloading"),
+    `Expected the active Work download to follow navigation and lock a second download: ${JSON.stringify(
+      competingDownloadState
+    )}`
   );
   await clickButtonByText(page, "Cancel download");
-  const cancellationReleasedLock = await waitForEnabledButton(page, "Download work", 10_000);
-  assert(cancellationReleasedLock, "Expected cancellation to release the download lock.");
+  const cancellationReleasedLock = await waitForEnabledButton(
+    page,
+    "Download work",
+    10_000
+  );
+  assert(
+    cancellationReleasedLock,
+    "Expected cancellation to release the download lock."
+  );
   await restoreDelayedChapterFetch(page);
   await page.goto(downloadedWorkUrl, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("#reader-title");
-  const downloadedWorkTitle = await page.$eval("#reader-title", (heading) => (
-    heading.textContent?.trim() ?? ""
-  ));
+  const downloadedWorkTitle = await page.$eval(
+    "#reader-title",
+    (heading) => heading.textContent?.trim() ?? ""
+  );
   await openReaderTools(page);
   await installQuotaAndPersistenceFailure(page);
   await clickButtonByText(page, "Download work");
-  await page.waitForFunction(() => document.body.textContent?.includes("Not enough storage"));
-  await page.waitForFunction(() => (
-    [...document.querySelectorAll("button")].some((button) => (
-      button.textContent?.trim() === "Retry download"
-    ))
-  ));
+  await page.waitForFunction(() =>
+    document.body.textContent?.includes("Not enough storage")
+  );
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll("button")].some(
+      (button) => button.textContent?.trim() === "Retry download"
+    )
+  );
   await restoreCacheWrites(page);
   await clickButtonByText(page, "Retry download");
-  /* obsolete diagnostic
-      records: localStorage.getItem("cross-cannon:offline-early-christian-works:v1")
-    }));
-    throw new Error(`Quota retry did not complete: ${JSON.stringify(retryState)}`);
-  }
-  */
-  const quotaRetryCompleted = await waitForEnabledButton(page, "Remove download", 15_000);
+  const quotaRetryCompleted = await waitForEnabledButton(
+    page,
+    "Remove download",
+    15_000
+  );
   assert(quotaRetryCompleted, "Expected the quota retry to complete.");
-  await page.waitForFunction(() => document.body.textContent?.includes("Available offline"));
-  await page.$eval("button[aria-label='Search']", (button) => (
+  const retryRecords = await page.evaluate(() =>
+    localStorage.getItem("cross-cannon:offline-early-christian-works:v1")
+  );
+  assert(
+    retryRecords === null || retryRecords.startsWith("{"),
+    "Expected Work metadata to remain valid JSON after the quota retry."
+  );
+  const quotaRetryRemainsComplete = await waitForEnabledButton(
+    page,
+    "Remove download",
+    15_000
+  );
+  assert(
+    quotaRetryRemainsComplete,
+    "Expected the completed Work action to remain available."
+  );
+  await page.waitForFunction(() =>
+    document.body.textContent?.includes("Available offline")
+  );
+  await page.$eval("button[aria-label='Search']", (button) =>
     (button as HTMLButtonElement).click()
-  ));
+  );
   await page.waitForSelector(".search-modal");
   await page.type("textarea[name='question']", "hope in suffering");
 
@@ -150,44 +194,50 @@ try {
     await page.setOfflineMode(true);
   }
 
-  await page.$eval(".search-button", (button) => (
+  await page.$eval(".search-button", (button) =>
     (button as HTMLButtonElement).click()
-  ));
+  );
   await page.waitForSelector(".offline-indicator");
   await page.waitForSelector(".search-modal", { hidden: true });
   await stagePriorCompleteWorkVersion(page);
 
   await page.goto(scriptureReaderUrl, {
-    waitUntil: "domcontentloaded"
+    waitUntil: "domcontentloaded",
   });
-  const scriptureReaderOpened = await page.waitForSelector("#reader h1, #reader-title", {
-    timeout: 5_000
-  }).then(() => true).catch(() => false);
+  const scriptureReaderOpened = await page
+    .waitForSelector("#reader h1, #reader-title", {
+      timeout: 5_000,
+    })
+    .then(() => true)
+    .catch(() => false);
   if (!scriptureReaderOpened) {
     const scriptureDiagnostic = await page.evaluate(async () => ({
       body: document.body.innerHTML.slice(0, 1_000),
-      cacheKeys: (await caches.keys()),
+      cacheKeys: await caches.keys(),
       scripts: [...document.scripts].map((script) => script.src || "inline"),
       title: document.title,
-      url: location.href
+      url: location.href,
     }));
-    throw new Error(`Offline Scripture Reader Link failed: ${JSON.stringify({
-      browserErrors,
-      errorResponses: [...new Set(errorResponses)],
-      failedRequests: [...new Set(failedRequests)],
-      scriptureDiagnostic
-    })}`);
+    throw new Error(
+      `Offline Scripture Reader Link failed: ${JSON.stringify({
+        browserErrors,
+        errorResponses: [...new Set(errorResponses)],
+        failedRequests: [...new Set(failedRequests)],
+        scriptureDiagnostic,
+      })}`
+    );
   }
-  const offlineScriptureTitle = await page.$eval("#reader h1, #reader-title", (heading) => (
-    heading.textContent ?? ""
-  ));
+  const offlineScriptureTitle = await page.$eval(
+    "#reader h1, #reader-title",
+    (heading) => heading.textContent ?? ""
+  );
   assert(
     offlineScriptureTitle.includes(scriptureChapter),
     `Expected offline Reader Link ${scriptureChapter}, got ${offlineScriptureTitle}.`
   );
 
   await page.goto(downloadedWorkUrl, {
-    waitUntil: "domcontentloaded"
+    waitUntil: "domcontentloaded",
   });
   if (!manageServer) {
     await page.evaluate(() => window.dispatchEvent(new Event("offline")));
@@ -196,27 +246,36 @@ try {
   if (!hydratedOfflineReader) {
     const pageState = await page.evaluate(() => ({
       bodyText: document.body.textContent?.trim().slice(0, 500) ?? "",
-      hasEntryScript: [...document.scripts].some((script) => (
+      hasEntryScript: [...document.scripts].some((script) =>
         script.textContent?.includes("entry.client")
-      )),
-      hasReaderToolsTrigger: Boolean(document.querySelector(
-        "button[aria-label='Open reader tools']"
-      )),
+      ),
+      hasReaderToolsTrigger: Boolean(
+        document.querySelector("button[aria-label='Open reader tools']")
+      ),
       readyState: document.readyState,
-      routeModuleIds: Object.keys((window as Window & {
-        __remixRouteModules?: Record<string, unknown>;
-      }).__remixRouteModules ?? {})
+      routeModuleIds: Object.keys(
+        (
+          window as Window & {
+            __remixRouteModules?: Record<string, unknown>;
+          }
+        ).__remixRouteModules ?? {}
+      ),
     }));
-    throw new Error(`Offline reader did not hydrate: ${JSON.stringify({
-      browserErrors,
-      errorResponses: [...new Set(errorResponses)],
-      failedRequests: [...new Set(failedRequests)].slice(0, 20),
-      pageState
-    })}`);
+    throw new Error(
+      `Offline reader did not hydrate: ${JSON.stringify({
+        browserErrors,
+        errorResponses: [...new Set(errorResponses)],
+        failedRequests: [...new Set(failedRequests)].slice(0, 20),
+        pageState,
+      })}`
+    );
   }
-  const hasOfflineIndicator = await page.waitForSelector(".offline-indicator", {
-    timeout: 15_000
-  }).then(() => true).catch(() => false);
+  const hasOfflineIndicator = await page
+    .waitForSelector(".offline-indicator", {
+      timeout: 15_000,
+    })
+    .then(() => true)
+    .catch(() => false);
 
   if (!hasOfflineIndicator) {
     const diagnostic = await page.evaluate(() => ({
@@ -225,7 +284,7 @@ try {
       hasOfflineFallback: Boolean(document.querySelector(".offline")),
       online: navigator.onLine,
       title: document.title,
-      url: location.href
+      url: location.href,
     }));
     throw new Error(`Offline indicator missing: ${JSON.stringify(diagnostic)}`);
   }
@@ -234,20 +293,36 @@ try {
   const offlineControls = await page.evaluate(() => ({
     hasAudio: Boolean(document.querySelector("button[aria-label*='audio']")),
     hasSearch: Boolean(document.querySelector("button[aria-label='Search']")),
-    hasSimilar: document.body.textContent?.includes("Similar passages") ?? false,
+    hasSimilar:
+      document.body.textContent?.includes("Similar passages") ?? false,
     indicator: document.querySelector(".offline-indicator")?.outerHTML ?? "",
-    search: document.querySelector("button[aria-label='Search']")?.outerHTML ?? "",
-    tools: document.querySelector(".reader-header-actions")?.textContent?.trim() ?? ""
+    search:
+      document.querySelector("button[aria-label='Search']")?.outerHTML ?? "",
+    tools:
+      document.querySelector(".reader-header-actions")?.textContent?.trim() ??
+      "",
   }));
 
   assert(!offlineControls.hasAudio, "Expected Audio to be removed offline.");
-  assert(!offlineControls.hasSearch, `Expected Search to be removed offline: ${JSON.stringify(offlineControls)}`);
-  assert(!offlineControls.hasSimilar, "Expected Similar Passages to be removed offline.");
+  assert(
+    !offlineControls.hasSearch,
+    `Expected Search to be removed offline: ${JSON.stringify(offlineControls)}`
+  );
+  assert(
+    !offlineControls.hasSimilar,
+    "Expected Similar Passages to be removed offline."
+  );
 
   await clickButtonByText(page, "Jump");
   await page.waitForSelector(".ec-jump-modal");
-  const offlineWorkCount = await page.$$eval(".ec-work-option", (works) => works.length);
-  assert(offlineWorkCount === 1, `Expected one downloaded Work offline, got ${offlineWorkCount}.`);
+  const offlineWorkCount = await page.$$eval(
+    ".ec-work-option",
+    (works) => works.length
+  );
+  assert(
+    offlineWorkCount === 1,
+    `Expected one downloaded Work offline, got ${offlineWorkCount}.`
+  );
   await clickButtonByText(page, "Close");
 
   if (manageServer) {
@@ -255,21 +330,34 @@ try {
   } else {
     await page.setOfflineMode(false);
   }
-  const recoveredHealthStatus = await page.evaluate(async () => (
-    (await fetch("/?offline-health=e2e-recovery", {
-      cache: "no-store",
-      method: "HEAD"
-    })).status
-  ));
-  assert(recoveredHealthStatus === 200, `Expected recovered origin health, got ${recoveredHealthStatus}.`);
+  const recoveredHealthStatus = await page.evaluate(
+    async () =>
+      (
+        await fetch("/?offline-health=e2e-recovery", {
+          cache: "no-store",
+          method: "HEAD",
+        })
+      ).status
+  );
+  assert(
+    recoveredHealthStatus === 200,
+    `Expected recovered origin health, got ${recoveredHealthStatus}.`
+  );
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
-  const indicatorCleared = await waitForMissingSelector(page, ".offline-indicator", 10_000);
-  assert(indicatorCleared, "Expected the Offline indicator to clear after origin recovery.");
+  const indicatorCleared = await waitForMissingSelector(
+    page,
+    ".offline-indicator",
+    10_000
+  );
+  assert(
+    indicatorCleared,
+    "Expected the Offline indicator to clear after origin recovery."
+  );
   await openReaderTools(page);
   await page.waitForSelector("button[aria-label='Search']");
-  await page.$eval("button[aria-label='Close reader tools']", (button) => (
+  await page.$eval("button[aria-label='Close reader tools']", (button) =>
     (button as HTMLButtonElement).click()
-  ));
+  );
   if (managedServer) {
     await stopServer(managedServer);
     await waitForServerStop(baseUrl, timeoutMs);
@@ -280,27 +368,38 @@ try {
 
   await page.goto(unavailableWorkUrl, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".reader-empty");
-  const unavailableState = await page.$eval(".reader-empty", (state) => (
-    state.textContent?.trim() ?? ""
-  ));
+  const unavailableState = await page.$eval(
+    ".reader-empty",
+    (state) => state.textContent?.trim() ?? ""
+  );
   assert(
-    unavailableState.includes("isn’t available offline")
-      && unavailableState.includes("Open downloaded works"),
+    unavailableState.includes("isn’t available offline") &&
+      unavailableState.includes("Open downloaded works"),
     `Expected an explicit unavailable Work state, got ${unavailableState}.`
   );
-  assert(page.url() === unavailableWorkUrl, "Expected the unavailable Reader Link to remain intact.");
+  assert(
+    page.url() === unavailableWorkUrl,
+    "Expected the unavailable Reader Link to remain intact."
+  );
 
   await page.evaluate((unavailableUrl) => {
-    const chapterKey = new URL(unavailableUrl).searchParams.get("chapter") ?? "";
+    const chapterKey =
+      new URL(unavailableUrl).searchParams.get("chapter") ?? "";
     localStorage.setItem(
       "cross-cannon:church-fathers-position:v1",
       JSON.stringify({ chapterKey, corpus: "fathers", version: 2 })
     );
   }, unavailableWorkUrl);
-  await page.goto(`${baseUrl}/church-fathers`, { waitUntil: "domcontentloaded" });
-  await page.waitForFunction((expectedTitle) => (
-    document.querySelector("#reader-title")?.textContent?.trim() === expectedTitle
-  ), {}, downloadedWorkTitle);
+  await page.goto(`${baseUrl}/church-fathers`, {
+    waitUntil: "domcontentloaded",
+  });
+  await page.waitForFunction(
+    (expectedTitle) =>
+      document.querySelector("#reader-title")?.textContent?.trim() ===
+      expectedTitle,
+    {},
+    downloadedWorkTitle
+  );
 
   await page.setViewport({ height: 800, width: 1280 });
   const desktopOfflineLayout = await page.evaluate(() => {
@@ -314,14 +413,16 @@ try {
     return {
       indicatorBottom: indicatorRect?.bottom ?? Number.POSITIVE_INFINITY,
       indicatorRight: indicatorRect?.right ?? Number.POSITIVE_INFINITY,
-      readerPaddingBottom
+      readerPaddingBottom,
     };
   });
   assert(
-    desktopOfflineLayout.indicatorBottom <= 800
-      && desktopOfflineLayout.indicatorRight <= 1280
-      && desktopOfflineLayout.readerPaddingBottom >= 48,
-    `Expected the desktop Offline indicator to stay clear of reader content: ${JSON.stringify(desktopOfflineLayout)}`
+    desktopOfflineLayout.indicatorBottom <= 800 &&
+      desktopOfflineLayout.indicatorRight <= 1280 &&
+      desktopOfflineLayout.readerPaddingBottom >= 48,
+    `Expected the desktop Offline indicator to stay clear of reader content: ${JSON.stringify(
+      desktopOfflineLayout
+    )}`
   );
 
   await openReaderTools(page);
@@ -330,25 +431,36 @@ try {
   await page.waitForFunction(() => location.pathname === "/");
   await page.waitForSelector(".reader-page");
 
-  await page.goto(`${baseUrl}/church-fathers`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/church-fathers`, {
+    waitUntil: "domcontentloaded",
+  });
   await page.waitForSelector(".reader-empty");
-  const emptyState = await page.$eval(".reader-empty", (state) => state.textContent?.trim() ?? "");
+  const emptyState = await page.$eval(
+    ".reader-empty",
+    (state) => state.textContent?.trim() ?? ""
+  );
   assert(
     emptyState.includes("No Early Christian works are available offline"),
     `Expected the no-download offline state, got ${emptyState}.`
   );
 
-  console.log(JSON.stringify({
-    emptyState: true,
-    downloadLifecycle: canceledWorkTitle,
-    offlineWorkCount,
-    passed: true,
-    priorCompleteVersion: true,
-    quotaRecovery: true,
-    reachabilityRecovery: true,
-    scripture: scriptureChapter,
-    unavailableWork: true
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        emptyState: true,
+        downloadLifecycle: canceledWorkTitle,
+        offlineWorkCount,
+        passed: true,
+        priorCompleteVersion: true,
+        quotaRecovery: true,
+        reachabilityRecovery: true,
+        scripture: scriptureChapter,
+        unavailableWork: true,
+      },
+      null,
+      2
+    )
+  );
 } finally {
   await browser.close();
   if (managedServer) {
@@ -357,13 +469,12 @@ try {
 }
 
 async function openReaderTools(page: Page) {
-  const clicked = await page.$eval(
-    "button[aria-label='Open reader tools']",
-    (trigger) => {
+  const clicked = await page
+    .$eval("button[aria-label='Open reader tools']", (trigger) => {
       (trigger as HTMLButtonElement).click();
       return true;
-    }
-  ).catch(() => false);
+    })
+    .catch(() => false);
 
   assert(clicked, "Expected the reader tools trigger.");
 }
@@ -380,8 +491,9 @@ async function captureAnotherWorkUrl(page: Page) {
 
 async function chooseAnotherWorkInOpenJump(page: Page) {
   const choseAnotherWork = await page.evaluate(() => {
-    const option = [...document.querySelectorAll<HTMLElement>(".ec-work-option")]
-      .find((candidate) => !candidate.classList.contains("is-selected"));
+    const option = [
+      ...document.querySelectorAll<HTMLElement>(".ec-work-option"),
+    ].find((candidate) => !candidate.classList.contains("is-selected"));
     option?.querySelector<HTMLButtonElement>(".ec-work-select")?.click();
     return Boolean(option);
   });
@@ -407,10 +519,11 @@ async function installDelayedChapterFetch(page: Page) {
     const originalMatch = Cache.prototype.match;
     scope.__crossCanonOriginalCacheMatch = originalMatch;
     scope.__crossCanonOriginalFetch = originalFetch;
-    Cache.prototype.match = function(request, options) {
-      const url = typeof request === "string"
-        ? request
-        : request instanceof Request
+    Cache.prototype.match = function (request, options) {
+      const url =
+        typeof request === "string"
+          ? request
+          : request instanceof Request
           ? request.url
           : request.href;
 
@@ -421,9 +534,10 @@ async function installDelayedChapterFetch(page: Page) {
       return originalMatch.call(this, request, options);
     };
     window.fetch = (input, init) => {
-      const url = typeof input === "string"
-        ? input
-        : input instanceof Request
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof Request
           ? input.url
           : input.href;
 
@@ -435,23 +549,27 @@ async function installDelayedChapterFetch(page: Page) {
         const timer = window.setTimeout(() => {
           void originalFetch(input, init).then(resolve, reject);
         }, 10_000);
-        init?.signal?.addEventListener("abort", () => {
-          window.clearTimeout(timer);
-          reject(new DOMException("Download canceled", "AbortError"));
-        }, { once: true });
+        init?.signal?.addEventListener(
+          "abort",
+          () => {
+            window.clearTimeout(timer);
+            reject(new DOMException("Download canceled", "AbortError"));
+          },
+          { once: true }
+        );
       });
     };
 
     try {
       Object.defineProperty(navigator.storage, "persisted", {
         configurable: true,
-        value: async () => false
+        value: async () => false,
       });
       Object.defineProperty(navigator.storage, "persist", {
         configurable: true,
         value: async () => {
           throw new DOMException("Persistence denied", "NotAllowedError");
-        }
+        },
       });
     } catch {
       // Persistence is optional and some engines expose non-configurable methods.
@@ -488,10 +606,11 @@ async function installQuotaAndPersistenceFailure(page: Page) {
     const originalPut = Cache.prototype.put;
     scope.__crossCanonOriginalCacheMatch = originalMatch;
     scope.__crossCanonOriginalCachePut = originalPut;
-    Cache.prototype.match = function(request, options) {
-      const url = typeof request === "string"
-        ? request
-        : request instanceof Request
+    Cache.prototype.match = function (request, options) {
+      const url =
+        typeof request === "string"
+          ? request
+          : request instanceof Request
           ? request.url
           : request.href;
 
@@ -501,15 +620,18 @@ async function installQuotaAndPersistenceFailure(page: Page) {
 
       return originalMatch.call(this, request, options);
     };
-    Cache.prototype.put = function(request, response) {
-      const url = typeof request === "string"
-        ? request
-        : request instanceof Request
+    Cache.prototype.put = function (request, response) {
+      const url =
+        typeof request === "string"
+          ? request
+          : request instanceof Request
           ? request.url
           : request.href;
 
       if (url.includes("/church-fathers-preview/chapters/")) {
-        return Promise.reject(new DOMException("Quota reached", "QuotaExceededError"));
+        return Promise.reject(
+          new DOMException("Quota reached", "QuotaExceededError")
+        );
       }
 
       return originalPut.call(this, request, response);
@@ -518,13 +640,13 @@ async function installQuotaAndPersistenceFailure(page: Page) {
     try {
       Object.defineProperty(navigator.storage, "persisted", {
         configurable: true,
-        value: async () => false
+        value: async () => false,
       });
       Object.defineProperty(navigator.storage, "persist", {
         configurable: true,
         value: async () => {
           throw new DOMException("Persistence denied", "NotAllowedError");
-        }
+        },
       });
     } catch {
       // Persistence is optional and some engines expose non-configurable methods.
@@ -554,7 +676,9 @@ async function restoreCacheWrites(page: Page) {
 async function stagePriorCompleteWorkVersion(page: Page) {
   await page.evaluate(async () => {
     const storageKey = "cross-cannon:offline-early-christian-works:v1";
-    const records = JSON.parse(localStorage.getItem(storageKey) ?? "{}") as Record<
+    const records = JSON.parse(
+      localStorage.getItem(storageKey) ?? "{}"
+    ) as Record<
       string,
       { chapterUrls: string[]; complete?: boolean; version: string }
     >;
@@ -566,7 +690,9 @@ async function stagePriorCompleteWorkVersion(page: Page) {
       for (const chapterUrl of record.chapterUrls) {
         const response = await cache.match(chapterUrl);
         if (!response) {
-          throw new Error(`Expected completed Chapter ${chapterUrl} before staging.`);
+          throw new Error(
+            `Expected completed Chapter ${chapterUrl} before staging.`
+          );
         }
         const priorUrl = new URL(chapterUrl, location.origin);
         priorUrl.searchParams.set("v", "prior-complete-version");
@@ -588,17 +714,19 @@ async function waitForReaderTools(page: Page, timeout: number) {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeout) {
-    const state = await page.evaluate(() => {
-      if (document.querySelector(".reader-header-actions")) {
-        return "open";
-      }
+    const state = await page
+      .evaluate(() => {
+        if (document.querySelector(".reader-header-actions")) {
+          return "open";
+        }
 
-      const trigger = document.querySelector<HTMLButtonElement>(
-        "button[aria-label='Open reader tools']"
-      );
-      trigger?.click();
-      return trigger ? "opening" : "missing";
-    }).catch(() => "navigating");
+        const trigger = document.querySelector<HTMLButtonElement>(
+          "button[aria-label='Open reader tools']"
+        );
+        trigger?.click();
+        return trigger ? "opening" : "missing";
+      })
+      .catch(() => "navigating");
 
     if (state === "open") {
       return true;
@@ -614,11 +742,15 @@ async function waitForEnabledButton(page: Page, text: string, timeout: number) {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeout) {
-    const isEnabled = await page.evaluate((label) => (
-      [...document.querySelectorAll<HTMLButtonElement>("button")].some((button) => (
-        button.textContent?.trim() === label && !button.disabled
-      ))
-    ), text).catch(() => false);
+    const isEnabled = await page
+      .evaluate(
+        (label) =>
+          [...document.querySelectorAll<HTMLButtonElement>("button")].some(
+            (button) => button.textContent?.trim() === label && !button.disabled
+          ),
+        text
+      )
+      .catch(() => false);
 
     if (isEnabled) {
       return true;
@@ -630,13 +762,17 @@ async function waitForEnabledButton(page: Page, text: string, timeout: number) {
   return false;
 }
 
-async function waitForMissingSelector(page: Page, selector: string, timeout: number) {
+async function waitForMissingSelector(
+  page: Page,
+  selector: string,
+  timeout: number
+) {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeout) {
-    const isMissing = await page.evaluate((candidate) => (
-      !document.querySelector(candidate)
-    ), selector).catch(() => false);
+    const isMissing = await page
+      .evaluate((candidate) => !document.querySelector(candidate), selector)
+      .catch(() => false);
 
     if (isMissing) {
       return true;
@@ -650,8 +786,9 @@ async function waitForMissingSelector(page: Page, selector: string, timeout: num
 
 async function clickButtonByText(page: Page, text: string) {
   const clicked = await page.evaluate((text: string) => {
-    const button = [...document.querySelectorAll<HTMLButtonElement>("button")]
-      .find((candidate) => candidate.textContent?.trim() === text);
+    const button = [
+      ...document.querySelectorAll<HTMLButtonElement>("button"),
+    ].find((candidate) => candidate.textContent?.trim() === text);
     button?.click();
     return Boolean(button);
   }, text);
@@ -665,12 +802,18 @@ function assert(condition: unknown, message: string): asserts condition {
   }
 }
 
-async function waitForServer(url: string, server: ChildProcess, timeout: number) {
+async function waitForServer(
+  url: string,
+  server: ChildProcess,
+  timeout: number
+) {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeout) {
     if (server.exitCode !== null) {
-      throw new Error(`Managed E2E server exited with code ${server.exitCode}.`);
+      throw new Error(
+        `Managed E2E server exited with code ${server.exitCode}.`
+      );
     }
 
     try {
@@ -697,9 +840,9 @@ async function startManagedServer(port: number, timeout: number) {
       env: {
         ...process.env,
         NODE_ENV: "production",
-        PORT: String(port)
+        PORT: String(port),
       },
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
     }
   );
   await waitForServer(baseUrl, server, timeout);
@@ -714,7 +857,7 @@ async function stopServer(server: ChildProcess) {
   server.kill("SIGTERM");
   await Promise.race([
     new Promise<void>((resolve) => server.once("exit", () => resolve())),
-    wait(5_000).then(() => undefined)
+    wait(5_000).then(() => undefined),
   ]);
 }
 
@@ -725,7 +868,7 @@ async function waitForServerStop(url: string, timeout: number) {
     try {
       await fetch(`${url}/?offline-stop-check=${Date.now()}`, {
         cache: "no-store",
-        method: "HEAD"
+        method: "HEAD",
       });
     } catch {
       return;
