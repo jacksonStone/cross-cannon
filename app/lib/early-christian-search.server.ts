@@ -79,7 +79,6 @@ export type EarlyChristianEmbeddingSource = {
 let client: Client | null = null;
 let earlyChristianAuthorsPromise: Promise<string[]> | null = null;
 const AUTHOR_FILTER_PAGE_SIZE = 10_000;
-export const MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS = 3;
 
 export function getEarlyChristianDb() {
   client ??= createClient({
@@ -97,35 +96,6 @@ export async function getEarlyChristianAuthors() {
     throw error;
   });
   return earlyChristianAuthorsPromise;
-}
-
-export async function parseEarlyChristianAuthorFilters(values: unknown[]) {
-  const requestedAuthors = Array.from(new Set(
-    values
-      .map((value) => String(value).trim())
-      .filter(Boolean)
-  ));
-
-  if (requestedAuthors.length > MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS) {
-    return {
-      error: `Choose up to ${MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS} early Christian authors.`
-    };
-  }
-
-  if (requestedAuthors.length === 0) {
-    return { authors: [] };
-  }
-
-  const knownAuthors = new Set(await getEarlyChristianAuthors());
-  const authors = requestedAuthors.filter((author) => knownAuthors.has(author));
-
-  if (authors.length === 0) {
-    return {
-      error: "Choose at least one indexed early Christian author."
-    };
-  }
-
-  return { authors };
 }
 
 async function readEarlyChristianAuthors() {

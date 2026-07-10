@@ -12,7 +12,10 @@ import { PassageReader } from "~/features/passage-reader/PassageReader";
 import { rememberReaderCorpus } from "~/features/reader-switch/ReaderCorpusSwitch";
 import { SearchForm } from "~/features/search/SearchForm";
 import { SearchResults } from "~/features/search/SearchResults";
-import { getIndexedBooks, handleSearchRequest } from "~/features/search/search.server";
+import {
+  getIndexedBooks,
+  handleSearchRequest
+} from "~/features/search/search-request.server";
 import {
   initialSearchModalFlowState,
   searchModalFlowReducer

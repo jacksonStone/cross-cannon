@@ -1,12 +1,4 @@
-import type {
-  CanonMode,
-  SearchResult,
-  SearchTargetCorpus
-} from "~/features/search/types";
-import type {
-  EarlyChristianSearchResult,
-  EarlyChristianSimilarSource
-} from "~/lib/early-christian-search.server";
+export type { ChurchFathersActionData } from "~/features/search/types";
 
 export type WorkClassification = {
   bucket: string;
@@ -117,19 +109,3 @@ export type ChapterAssetLoadResult =
     entry: ChapterEntry;
     error: string;
   };
-
-export type ChurchFathersActionData = {
-  authors?: string[];
-  books?: string[];
-  canon?: CanonMode;
-  error?: string;
-  matchCount?: number;
-  mode?: "theme" | "theme-scripture" | "similar" | "similar-scripture";
-  question?: string;
-  results?: EarlyChristianSearchResult[];
-  retryAfterSeconds?: number;
-  similarSource?: EarlyChristianSimilarSource;
-  similarScriptureSource?: EarlyChristianSimilarSource;
-  scriptureResults?: SearchResult[];
-  targetCorpus?: SearchTargetCorpus;
-};

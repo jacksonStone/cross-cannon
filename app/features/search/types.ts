@@ -1,4 +1,7 @@
-import type { EarlyChristianSearchResult } from "~/lib/early-christian-search.server";
+import type {
+  EarlyChristianSearchResult,
+  EarlyChristianSimilarSource
+} from "~/lib/early-christian-search.server";
 
 export type CanonMode = "protestant" | "catholic" | "orthodox";
 export type SearchTargetCorpus = "scripture" | "early-christian";
@@ -27,6 +30,22 @@ export type SearchActionData = {
   };
   results?: SearchResult[];
   retryAfterSeconds?: number;
+  targetCorpus?: SearchTargetCorpus;
+};
+
+export type ChurchFathersActionData = {
+  authors?: string[];
+  books?: string[];
+  canon?: CanonMode;
+  error?: string;
+  matchCount?: number;
+  mode?: "theme" | "theme-scripture" | "similar" | "similar-scripture";
+  question?: string;
+  results?: EarlyChristianSearchResult[];
+  retryAfterSeconds?: number;
+  similarSource?: EarlyChristianSimilarSource;
+  similarScriptureSource?: EarlyChristianSimilarSource;
+  scriptureResults?: SearchResult[];
   targetCorpus?: SearchTargetCorpus;
 };
 

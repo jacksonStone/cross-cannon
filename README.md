@@ -15,12 +15,12 @@ the browser loads the full passage text from a versioned static scripture cache.
    the route loader/action to search feature modules, loads the browser
    scripture cache, and composes the reader, search form, and results
    components.
-2. `app/features/search/search.server.ts` ensures the database schema exists,
-   reads and caches indexed books from the `passages` table, validates search
-   form data, scopes searches by canon/books, and returns paragraph result
-   metadata.
+2. `app/features/search/search-request.server.ts` handles Search Requests from
+   both reader routes, preserving their form/result contracts while keeping
+   validation, corpus selection, canon/book/author scope, and result shaping in
+   one module.
 3. The route action rate-limits each client IP to 5 searches per minute before
-   handing validated form data to the search feature module.
+   handing form data to the Search Request module.
 4. `app/lib/search.server.ts` embeds the query with OpenAI when an API key is
    configured, searches broad result sets through the persisted vector index,
    and scores small selected-book searches exactly within those books.
@@ -50,7 +50,7 @@ app/routes/_index.tsx                         page composition, loader/action
 app/features/passage-reader/PassageReader.tsx immersive reader, dynamic chapter window
 app/features/passage-reader/chapter-index.ts  passage reference parsing and chapter grouping
 app/features/passage-jump/PassageJump.tsx     book/chapter/verse jump modal
-app/features/search/search.server.ts          server-side search form handling
+app/features/search/search-request.server.ts  cross-corpus Search Request handling
 app/features/search/SearchForm.tsx            textarea, submit button, filters button
 app/features/search/FilterModal.tsx           canon/match/book filter modal
 app/features/search/useSearchFilters.ts       localStorage and filter state
@@ -68,9 +68,9 @@ displaying passage results, prefer adding it under `app/features/search/`
 instead of growing `app/routes/_index.tsx`.
 
 For upcoming passage-specific features, `SearchResults.tsx` is the current
-attachment point for result-card UI, while any server-side related-passage
-lookup should live in a separate search feature server module unless it belongs
-inside the lower-level engine in `app/lib/search.server.ts`.
+attachment point for result-card UI. New Search Request modes belong in
+`app/features/search/search-request.server.ts`; lower-level embedding and
+ranking behavior belongs in `app/lib/search.server.ts`.
 
 ## Local Development
 

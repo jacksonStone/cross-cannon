@@ -33,7 +33,7 @@ function startRuntimeWarmups() {
 
   hasStartedWarmups = true;
 
-  void import("./features/search/search.server")
+  void import("./features/search/search-request.server")
     .then(({ getIndexedBooks }) => getIndexedBooks())
     .then((books) => {
       console.info(`Warmed indexed books cache: ${books.length} books`);

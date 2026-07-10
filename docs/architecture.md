@@ -62,9 +62,9 @@ flowchart TD
   PassageJump --> JumpIndex[buildJumpIndex]
 
   Action --> RateLimit[rateLimit by client IP]
-  RateLimit --> SearchServer[handleSearchRequest]
-  SearchServer --> Filters[parseSearchFilters]
-  SearchServer --> SearchEngine["app/lib/search.server.ts"]
+  RateLimit --> SearchRequest[Search Request module]
+  SearchRequest --> Filters[canon / books / authors]
+  SearchRequest --> SearchEngine["app/lib/search.server.ts"]
 
   SearchEngine --> OpenAI["OpenAI embeddings if configured"]
   SearchEngine --> DB[("SQLite / libSQL passage index")]
@@ -100,8 +100,8 @@ sequenceDiagram
   participant User
   participant SearchForm
   participant IndexAction as / action
-  participant SearchServer as search.server.ts
-  participant SearchEngine as search.server engine
+  participant SearchRequest as Search Request module
+  participant SearchEngine as Scripture search engine
   participant DB as SQLite/libSQL
   participant OpenAI
   participant UI as SearchResults
@@ -109,21 +109,21 @@ sequenceDiagram
   User->>SearchForm: Submit theme query or similar passage
   SearchForm->>IndexAction: POST /?index form data
   IndexAction->>IndexAction: rateLimit(client IP)
-  IndexAction->>SearchServer: handleSearchRequest(formData)
-  SearchServer->>SearchServer: parse canon/books/matchCount
-  SearchServer->>DB: validate indexed books
+  IndexAction->>SearchRequest: handleSearchRequest(formData)
+  SearchRequest->>SearchRequest: validate and prepare Search Request
+  SearchRequest->>DB: validate indexed books
 
   alt Theme search
-    SearchServer->>SearchEngine: searchScripture(question, limit, books)
+    SearchRequest->>SearchEngine: searchScripture(question, limit, books)
     SearchEngine->>OpenAI: embed query if API key configured
     SearchEngine->>DB: vector search / cached embeddings / FTS fallback
   else Similar passage search
-    SearchServer->>SearchEngine: searchSimilarScripture(sourcePassageId)
+    SearchRequest->>SearchEngine: searchSimilarScripture(sourcePassageId)
     SearchEngine->>DB: load source embedding + neighbors
   end
 
-  SearchEngine-->>SearchServer: passage IDs + score metadata
-  SearchServer-->>IndexAction: SearchActionData JSON
+  SearchEngine-->>SearchRequest: passage IDs + score metadata
+  SearchRequest-->>IndexAction: existing route-specific JSON
   IndexAction-->>UI: results metadata
   UI->>UI: join IDs to full passage text via passageLookup
 ```

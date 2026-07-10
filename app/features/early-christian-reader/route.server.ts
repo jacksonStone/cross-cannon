@@ -5,27 +5,11 @@ import {
   EARLY_CHRISTIAN_MANIFEST_URL,
   EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION
 } from "~/features/early-christian-preview/preview-cache";
-import {
-  BOOKS_BY_CANON,
-  parseCanonMode
-} from "~/features/search/canons";
-import {
-  parseSearchMatchCount,
-  validateSearchQuestion
-} from "~/features/search/search-request.server";
-import type { CanonMode } from "~/features/search/types";
-import { withCalibratedMatchStrength } from "~/features/search/match-strength";
-import { searchScriptureSimilarToFathers } from "~/lib/cross-corpus-search.server";
-import {
-  getEarlyChristianAuthors,
-  parseEarlyChristianAuthorFilters,
-  searchEarlyChristianWorks,
-  searchSimilarEarlyChristianPassages
-} from "~/lib/early-christian-search.server";
+import { handleSearchRequest } from "~/features/search/search-request.server";
+import { getEarlyChristianAuthors } from "~/lib/early-christian-search.server";
 import { parseJson } from "~/lib/json";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";
-import { searchScripture } from "~/lib/search.server";
 
 import type { BookIndex, ChurchFathersActionData } from "./types";
 
@@ -74,142 +58,7 @@ export async function churchFathersAction({ request }: ActionFunctionArgs) {
     );
   }
 
-  const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "theme");
-  const matchCountResult = parseSearchMatchCount(formData.get("matchCount"), 10);
-  const authorFilters = await parseEarlyChristianAuthorFilters(
-    formData.getAll("authors")
-  );
-
-  if ("error" in matchCountResult) {
-    return json<ChurchFathersActionData>(
-      { error: matchCountResult.error },
-      { status: matchCountResult.status }
-    );
-  }
-
-  const matchCount = matchCountResult.matchCount;
-
-  if ("error" in authorFilters) {
-    return json<ChurchFathersActionData>(
-      { error: authorFilters.error },
-      { status: 400 }
-    );
-  }
-
-  if (intent === "similar-passage") {
-    const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
-    const similar = await searchSimilarEarlyChristianPassages(
-      sourcePassageId,
-      matchCount,
-      authorFilters.authors
-    );
-
-    if (!similar) {
-      return json<ChurchFathersActionData>(
-        { error: "Choose an indexed passage to search from." },
-        { status: 400 }
-      );
-    }
-
-    return json<ChurchFathersActionData>({
-      authors: authorFilters.authors,
-      matchCount,
-      mode: "similar",
-      results: similar.results,
-      similarSource: similar.source,
-      targetCorpus: "early-christian"
-    });
-  }
-
-  if (intent === "similar-scripture") {
-    const scriptureFilters = parseChurchFathersScriptureFilters(formData);
-
-    if ("response" in scriptureFilters) {
-      return scriptureFilters.response;
-    }
-
-    const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
-    const similar = await searchScriptureSimilarToFathers(
-      sourcePassageId,
-      matchCount,
-      scriptureFilters.searchBooks
-    );
-
-    if (!similar) {
-      return json<ChurchFathersActionData>(
-        { error: "Choose an indexed passage to search from." },
-        { status: 400 }
-      );
-    }
-
-    return json<ChurchFathersActionData>({
-      books: scriptureFilters.books,
-      canon: scriptureFilters.canon,
-      matchCount,
-      mode: "similar-scripture",
-      scriptureResults: withCalibratedMatchStrength(similar.results),
-      similarScriptureSource: similar.source,
-      targetCorpus: "scripture"
-    });
-  }
-
-  if (intent === "theme-scripture") {
-    const scriptureFilters = parseChurchFathersScriptureFilters(formData);
-
-    if ("response" in scriptureFilters) {
-      return scriptureFilters.response;
-    }
-
-    const question = String(formData.get("question") ?? "").trim();
-    const validationError = validateSearchQuestion(question);
-
-    if ("error" in validationError) {
-      return json<ChurchFathersActionData>(
-        { error: validationError.error },
-        { status: validationError.status }
-      );
-    }
-
-    const results = await searchScripture(
-      question,
-      matchCount,
-      scriptureFilters.searchBooks
-    );
-
-    return json<ChurchFathersActionData>({
-      books: scriptureFilters.books,
-      canon: scriptureFilters.canon,
-      matchCount,
-      mode: "theme-scripture",
-      question,
-      scriptureResults: withCalibratedMatchStrength(results),
-      targetCorpus: "scripture"
-    });
-  }
-
-  const question = String(formData.get("question") ?? "").trim();
-  const validationError = validateSearchQuestion(question);
-
-  if ("error" in validationError) {
-    return json<ChurchFathersActionData>(
-      { error: validationError.error },
-      { status: validationError.status }
-    );
-  }
-
-  return json<ChurchFathersActionData>({
-    authors: authorFilters.authors,
-    matchCount,
-    mode: "theme",
-    question,
-    results: await searchEarlyChristianWorks(
-      question,
-      matchCount,
-      authorFilters.authors
-    ),
-    targetCorpus: "early-christian"
-  });
+  return handleSearchRequest(await request.formData(), "fathers");
 }
 
 async function isKnownPreviewChapterId(chapterId: string) {
@@ -236,36 +85,4 @@ async function readKnownPreviewChapterIds() {
   }
 
   return chapterIds;
-}
-
-function parseChurchFathersScriptureFilters(formData: FormData):
-  | {
-    books: string[];
-    canon: CanonMode;
-    searchBooks: string[];
-  }
-  | { response: ReturnType<typeof json<ChurchFathersActionData>> } {
-  const canon = parseCanonMode(String(formData.get("canon") ?? ""));
-  const canonBooks = BOOKS_BY_CANON[canon];
-  const selectedBooks = formData
-    .getAll("books")
-    .map((value) => String(value).trim())
-    .filter(Boolean);
-  const books = Array.from(new Set(selectedBooks))
-    .filter((book) => canonBooks.has(book));
-
-  if (selectedBooks.length > 0 && books.length === 0) {
-    return {
-      response: json<ChurchFathersActionData>(
-        { error: "Choose at least one book in the selected canon." },
-        { status: 400 }
-      )
-    };
-  }
-
-  return {
-    books,
-    canon,
-    searchBooks: books.length > 0 ? books : Array.from(canonBooks)
-  };
 }

@@ -38,6 +38,11 @@ A passage the user has selected as the source context for a similar-passage
 search. It is not the same thing as the passage currently visible in the reader.
 _Avoid_: Current passage, scroll target, selected verse
 
+**Search Request**:
+A user's intent to find Passages by theme or similarity within Scripture or
+Early Christian Works, optionally scoped by a Canon, Books, or authors.
+_Avoid_: Form submission, query payload, search action
+
 **Reader Location**:
 The user's restorable place within a reader corpus, identified by a chapter and
 optionally a passage range inside that chapter.
