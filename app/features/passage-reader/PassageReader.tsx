@@ -8,8 +8,8 @@ import {
 import { Form, Link, useNavigation } from "@remix-run/react";
 
 import { PassageJump } from "~/features/passage-jump/PassageJump";
+import { useScriptureReaderNavigation } from "~/features/reader-navigation/useScriptureReaderNavigation";
 import { ReaderCorpusSwitch } from "~/features/reader-switch/ReaderCorpusSwitch";
-import { useScriptureReaderWindow } from "~/features/reader-window/useReaderWindow";
 import {
   type ReaderTheme,
   readerSettingsStyle
@@ -24,10 +24,6 @@ import type { StoredFilters } from "~/features/search/types";
 import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
 import { ReaderBookHeader, type ReaderBookHeaderDetail } from "./BookHeader";
-import {
-  buildChapterIndex,
-  getPassageChapterKey
-} from "./chapter-index";
 
 const TRANSLATION_ABBREVIATION = "WEB";
 const TRANSLATION_NAME = "World English Bible";
@@ -44,7 +40,6 @@ type PassageReaderProps = {
   initialPassageId: string;
   isScriptureReady: boolean;
   onChapterChange?: (chapterKey: string) => void;
-  onJumpToPassage?: (passageId: string) => void;
   onOpenSearch?: () => void;
   onThemeChange?: (theme: ReaderTheme) => void;
   passages: BrowserPassage[];
@@ -56,7 +51,6 @@ export function PassageReader({
   initialPassageId,
   isScriptureReady,
   onChapterChange,
-  onJumpToPassage,
   onOpenSearch,
   onThemeChange,
   passages
@@ -68,29 +62,22 @@ export function PassageReader({
   });
   const [isReaderToolsOpen, setIsReaderToolsOpen] = useState(false);
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
-  const chapterIndex = useMemo(() => buildChapterIndex(passages), [passages]);
-  const orderedChapterEntries = chapterIndex.orderedChapterEntries;
-  const renderedChapterKeys = chapterIndex.renderedChapterKeys;
-  const chapterCountByBook = chapterIndex.chapterCountByBook;
-  const initialChapterKey =
-    getPassageChapterKey(chapterIndex, initialPassageId)
-    ?? orderedChapterEntries[0]?.key
-    ?? null;
-  const [activeChapterKey, setActiveChapterKey] = useState(initialChapterKey);
-  const [selectedPassageId, setSelectedPassageId] = useState("");
-  const activeChapter = activeChapterKey
-    ? chapterIndex.chaptersByKey.get(activeChapterKey)
-    : null;
-  const initialChapterIndex = initialChapterKey
-    ? renderedChapterKeys.indexOf(initialChapterKey)
-    : -1;
-  const resetReaderWindow = useCallback(() => {
-    setActiveChapterKey(initialChapterKey);
-    setSelectedPassageId("");
-  }, [initialChapterKey]);
+  const {
+    activeChapter,
+    chapterCountByBook,
+    isInitialChapterReadyToRender,
+    passageJumpInitialPassageId,
+    renderedChapterEntries,
+    selectedPassageId,
+    toggleSelectedPassage
+  } = useScriptureReaderNavigation({
+    filters,
+    initialPassageId,
+    isReady: isScriptureReady,
+    onChapterChange,
+    passages
+  });
   const activeAudioUrl = activeChapter?.audioUrl ?? null;
-  const passageJumpInitialPassageId =
-    activeChapter?.passages[0]?.id ?? initialPassageId;
   const isActiveChapterPlaying = Boolean(
     activeAudioUrl && playingAudioUrl === activeAudioUrl
   );
@@ -113,43 +100,6 @@ export function PassageReader({
       .then(() => setPlayingAudioUrl(activeAudioUrl))
       .catch(() => setPlayingAudioUrl(null));
   }, [activeAudioUrl, isActiveChapterPlaying]);
-
-  const scrollToTopWhenInitialPassageMissing = useCallback(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  }, []);
-  const updateActiveChapterFromScroll = useCallback((chapterKey: string) => {
-    setActiveChapterKey(chapterKey);
-    onChapterChange?.(chapterKey);
-  }, [onChapterChange]);
-
-  const { renderedRange } = useScriptureReaderWindow({
-    activeChapterKey,
-    initialChapterIndex,
-    initialChapterKey,
-    initialPassageId,
-    isReady: isScriptureReady,
-    itemCount: orderedChapterEntries.length,
-    onActiveChapterChange: updateActiveChapterFromScroll,
-    onMissingInitialPassage: scrollToTopWhenInitialPassageMissing,
-    onReset: resetReaderWindow,
-  });
-  const renderedChapterEntries = useMemo(
-    () => {
-      if (renderedRange.endIndex < renderedRange.startIndex) {
-        return [];
-      }
-
-      return orderedChapterEntries.slice(
-        Math.max(0, renderedRange.startIndex),
-        renderedRange.endIndex + 1
-      );
-    },
-    [orderedChapterEntries, renderedRange.endIndex, renderedRange.startIndex]
-  );
-  const isInitialChapterReadyToRender = Boolean(
-    initialChapterKey
-    && renderedChapterEntries.some((entry) => entry.key === initialChapterKey)
-  );
 
   const isSearchingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
@@ -276,10 +226,6 @@ export function PassageReader({
               isScriptureReady={isScriptureReady}
               label="Jump"
               launcherVariant="inline"
-              onJumpToPassage={(passageId) => {
-                setIsReaderToolsOpen(false);
-                onJumpToPassage?.(passageId);
-              }}
               passages={passages}
             />
             <ReaderSettingsControl
@@ -290,12 +236,11 @@ export function PassageReader({
       </header>
 
       <div className="reader-passages">
-        {renderedChapterEntries.map(({ chapter, key: currentChapterKey }) => {
-          const globalChapterIndex = renderedChapterKeys.indexOf(currentChapterKey);
-          const previousChapter = globalChapterIndex > 0
-            ? orderedChapterEntries[globalChapterIndex - 1]?.chapter
-            : null;
-          const isBookBoundary = !previousChapter || previousChapter.book !== chapter.book;
+        {renderedChapterEntries.map(({
+          chapter,
+          isBookBoundary,
+          key: currentChapterKey
+        }) => {
           const bookMetadata = getScriptureBookHeaderMetadata(
             chapter.book,
             chapterCountByBook.get(chapter.book) ?? 0,
@@ -375,7 +320,7 @@ export function PassageReader({
                       dataAttributes={{ "data-passage-id": passage.id }}
                       isSelected={isSelected}
                       key={passage.id}
-                      onToggle={() => setSelectedPassageId(isSelected ? "" : passage.id)}
+                      onToggle={() => toggleSelectedPassage(passage.id)}
                       reference={passage.reference}
                       text={passage.verses.map((verse, index) => (
                         <span className="reader-verse" key={verse.number}>

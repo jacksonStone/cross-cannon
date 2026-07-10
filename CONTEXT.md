@@ -54,6 +54,12 @@ open when the user arrives from saved state, a direct link, a jump action, a
 search result, or normal reading.
 _Avoid_: Scroll tracking, window management
 
+**Reader Link**:
+A shareable URL representation of a Reader Location. Reader Links represent a
+deliberately selected or opened Chapter or Passage, not whichever text happens
+to be visible during passive reading.
+_Avoid_: Scroll URL, current viewport link, position hash
+
 **Scripture Cache**:
 The versioned collection of Scripture passages used as the browser's complete
 text source for reading, result display, passage lookup, and similar-passage

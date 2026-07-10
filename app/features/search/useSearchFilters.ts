@@ -9,12 +9,20 @@ import {
   FILTER_STORAGE_KEY,
   parseCanonMode
 } from "./canons";
-import type { CanonMode, SearchActionData, StoredFilters } from "./types";
+import type { CanonMode, StoredFilters } from "./types";
+
+type SearchFilterActionData = {
+  books?: string[];
+  canon?: CanonMode;
+  earlyChristianAuthors?: string[];
+  matchCount?: number;
+};
 
 type UseSearchFiltersOptions = {
-  actionData?: SearchActionData;
+  actionData?: SearchFilterActionData;
   books: string[];
   earlyChristianAuthors?: string[];
+  persist?: boolean;
 };
 
 const MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS = 3;
@@ -22,7 +30,8 @@ const MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS = 3;
 export function useSearchFilters({
   actionData,
   books,
-  earlyChristianAuthors = []
+  earlyChristianAuthors = [],
+  persist = true
 }: UseSearchFiltersOptions) {
   const [canon, setCanon] = useState<CanonMode>(actionData?.canon ?? DEFAULT_CANON);
   const [matchCount, setMatchCount] = useState(actionData?.matchCount ?? DEFAULT_MATCH_COUNT);
@@ -30,7 +39,7 @@ export function useSearchFilters({
   const [selectedEarlyChristianAuthors, setSelectedEarlyChristianAuthors] = useState<string[]>(
     () => actionData?.earlyChristianAuthors ?? []
   );
-  const [hasLoadedStoredFilters, setHasLoadedStoredFilters] = useState(false);
+  const [hasLoadedStoredFilters, setHasLoadedStoredFilters] = useState(!persist);
   const visibleBooks = useMemo(
     () => books.filter((book) => BOOKS_BY_CANON[canon].has(book)),
     [books, canon]
@@ -48,6 +57,10 @@ export function useSearchFilters({
     + selectedKnownEarlyChristianAuthors.length;
 
   useEffect(() => {
+    if (!persist) {
+      return;
+    }
+
     if (hasLoadedStoredFilters) {
       return;
     }
@@ -109,10 +122,37 @@ export function useSearchFilters({
     } finally {
       setHasLoadedStoredFilters(true);
     }
-  }, [actionData, books, earlyChristianAuthors, hasLoadedStoredFilters]);
+  }, [actionData, books, earlyChristianAuthors, hasLoadedStoredFilters, persist]);
 
   useEffect(() => {
-    if (!hasLoadedStoredFilters) {
+    if (!actionData) {
+      return;
+    }
+
+    if (actionData.canon) {
+      setCanon(actionData.canon);
+    }
+
+    if (typeof actionData.matchCount === "number") {
+      setMatchCount(actionData.matchCount);
+    }
+
+    if (actionData.books) {
+      setSelectedBooks(actionData.books);
+    }
+
+    if (actionData.earlyChristianAuthors) {
+      setSelectedEarlyChristianAuthors(actionData.earlyChristianAuthors);
+    }
+  }, [
+    actionData?.books,
+    actionData?.canon,
+    actionData?.earlyChristianAuthors,
+    actionData?.matchCount
+  ]);
+
+  useEffect(() => {
+    if (!persist || !hasLoadedStoredFilters) {
       return;
     }
 
@@ -128,6 +168,7 @@ export function useSearchFilters({
     canon,
     hasLoadedStoredFilters,
     matchCount,
+    persist,
     selectedBooksForCanon,
     selectedKnownEarlyChristianAuthors
   ]);

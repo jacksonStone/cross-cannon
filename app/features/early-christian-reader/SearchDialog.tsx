@@ -7,10 +7,9 @@ import type { PassageLookup } from "~/features/scripture/useScriptureLibrary";
 import { isBackdropClick } from "~/lib/use-dialog-dismiss";
 import type { EarlyChristianSearchResult } from "~/lib/early-christian-search.server";
 import type {
-  CanonMode,
-  SearchActionData,
-  SearchTargetCorpus
+  SearchActionData
 } from "~/features/search/types";
+import type { SearchDialogState } from "~/features/search/useSearchDialogState";
 
 import { EarlyChristianSearchResults } from "./EarlyChristianSearchResults";
 import { EarlyChristianAuthorInputs } from "./SearchFields";
@@ -23,69 +22,54 @@ type FocusedPassageSummary = {
 
 export function SearchDialog({
   actionData,
-  activeFilterCount,
   authorOptions,
-  canon,
   closeSearch,
+  dialogState,
   examplePlaceholder,
   focusedPassage,
   focusedPassageKey,
-  isAuthorFilterOpen,
   isReady,
   isSearching,
-  matchCount,
-  onCanonChange,
-  onClearFilters,
-  onCloseAuthorFilters,
-  onMatchCountChange,
-  onOpenAuthorFilters,
   onOpenResult,
   onSetFocusedPassageKey,
-  onTargetCorpusChange,
-  onToggleBook,
-  onToggleEarlyChristianAuthor,
   passageLookup,
-  readerTheme,
-  searchIntent,
-  selectedAuthorFilters,
-  selectedBooksForCanon,
-  showAuthorFilters,
-  showScriptureFilters,
-  themeCorpus,
-  visibleScriptureBooks
+  readerTheme
 }: {
   actionData?: ChurchFathersActionData;
-  activeFilterCount: number;
   authorOptions: string[];
-  canon: CanonMode;
   closeSearch: () => void;
+  dialogState: SearchDialogState;
   examplePlaceholder: string;
   focusedPassage: FocusedPassageSummary;
   focusedPassageKey: string | null;
-  isAuthorFilterOpen: boolean;
   isReady: boolean;
   isSearching: boolean;
-  matchCount: number;
-  onCanonChange: (canon: CanonMode) => void;
-  onClearFilters: () => void;
-  onCloseAuthorFilters: () => void;
-  onMatchCountChange: (matchCount: number) => void;
-  onOpenAuthorFilters: () => void;
   onOpenResult: (result: EarlyChristianSearchResult) => void;
   onSetFocusedPassageKey: (focusedId: string | null) => void;
-  onTargetCorpusChange: (targetCorpus: SearchTargetCorpus) => void;
-  onToggleBook: (book: string) => void;
-  onToggleEarlyChristianAuthor: (author: string) => void;
   passageLookup: PassageLookup;
   readerTheme: string;
-  searchIntent: string;
-  selectedAuthorFilters: string[];
-  selectedBooksForCanon: string[];
-  showAuthorFilters: boolean;
-  showScriptureFilters: boolean;
-  themeCorpus: SearchTargetCorpus;
-  visibleScriptureBooks: string[];
 }) {
+  const {
+    activeFilterCount,
+    canon,
+    clearFilters,
+    closeFilters,
+    intent: searchIntent,
+    isFilterOpen,
+    matchCount,
+    openFilters,
+    selectedEarlyChristianAuthors: selectedAuthorFilters,
+    selectedBooksForCanon,
+    setMatchCount,
+    setTargetCorpus,
+    showAuthorFilters,
+    showScriptureFilters,
+    targetCorpus: themeCorpus,
+    toggleEarlyChristianAuthor,
+    toggleSelectedBook,
+    updateCanon,
+    visibleBooks: visibleScriptureBooks
+  } = dialogState;
   return (
     <div
       className={`search-modal-backdrop reader-theme-${readerTheme}`}
@@ -143,7 +127,7 @@ export function SearchDialog({
               <SearchTargetControl
                 disabled={isSearching}
                 value={themeCorpus}
-                onChange={onTargetCorpusChange}
+                onChange={setTargetCorpus}
               />
               {!focusedPassageKey ? (
                 <label htmlFor="question">
@@ -193,10 +177,10 @@ export function SearchDialog({
                 <div className="search-actions">
                   <button
                     aria-controls="filter-modal"
-                    aria-expanded={isAuthorFilterOpen}
+                    aria-expanded={isFilterOpen}
                     className={`filter-toggle${activeFilterCount > 0 ? " is-active" : ""}`}
                     disabled={isSearching}
-                    onClick={onOpenAuthorFilters}
+                    onClick={openFilters}
                     type="button"
                   >
                     Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
@@ -218,7 +202,7 @@ export function SearchDialog({
               <FilterModal
                 canon={canon}
                 earlyChristianAuthors={authorOptions}
-                isOpen={isAuthorFilterOpen}
+                isOpen={isFilterOpen}
                 isSearching={isSearching}
                 matchCount={matchCount}
                 selectedEarlyChristianAuthors={selectedAuthorFilters}
@@ -226,12 +210,12 @@ export function SearchDialog({
                 showEarlyChristianAuthorFilters={showAuthorFilters}
                 showScriptureFilters={showScriptureFilters}
                 visibleBooks={visibleScriptureBooks}
-                onCanonChange={onCanonChange}
-                onClearFilters={onClearFilters}
-                onClose={onCloseAuthorFilters}
-                onMatchCountChange={onMatchCountChange}
-                onToggleBook={onToggleBook}
-                onToggleEarlyChristianAuthor={onToggleEarlyChristianAuthor}
+                onCanonChange={updateCanon}
+                onClearFilters={clearFilters}
+                onClose={closeFilters}
+                onMatchCountChange={setMatchCount}
+                onToggleBook={toggleSelectedBook}
+                onToggleEarlyChristianAuthor={toggleEarlyChristianAuthor}
               />
             </Form>
           </section>

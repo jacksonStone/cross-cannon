@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Link } from "@remix-run/react";
 
+import { buildScriptureReaderUrl } from "~/features/reader-navigation/reader-links";
 import {
   buildChapterIndex,
   filterJumpBooksByCanon,
@@ -22,7 +23,6 @@ type PassageJumpProps = {
   isScriptureReady: boolean;
   launcherVariant?: "block" | "inline";
   label?: string;
-  onJumpToPassage?: (passageId: string) => void;
   passages: BrowserPassage[];
 };
 
@@ -33,7 +33,6 @@ export function PassageJump({
   isScriptureReady,
   label = "Jump to passage",
   launcherVariant = "block",
-  onJumpToPassage,
   passages
 }: PassageJumpProps) {
   const scriptureIndex = useMemo(() => buildChapterIndex(passages), [passages]);
@@ -182,27 +181,13 @@ export function PassageJump({
                 <span>Verse</span>
                 <div className="passage-jump-options">
                   {chapter.verses.map((verse) => (
-                    onJumpToPassage ? (
-                      <button
-                        className="passage-jump-verse"
-                        key={verse.number}
-                        onClick={() => {
-                          setIsOpen(false);
-                          onJumpToPassage(verse.passageId);
-                        }}
-                        type="button"
-                      >
-                        {verse.number}
-                      </button>
-                    ) : (
-                      <Link
-                        className="passage-jump-verse"
-                        key={verse.number}
-                        to={buildReaderUrl(verse.passageId, filters)}
-                      >
-                        {verse.number}
-                      </Link>
-                    )
+                    <Link
+                      className="passage-jump-verse"
+                      key={verse.number}
+                      to={buildScriptureReaderUrl(verse.passageId, filters)}
+                    >
+                      {verse.number}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -212,23 +197,4 @@ export function PassageJump({
       ) : null}
     </>
   );
-}
-
-function buildReaderUrl(passageId: string, filters?: StoredFilters) {
-  const searchParams = new URLSearchParams();
-
-  if (filters?.canon) {
-    searchParams.set("canon", filters.canon);
-  }
-
-  if (filters?.matchCount) {
-    searchParams.set("matchCount", String(filters.matchCount));
-  }
-
-  for (const book of filters?.books ?? []) {
-    searchParams.append("books", book);
-  }
-
-  const query = searchParams.toString();
-  return `/reader/${passageId}${query ? `?${query}` : ""}`;
 }

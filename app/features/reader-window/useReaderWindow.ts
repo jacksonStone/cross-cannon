@@ -40,7 +40,7 @@ const READING_ANCHOR_KEY_ATTRIBUTES = [
   "data-chapter-id"
 ] as const;
 
-export const DEFAULT_READER_SCROLL_WINDOW = {
+const DEFAULT_READER_SCROLL_WINDOW = {
   edgePx: 2200,
   expandCount: 10,
   headerOffset: 118,
@@ -54,7 +54,7 @@ export const DEFAULT_READER_SCROLL_WINDOW = {
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-export function readReaderHeaderOffset({
+function readReaderHeaderOffset({
   fallback = DEFAULT_READER_SCROLL_WINDOW.headerOffset,
   rootSelector = ".reader-page"
 }: {
@@ -74,7 +74,7 @@ export function readReaderHeaderOffset({
   return Number.isFinite(parsedValue) ? parsedValue : fallback;
 }
 
-export function useReaderHeaderOffset({
+function useReaderHeaderOffset({
   fallback = DEFAULT_READER_SCROLL_WINDOW.headerOffset,
   rootSelector = ".reader-page"
 }: {
@@ -101,7 +101,7 @@ export function useReaderHeaderOffset({
   return headerOffset;
 }
 
-export function useAnchoredReaderWindow({
+function useAnchoredReaderWindow({
   activeKey,
   chapterSelector,
   edgePx,
@@ -276,7 +276,63 @@ export function useScriptureReaderWindow({
   });
 }
 
-export function usePreservePrependedScroll({
+export function useEarlyChristianReaderWindow({
+  activeChapterId,
+  initialChapterId,
+  initialPassageRange,
+  initialRange,
+  isReady,
+  isTargetWindowReady,
+  itemCount,
+  minStartIndex,
+  onActiveChapterChange,
+  onReset
+}: {
+  activeChapterId: string;
+  initialChapterId: string;
+  initialPassageRange: string;
+  initialRange: WindowRange;
+  isReady: boolean;
+  isTargetWindowReady: boolean;
+  itemCount: number;
+  minStartIndex: number;
+  onActiveChapterChange: (chapterId: string) => void;
+  onReset: () => void;
+}) {
+  const headerOffset = useReaderHeaderOffset();
+  const findInitialTarget = useCallback(() => (
+    findEarlyChristianReaderTarget(initialChapterId, initialPassageRange)
+  ), [initialChapterId, initialPassageRange]);
+  const getRenderedChapterId = useCallback((element: HTMLElement) => (
+    element.dataset.chapterId
+  ), []);
+
+  return useAnchoredReaderWindow({
+    activeKey: activeChapterId,
+    chapterSelector: ".ec-reader-chapter",
+    edgePx: DEFAULT_READER_SCROLL_WINDOW.edgePx,
+    expandCount: DEFAULT_READER_SCROLL_WINDOW.expandCount,
+    findInitialTarget,
+    getChapterKey: getRenderedChapterId,
+    headerOffset,
+    initialActiveKey: initialChapterId,
+    initialRange,
+    initialScrollMaxFrames: DEFAULT_READER_SCROLL_WINDOW.initialScrollMaxFrames,
+    initialScrollReady: isReady && isTargetWindowReady,
+    itemCount,
+    minStartIndex,
+    minReadingAnchorOffset: DEFAULT_READER_SCROLL_WINDOW.minReadingAnchorOffset,
+    onActiveKeyChange: onActiveChapterChange,
+    onReset,
+    passageSelector: ".ec-reader-chapter .reader-passage",
+    readingAnchorRatio: DEFAULT_READER_SCROLL_WINDOW.readingAnchorRatio,
+    resetKey: `${initialChapterId}|${initialPassageRange}`,
+    trackingReady: isReady,
+    windowReady: isReady
+  });
+}
+
+function usePreservePrependedScroll({
   prependSnapshotRef,
   startIndex
 }: {
@@ -310,7 +366,57 @@ function findRenderedPassageElement(passageId: string) {
     .find((element) => element.dataset.passageId === passageId) ?? null;
 }
 
-export function useExpandableReaderWindow({
+function findEarlyChristianReaderTarget(chapterId: string, passageRange: string) {
+  if (!chapterId) {
+    return null;
+  }
+
+  const chapterElement = document.querySelector<HTMLElement>(
+    `[data-chapter-id="${cssEscape(chapterId)}"]`
+  );
+
+  if (!chapterElement || !passageRange) {
+    return chapterElement;
+  }
+
+  const exactTarget = chapterElement.querySelector<HTMLElement>(
+    `[data-passage-range="${cssEscape(passageRange)}"]`
+  );
+
+  if (exactTarget) {
+    return exactTarget;
+  }
+
+  const [startValue, endValue = startValue] = passageRange.split("-");
+  const start = Number(startValue);
+  const end = Number(endValue);
+
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return chapterElement;
+  }
+
+  return [...chapterElement.querySelectorAll<HTMLElement>(
+    "[data-passage-start][data-passage-end]"
+  )].find((element) => {
+    const passageStart = Number(element.dataset.passageStart);
+    const passageEnd = Number(element.dataset.passageEnd);
+
+    return Number.isFinite(passageStart)
+      && Number.isFinite(passageEnd)
+      && passageStart <= start
+      && passageEnd >= end;
+  }) ?? chapterElement;
+}
+
+function cssEscape(value: string) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(value);
+  }
+
+  return value.replace(/["\\]/g, "\\$&");
+}
+
+function useExpandableReaderWindow({
   edgePx,
   expandCount,
   expandOnMount = true,
@@ -398,7 +504,7 @@ export function useExpandableReaderWindow({
   ]);
 }
 
-export function useInitialTargetScroll({
+function useInitialTargetScroll({
   findTarget,
   headerOffset,
   isReady,
@@ -521,7 +627,7 @@ export function useInitialTargetScroll({
   ]);
 }
 
-export function useReaderScrollWindow({
+function useReaderScrollWindow({
   activeKeyRef,
   chapterSelector,
   edgePx,

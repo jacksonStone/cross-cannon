@@ -25,7 +25,6 @@ import {
   EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY
 } from "~/features/early-christian-preview/preview-cache";
 import {
-  MAX_AUTHOR_FILTERS,
   SEARCH_EXAMPLES
 } from "~/features/early-christian-reader/book-index";
 import { ChapterList } from "~/features/early-christian-reader/ChapterList";
@@ -45,11 +44,7 @@ import {
 import {
   useEarlyChristianReaderNavigation
 } from "~/features/early-christian-reader/useEarlyChristianReaderNavigation";
-import {
-  BOOKS_BY_CANON,
-  DEFAULT_CANON,
-  DEFAULT_MATCH_COUNT
-} from "~/features/search/canons";
+import { BOOKS_BY_CANON } from "~/features/search/canons";
 import {
   readerSettingsStyle
 } from "~/features/reader-settings/reader-settings";
@@ -58,10 +53,7 @@ import {
   initialSearchModalFlowState,
   searchModalFlowReducer
 } from "~/features/search/search-modal-flow";
-import type {
-  CanonMode,
-  SearchTargetCorpus
-} from "~/features/search/types";
+import { useSearchDialogState } from "~/features/search/useSearchDialogState";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import {
   type EarlyChristianSearchResult,
@@ -74,6 +66,7 @@ import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 const MANIFEST_URL = EARLY_CHRISTIAN_MANIFEST_URL;
 const PREVIEW_ASSET_VERSION = EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION;
 const READER_POSITION_STORAGE_KEY = EARLY_CHRISTIAN_READER_POSITION_STORAGE_KEY;
+const SCRIPTURE_BOOKS = Array.from(BOOKS_BY_CANON.orthodox);
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -119,17 +112,7 @@ export default function ChurchFathersReaderRoute() {
   const readerStyles = readerSettingsStyle(readerSettings);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isJumpOpen, setIsJumpOpen] = useState(false);
-  const [isAuthorFilterOpen, setIsAuthorFilterOpen] = useState(false);
   const [readerTextMode, setReaderTextMode] = useState<ReaderTextMode>("modernized");
-  const [themeCorpus, setThemeCorpus] = useState<SearchTargetCorpus>("early-christian");
-  const [canon, setCanon] = useState<CanonMode>(actionData?.canon ?? DEFAULT_CANON);
-  const [matchCount, setMatchCount] = useState(actionData?.matchCount ?? DEFAULT_MATCH_COUNT);
-  const [selectedScriptureBooks, setSelectedScriptureBooks] = useState<string[]>(
-    () => actionData?.books ?? []
-  );
-  const [selectedAuthors, setSelectedAuthors] = useState<string[]>(() => (
-    actionData?.authors ?? []
-  ));
   const [exampleIndex, setExampleIndex] = useState(0);
   const headerTitleRef = useRef<HTMLDivElement | null>(null);
   const isToolsOpenRef = useRef(isToolsOpen);
@@ -158,10 +141,6 @@ export default function ChurchFathersReaderRoute() {
   });
   const focusedPassageKey = searchFlow.focusedId;
   const isSearchOpen = searchFlow.isOpen;
-  const closeSearch = useCallback(() => {
-    setIsAuthorFilterOpen(false);
-    dispatchSearchFlow({ type: "close" });
-  }, []);
   const openSearch = useCallback(() => dispatchSearchFlow({ type: "open" }), []);
   const setFocusedPassageKey = useCallback((focusedId: string | null) => {
     dispatchSearchFlow({
@@ -169,7 +148,6 @@ export default function ChurchFathersReaderRoute() {
       type: "set-focused"
     });
   }, []);
-  useModalScrollLock(isSearchOpen || isJumpOpen || isAuthorFilterOpen);
   const focusedPassage = focusedPassageKey
     ? findLoadedPassage(loadedChapters, focusedPassageKey, readerTextMode)
     : null;
@@ -185,28 +163,36 @@ export default function ChurchFathersReaderRoute() {
   const activeHeaderTitle = activeEntry
     ? `${activeEntry.book.name} ${activeEntry.chapter.chapter}`
     : "";
-  const selectedAuthorFilters = useMemo(() => {
-    const knownAuthors = new Set(authorOptions);
-    return selectedAuthors
-      .filter((author) => knownAuthors.has(author))
-      .slice(0, MAX_AUTHOR_FILTERS);
-  }, [authorOptions, selectedAuthors]);
-  const showScriptureFilters = themeCorpus === "scripture";
-  const showAuthorFilters = themeCorpus === "early-christian";
-  const visibleScriptureBooks = useMemo(
-    () => Array.from(BOOKS_BY_CANON[canon]),
-    [canon]
-  );
-  const selectedBooksForCanon = useMemo(
-    () => selectedScriptureBooks.filter((book) => BOOKS_BY_CANON[canon].has(book)),
-    [canon, selectedScriptureBooks]
-  );
-  const searchIntent = focusedPassageKey
-    ? themeCorpus === "scripture" ? "similar-scripture" : "similar-passage"
-    : themeCorpus === "scripture" ? "theme-scripture" : "theme";
-  const activeFilterCount = (matchCount === DEFAULT_MATCH_COUNT ? 0 : 1)
-    + (showScriptureFilters ? selectedBooksForCanon.length : 0)
-    + (showAuthorFilters ? selectedAuthorFilters.length : 0);
+  const filterActionData = useMemo(() => ({
+    books: actionData?.books,
+    canon: actionData?.canon,
+    earlyChristianAuthors: actionData?.authors,
+    matchCount: actionData?.matchCount,
+    mode: actionData?.mode,
+    targetCorpus: actionData?.targetCorpus
+  }), [
+    actionData?.authors,
+    actionData?.books,
+    actionData?.canon,
+    actionData?.matchCount,
+    actionData?.mode,
+    actionData?.targetCorpus
+  ]);
+  const searchDialog = useSearchDialogState({
+    actionData: filterActionData,
+    books: SCRIPTURE_BOOKS,
+    earlyChristianAuthors: authorOptions,
+    focusedPassageId: focusedPassageKey,
+    persistFilters: false,
+    readerCorpus: "early-christian"
+  });
+  const selectedAuthorFilters = searchDialog.selectedEarlyChristianAuthors;
+  const closeSearchFilters = searchDialog.closeFilters;
+  const closeSearch = useCallback(() => {
+    closeSearchFilters();
+    dispatchSearchFlow({ type: "close" });
+  }, [closeSearchFilters]);
+  useModalScrollLock(isSearchOpen || isJumpOpen || searchDialog.isFilterOpen);
   useRenderedChapterAssetLoader({
     activeChapterIndex,
     bookIndex,
@@ -217,46 +203,6 @@ export default function ChurchFathersReaderRoute() {
     setChapterLoadErrors,
     setLoadedChapters
   });
-  const toggleSelectedBook = useCallback((book: string) => {
-    if (!BOOKS_BY_CANON[canon].has(book)) {
-      return;
-    }
-
-    setSelectedScriptureBooks((currentBooks) => (
-      currentBooks.includes(book)
-        ? currentBooks.filter((selectedBook) => selectedBook !== book)
-        : [...currentBooks, book]
-    ));
-  }, [canon]);
-  const updateCanon = useCallback((nextCanon: CanonMode) => {
-    setCanon(nextCanon);
-    setSelectedScriptureBooks((currentBooks) => (
-      currentBooks.filter((book) => BOOKS_BY_CANON[nextCanon].has(book))
-    ));
-  }, []);
-  const toggleSelectedAuthor = useCallback((author: string) => {
-    if (!authorOptions.includes(author)) {
-      return;
-    }
-
-    setSelectedAuthors((currentAuthors) => {
-      if (currentAuthors.includes(author)) {
-        return currentAuthors.filter((selectedAuthor) => selectedAuthor !== author);
-      }
-
-      if (currentAuthors.length >= MAX_AUTHOR_FILTERS) {
-        return currentAuthors;
-      }
-
-      return [...currentAuthors, author];
-    });
-  }, [authorOptions]);
-  const clearAuthorFilters = useCallback(() => {
-    setMatchCount(DEFAULT_MATCH_COUNT);
-    setSelectedScriptureBooks([]);
-    setSelectedAuthors([]);
-  }, []);
-
   const {
     activeAudio,
     activeAudioUrl,
@@ -273,39 +219,6 @@ export default function ChurchFathersReaderRoute() {
     onOpenChapter: openChapter,
     resolvedActiveChapterId
   });
-
-  useEffect(() => {
-    if (actionData?.authors) {
-      setSelectedAuthors(actionData.authors);
-    }
-
-    if (actionData?.books) {
-      setSelectedScriptureBooks(actionData.books);
-    }
-
-    if (actionData?.canon) {
-      setCanon(actionData.canon);
-    }
-
-    if (typeof actionData?.matchCount === "number") {
-      setMatchCount(actionData.matchCount);
-    }
-
-    if (actionData?.targetCorpus) {
-      setThemeCorpus(actionData.targetCorpus);
-    } else if (actionData?.mode === "theme-scripture") {
-      setThemeCorpus("scripture");
-    } else if (actionData?.mode === "theme") {
-      setThemeCorpus("early-christian");
-    }
-  }, [
-    actionData?.authors,
-    actionData?.books,
-    actionData?.canon,
-    actionData?.matchCount,
-    actionData?.mode,
-    actionData?.targetCorpus
-  ]);
 
   useEffect(() => {
     rememberReaderCorpus("fathers");
@@ -529,36 +442,18 @@ export default function ChurchFathersReaderRoute() {
       {isSearchOpen ? (
         <SearchDialog
           actionData={actionData}
-          activeFilterCount={activeFilterCount}
           authorOptions={authorOptions}
-          canon={canon}
           closeSearch={closeSearch}
+          dialogState={searchDialog}
           examplePlaceholder={SEARCH_EXAMPLES[exampleIndex]}
           focusedPassage={focusedPassage}
           focusedPassageKey={focusedPassageKey}
-          isAuthorFilterOpen={isAuthorFilterOpen}
           isReady={isReady}
           isSearching={isSearching}
-          matchCount={matchCount}
-          onCanonChange={updateCanon}
-          onClearFilters={clearAuthorFilters}
-          onCloseAuthorFilters={() => setIsAuthorFilterOpen(false)}
-          onMatchCountChange={setMatchCount}
-          onOpenAuthorFilters={() => setIsAuthorFilterOpen(true)}
           onOpenResult={openResult}
           onSetFocusedPassageKey={setFocusedPassageKey}
-          onTargetCorpusChange={setThemeCorpus}
-          onToggleBook={toggleSelectedBook}
-          onToggleEarlyChristianAuthor={toggleSelectedAuthor}
           passageLookup={scriptureLibrary.passageLookup}
           readerTheme={readerTheme}
-          searchIntent={searchIntent}
-          selectedAuthorFilters={selectedAuthorFilters}
-          selectedBooksForCanon={selectedBooksForCanon}
-          showAuthorFilters={showAuthorFilters}
-          showScriptureFilters={showScriptureFilters}
-          themeCorpus={themeCorpus}
-          visibleScriptureBooks={visibleScriptureBooks}
         />
       ) : null}
 

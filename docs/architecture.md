@@ -52,13 +52,15 @@ flowchart TD
 
   SearchModal --> SearchForm[SearchForm]
   SearchModal --> SearchResults[SearchResults]
+  SearchForm --> SearchDialogState[Cross-corpus Search Dialog state]
   PassageReader --> PassageJump[PassageJump]
   SearchForm --> PassageJump
 
   SearchForm --> Action
   SearchResults --> PassageLookup
   SearchForm --> PassageLookup
-  PassageReader --> ChapterIndex[buildChapterIndex]
+  PassageReader --> ScriptureNavigation[Scripture Reader Navigation adapter]
+  ScriptureNavigation --> ChapterIndex[buildChapterIndex]
   PassageJump --> JumpIndex[buildJumpIndex]
 
   Action --> RateLimit[rateLimit by client IP]
@@ -132,8 +134,8 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  InitialPassage[readerPassageId] --> PassageReader
-  PassageReader --> ChapterIndex["buildChapterIndex(passages)"]
+  InitialPassage[readerPassageId] --> ScriptureNavigation[Scripture Reader Navigation adapter]
+  ScriptureNavigation --> ChapterIndex["buildChapterIndex(passages)"]
   ChapterIndex --> Chapters[Chapter windows]
   Chapters --> RenderedRange[Rendered chapter range]
 
@@ -147,6 +149,11 @@ flowchart TD
 
   UserPosition[Reading anchor] --> LocationReport[onLocationChange]
   LocationReport --> LocalStorage[remember reader position]
+
+  ExplicitJump[Explicit jump] --> ReaderLink[Reader Link]
+  ReaderLink --> BrowserHistory[Back / Forward]
+  PassageSelection[Passage selection] --> ReaderLink
+  UserScroll -. no URL update .-> ReaderLink
 
   PassageReader --> Audio[Chapter audio button]
   PassageReader --> PassageActions[Similar passages action]
@@ -177,7 +184,7 @@ flowchart LR
   Package --> SCP[SCP to Ubuntu box]
   SCP --> Remote["/home/ubuntu/cross-cannon"]
   Remote --> PreserveStorage["Preserve remote storage/"]
-  Remote --> NpmCi[npm ci --omit=dev]
+  Remote --> NpmCi[npm ci --omit=dev --legacy-peer-deps]
   NpmCi --> Restart[systemctl restart cross-cannon]
   Restart --> RuntimeDbGuard["DB maintenance skipped unless CROSS_CANNON_UPDATE_DB=1"]
 
@@ -197,7 +204,11 @@ app/features/scripture/
   Browser scripture cache loading, shared readiness state, passageLookup.
 
 app/features/search/
-  Search UI, filters, result rendering, server-side form/search handling.
+  Search UI, shared Search Dialog state, filters, result rendering, and
+  server-side Search Request handling.
+
+app/features/reader-navigation/
+  Reader Links and the Scripture Reader Navigation adapter.
 
 app/features/passage-reader/
   Reader layout, chapter windows, scroll preservation, passage actions.
@@ -210,5 +221,6 @@ app/lib/
   rate limiting, audio chapter helpers.
 
 scripts/
-  Index/build/download/deploy-adjacent operational scripts plus verification.
+  Index/build/download/deploy-adjacent operational scripts, shared Early
+  Christian Work audio alignment, plus verification.
 ```

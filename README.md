@@ -50,7 +50,9 @@ app/routes/_index.tsx                         page composition, loader/action
 app/features/passage-reader/PassageReader.tsx immersive reader, dynamic chapter window
 app/features/passage-reader/chapter-index.ts  passage reference parsing and chapter grouping
 app/features/passage-jump/PassageJump.tsx     book/chapter/verse jump modal
+app/features/reader-navigation/               Reader Links and Scripture Reader Navigation adapter
 app/features/search/search-request.server.ts  cross-corpus Search Request handling
+app/features/search/useSearchDialogState.ts   cross-corpus Search Dialog state and filter behavior
 app/features/search/SearchForm.tsx            textarea, submit button, filters button
 app/features/search/FilterModal.tsx           canon/match/book filter modal
 app/features/search/useSearchFilters.ts       localStorage and filter state
@@ -71,6 +73,11 @@ For upcoming passage-specific features, `SearchResults.tsx` is the current
 attachment point for result-card UI. New Search Request modes belong in
 `app/features/search/search-request.server.ts`; lower-level embedding and
 ranking behavior belongs in `app/lib/search.server.ts`.
+
+Reader Links use `/reader/:passageId` for Scripture and
+`/church-fathers?chapter=...&passage=...` for Early Christian Works. Explicit
+jumps create browser history; selecting a Passage replaces the current link;
+passive scrolling only persists Reader Location.
 
 ## Local Development
 

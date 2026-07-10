@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { Form, Link, useNavigation } from "@remix-run/react";
 
+import { buildScriptureReaderUrl } from "~/features/reader-navigation/reader-links";
 import type { PassageLookup } from "~/features/scripture/useScriptureLibrary";
 
 import { DEFAULT_CANON, DEFAULT_MATCH_COUNT } from "./canons";
@@ -19,7 +20,6 @@ type SearchResultsProps = {
     pendingLabel: string;
   };
   focusedPassageId: string | null;
-  onJumpToPassage?: (passageId: string) => void;
   passageLookup: PassageLookup;
   results?: SearchResult[];
   showEmptyState?: boolean;
@@ -31,7 +31,6 @@ export function SearchResults({
   contextActionLabel = "View in context",
   crossCorpusAction,
   focusedPassageId,
-  onJumpToPassage,
   passageLookup,
   results,
   showEmptyState = true,
@@ -133,24 +132,15 @@ export function SearchResults({
                 </button>
                 {isSelected ? (
                   <div className="result-actions">
-                    {onJumpToPassage ? (
-                      <button
-                        className="context-button"
-                        disabled={!passage}
-                        onClick={() => passage && onJumpToPassage(passage.id)}
-                        type="button"
-                      >
-                        {contextActionLabel}
-                      </button>
-                    ) : (
-                      <Link
-                        className="context-button"
-                        aria-disabled={!passage}
-                        to={passage ? buildReaderUrl(passage.id, actionData) : "#"}
-                      >
-                        {contextActionLabel}
-                      </Link>
-                    )}
+                    <Link
+                      className="context-button"
+                      aria-disabled={!passage}
+                      to={passage
+                        ? buildScriptureReaderUrl(passage.id, actionData)
+                        : "#"}
+                    >
+                      {contextActionLabel}
+                    </Link>
                     {showSimilarAction ? (
                       <Form method="post">
                         <input type="hidden" name="intent" value="similar-passage" />
@@ -259,23 +249,4 @@ function SearchFilterInputs({
       )) : null}
     </>
   );
-}
-
-function buildReaderUrl(passageId: string, actionData?: SearchActionData) {
-  const searchParams = new URLSearchParams();
-
-  if (actionData?.canon) {
-    searchParams.set("canon", actionData.canon);
-  }
-
-  if (actionData?.matchCount) {
-    searchParams.set("matchCount", String(actionData.matchCount));
-  }
-
-  for (const book of actionData?.books ?? []) {
-    searchParams.append("books", book);
-  }
-
-  const query = searchParams.toString();
-  return `/reader/${passageId}${query ? `?${query}` : ""}`;
 }

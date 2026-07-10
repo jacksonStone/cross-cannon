@@ -51,6 +51,7 @@ async function main() {
     await step("Bible: load reader", () => loadBible(page));
     await step("Bible: cross chapter boundary down and up", () => crossBibleChapterBoundary(page));
     await step("Bible: persisted spot survives Fathers switch", () => exerciseBiblePositionPersistence(page));
+    await step("Bible: explicit jump supports Back", () => exerciseBibleJumpHistory(page));
     await step("Bible: theme search, similar search, jump result", () => exerciseBibleSearch(page));
     await step("Bible: selected passage similar search", () => exerciseBibleReaderPassageSimilar(page));
     await step("Fathers: invalid bookmark falls back to first work", () => exerciseFathersPositionFallback(page));
@@ -195,6 +196,41 @@ async function simulateUserScroll(page: Page, deltaY: number) {
   await wait(250);
 }
 
+async function exerciseBibleJumpHistory(page: Page) {
+  await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+  await waitForReader(page, "Scripture");
+  const beforeJumpUrl = page.url();
+
+  await openReaderTools(page);
+  await clickButtonByText(
+    page,
+    ".reader-header-actions .passage-jump-launcher button",
+    "Jump"
+  );
+  await page.waitForSelector(".passage-jump-modal", { visible: true });
+  await page.waitForSelector(".passage-jump-verse", { visible: true });
+  const jumpUrl = await page.$eval(
+    ".passage-jump-verse",
+    (link) => (link as HTMLAnchorElement).href
+  );
+  await page.goto(jumpUrl, { waitUntil: "domcontentloaded" });
+  console.log(`    jumped to ${page.url()}`);
+  await expectReaderPassages(page);
+  console.log("    direct Reader Location rendered");
+  assert(
+    new URL(page.url()).pathname.startsWith("/reader/"),
+    `Expected Scripture jump URL, got ${page.url()}.`
+  );
+
+  await page.evaluate(() => window.history.back());
+  await page.waitForFunction((url) => location.href === url, {
+    timeout: timeoutMs
+  }, beforeJumpUrl);
+  console.log(`    Back restored ${page.url()}`);
+  await expectReaderPassages(page);
+  assert(page.url() === beforeJumpUrl, `Expected Back to restore ${beforeJumpUrl}, got ${page.url()}.`);
+}
+
 async function exerciseFathersPositionFallback(page: Page) {
   await page.goto(`${baseUrl}/church-fathers`, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => {
@@ -289,6 +325,7 @@ async function exerciseBibleReaderPassageSimilar(page: Page) {
 }
 
 async function jumpToFathersWork(page: Page) {
+  const beforeJumpUrl = page.url();
   await openReaderTools(page);
   await clickButtonByText(page, ".reader-header-actions .passage-jump-launcher button", "Jump");
   await page.waitForSelector(".passage-jump-modal", { visible: true });
@@ -313,6 +350,26 @@ async function jumpToFathersWork(page: Page) {
   await wait(500);
   await assertReaderTitleDidNotFlicker(page, titleRecorder);
   await assertReaderHealthy(page);
+  const afterJumpUrl = page.url();
+
+  assert(
+    afterJumpUrl !== beforeJumpUrl && afterJumpUrl.includes("chapter="),
+    `Expected Early Christian jump URL, got ${afterJumpUrl}.`
+  );
+
+  await page.evaluate(() => window.history.back());
+  await page.waitForFunction((url) => location.href === url, {
+    timeout: timeoutMs
+  }, beforeJumpUrl);
+  await waitForReader(page, "Early Christian");
+  assert(page.url() === beforeJumpUrl, `Expected Back to restore ${beforeJumpUrl}, got ${page.url()}.`);
+
+  await page.evaluate(() => window.history.forward());
+  await page.waitForFunction((url) => location.href === url, {
+    timeout: timeoutMs
+  }, afterJumpUrl);
+  await waitForReader(page, "Early Christian");
+  assert(page.url() === afterJumpUrl, `Expected Forward to restore ${afterJumpUrl}, got ${page.url()}.`);
 }
 
 async function crossFathersChapterBoundary(page: Page) {

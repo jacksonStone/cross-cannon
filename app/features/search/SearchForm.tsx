@@ -6,11 +6,10 @@ import { PassageJump } from "~/features/passage-jump/PassageJump";
 import type { PassageLookup } from "~/features/scripture/useScriptureLibrary";
 import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
-import { DEFAULT_MATCH_COUNT } from "./canons";
 import { FilterModal } from "./FilterModal";
 import { SearchTargetControl } from "./SearchTargetControl";
-import type { SearchActionData, SearchTargetCorpus } from "./types";
-import { useSearchFilters } from "./useSearchFilters";
+import type { SearchActionData } from "./types";
+import { useSearchDialogState } from "./useSearchDialogState";
 
 const SEARCH_EXAMPLES = [
   "Hope after death",
@@ -28,7 +27,6 @@ type SearchFormProps = {
   focusedPassageId: string | null;
   isScriptureReady: boolean;
   jumpInitialPassageId?: string;
-  onJumpToPassage?: (passageId: string) => void;
   onFocusedPassageChange: (passageId: string | null) => void;
   passageLookup: PassageLookup;
   passages: BrowserPassage[];
@@ -42,7 +40,6 @@ export function SearchForm({
   focusedPassageId,
   isScriptureReady,
   jumpInitialPassageId,
-  onJumpToPassage,
   onFocusedPassageChange,
   passageLookup,
   passages,
@@ -51,8 +48,6 @@ export function SearchForm({
   const navigation = useNavigation();
   const submittingRef = useRef(false);
   const [exampleIndex, setExampleIndex] = useState(0);
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [themeCorpus, setThemeCorpus] = useState<SearchTargetCorpus>("scripture");
   const isSearching = navigation.state === "submitting";
   const isSubmittingSimilar =
     isSearching && navigation.formData?.get("intent") === "similar-passage";
@@ -68,50 +63,40 @@ export function SearchForm({
     ?? (focusedPassageId === actionData?.similarSource?.id
       ? actionData.similarSource.reference
       : null);
+  const searchDialog = useSearchDialogState({
+    actionData,
+    books,
+    earlyChristianAuthors,
+    focusedPassageId,
+    readerCorpus: "scripture"
+  });
   const {
+    activeFilterCount,
     canon,
     clearFilters,
+    closeFilters,
+    intent: searchIntent,
+    isFilterOpen: isFilterModalOpen,
     matchCount,
+    openFilters,
     selectedEarlyChristianAuthors,
     selectedBooksForCanon,
     setMatchCount,
+    setTargetCorpus,
+    showAuthorFilters: showEarlyChristianAuthorFilters,
+    showScriptureFilters,
+    targetCorpus: themeCorpus,
     toggleEarlyChristianAuthor,
     toggleSelectedBook,
     updateCanon,
     visibleBooks
-  } = useSearchFilters({ actionData, books, earlyChristianAuthors });
-  const isThemeEarlyChristianSearch = !focusedPassageId && themeCorpus === "early-christian";
-  const searchIntent = focusedPassageId
-    ? themeCorpus === "early-christian" ? "similar-early-christian" : "similar-passage"
-    : isThemeEarlyChristianSearch
-    ? "theme-early-christian"
-    : "theme";
-  const showScriptureFilters = themeCorpus === "scripture";
-  const showEarlyChristianAuthorFilters = themeCorpus === "early-christian";
-  const activeFilterCount = (matchCount === DEFAULT_MATCH_COUNT ? 0 : 1)
-    + (showScriptureFilters ? selectedBooksForCanon.length : 0)
-    + (showEarlyChristianAuthorFilters ? selectedEarlyChristianAuthors.length : 0);
+  } = searchDialog;
 
   useEffect(() => {
     if (navigation.state === "idle") {
       submittingRef.current = false;
     }
   }, [navigation.state]);
-
-  useEffect(() => {
-    if (actionData?.targetCorpus) {
-      setThemeCorpus(actionData.targetCorpus);
-      return;
-    }
-
-    if (actionData?.mode === "theme-early-christian") {
-      setThemeCorpus("early-christian");
-    }
-
-    if (actionData?.mode === "theme") {
-      setThemeCorpus("scripture");
-    }
-  }, [actionData?.mode, actionData?.targetCorpus]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -173,14 +158,13 @@ export function SearchForm({
             isScriptureReady={isScriptureReady}
             label="Jump to specific passage"
             launcherVariant="inline"
-            onJumpToPassage={onJumpToPassage}
             passages={passages}
           />
         ) : null}
         <SearchTargetControl
           disabled={isSearching}
           value={themeCorpus}
-          onChange={setThemeCorpus}
+          onChange={setTargetCorpus}
         />
         {!focusedPassageId ? (
           <label htmlFor="question">
@@ -223,7 +207,7 @@ export function SearchForm({
               aria-controls="filter-modal"
               className={`filter-toggle${activeFilterCount > 0 ? " is-active" : ""}`}
               disabled={isSearching}
-              onClick={() => setIsFilterModalOpen(true)}
+              onClick={openFilters}
               type="button"
             >
               Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
@@ -280,7 +264,7 @@ export function SearchForm({
           visibleBooks={visibleBooks}
           onCanonChange={updateCanon}
           onClearFilters={clearFilters}
-          onClose={() => setIsFilterModalOpen(false)}
+          onClose={closeFilters}
           onToggleEarlyChristianAuthor={toggleEarlyChristianAuthor}
           onMatchCountChange={setMatchCount}
           onToggleBook={toggleSelectedBook}

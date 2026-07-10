@@ -9,6 +9,7 @@ import {
 } from "@remix-run/react";
 
 import { PassageReader } from "~/features/passage-reader/PassageReader";
+import { buildEarlyChristianReaderUrl } from "~/features/reader-navigation/reader-links";
 import { rememberReaderCorpus } from "~/features/reader-switch/ReaderCorpusSwitch";
 import { SearchForm } from "~/features/search/SearchForm";
 import { SearchResults } from "~/features/search/SearchResults";
@@ -259,21 +260,6 @@ export default function Index() {
     });
   }, []);
 
-  const jumpToReaderPassage = useCallback((passageId: string) => {
-    setReaderPassageId(passageId);
-
-    const nextChapterKey = getPassageChapterKey(
-      scriptureIndex,
-      passageId
-    );
-
-    if (nextChapterKey) {
-      rememberReaderChapter(nextChapterKey);
-    }
-
-    dispatchSearchFlow({ type: "close" });
-  }, [rememberReaderChapter, scriptureIndex]);
-
   const updateReaderTheme = useCallback((theme: string) => {
     if (isReaderTheme(theme)) {
       setReaderTheme(theme);
@@ -287,7 +273,6 @@ export default function Index() {
         filters={{}}
         initialPassageId={readerPassageId}
         isScriptureReady={scriptureLibrary.isReady && Boolean(readerPassageId)}
-        onJumpToPassage={jumpToReaderPassage}
         onChapterChange={rememberReaderChapter}
         onOpenSearch={openSearch}
         onThemeChange={updateReaderTheme}
@@ -336,7 +321,6 @@ export default function Index() {
                 isScriptureReady={scriptureLibrary.isReady}
                 jumpInitialPassageId={readerPassageId}
                 onFocusedPassageChange={setFocusedPassageId}
-                onJumpToPassage={jumpToReaderPassage}
                 passageLookup={scriptureLibrary.passageLookup}
                 passages={scriptureLibrary.passages}
               />
@@ -359,7 +343,6 @@ export default function Index() {
                   pendingLabel: "Finding Fathers"
                 }}
                 focusedPassageId={focusedPassageId}
-                onJumpToPassage={jumpToReaderPassage}
                 passageLookup={scriptureLibrary.passageLookup}
                 results={actionData?.results}
                 showEmptyState={
@@ -456,7 +439,10 @@ function EarlyChristianCrossResults({
               <div className="result-actions">
                 <a
                   className="context-button"
-                  href={buildChurchFathersUrl(result)}
+                  href={buildEarlyChristianReaderUrl(
+                    result.chapterId,
+                    result.highlightPassage.rangeLabel ?? ""
+                  )}
                 >
                   Jump to
                 </a>
@@ -467,15 +453,4 @@ function EarlyChristianCrossResults({
       })}
     </section>
   );
-}
-
-function buildChurchFathersUrl(result: EarlyChristianSearchResult) {
-  const searchParams = new URLSearchParams();
-  searchParams.set("chapter", result.chapterId);
-
-  if (result.highlightPassage.rangeLabel) {
-    searchParams.set("passage", result.highlightPassage.rangeLabel);
-  }
-
-  return `/church-fathers?${searchParams.toString()}`;
 }
