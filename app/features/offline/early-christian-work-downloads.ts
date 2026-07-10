@@ -12,6 +12,7 @@ import {
   type OfflineWorkRecords,
   cleanupInactiveWorkGenerations,
   deleteWorkGeneration,
+  promoteCompletedWorkGenerations,
   readOfflineWorkRecords,
   workGenerationCacheName,
   writeOfflineWorkRecords,
@@ -86,6 +87,7 @@ export function useEarlyChristianWorkDownloads({
     let ignore = false;
 
     void readOfflineWorkRecords()
+      .then(promoteCompletedWorkGenerations)
       .then(validateOfflineWorkRecords)
       .then(async (loadedRecords) => {
         await writeOfflineWorkRecords(loadedRecords);
@@ -110,7 +112,7 @@ export function useEarlyChristianWorkDownloads({
 
   const performDownload = useCallback(
     async (
-      book: BookSummary,
+      work: BookSummary,
       source: DownloadSource,
       requestPersistence: boolean
     ) => {
@@ -120,8 +122,8 @@ export function useEarlyChristianWorkDownloads({
           error: "Offline downloads are unavailable in this browser.",
           kind: "error",
           source,
-          workId: book.id,
-          workName: book.name,
+          workId: work.id,
+          workName: work.name,
         });
         return;
       }
@@ -130,12 +132,12 @@ export function useEarlyChristianWorkDownloads({
         await requestPersistentStorageOnce();
       }
 
-      const chapterDownloads = book.chapters.map((chapter) => ({
+      const chapterDownloads = work.chapters.map((chapter) => ({
         chapterId: chapter.id,
         url: versionedPreviewUrl(chapter.assetPath, previewAssetVersion),
       }));
       const chapterUrls = chapterDownloads.map((chapter) => chapter.url);
-      const previousRecord = recordsRef.current[book.id];
+      const previousRecord = recordsRef.current[work.id];
       const matchingPending =
         previousRecord?.pending?.version === previewAssetVersion
           ? previousRecord.pending
@@ -147,7 +149,7 @@ export function useEarlyChristianWorkDownloads({
         matchingPending?.cacheName ??
         (isRepair
           ? previousRecord.cacheName
-          : workGenerationCacheName(book.id, previewAssetVersion));
+          : workGenerationCacheName(work.id, previewAssetVersion));
       const controller = new AbortController();
       abortControllerRef.current = controller;
       setDownloadState({
@@ -156,8 +158,8 @@ export function useEarlyChristianWorkDownloads({
         kind: "downloading",
         source,
         total: chapterUrls.length,
-        workId: book.id,
-        workName: book.name,
+        workId: work.id,
+        workName: work.name,
       });
 
       try {
@@ -169,7 +171,7 @@ export function useEarlyChristianWorkDownloads({
         });
         await persistRecords({
           ...recordsRef.current,
-          [book.id]: startedRecord,
+          [work.id]: startedRecord,
         });
         const stageCache = await caches.open(stageCacheName);
         const generalCache = await caches.open(GENERAL_CONTENT_CACHE);
@@ -254,15 +256,29 @@ export function useEarlyChristianWorkDownloads({
           })
         );
 
+        const completedAt = Date.now();
+        const completedRecord =
+          source === "background" && previousRecord?.complete
+            ? {
+                ...previousRecord,
+                pending: {
+                  cacheName: stageCacheName,
+                  chapterUrls,
+                  complete: true,
+                  completedAt,
+                  version: previewAssetVersion,
+                },
+              }
+            : {
+                cacheName: stageCacheName,
+                chapterUrls,
+                complete: true,
+                completedAt,
+                version: previewAssetVersion,
+              };
         const nextRecords = {
           ...recordsRef.current,
-          [book.id]: {
-            cacheName: stageCacheName,
-            chapterUrls,
-            complete: true,
-            completedAt: Date.now(),
-            version: previewAssetVersion,
-          },
+          [work.id]: completedRecord,
         };
         await persistRecords(nextRecords);
         setDownloadState({
@@ -271,15 +287,15 @@ export function useEarlyChristianWorkDownloads({
           kind: "idle",
           source,
           total: chapterUrls.length,
-          workId: book.id,
-          workName: book.name,
+          workId: work.id,
+          workName: work.name,
         });
 
         if (source === "manual") {
-          setAvailableOfflineWorkId(book.id);
+          setAvailableOfflineWorkId(work.id);
           window.setTimeout(() => {
             setAvailableOfflineWorkId((current) =>
-              current === book.id ? "" : current
+              current === work.id ? "" : current
             );
           }, 3_000);
         }
@@ -290,7 +306,7 @@ export function useEarlyChristianWorkDownloads({
         if (wasCanceled || isQuotaError) {
           await deleteWorkGeneration(stageCacheName);
           await rollbackStartedRecord(
-            book.id,
+            work.id,
             previousRecord,
             recordsRef.current,
             persistRecords
@@ -307,8 +323,8 @@ export function useEarlyChristianWorkDownloads({
           kind: wasCanceled ? "idle" : "error",
           source,
           total: chapterUrls.length,
-          workId: book.id,
-          workName: book.name,
+          workId: work.id,
+          workName: work.name,
         });
       } finally {
         abortControllerRef.current = null;
@@ -319,11 +335,11 @@ export function useEarlyChristianWorkDownloads({
 
   const startDownload = useCallback(
     (
-      book: BookSummary,
+      work: BookSummary,
       source: DownloadSource,
       requestPersistence: boolean
     ) => {
-      const promise = performDownload(book, source, requestPersistence);
+      const promise = performDownload(work, source, requestPersistence);
       const activeDownload = { promise, source };
       activeDownloadRef.current = activeDownload;
       void promise.finally(() => {
@@ -337,7 +353,7 @@ export function useEarlyChristianWorkDownloads({
   );
 
   const downloadWork = useCallback(
-    async (book: BookSummary) => {
+    async (work: BookSummary) => {
       const activeDownload = activeDownloadRef.current;
 
       if (activeDownload?.source === "background") {
@@ -347,7 +363,7 @@ export function useEarlyChristianWorkDownloads({
         return;
       }
 
-      await startDownload(book, "manual", true);
+      await startDownload(work, "manual", true);
     },
     [startDownload]
   );
@@ -357,14 +373,14 @@ export function useEarlyChristianWorkDownloads({
   }, []);
 
   const removeWork = useCallback(
-    async (bookId: string) => {
-      const record = recordsRef.current[bookId];
+    async (workId: string) => {
+      const record = recordsRef.current[workId];
 
       if (!record) {
         return;
       }
 
-      const { [bookId]: _removed, ...nextRecords } = recordsRef.current;
+      const { [workId]: _removed, ...nextRecords } = recordsRef.current;
       await persistRecords(nextRecords);
       await Promise.all([
         deleteWorkGeneration(record.cacheName),
@@ -399,8 +415,8 @@ export function useEarlyChristianWorkDownloads({
       return;
     }
 
-    const staleWork = bookIndex.books.find((book) => {
-      const record = recordsRef.current[book.id];
+    const staleWork = bookIndex.books.find((work) => {
+      const record = recordsRef.current[work.id];
       return (
         record &&
         (record.complete === false ||
@@ -474,7 +490,7 @@ function createStartedRecord({
 }
 
 async function rollbackStartedRecord(
-  bookId: string,
+  workId: string,
   previousRecord: OfflineWorkRecord | undefined,
   currentRecords: OfflineWorkRecords,
   persistRecords: (records: OfflineWorkRecords) => Promise<void>
@@ -482,17 +498,17 @@ async function rollbackStartedRecord(
   if (previousRecord?.complete) {
     const { pending: _pending, ...activeRecord } = previousRecord;
     await persistRecords({
-      ...removeRecord(currentRecords, bookId),
-      [bookId]: activeRecord,
+      ...removeRecord(currentRecords, workId),
+      [workId]: activeRecord,
     });
     return;
   }
 
-  await persistRecords(removeRecord(currentRecords, bookId));
+  await persistRecords(removeRecord(currentRecords, workId));
 }
 
-function removeRecord(records: OfflineWorkRecords, bookId: string) {
-  const { [bookId]: _removed, ...remaining } = records;
+function removeRecord(records: OfflineWorkRecords, workId: string) {
+  const { [workId]: _removed, ...remaining } = records;
   return remaining;
 }
 

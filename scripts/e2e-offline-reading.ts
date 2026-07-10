@@ -262,6 +262,39 @@ try {
   await page.waitForFunction(() =>
     document.body.textContent?.includes("Available offline")
   );
+  const outageChapter = await page.evaluate(async () => {
+    const response = await fetch(
+      "/church-fathers-preview/chapters/anf05_iii.iv.i.vi.i.json?__crossCanonE2eOutage=1",
+      { cache: "no-store" }
+    );
+    const chapter = await response.json();
+    return { id: chapter.id ?? "", status: response.status };
+  });
+  assert(
+    outageChapter.status === 200 && outageChapter.id === "anf05:iii.iv.i.vi.i",
+    `Expected an HTTP outage to fall back to the active Work generation: ${JSON.stringify(
+      outageChapter
+    )}`
+  );
+  await page.goto(`${baseUrl}/?__crossCanonE2eOutage=1`, {
+    waitUntil: "domcontentloaded",
+  });
+  await page.waitForSelector(".reader-page");
+  const outageNavigationTitle = await page.$eval(
+    "#reader-title",
+    (heading) => heading.textContent?.trim() ?? ""
+  );
+  assert(
+    outageNavigationTitle === scriptureChapter,
+    `Expected an HTTP outage navigation to use the active reader shell: ${outageNavigationTitle}`
+  );
+  await page.goto(downloadedWorkUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#reader-title");
+  assert(
+    await waitForMissingSelector(page, ".offline-indicator", 10_000),
+    "Expected a successful navigation to recover after an HTTP outage."
+  );
+  await openReaderTools(page);
   await page.$eval("button[aria-label='Search']", (button) =>
     (button as HTMLButtonElement).click()
   );
@@ -595,8 +628,19 @@ try {
   await waitForReaderTools(page, 5_000);
   assert(
     await waitForEnabledButton(page, "Remove download", 15_000),
-    "Expected the resumed Work update to activate."
+    "Expected the resumed Work update to finish staging."
   );
+  const stagedWorkUpdate = await readOnlyDownloadedWorkStorage(page);
+  assert(
+    stagedWorkUpdate.version === "prior-complete-version" &&
+      stagedWorkUpdate.pendingVersion !== "" &&
+      stagedWorkUpdate.pendingCachedCount === stagedWorkUpdate.pendingTotal,
+    `Expected the completed replacement to wait for a later navigation or reload: ${JSON.stringify(
+      stagedWorkUpdate
+    )}`
+  );
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#reader-title");
   const activatedWorkUpdate = await readOnlyDownloadedWorkStorage(page);
   assert(
     activatedWorkUpdate.complete &&
@@ -762,6 +806,7 @@ try {
         manualDownloadPriority: true,
         missingChapterRepair: true,
         offlineWorkCount,
+        outageFallback: true,
         passed: true,
         priorCompleteVersion: true,
         quotaRecovery: true,

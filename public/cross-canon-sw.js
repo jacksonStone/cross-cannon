@@ -199,7 +199,8 @@ async function activateStagedShell() {
 async function networkOnly(request) {
   try {
     const response = await fetch(new Request(request, { cache: "no-store" }));
-    void notifyClients("online");
+
+    void notifyClients(response.status >= 500 ? "offline" : "online");
     return response;
   } catch {
     void notifyClients("offline");
@@ -210,27 +211,37 @@ async function networkOnly(request) {
 async function networkFirstNavigation(request) {
   try {
     const response = await fetch(new Request(request, { cache: "no-store" }));
+
+    if (response.status >= 500) {
+      void notifyClients("offline");
+      return offlineNavigationResponse(request);
+    }
+
     void notifyClients("online");
     return response;
   } catch {
     void notifyClients("offline");
-    const cache = await openActiveShellCache();
-    const pathname = new URL(request.url).pathname;
-
-    if (pathname.startsWith("/reader/")) {
-      return (await cache.match(OFFLINE_READER_URL)) ?? offlineResponse();
-    }
-
-    if (pathname === "/church-fathers") {
-      return (await cache.match("/church-fathers")) ?? offlineResponse();
-    }
-
-    return (
-      (await cache.match("/")) ??
-      (await cache.match(OFFLINE_READER_URL)) ??
-      offlineResponse()
-    );
+    return offlineNavigationResponse(request);
   }
+}
+
+async function offlineNavigationResponse(request) {
+  const cache = await openActiveShellCache();
+  const pathname = new URL(request.url).pathname;
+
+  if (pathname.startsWith("/reader/")) {
+    return (await cache.match(OFFLINE_READER_URL)) ?? offlineResponse();
+  }
+
+  if (pathname === "/church-fathers") {
+    return (await cache.match("/church-fathers")) ?? offlineResponse();
+  }
+
+  return (
+    (await cache.match("/")) ??
+    (await cache.match(OFFLINE_READER_URL)) ??
+    offlineResponse()
+  );
 }
 
 async function shellCacheFirst(request) {
@@ -256,24 +267,36 @@ async function networkFirstEarlyChristianContent(request) {
     if (response.ok) {
       const cache = await caches.open(GENERAL_CONTENT_CACHE);
       await cache.put(request, response.clone());
+      void notifyClients("online");
+      return response;
     }
 
-    return response;
+    if (response.status < 500) {
+      void notifyClients("online");
+      return response;
+    }
+
+    void notifyClients("offline");
+    return offlineEarlyChristianContentResponse(request);
   } catch {
     void notifyClients("offline");
-    const activeWorkResponse = await matchActiveWorkContent(request);
-
-    if (activeWorkResponse) {
-      return activeWorkResponse;
-    }
-
-    const cache = await caches.open(GENERAL_CONTENT_CACHE);
-    return (
-      (await cache.match(request)) ??
-      (await cache.match(request, { ignoreSearch: true })) ??
-      offlineResponse()
-    );
+    return offlineEarlyChristianContentResponse(request);
   }
+}
+
+async function offlineEarlyChristianContentResponse(request) {
+  const activeWorkResponse = await matchActiveWorkContent(request);
+
+  if (activeWorkResponse) {
+    return activeWorkResponse;
+  }
+
+  const cache = await caches.open(GENERAL_CONTENT_CACHE);
+  return (
+    (await cache.match(request)) ??
+    (await cache.match(request, { ignoreSearch: true })) ??
+    offlineResponse()
+  );
 }
 
 async function matchActiveWorkContent(request) {

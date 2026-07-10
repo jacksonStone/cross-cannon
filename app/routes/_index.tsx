@@ -4,16 +4,12 @@ import {
   useMemo,
   useReducer,
   useRef,
-  useState
+  useState,
 } from "react";
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import {
-  useActionData,
-  useLoaderData,
-  useNavigation
-} from "@remix-run/react";
+import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
 
 import { PassageReader } from "~/features/passage-reader/PassageReader";
 import { useOfflineStatus } from "~/features/offline/OfflineProvider";
@@ -24,63 +20,63 @@ import { SearchForm } from "~/features/search/SearchForm";
 import { SearchResults } from "~/features/search/SearchResults";
 import {
   getIndexedBooks,
-  handleSearchRequest
+  handleSearchRequest,
 } from "~/features/search/search-request.server";
 import {
   initialSearchModalFlowState,
-  searchModalFlowReducer
+  searchModalFlowReducer,
 } from "~/features/search/search-modal-flow";
 import type { SearchActionData } from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import {
   getEarlyChristianAuthors,
-  type EarlyChristianSearchResult
+  type EarlyChristianSearchResult,
 } from "~/lib/early-christian-search.server";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
-import {
-  getScriptureCacheInfo
-} from "~/lib/scripture-cache.server";
-import {
-  isBackdropClick,
-  useEscapeDismiss
-} from "~/lib/use-dialog-dismiss";
+import { isLocalE2eOutageRequest } from "~/lib/local-e2e-outage.server";
+import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";
+import { isBackdropClick, useEscapeDismiss } from "~/lib/use-dialog-dismiss";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
 import {
   buildChapterIndex,
   findDefaultReaderPassageId,
   findFirstPassageIdForChapter,
-  getPassageChapterKey
+  getPassageChapterKey,
 } from "~/features/passage-reader/chapter-index";
 import {
   createReaderLocation,
   readReaderLocation,
   readReaderPosition,
   readerLocationKey,
-  rememberReaderLocation
+  rememberReaderLocation,
 } from "~/features/reader-position/reader-position";
 import {
   type ReaderTheme,
   isReaderTheme,
-  readSavedReaderTheme
+  readSavedReaderTheme,
 } from "~/features/reader-settings/reader-settings";
 
 const READER_POSITION_STORAGE_KEY = "cross-cannon:reader-position:v1";
 
-export async function loader({}: LoaderFunctionArgs) {
-  const earlyChristianAuthorsPromise: Promise<string[]> = getEarlyChristianAuthors()
-    .catch(() => []);
+export async function loader({ request }: LoaderFunctionArgs) {
+  if (isLocalE2eOutageRequest(request)) {
+    throw new Response("Intentional local E2E outage", { status: 503 });
+  }
+
+  const earlyChristianAuthorsPromise: Promise<string[]> =
+    getEarlyChristianAuthors().catch(() => []);
   const [books, earlyChristianAuthors, scriptureCache] = await Promise.all([
     getIndexedBooks(),
     earlyChristianAuthorsPromise,
-    getScriptureCacheInfo()
+    getScriptureCacheInfo(),
   ]);
 
   return json({
     books,
     earlyChristianAuthors,
     scriptureCacheKey: scriptureCache.version,
-    scriptureCacheUrl: scriptureCache.url
+    scriptureCacheUrl: scriptureCache.url,
   });
 }
 
@@ -92,13 +88,13 @@ export async function action({ request }: ActionFunctionArgs) {
     return json<SearchActionData>(
       {
         error: "Rate limit reached. Try again in a moment.",
-        retryAfterSeconds: limit.retryAfterSeconds
+        retryAfterSeconds: limit.retryAfterSeconds,
       },
       {
         status: 429,
         headers: {
-          "Retry-After": String(limit.retryAfterSeconds)
-        }
+          "Retry-After": String(limit.retryAfterSeconds),
+        },
       }
     );
   }
@@ -116,13 +112,16 @@ export default function Index() {
     searchModalFlowReducer,
     initialSearchModalFlowState
   );
-  const savedReaderLocation = readReaderLocation(READER_POSITION_STORAGE_KEY, "scripture");
+  const savedReaderLocation = readReaderLocation(
+    READER_POSITION_STORAGE_KEY,
+    "scripture"
+  );
   const savedReaderPositionRef = useRef(readerLocationKey(savedReaderLocation));
   const [readerPassageId, setReaderPassageId] = useState("");
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("paper");
   const lastVisibleChapterKeyRef = useRef(savedReaderPositionRef.current);
   const scriptureLibrary = useScriptureLibrary({
-    scriptureCacheUrl
+    scriptureCacheUrl,
   });
   const scriptureIndex = useMemo(
     () => buildChapterIndex(scriptureLibrary.passages),
@@ -130,18 +129,24 @@ export default function Index() {
   );
   const focusedPassageId = searchFlow.focusedId;
   const isSearchOpen = searchFlow.isOpen;
-  const closeSearch = useCallback(() => dispatchSearchFlow({ type: "close" }), []);
-  const openSearch = useCallback(() => dispatchSearchFlow({ type: "open" }), []);
+  const closeSearch = useCallback(
+    () => dispatchSearchFlow({ type: "close" }),
+    []
+  );
+  const openSearch = useCallback(
+    () => dispatchSearchFlow({ type: "open" }),
+    []
+  );
   const setFocusedPassageId = useCallback((focusedId: string | null) => {
     dispatchSearchFlow({
       focusedId,
-      type: "set-focused"
+      type: "set-focused",
     });
   }, []);
   const handleNetworkDependentSubmit = useOfflineSubmitGuard({
     isOffline,
     isSubmitting: navigation.state !== "idle",
-    onBlocked: closeSearch
+    onBlocked: closeSearch,
   });
 
   useModalScrollLock(isSearchOpen);
@@ -160,7 +165,9 @@ export default function Index() {
       window.history.replaceState(
         null,
         "",
-        `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`
+        `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${
+          window.location.hash
+        }`
       );
       return;
     }
@@ -174,8 +181,8 @@ export default function Index() {
     }
 
     if (
-      readerPassageId
-      && scriptureLibrary.passageLookup.has(readerPassageId)
+      readerPassageId &&
+      scriptureLibrary.passageLookup.has(readerPassageId)
     ) {
       return;
     }
@@ -183,7 +190,8 @@ export default function Index() {
     const initialPassageId =
       findFirstPassageIdForChapter(
         scriptureIndex,
-        savedReaderLocation?.chapterKey ?? readReaderPosition(READER_POSITION_STORAGE_KEY)
+        savedReaderLocation?.chapterKey ??
+          readReaderPosition(READER_POSITION_STORAGE_KEY)
       ) ?? findDefaultReaderPassageId(scriptureIndex);
 
     if (!initialPassageId) {
@@ -196,13 +204,17 @@ export default function Index() {
     );
 
     if (initialChapterKey) {
-      rememberReaderLocation(READER_POSITION_STORAGE_KEY, createReaderLocation({
-        chapterKey: initialChapterKey,
-        corpus: "scripture"
-      }), {
-        lastReportedRef: lastVisibleChapterKeyRef,
-        savedRef: savedReaderPositionRef
-      });
+      rememberReaderLocation(
+        READER_POSITION_STORAGE_KEY,
+        createReaderLocation({
+          chapterKey: initialChapterKey,
+          corpus: "scripture",
+        }),
+        {
+          lastReportedRef: lastVisibleChapterKeyRef,
+          savedRef: savedReaderPositionRef,
+        }
+      );
     }
 
     setReaderPassageId(initialPassageId);
@@ -211,23 +223,23 @@ export default function Index() {
     scriptureLibrary.isReady,
     scriptureLibrary.passageLookup,
     scriptureLibrary.passages,
-    scriptureIndex
+    scriptureIndex,
   ]);
 
   useEffect(() => {
     if (
-      navigation.state === "submitting"
-      && (
-        navigation.formData?.get("intent") === "similar-passage"
-        || navigation.formData?.get("intent") === "similar-early-christian"
-      )
+      navigation.state === "submitting" &&
+      (navigation.formData?.get("intent") === "similar-passage" ||
+        navigation.formData?.get("intent") === "similar-early-christian")
     ) {
-      const sourcePassageId = String(navigation.formData.get("sourcePassageId") ?? "");
+      const sourcePassageId = String(
+        navigation.formData.get("sourcePassageId") ?? ""
+      );
 
       if (sourcePassageId) {
         dispatchSearchFlow({
           focusedId: sourcePassageId,
-          type: "submitting-similar"
+          type: "submitting-similar",
         });
       }
     }
@@ -237,15 +249,18 @@ export default function Index() {
     if (actionData?.mode === "similar" && actionData.similarSource) {
       dispatchSearchFlow({
         focusedId: actionData.similarSource.id,
-        type: "similar-results"
+        type: "similar-results",
       });
       return;
     }
 
-    if (actionData?.mode === "similar-early-christian" && actionData.similarSource) {
+    if (
+      actionData?.mode === "similar-early-christian" &&
+      actionData.similarSource
+    ) {
       dispatchSearchFlow({
         focusedId: actionData.similarSource.id,
-        type: "similar-results"
+        type: "similar-results",
       });
       return;
     }
@@ -262,17 +277,21 @@ export default function Index() {
 
   useEscapeDismiss({
     isOpen: isSearchOpen,
-    onDismiss: closeSearch
+    onDismiss: closeSearch,
   });
 
   const rememberReaderChapter = useCallback((chapterKeyValue: string) => {
-    rememberReaderLocation(READER_POSITION_STORAGE_KEY, createReaderLocation({
-      chapterKey: chapterKeyValue,
-      corpus: "scripture"
-    }), {
-      lastReportedRef: lastVisibleChapterKeyRef,
-      savedRef: savedReaderPositionRef
-    });
+    rememberReaderLocation(
+      READER_POSITION_STORAGE_KEY,
+      createReaderLocation({
+        chapterKey: chapterKeyValue,
+        corpus: "scripture",
+      }),
+      {
+        lastReportedRef: lastVisibleChapterKeyRef,
+        savedRef: savedReaderPositionRef,
+      }
+    );
   }, []);
 
   const updateReaderTheme = useCallback((theme: string) => {
@@ -358,21 +377,23 @@ export default function Index() {
                 crossCorpusAction={{
                   intent: "similar-early-christian",
                   label: "Similar in Fathers",
-                  pendingLabel: "Finding Fathers"
+                  pendingLabel: "Finding Fathers",
                 }}
                 focusedPassageId={focusedPassageId}
                 passageLookup={scriptureLibrary.passageLookup}
                 results={actionData?.results}
                 showEmptyState={
-                  actionData?.mode !== "similar-early-christian"
-                  && actionData?.mode !== "theme-early-christian"
+                  actionData?.mode !== "similar-early-christian" &&
+                  actionData?.mode !== "theme-early-christian"
                 }
               />
 
               <EarlyChristianCrossResults
-                heading={actionData?.mode === "theme-early-christian"
-                  ? "Early Christian results"
-                  : "Similar early Christian passages"}
+                heading={
+                  actionData?.mode === "theme-early-christian"
+                    ? "Early Christian results"
+                    : "Similar early Christian passages"
+                }
                 results={actionData?.earlyChristianResults}
               />
             </div>
@@ -385,7 +406,7 @@ export default function Index() {
 
 function EarlyChristianCrossResults({
   heading,
-  results
+  results,
 }: {
   heading: string;
   results?: EarlyChristianSearchResult[];
@@ -411,14 +432,18 @@ function EarlyChristianCrossResults({
             className={[
               "scripture-result",
               `match-level-${result.matchStrength}`,
-              isSelected ? "is-selected" : ""
-            ].filter(Boolean).join(" ")}
+              isSelected ? "is-selected" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             key={`${result.highlightPassage.id}-${index}`}
           >
             <button
               aria-expanded={isSelected}
               className="scripture-result-button"
-              onClick={() => setSelectedResult(isSelected ? "" : result.highlightPassage.id)}
+              onClick={() =>
+                setSelectedResult(isSelected ? "" : result.highlightPassage.id)
+              }
               type="button"
             >
               <span className="result-meta">
@@ -435,7 +460,11 @@ function EarlyChristianCrossResults({
                   <span className="match-dots" aria-hidden="true">
                     {[1, 2, 3, 4].map((level) => (
                       <span
-                        className={level <= result.matchStrength ? "is-active" : undefined}
+                        className={
+                          level <= result.matchStrength
+                            ? "is-active"
+                            : undefined
+                        }
                         key={level}
                       />
                     ))}

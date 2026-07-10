@@ -9,6 +9,8 @@ const LEGACY_STORAGE_KEY = "cross-canon:offline-early-christian-works:v1";
 export type PendingOfflineWorkGeneration = {
   cacheName: string;
   chapterUrls: string[];
+  complete?: boolean;
+  completedAt?: number;
   version: string;
 };
 
@@ -80,6 +82,31 @@ export async function cleanupInactiveWorkGenerations(
   );
 }
 
+export function promoteCompletedWorkGenerations(
+  records: OfflineWorkRecords
+): OfflineWorkRecords {
+  return Object.fromEntries(
+    Object.entries(records).map(([workId, record]) => {
+      const pending = record.pending;
+
+      if (!pending?.complete) {
+        return [workId, record];
+      }
+
+      return [
+        workId,
+        {
+          cacheName: pending.cacheName,
+          chapterUrls: pending.chapterUrls,
+          complete: true,
+          completedAt: pending.completedAt ?? record.completedAt,
+          version: pending.version,
+        },
+      ];
+    })
+  );
+}
+
 function parseOfflineWorkRecords(value: unknown): OfflineWorkRecords {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
@@ -123,6 +150,9 @@ function isPendingGeneration(
     pending.cacheName.startsWith(WORK_CACHE_PREFIX) &&
     Array.isArray(pending.chapterUrls) &&
     pending.chapterUrls.every((url) => typeof url === "string") &&
+    (pending.complete === undefined || typeof pending.complete === "boolean") &&
+    (pending.completedAt === undefined ||
+      typeof pending.completedAt === "number") &&
     typeof pending.version === "string"
   );
 }

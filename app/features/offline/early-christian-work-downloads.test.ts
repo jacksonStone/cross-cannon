@@ -2,14 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { isValidEarlyChristianChapterResponse } from "./early-christian-work-downloads";
+import { promoteCompletedWorkGenerations } from "./offline-work-storage.client";
 
 test("validates a downloaded Early Christian Chapter", async () => {
   const response = jsonResponse({
     id: "work:chapter-1",
     verses: [
       { modernizedText: "Modern", text: "Original", verse: 1 },
-      { text: "Original only", verse: 2 }
-    ]
+      { text: "Original only", verse: 2 },
+    ],
   });
 
   assert.equal(
@@ -40,8 +41,48 @@ test("rejects corrupt or unexpected Chapter responses", async () => {
   );
 });
 
+test("promotes only fully staged Work replacements on the next reader mount", () => {
+  const active = {
+    cacheName: "cross-canon-work-v1-work-old",
+    chapterUrls: ["/old"],
+    complete: true,
+    completedAt: 1,
+    version: "old",
+  };
+  const staged = promoteCompletedWorkGenerations({
+    ready: {
+      ...active,
+      pending: {
+        cacheName: "cross-canon-work-v1-work-new",
+        chapterUrls: ["/new"],
+        complete: true,
+        completedAt: 2,
+        version: "new",
+      },
+    },
+    interrupted: {
+      ...active,
+      pending: {
+        cacheName: "cross-canon-work-v1-work-partial",
+        chapterUrls: ["/partial"],
+        version: "new",
+      },
+    },
+  });
+
+  assert.deepEqual(staged.ready, {
+    cacheName: "cross-canon-work-v1-work-new",
+    chapterUrls: ["/new"],
+    complete: true,
+    completedAt: 2,
+    version: "new",
+  });
+  assert.equal(staged.interrupted.version, "old");
+  assert.equal(staged.interrupted.pending?.version, "new");
+});
+
 function jsonResponse(value: unknown) {
   return new Response(JSON.stringify(value), {
-    headers: { "Content-Type": "application/json" }
+    headers: { "Content-Type": "application/json" },
   });
 }
