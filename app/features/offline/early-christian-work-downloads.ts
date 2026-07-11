@@ -51,12 +51,12 @@ const IDLE_DOWNLOAD: WorkDownloadState = {
 
 export function useEarlyChristianWorkDownloads({
   bookIndex,
-  hasCheckedReachability,
+  hasInitializedOfflineDetection,
   isOffline,
   previewAssetVersion,
 }: {
   bookIndex: BookIndex | null;
-  hasCheckedReachability: boolean;
+  hasInitializedOfflineDetection: boolean;
   isOffline: boolean;
   previewAssetVersion: string;
 }) {
@@ -408,7 +408,7 @@ export function useEarlyChristianWorkDownloads({
   useEffect(() => {
     if (
       !bookIndex ||
-      !hasCheckedReachability ||
+      !hasInitializedOfflineDetection ||
       !hasValidatedRecords ||
       activeDownloadRef.current
     ) {
@@ -444,7 +444,7 @@ export function useEarlyChristianWorkDownloads({
   }, [
     bookIndex,
     downloadState.kind,
-    hasCheckedReachability,
+    hasInitializedOfflineDetection,
     hasValidatedRecords,
     isOffline,
     previewAssetVersion,

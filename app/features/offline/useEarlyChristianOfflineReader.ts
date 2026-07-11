@@ -16,14 +16,14 @@ export function useEarlyChristianOfflineReader({
   initialPassageRange: string;
   previewAssetVersion: string;
 }) {
-  const { hasCheckedReachability, isOffline } = useOfflineStatus();
+  const { hasInitializedOfflineDetection, isOffline } = useOfflineStatus();
   const [readerLinkChapterId, setReaderLinkChapterId] =
     useState(initialChapterId);
   const [readerLinkPassageRange, setReaderLinkPassageRange] =
     useState(initialPassageRange);
   const downloads = useEarlyChristianWorkDownloads({
     bookIndex,
-    hasCheckedReachability,
+    hasInitializedOfflineDetection,
     isOffline,
     previewAssetVersion,
   });

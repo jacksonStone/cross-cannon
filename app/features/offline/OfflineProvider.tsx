@@ -1,114 +1,59 @@
 import {
   createContext,
   type ReactNode,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
 
+const OFFLINE_DEBOUNCE_MS = 5_000;
+
 type OfflineContextValue = {
-  hasCheckedReachability: boolean;
+  hasInitializedOfflineDetection: boolean;
   isOffline: boolean;
 };
 
 const OfflineContext = createContext<OfflineContextValue>({
-  hasCheckedReachability: false,
+  hasInitializedOfflineDetection: false,
   isOffline: false,
 });
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
-  // Keep the server and the browser's first render identical. Reachability is
-  // established immediately after hydration, including on an offline startup.
+  // Keep the server and the browser's first render identical.
   const [isOffline, setIsOffline] = useState(false);
-  const [hasCheckedReachability, setHasCheckedReachability] = useState(false);
+  const [hasInitializedOfflineDetection, setHasInitializedOfflineDetection] =
+    useState(false);
   const value = useMemo(
-    () => ({ hasCheckedReachability, isOffline }),
-    [hasCheckedReachability, isOffline]
+    () => ({ hasInitializedOfflineDetection, isOffline }),
+    [hasInitializedOfflineDetection, isOffline]
   );
-  const checkReachability = useCallback(async () => {
-    if (!navigator.onLine) {
-      setIsOffline(true);
-      setHasCheckedReachability(true);
-      return;
-    }
-
-    try {
-      const response = await fetch("/?offline-health=1", {
-        cache: "no-store",
-        method: "HEAD",
-      });
-      setIsOffline(!response.ok);
-    } catch {
-      setIsOffline(true);
-    } finally {
-      setHasCheckedReachability(true);
-    }
-  }, []);
-
   useEffect(() => {
-    const markOnline = () => void checkReachability();
-    const markOffline = () => setIsOffline(true);
-    const onServiceWorkerMessage = (event: MessageEvent<unknown>) => {
-      const message = event.data;
-
-      if (!message || typeof message !== "object") {
-        return;
-      }
-
-      const typedMessage = message as { source?: unknown; type?: unknown };
-
-      if (typedMessage.source !== "cross-canon") {
-        return;
-      }
-
-      if (typedMessage.type === "offline") {
-        markOffline();
-      }
-
-      if (typedMessage.type === "online") {
-        markOnline();
-      }
+    let offlineTimeout: number | undefined;
+    const markOfflineAfterDebounce = () => {
+      window.clearTimeout(offlineTimeout);
+      offlineTimeout = window.setTimeout(() => {
+        if (!navigator.onLine) {
+          setIsOffline(true);
+        }
+      }, OFFLINE_DEBOUNCE_MS);
     };
 
-    window.addEventListener("online", markOnline);
-    window.addEventListener("offline", markOffline);
-    navigator.serviceWorker?.addEventListener(
-      "message",
-      onServiceWorkerMessage
-    );
-    void checkReachability();
+    window.addEventListener("offline", markOfflineAfterDebounce);
+    setHasInitializedOfflineDetection(true);
+
+    if (!navigator.onLine) {
+      markOfflineAfterDebounce();
+    }
 
     return () => {
-      window.removeEventListener("online", markOnline);
-      window.removeEventListener("offline", markOffline);
-      navigator.serviceWorker?.removeEventListener(
-        "message",
-        onServiceWorkerMessage
+      window.clearTimeout(offlineTimeout);
+      window.removeEventListener(
+        "offline",
+        markOfflineAfterDebounce
       );
     };
-  }, [checkReachability]);
-
-  useEffect(() => {
-    if (!isOffline) {
-      return;
-    }
-
-    const interval = window.setInterval(() => void checkReachability(), 5_000);
-    const checkWhenVisible = () => {
-      if (document.visibilityState === "visible") {
-        void checkReachability();
-      }
-    };
-
-    document.addEventListener("visibilitychange", checkWhenVisible);
-
-    return () => {
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", checkWhenVisible);
-    };
-  }, [checkReachability, isOffline]);
+  }, []);
 
   return (
     <OfflineContext.Provider value={value}>
