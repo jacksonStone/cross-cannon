@@ -39,6 +39,7 @@ const browser = await puppeteer.launch({
 
 try {
   const page = await browser.newPage();
+  const reportedRegressionFailures: string[] = [];
   page.on("requestfailed", (request) =>
     failedRequests.push(
       `${request.url()} (${request.failure()?.errorText ?? "failed"})`
@@ -194,6 +195,26 @@ try {
   await page.waitForFunction(() =>
     document.body.textContent?.includes("Downloading")
   );
+  const activeDownloadLayout = await page.evaluate(() => {
+    const passages = [...document.querySelectorAll<HTMLElement>("article")]
+      .slice(0, 4)
+      .map((article) => article.getBoundingClientRect());
+    return {
+      horizontalOverflow:
+        document.documentElement.scrollWidth - window.innerWidth,
+      passageOverlaps: passages
+        .slice(1)
+        .map((passage, index) => passages[index].bottom - passage.top),
+    };
+  });
+  if (
+    activeDownloadLayout.horizontalOverflow > 1 ||
+    activeDownloadLayout.passageOverlaps.some((overlap) => overlap > 0)
+  ) {
+    reportedRegressionFailures.push(
+      `Download layout overflowed: ${JSON.stringify(activeDownloadLayout)}`
+    );
+  }
   await page.$eval("button[aria-label='Close reader tools']", (button) =>
     (button as HTMLButtonElement).click()
   );
@@ -445,6 +466,44 @@ try {
     !offlineControls.hasSimilar,
     "Expected Similar Passages to be removed offline."
   );
+  const offlineBottomControls = await page.evaluate(() => {
+    const indicator = document
+      .querySelector<HTMLElement>(".offline-indicator")
+      ?.getBoundingClientRect();
+    const corpusSwitch = document
+      .querySelector<HTMLElement>(".reader-corpus-switch")
+      ?.getBoundingClientRect();
+    const intersects = Boolean(
+      indicator &&
+        corpusSwitch &&
+        indicator.left < corpusSwitch.right &&
+        indicator.right > corpusSwitch.left &&
+        indicator.top < corpusSwitch.bottom &&
+        indicator.bottom > corpusSwitch.top
+    );
+    return {
+      corpusSwitch: corpusSwitch && {
+        bottom: corpusSwitch.bottom,
+        left: corpusSwitch.left,
+        right: corpusSwitch.right,
+        top: corpusSwitch.top,
+      },
+      indicator: indicator && {
+        bottom: indicator.bottom,
+        left: indicator.left,
+        right: indicator.right,
+        top: indicator.top,
+      },
+      intersects,
+    };
+  });
+  if (offlineBottomControls.intersects) {
+    reportedRegressionFailures.push(
+      `Offline indicator covered the corpus switch: ${JSON.stringify(
+        offlineBottomControls
+      )}`
+    );
+  }
 
   await clickButtonByText(page, "Jump");
   await page.waitForSelector(".ec-jump-modal");
@@ -857,11 +916,92 @@ try {
     emptyState.includes("No Early Christian works are available offline"),
     `Expected the no-download offline state, got ${emptyState}.`
   );
+  let coldStartWorkTitle = "";
+
+  if (manageServer) {
+    managedServer = await startManagedServer(managedPort, timeoutMs);
+    const coldStartContext = await browser.createBrowserContext();
+
+    try {
+      const onlinePage = await coldStartContext.newPage();
+      onlinePage.setDefaultTimeout(timeoutMs);
+      await onlinePage.setViewport({ height: 844, width: 390 });
+      await onlinePage.goto(downloadedWorkUrl, {
+        waitUntil: "domcontentloaded",
+      });
+      await onlinePage.waitForSelector("#reader-title");
+      coldStartWorkTitle = await onlinePage.$eval(
+        "#reader-title",
+        (heading) => heading.textContent?.trim() ?? ""
+      );
+      await onlinePage.evaluate(async () => {
+        await navigator.serviceWorker.ready;
+      });
+      await openReaderTools(onlinePage);
+      await clickButtonByText(onlinePage, "Download work");
+      assert(
+        await waitForEnabledButton(onlinePage, "Remove download", 15_000),
+        "Expected the first-session Work download to complete."
+      );
+      await onlinePage.close();
+      await stopServer(managedServer);
+      await waitForServerStop(baseUrl, timeoutMs);
+      managedServer = null;
+
+      const offlinePage = await coldStartContext.newPage();
+      offlinePage.setDefaultTimeout(timeoutMs);
+      await offlinePage.setViewport({ height: 844, width: 390 });
+      await offlinePage.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+      await offlinePage.waitForSelector(".reader-page");
+      const switched = await offlinePage.evaluate(() => {
+        const link = document.querySelector<HTMLAnchorElement>(
+          "a[aria-label='Switch to early Christian works']"
+        );
+        link?.click();
+        return Boolean(link);
+      });
+      assert(switched, "Expected the offline Scripture-to-Fathers switch.");
+      await offlinePage.waitForFunction(() =>
+        Boolean(
+          document.querySelector("#reader-title") ||
+            document.body.textContent?.includes("Application Error")
+        )
+      );
+      const coldStartState = await offlinePage.evaluate(() => ({
+        body: document.body.textContent?.trim().slice(0, 500) ?? "",
+        title:
+          document.querySelector("#reader-title")?.textContent?.trim() ?? "",
+        url: location.href,
+      }));
+      if (
+        coldStartState.body.includes("Application Error") ||
+        coldStartState.title !== coldStartWorkTitle
+      ) {
+        reportedRegressionFailures.push(
+          `Cold offline Fathers startup failed: ${JSON.stringify(
+            coldStartState
+          )}`
+        );
+      }
+    } finally {
+      await coldStartContext.close();
+      if (managedServer) {
+        await stopServer(managedServer);
+        managedServer = null;
+      }
+    }
+  }
+
+  assert(
+    reportedRegressionFailures.length === 0,
+    `Reported offline regressions: ${reportedRegressionFailures.join(" | ")}`
+  );
 
   console.log(
     JSON.stringify(
       {
         atomicShellUpdate: true,
+        coldStartWork: coldStartWorkTitle,
         emptyState: true,
         downloadLifecycle: canceledWorkTitle,
         interruptedUpdateResume: true,

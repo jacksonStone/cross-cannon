@@ -12,7 +12,8 @@ type ReaderCorpusSwitchProps = {
 };
 
 export function ReaderCorpusSwitch({ current }: ReaderCorpusSwitchProps) {
-  const targetCorpus: ReaderCorpus = current === "scripture" ? "fathers" : "scripture";
+  const targetCorpus: ReaderCorpus =
+    current === "scripture" ? "fathers" : "scripture";
   const isSwitchingToFathers = targetCorpus === "fathers";
 
   useEffect(() => {
@@ -23,7 +24,11 @@ export function ReaderCorpusSwitch({ current }: ReaderCorpusSwitchProps) {
 
   return (
     <Link
-      aria-label={isSwitchingToFathers ? "Switch to early Christian works" : "Switch to Scripture"}
+      aria-label={
+        isSwitchingToFathers
+          ? "Switch to early Christian works"
+          : "Switch to Scripture"
+      }
       className="reader-corpus-switch"
       onClick={() => {
         if (isSwitchingToFathers) {
@@ -33,11 +38,15 @@ export function ReaderCorpusSwitch({ current }: ReaderCorpusSwitchProps) {
         rememberReaderCorpus(targetCorpus);
       }}
       prefetch="render"
+      reloadDocument
       title={isSwitchingToFathers ? "Early Christian works" : "Scripture"}
       to={isSwitchingToFathers ? "/church-fathers" : "/?reader=scripture"}
     >
       {isSwitchingToFathers ? (
-        <span aria-hidden="true" className="reader-corpus-switch-mark is-fathers">
+        <span
+          aria-hidden="true"
+          className="reader-corpus-switch-mark is-fathers"
+        >
           ✣
         </span>
       ) : (

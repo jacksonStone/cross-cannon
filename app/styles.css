@@ -19,7 +19,8 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   line-height: 1.5;
 }
 
@@ -365,7 +366,8 @@ h1 {
   font-weight: 800;
   line-height: 1;
   padding: 0 12px;
-  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+  transition: background-color 140ms ease, border-color 140ms ease,
+    color 140ms ease;
 }
 
 .search-target-dial input {
@@ -409,7 +411,11 @@ h1 {
 
 .search-target-dial label.is-active span::before {
   border-color: var(--accent);
-  background: radial-gradient(circle at center, var(--accent) 0 42%, transparent 46%);
+  background: radial-gradient(
+    circle at center,
+    var(--accent) 0 42%,
+    transparent 46%
+  );
   opacity: 1;
 }
 
@@ -497,9 +503,7 @@ textarea {
   font-size: 1.05rem;
   line-height: 1.55;
   padding: 18px;
-  box-shadow:
-    inset 0 0 0 1px var(--field-inset),
-    0 1px 0 rgba(36, 33, 29, 0.03);
+  box-shadow: inset 0 0 0 1px var(--field-inset), 0 1px 0 rgba(36, 33, 29, 0.03);
 }
 
 textarea:focus {
@@ -518,9 +522,7 @@ textarea::placeholder {
   border-radius: 8px;
   background: var(--panel);
   padding: 16px 42px 18px 18px;
-  box-shadow:
-    inset 0 0 0 1px var(--field-inset),
-    0 1px 0 rgba(36, 33, 29, 0.03);
+  box-shadow: inset 0 0 0 1px var(--field-inset), 0 1px 0 rgba(36, 33, 29, 0.03);
 }
 
 .focused-passage-label {
@@ -1062,7 +1064,8 @@ button:disabled {
 .offline-indicator {
   position: fixed;
   z-index: 40;
-  right: 16px;
+  right: auto;
+  left: max(16px, env(safe-area-inset-left));
   bottom: max(16px, env(safe-area-inset-bottom));
   border-radius: 999px;
   background: var(--ink, #24211d);
@@ -1452,8 +1455,7 @@ button:disabled {
   display: grid;
   place-items: center;
   overscroll-behavior: contain;
-  background:
-    linear-gradient(rgba(36, 33, 29, 0.48), rgba(36, 33, 29, 0.56)),
+  background: linear-gradient(rgba(36, 33, 29, 0.48), rgba(36, 33, 29, 0.56)),
     var(--paper);
   color: var(--ink);
   padding: 24px;
@@ -1536,8 +1538,10 @@ button:disabled {
   display: grid;
   gap: clamp(18px, 3vw, 26px);
   margin: clamp(14px, 4vw, 28px) 0 clamp(10px, 3vw, 22px);
-  border-top: 1px solid color-mix(in srgb, var(--reader-action-ink) 28%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--reader-line) 58%, transparent);
+  border-top: 1px solid
+    color-mix(in srgb, var(--reader-action-ink) 28%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--reader-line) 58%, transparent);
   padding: clamp(28px, 7vw, 62px) 0 clamp(24px, 5vw, 46px);
 }
 
@@ -1560,7 +1564,8 @@ button:disabled {
 .reader-book-header-subtitle,
 .reader-book-header-description,
 .reader-book-header-details {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
 }
 
 .reader-book-header-eyebrow {
@@ -1671,7 +1676,8 @@ button:disabled {
 
 .reader-chapter-heading span {
   color: color-mix(in srgb, var(--reader-muted) 58%, transparent);
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   font-size: 0.62rem;
   font-weight: 700;
 }
@@ -1685,7 +1691,8 @@ button:disabled {
   max-width: var(--reader-content-width);
   margin: -4px 0 8px;
   color: var(--reader-muted);
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   font-size: 0.76rem;
   font-weight: 650;
   line-height: 1.45;
@@ -1835,7 +1842,11 @@ button:disabled {
 }
 
 .reader-corpus-switch:hover {
-  border-color: color-mix(in srgb, var(--reader-action-ink) 36%, var(--reader-line));
+  border-color: color-mix(
+    in srgb,
+    var(--reader-action-ink) 36%,
+    var(--reader-line)
+  );
   background: color-mix(in srgb, var(--reader-panel) 94%, transparent);
   color: var(--reader-action-active-ink);
 }
@@ -2198,12 +2209,18 @@ button:disabled {
 .fathers-picker-form {
   display: grid;
   align-items: end;
-  grid-template-columns: minmax(170px, 0.7fr) minmax(120px, 0.45fr) minmax(220px, 1fr) minmax(240px, 1.1fr) auto;
+  grid-template-columns: minmax(170px, 0.7fr) minmax(120px, 0.45fr) minmax(
+      220px,
+      1fr
+    ) minmax(240px, 1.1fr) auto;
   gap: 12px;
 }
 
 .fathers-picker-form-flat {
-  grid-template-columns: minmax(120px, 0.45fr) minmax(260px, 1.25fr) minmax(260px, 1.1fr) auto;
+  grid-template-columns: minmax(120px, 0.45fr) minmax(260px, 1.25fr) minmax(
+      260px,
+      1.1fr
+    ) auto;
 }
 
 .fathers-picker label,
@@ -2643,9 +2660,28 @@ button:disabled {
   }
 
   .reader-header-actions {
-    width: auto;
-    min-width: max-content;
-    justify-content: flex-end;
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+
+  .reader-header:has(.reader-header-actions) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reader-header:has(.reader-header-actions) .reader-header-title {
+    display: none;
+  }
+
+  .reader-header-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .reader-header-actions .reader-tools-close {
+    order: -1;
   }
 
   .reader-header h1 {
@@ -2832,5 +2868,4 @@ button:disabled {
   .fathers-metadata {
     grid-template-columns: 1fr;
   }
-
 }

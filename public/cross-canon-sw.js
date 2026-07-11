@@ -103,6 +103,8 @@ async function stageShellGeneration(cacheName) {
       }
     }
 
+    await stageEarlyChristianNavigationResources(cache);
+
     if (shouldFailShellStage) {
       throw new Error("Intentional local shell-staging failure.");
     }
@@ -131,6 +133,44 @@ async function stageShellGeneration(cacheName) {
     await caches.delete(cacheName);
     throw error;
   }
+}
+
+async function stageEarlyChristianNavigationResources(cache) {
+  const manifestUrl = "/church-fathers-preview/manifest.json";
+  const manifestResponse = await fetch(
+    new Request(manifestUrl, { cache: "no-store" })
+  );
+
+  if (!manifestResponse.ok) {
+    throw new Error(
+      `Failed to stage Early Christian manifest: ${manifestResponse.status}`
+    );
+  }
+
+  const manifest = await manifestResponse.clone().json();
+
+  if (typeof manifest?.bookIndexPath !== "string") {
+    throw new Error("Failed to validate the Early Christian manifest.");
+  }
+
+  await cache.put(manifestUrl, manifestResponse);
+  const bookIndexResponse = await fetch(
+    new Request(manifest.bookIndexPath, { cache: "no-store" })
+  );
+
+  if (!bookIndexResponse.ok) {
+    throw new Error(
+      `Failed to stage Early Christian Work index: ${bookIndexResponse.status}`
+    );
+  }
+
+  const bookIndex = await bookIndexResponse.clone().json();
+
+  if (!Array.isArray(bookIndex?.books) || bookIndex.books.length === 0) {
+    throw new Error("Failed to validate the Early Christian Work index.");
+  }
+
+  await cache.put(manifest.bookIndexPath, bookIndexResponse);
 }
 
 function collectDocumentResources(html) {
@@ -289,6 +329,15 @@ async function offlineEarlyChristianContentResponse(request) {
 
   if (activeWorkResponse) {
     return activeWorkResponse;
+  }
+
+  const shellCache = await openActiveShellCache();
+  const shellResponse = await shellCache.match(request, {
+    ignoreSearch: true,
+  });
+
+  if (shellResponse) {
+    return shellResponse;
   }
 
   const cache = await caches.open(GENERAL_CONTENT_CACHE);
