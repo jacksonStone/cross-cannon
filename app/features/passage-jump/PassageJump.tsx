@@ -8,7 +8,9 @@ import {
   filterJumpBooksByCanon,
   findInitialJumpSelection
 } from "~/features/passage-reader/chapter-index";
-import type { StoredFilters } from "~/features/search/types";
+import { DEFAULT_CANON } from "~/features/search/canons";
+import { CanonPicker } from "~/features/search/CanonPicker";
+import type { CanonMode, StoredFilters } from "~/features/search/types";
 import {
   isBackdropClick,
   useEscapeDismiss
@@ -36,9 +38,10 @@ export function PassageJump({
   passages
 }: PassageJumpProps) {
   const scriptureIndex = useMemo(() => buildChapterIndex(passages), [passages]);
+  const [canon, setCanon] = useState<CanonMode>(DEFAULT_CANON);
   const jumpBooks = useMemo(
-    () => filterJumpBooksByCanon(scriptureIndex.jumpBooks, filters?.canon),
-    [filters?.canon, scriptureIndex.jumpBooks]
+    () => filterJumpBooksByCanon(scriptureIndex.jumpBooks, canon),
+    [canon, scriptureIndex.jumpBooks]
   );
   const initialSelection = useMemo(
     () => findInitialJumpSelection(scriptureIndex, initialPassageId),
@@ -134,6 +137,8 @@ export function PassageJump({
             </header>
 
             <div className="passage-jump-modal-body">
+              <CanonPicker canon={canon} onChange={setCanon} />
+
               <label className="passage-jump-book">
                 <span>Book</span>
                 <select

@@ -2,9 +2,10 @@ import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
 import {
   BOOKS_BY_CANON,
-  parseCanonMode,
+  DEFAULT_CANON,
   sortCanonicalBooks
 } from "~/features/search/canons";
+import type { CanonMode } from "~/features/search/types";
 
 export type PassageLocation = {
   book: string;
@@ -226,13 +227,9 @@ export function findInitialJumpSelection(
 
 export function filterJumpBooksByCanon(
   jumpBooks: JumpBookOption[],
-  canon: string | null | undefined
+  canon: CanonMode | null | undefined
 ) {
-  if (!canon) {
-    return jumpBooks;
-  }
-
-  const canonBooks = BOOKS_BY_CANON[parseCanonMode(canon)];
+  const canonBooks = BOOKS_BY_CANON[canon ?? DEFAULT_CANON];
   return jumpBooks.filter((book) => canonBooks.has(book.name));
 }
 

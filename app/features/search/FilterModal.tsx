@@ -6,7 +6,7 @@ import {
 } from "~/lib/use-dialog-dismiss";
 import { useModalScrollLock } from "~/lib/use-modal-scroll-lock";
 
-import { parseCanonMode } from "./canons";
+import { CanonPicker } from "./CanonPicker";
 import { CheckboxPicker } from "./CheckboxPicker";
 import type { CanonMode } from "./types";
 
@@ -91,18 +91,11 @@ export function FilterModal({
         </div>
         <div className="filter-modal-body">
           {showScriptureFilters ? (
-            <fieldset className="canon-control" disabled={isSearching}>
-              <legend>Canon</legend>
-              <select
-                aria-label="Canon"
-                onChange={(event) => onCanonChange(parseCanonMode(event.currentTarget.value))}
-                value={canon}
-              >
-                <option value="protestant">Protestant</option>
-                <option value="catholic">Catholic</option>
-                <option value="orthodox">Orthodox</option>
-              </select>
-            </fieldset>
+            <CanonPicker
+              canon={canon}
+              disabled={isSearching}
+              onChange={onCanonChange}
+            />
           ) : null}
           <fieldset className="match-control" disabled={isSearching}>
             <legend>Matches</legend>

@@ -136,13 +136,17 @@ test("filterJumpBooksByCanon keeps only books in the selected canon", () => {
   );
 });
 
-test("filterJumpBooksByCanon leaves jump books unfiltered without a canon", () => {
+test("filterJumpBooksByCanon defaults to the Protestant canon", () => {
   const jumpBooks = [
     { chapters: [], name: "Genesis" },
-    { chapters: [], name: "Tobit" }
+    { chapters: [], name: "Tobit" },
+    { chapters: [], name: "1 Esdras" }
   ];
 
-  assert.equal(filterJumpBooksByCanon(jumpBooks, undefined), jumpBooks);
+  assert.deepEqual(
+    filterJumpBooksByCanon(jumpBooks, undefined).map((book) => book.name),
+    ["Genesis"]
+  );
 });
 
 test("reader index resolves saved chapters, passage chapter keys, and defaults", () => {
