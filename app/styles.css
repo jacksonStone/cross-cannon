@@ -1091,6 +1091,45 @@ button:disabled {
   white-space: nowrap;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ec-download-control .ec-download-icon {
+  width: 20px;
+  height: 20px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.ec-download-control.is-downloaded {
+  color: var(--reader-action-active-ink, var(--accent-dark));
+}
+
+.ec-download-progress-track {
+  opacity: 0.22;
+}
+
+.ec-download-progress-value {
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dashoffset 160ms ease;
+}
+
+.ec-download-progress-cancel {
+  stroke-width: 1.5;
+}
+
 .ec-work-download {
   align-self: center;
   color: var(--accent);
@@ -2209,18 +2248,16 @@ button:disabled {
 .fathers-picker-form {
   display: grid;
   align-items: end;
-  grid-template-columns: minmax(170px, 0.7fr) minmax(120px, 0.45fr) minmax(
-      220px,
-      1fr
-    ) minmax(240px, 1.1fr) auto;
+  grid-template-columns:
+    minmax(170px, 0.7fr) minmax(120px, 0.45fr) minmax(220px, 1fr)
+    minmax(240px, 1.1fr) auto;
   gap: 12px;
 }
 
 .fathers-picker-form-flat {
-  grid-template-columns: minmax(120px, 0.45fr) minmax(260px, 1.25fr) minmax(
-      260px,
-      1.1fr
-    ) auto;
+  grid-template-columns:
+    minmax(120px, 0.45fr) minmax(260px, 1.25fr) minmax(260px, 1.1fr)
+    auto;
 }
 
 .fathers-picker label,

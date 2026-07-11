@@ -667,7 +667,7 @@ try {
       document.body.textContent?.includes("Downloading") &&
       !document.body.textContent?.includes("Updating")
   );
-  await clickButtonByText(page, "Cancel download");
+  await clickButtonByAccessibleLabel(page, "Cancel download");
   const manualCancelCompleted = await waitForEnabledButton(
     page,
     "Download work",
@@ -1724,6 +1724,18 @@ async function clickButtonByText(page: Page, text: string) {
   }, text);
 
   assert(clicked, `Expected a button labelled “${text}”.`);
+}
+
+async function clickButtonByAccessibleLabel(page: Page, label: string) {
+  const clicked = await page.evaluate((label: string) => {
+    const button = [
+      ...document.querySelectorAll<HTMLButtonElement>("button[aria-label]"),
+    ].find((candidate) => candidate.ariaLabel?.startsWith(label));
+    button?.click();
+    return Boolean(button);
+  }, label);
+
+  assert(clicked, `Expected a button labelled “${label}”.`);
 }
 
 function assert(condition: unknown, message: string): asserts condition {
