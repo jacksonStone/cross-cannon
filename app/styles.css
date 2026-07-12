@@ -1064,9 +1064,9 @@ button:disabled {
 .offline-indicator {
   position: fixed;
   z-index: 40;
-  right: auto;
-  left: max(16px, env(safe-area-inset-left));
+  left: 50%;
   bottom: max(16px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
   border-radius: 999px;
   background: var(--ink, #24211d);
   color: var(--paper, #fbfaf7);
