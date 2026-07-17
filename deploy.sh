@@ -19,6 +19,14 @@ cp -r build public scripts scripture-cache package.json package-lock.json README
 
 zip -r -X "$ZIP_FILE" "$PACKAGE_DIR"
 
+if unzip -Z1 "$ZIP_FILE" | awk -v prefix="${PACKAGE_DIR}/storage/" '
+  index($0, prefix) == 1 { found = 1 }
+  END { exit !found }
+'; then
+  echo "Refusing to deploy a package containing storage data." >&2
+  exit 1
+fi
+
 scp -i "$EC2_PEM_PATH" "$ZIP_FILE" ubuntu@"$EC2_PUBLIC_IP":/home/ubuntu/.temp/
 
 ssh -i "$EC2_PEM_PATH" ubuntu@"$EC2_PUBLIC_IP" << EOF

@@ -420,6 +420,9 @@ database must already exist on the server or be copied there separately.
 
 Normal deploys and `npm run ship` do not opt into production database
 maintenance. Set `CROSS_CANNON_UPDATE_DB=1` only for an explicit DB update task.
+Deploy packages must not contain `storage` data. The deploy preserves live
+production storage between releases; database backups should be retained
+off-server instead of uploaded with an application release.
 
 Required deploy environment variables on the machine running `deploy.sh`:
 

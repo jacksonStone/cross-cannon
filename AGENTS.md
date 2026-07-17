@@ -40,7 +40,8 @@ homepage, and runs a production search POST smoke test. It expects
 
 `./deploy.sh` builds the Remix app from existing scripture cache artifacts,
 packages, copies, installs production dependencies, and restarts the remote
-service. It preserves the remote `storage` directory.
+service. It preserves the remote `storage` directory and rejects deploy packages
+that contain `storage` data; production database backups belong off-server.
 
 Do not refresh scripture cache artifacts or perform database-update work as part
 of `npm run ship`, `npm run verify`, or `./deploy.sh`. Use an explicit
