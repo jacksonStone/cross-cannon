@@ -1058,7 +1058,11 @@ button:disabled {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  padding: 16px max(16px, calc((100% - 880px) / 2)) 64px;
+  padding:
+    16px
+    max(16px, env(safe-area-inset-right), calc((100% - 880px) / 2))
+    64px
+    max(16px, env(safe-area-inset-left), calc((100% - 880px) / 2));
 }
 
 .offline-indicator {
@@ -2686,7 +2690,11 @@ button:disabled {
   }
 
   .reader-shell {
-    padding: 12px 12px 64px;
+    padding:
+      12px
+      max(12px, env(safe-area-inset-right))
+      64px
+      max(12px, env(safe-area-inset-left));
   }
 
   .reader-header {
@@ -2701,7 +2709,7 @@ button:disabled {
     width: 100%;
     min-width: 0;
     overflow-x: auto;
-    justify-content: flex-start;
+    justify-content: safe flex-end;
     scrollbar-width: none;
   }
 

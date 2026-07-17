@@ -14,6 +14,7 @@ import {
   getCenteredWindowRange,
   type WindowRange
 } from "./window-range";
+import { shouldPreserveReaderAnchorOnResize } from "./reader-resize";
 
 type PrependSnapshot = {
   scrollHeight: number;
@@ -50,6 +51,8 @@ const DEFAULT_READER_SCROLL_WINDOW = {
   minReadingAnchorOffset: 220,
   readingAnchorRatio: 0.38
 } as const;
+const READER_RESIZE_PREPARE_MS = 600;
+const READER_RESIZE_SETTLE_MS = 180;
 
 const useBrowserLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -692,6 +695,8 @@ function useReaderScrollWindow({
     minReadingAnchorOffset,
     readingAnchorRatio
   };
+  const anchorOptionsRef = useRef(anchorOptions);
+  anchorOptionsRef.current = anchorOptions;
   const captureCurrentReadingAnchor = useCallback(() => (
     captureReadingAnchorSnapshot({
       anchorOptions,
@@ -705,6 +710,8 @@ function useReaderScrollWindow({
     passageSelector,
     readingAnchorRatio
   ]);
+  const captureCurrentReadingAnchorRef = useRef(captureCurrentReadingAnchor);
+  captureCurrentReadingAnchorRef.current = captureCurrentReadingAnchor;
 
   useInitialTargetScroll({
     findTarget: findInitialTarget,
@@ -737,8 +744,8 @@ function useReaderScrollWindow({
       return;
     }
 
-    lastReadingAnchorRef.current = captureCurrentReadingAnchor();
-  }, [captureCurrentReadingAnchor, itemCount, trackingReady]);
+    lastReadingAnchorRef.current = captureCurrentReadingAnchorRef.current();
+  }, [itemCount, trackingReady]);
 
   useEffect(() => {
     if (!trackingReady || itemCount === 0) {
@@ -746,7 +753,9 @@ function useReaderScrollWindow({
     }
 
     let animationFrame = 0;
+    let isRestoringLayoutResize = false;
     let settleTimeout = 0;
+    let layoutWidth = document.documentElement.clientWidth;
 
     const restoreAnchor = () => {
       const snapshot = pendingResizeAnchorRef.current;
@@ -755,19 +764,28 @@ function useReaderScrollWindow({
         return;
       }
 
-      restoreReadingAnchorSnapshot(snapshot, anchorOptions);
+      restoreReadingAnchorSnapshot(snapshot, anchorOptionsRef.current);
     };
 
     const finishResizePreservation = () => {
       restoreAnchor();
       pendingResizeAnchorRef.current = null;
       isPreservingResizeRef.current = false;
-      lastReadingAnchorRef.current = captureCurrentReadingAnchor();
+      isRestoringLayoutResize = false;
+      lastReadingAnchorRef.current = captureCurrentReadingAnchorRef.current();
+    };
+
+    const finishHeightOnlyResize = () => {
+      pendingResizeAnchorRef.current = null;
+      isPreservingResizeRef.current = false;
+      isRestoringLayoutResize = false;
+      lastReadingAnchorRef.current = captureCurrentReadingAnchorRef.current();
     };
 
     const scheduleResizePreservation = () => {
+      const nextLayoutWidth = document.documentElement.clientWidth;
       pendingResizeAnchorRef.current ??= lastReadingAnchorRef.current
-        ?? captureCurrentReadingAnchor();
+        ?? captureCurrentReadingAnchorRef.current();
 
       if (!pendingResizeAnchorRef.current) {
         return;
@@ -775,19 +793,37 @@ function useReaderScrollWindow({
 
       isPreservingResizeRef.current = true;
 
-      if (animationFrame) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-
       if (settleTimeout) {
         window.clearTimeout(settleTimeout);
+      }
+
+      if (!shouldPreserveReaderAnchorOnResize(layoutWidth, nextLayoutWidth)) {
+        settleTimeout = window.setTimeout(
+          isRestoringLayoutResize
+            ? finishResizePreservation
+            : finishHeightOnlyResize,
+          isRestoringLayoutResize
+            ? READER_RESIZE_SETTLE_MS
+            : READER_RESIZE_PREPARE_MS
+        );
+        return;
+      }
+
+      layoutWidth = nextLayoutWidth;
+      isRestoringLayoutResize = true;
+
+      if (animationFrame) {
+        window.cancelAnimationFrame(animationFrame);
       }
 
       animationFrame = window.requestAnimationFrame(() => {
         animationFrame = 0;
         restoreAnchor();
       });
-      settleTimeout = window.setTimeout(finishResizePreservation, 180);
+      settleTimeout = window.setTimeout(
+        finishResizePreservation,
+        READER_RESIZE_SETTLE_MS
+      );
     };
 
     window.addEventListener("resize", scheduleResizePreservation);
@@ -807,16 +843,9 @@ function useReaderScrollWindow({
 
       pendingResizeAnchorRef.current = null;
       isPreservingResizeRef.current = false;
+      isRestoringLayoutResize = false;
     };
-  }, [
-    captureCurrentReadingAnchor,
-    headerOffset,
-    itemCount,
-    minReadingAnchorOffset,
-    passageSelector,
-    readingAnchorRatio,
-    trackingReady
-  ]);
+  }, [itemCount, trackingReady]);
 
   useEffect(() => {
     if (!trackingReady || itemCount === 0) {
