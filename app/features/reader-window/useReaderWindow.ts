@@ -826,10 +826,12 @@ function useReaderScrollWindow({
       );
     };
 
+    window.addEventListener("orientationchange", scheduleResizePreservation);
     window.addEventListener("resize", scheduleResizePreservation);
     window.visualViewport?.addEventListener("resize", scheduleResizePreservation);
 
     return () => {
+      window.removeEventListener("orientationchange", scheduleResizePreservation);
       window.removeEventListener("resize", scheduleResizePreservation);
       window.visualViewport?.removeEventListener("resize", scheduleResizePreservation);
 

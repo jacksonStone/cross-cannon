@@ -99,7 +99,7 @@ async function verifyOrientationPreservesReadingAnchor(page: Page) {
     path.join(orientationFixtureOutput, "index.html")
   ).href;
 
-  await page.setViewport({ height: 844, width: 390 });
+  await setMobileViewport(page, 390, 844);
   await page.goto(fixtureUrl, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(`[data-passage-id="${targetPassageId}"]`, {
     visible: true
@@ -128,25 +128,33 @@ async function verifyOrientationPreservesReadingAnchor(page: Page) {
   await wait(250);
 
   const portraitBefore = await readOrientationState(page);
-  await page.setViewport({ height: 500, width: 390 });
+  await setMobileViewport(page, 390, 500);
   await wait(350);
   const toolbarResize = await readOrientationState(page);
-  await page.setViewport({ height: 844, width: 390 });
+  await setMobileViewport(page, 390, 844);
   await wait(700);
-  await page.setViewport({ height: 390, width: 844 });
+  await setMobileViewport(page, 844, 390);
   await wait(350);
   const landscape = await readOrientationState(page);
-  await page.setViewport({ height: 844, width: 390 });
+  await setMobileViewport(page, 390, 844);
   await wait(350);
   const portraitAfter = await readOrientationState(page);
   await page.evaluate(() => window.dispatchEvent(new Event("resize")));
-  await page.setViewport({ height: 390, width: 844 });
+  await setMobileViewport(page, 844, 390);
   await wait(350);
   const multiEventLandscape = await readOrientationState(page);
   await page.evaluate(() => window.dispatchEvent(new Event("resize")));
-  await page.setViewport({ height: 844, width: 390 });
+  await setMobileViewport(page, 390, 844);
   await wait(350);
   const multiEventPortrait = await readOrientationState(page);
+  await simulatePreResizeScrollShift(page, "eccl-8-1");
+  await setMobileViewport(page, 844, 390);
+  await wait(350);
+  const scrollFirstLandscape = await readOrientationState(page);
+  await simulatePreResizeScrollShift(page, "eccl-8-1");
+  await setMobileViewport(page, 390, 844);
+  await wait(350);
+  const scrollFirstPortrait = await readOrientationState(page);
 
   const failures = [
     portraitBefore.anchorPassageId !== targetPassageId
@@ -170,6 +178,12 @@ async function verifyOrientationPreservesReadingAnchor(page: Page) {
     multiEventPortrait.anchorPassageId !== targetPassageId
       ? `multi-event portrait anchored ${multiEventPortrait.anchorPassageId}`
       : "",
+    scrollFirstLandscape.anchorPassageId !== targetPassageId
+      ? `scroll-first landscape anchored ${scrollFirstLandscape.anchorPassageId}`
+      : "",
+    scrollFirstPortrait.anchorPassageId !== targetPassageId
+      ? `scroll-first portrait anchored ${scrollFirstPortrait.anchorPassageId}`
+      : "",
     landscape.title !== "Ecclesiastes 11"
       ? `landscape title was ${landscape.title}`
       : "",
@@ -182,11 +196,23 @@ async function verifyOrientationPreservesReadingAnchor(page: Page) {
     multiEventPortrait.title !== "Ecclesiastes 11"
       ? `multi-event portrait title was ${multiEventPortrait.title}`
       : "",
+    scrollFirstLandscape.title !== "Ecclesiastes 11"
+      ? `scroll-first landscape title was ${scrollFirstLandscape.title}`
+      : "",
+    scrollFirstPortrait.title !== "Ecclesiastes 11"
+      ? `scroll-first portrait title was ${scrollFirstPortrait.title}`
+      : "",
     portraitAfter.maxPassageGap > 2
       ? `portrait return passage gap was ${portraitAfter.maxPassageGap}px`
       : "",
     multiEventPortrait.maxPassageGap > 2
       ? `multi-event portrait passage gap was ${multiEventPortrait.maxPassageGap}px`
+      : "",
+    scrollFirstPortrait.maxPassageGap > 2
+      ? `scroll-first portrait passage gap was ${scrollFirstPortrait.maxPassageGap}px`
+      : "",
+    scrollFirstPortrait.maxPassageTextGap > 20
+      ? `scroll-first portrait passage text gap was ${scrollFirstPortrait.maxPassageTextGap}px`
       : ""
   ].filter(Boolean);
 
@@ -198,9 +224,35 @@ async function verifyOrientationPreservesReadingAnchor(page: Page) {
       multiEventPortrait,
       portraitAfter,
       portraitBefore,
+      scrollFirstLandscape,
+      scrollFirstPortrait,
       toolbarResize
     })}`
   );
+}
+
+async function simulatePreResizeScrollShift(
+  page: Page,
+  passageId: string
+) {
+  await page.evaluate((nextPassageId) => {
+    window.dispatchEvent(new Event("orientationchange"));
+
+    const passage = document.querySelector<HTMLElement>(
+      `[data-passage-id="${nextPassageId}"]`
+    );
+
+    if (!passage) {
+      throw new Error("Scroll-shift passage is missing.");
+    }
+
+    window.scrollTo({
+      behavior: "auto",
+      top: passage.getBoundingClientRect().top + window.scrollY - 128
+    });
+    window.dispatchEvent(new Event("scroll"));
+  }, passageId);
+  await wait(50);
 }
 
 async function readOrientationState(page: Page) {
@@ -231,14 +283,32 @@ async function readOrientationState(page: Page) {
       passage.getBoundingClientRect().top
         - passages[index].getBoundingClientRect().bottom
     ));
+    const passageTexts = passages.flatMap((passage) => (
+      [...passage.querySelectorAll<HTMLElement>(".reader-passage-text")]
+    ));
+    const passageTextGaps = passageTexts.slice(1).map((passageText, index) => (
+      passageText.getBoundingClientRect().top
+        - passageTexts[index].getBoundingClientRect().bottom
+    ));
 
     return {
       anchorPassageId: anchorPassage?.dataset.passageId ?? "",
       maxPassageGap: Math.round(Math.max(0, ...passageGaps)),
+      maxPassageTextGap: Math.round(Math.max(0, ...passageTextGaps)),
       scrollY: Math.round(window.scrollY),
       title: document.querySelector("#reader-title")?.textContent?.trim() ?? "",
       viewport: `${window.innerWidth}x${window.innerHeight}`
     };
+  });
+}
+
+function setMobileViewport(page: Page, width: number, height: number) {
+  return page.setViewport({
+    deviceScaleFactor: 3,
+    hasTouch: true,
+    height,
+    isMobile: true,
+    width
   });
 }
 
