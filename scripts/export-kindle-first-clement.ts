@@ -270,6 +270,7 @@ function createTitlePage() {
     <h2>About this edition</h2>
     <p>Source text from the <i>Ante-Nicene Fathers</i> via the Christian Classics Ethereal Library.</p>
     <p>Words marked with a fine dotted underline differ from the original public-domain translation.</p>
+    <p>Cover artwork: Giovanni Battista Tiepolo, <i>Pope St Clement Adoring the Trinity</i> (1737–1738), public domain.</p>
   </section>
 </body>
 </html>

@@ -1,15 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2560" viewBox="0 0 1600 2560">
   <defs>
     <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#090704" stop-opacity="0.14"/>
-      <stop offset="0.5" stop-color="#090704" stop-opacity="0"/>
-      <stop offset="1" stop-color="#090704" stop-opacity="0.97"/>
+      <stop offset="0" stop-color="#120b08" stop-opacity="0.98"/>
+      <stop offset="0.3" stop-color="#120b08" stop-opacity="0.82"/>
+      <stop offset="0.52" stop-color="#120b08" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#120b08" stop-opacity="0.16"/>
     </linearGradient>
   </defs>
 
-  <rect width="1600" height="2560" fill="#17100a"/>
+  <rect width="1600" height="2560" fill="#160e0a"/>
   <image
-    href="christ-pantocrator-sinai.jpg"
+    href="first-clement-tiepolo.jpg"
     width="1600"
     height="2560"
     preserveAspectRatio="xMidYMid slice"
@@ -17,11 +18,11 @@
   <rect width="1600" height="2560" fill="url(#shade)"/>
 
   <g fill="#f4e8c8" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif">
-    <text x="800" y="1925" font-size="52" letter-spacing="10">THE FIRST EPISTLE</text>
-    <text x="800" y="2015" font-size="42" letter-spacing="8">OF</text>
-    <text x="800" y="2120" font-size="82" letter-spacing="14">CLEMENT</text>
-    <text x="800" y="2205" font-size="45" letter-spacing="6">TO THE CORINTHIANS</text>
-    <line x1="430" y1="2270" x2="1170" y2="2270" stroke="#c9a55f" stroke-width="3"/>
-    <text x="800" y="2370" font-size="42" font-style="italic">Clement of Rome</text>
+    <text x="800" y="205" font-size="49" letter-spacing="10">THE FIRST EPISTLE</text>
+    <text x="800" y="290" font-size="38" letter-spacing="8">OF</text>
+    <text x="800" y="410" font-size="94" letter-spacing="14">CLEMENT</text>
+    <text x="800" y="505" font-size="44" letter-spacing="6">TO THE CORINTHIANS</text>
+    <line x1="430" y1="575" x2="1170" y2="575" stroke="#cfad66" stroke-width="3"/>
+    <text x="800" y="665" font-size="41" font-style="italic">Clement of Rome</text>
   </g>
 </svg>
