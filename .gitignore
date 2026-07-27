@@ -20,3 +20,4 @@ scripture-cache/
 *.zip
 cross-cannon/
 docs/screenshots/
+exports/kindle/*.epub

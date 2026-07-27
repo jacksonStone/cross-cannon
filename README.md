@@ -188,6 +188,31 @@ scripture-cache/manifest.json
 The cache route serves these artifacts with long-lived immutable cache headers
 and gzip when the browser accepts it.
 
+## Kindle Export
+
+Generate a reflowable EPUB of the World English Bible from `data/bible.json`:
+
+```bash
+npm run export:kindle
+```
+
+The generated personal-document artifact is written to:
+
+```text
+exports/kindle/cross-canon-bible.epub
+```
+
+The EPUB includes a Kindle-compatible logical table of contents with Book and
+Chapter navigation. Upload it through Amazon Send to Kindle; generated EPUB
+artifacts are intentionally ignored by git. Override the source or destination
+when needed:
+
+```bash
+npm run export:kindle:bible -- \
+  --input data/bible.json \
+  --output exports/kindle/cross-canon-bible.epub
+```
+
 ## Early Christian Audio Alignment
 
 The Early Christian reader links remote audio instead of downloading MP3s into
