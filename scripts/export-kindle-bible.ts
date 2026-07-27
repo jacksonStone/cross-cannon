@@ -28,13 +28,18 @@ type BibleVerse = {
 
 const DEFAULT_INPUT_PATH = "data/bible.json";
 const DEFAULT_OUTPUT_PATH = "exports/kindle/cross-canon-bible.epub";
+const DEFAULT_COVER_PATH = "assets/kindle/cross-canon-bible-cover.jpg";
 const EPUB_TITLE = "The Holy Bible — World English Bible";
 
 async function run() {
-  const { inputPath, outputPath } = parseArgs(process.argv.slice(2));
-  const bible = parseBibleJson(await readFile(inputPath, "utf8"));
+  const { coverPath, inputPath, outputPath } = parseArgs(process.argv.slice(2));
+  const [source, coverImage] = await Promise.all([
+    readFile(inputPath, "utf8"),
+    readFile(coverPath)
+  ]);
+  const bible = parseBibleJson(source);
   const generatedAt = new Date();
-  const epub = createBibleEpub(bible, generatedAt);
+  const epub = createBibleEpub(bible, coverImage, generatedAt);
 
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, epub);
@@ -46,6 +51,7 @@ async function run() {
 }
 
 function parseArgs(args: string[]) {
+  let coverPath = DEFAULT_COVER_PATH;
   let inputPath = DEFAULT_INPUT_PATH;
   let outputPath = DEFAULT_OUTPUT_PATH;
 
@@ -62,10 +68,16 @@ function parseArgs(args: string[]) {
       continue;
     }
 
+    if (argument === "--cover") {
+      coverPath = requireArgValue(args, ++index, argument);
+      continue;
+    }
+
     throw new Error(`Unknown argument: ${argument}`);
   }
 
   return {
+    coverPath: path.resolve(process.cwd(), coverPath),
     inputPath: path.resolve(process.cwd(), inputPath),
     outputPath: path.resolve(process.cwd(), outputPath)
   };
@@ -147,13 +159,19 @@ function parseBibleJson(source: string): Bible {
   return { books };
 }
 
-function createBibleEpub(bible: Bible, generatedAt: Date) {
+function createBibleEpub(bible: Bible, coverImage: Buffer, generatedAt: Date) {
   const entries: EpubArchiveEntry[] = [
     epubTextEntry("mimetype", "application/epub+zip", "store"),
     epubTextEntry("META-INF/container.xml", createContainerDocument()),
     epubTextEntry("EPUB/package.opf", createPackageDocument(bible, generatedAt)),
     epubTextEntry("EPUB/nav.xhtml", createNavigationDocument(bible)),
     epubTextEntry("EPUB/styles/book.css", createBookStyles()),
+    {
+      body: coverImage,
+      compression: "deflate",
+      path: "EPUB/images/cover.jpg"
+    },
+    epubTextEntry("EPUB/text/cover.xhtml", createCoverPage()),
     epubTextEntry("EPUB/text/title.xhtml", createTitlePage())
   ];
 
@@ -198,18 +216,25 @@ function createPackageDocument(bible: Bible, generatedAt: Date) {
     <dc:rights>Public Domain</dc:rights>
     <meta property="dcterms:modified">${generatedAt.toISOString().replace(/\.\d{3}Z$/, "Z")}</meta>
     <meta property="rendition:layout">reflowable</meta>
+    <meta name="cover" content="cover-image"/>
   </metadata>
   <manifest>
     <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
     <item id="styles" href="styles/book.css" media-type="text/css"/>
+    <item id="cover-image" href="images/cover.jpg" media-type="image/jpeg" properties="cover-image"/>
+    <item id="cover" href="text/cover.xhtml" media-type="application/xhtml+xml"/>
     <item id="title" href="text/title.xhtml" media-type="application/xhtml+xml"/>
 ${bookManifest}
   </manifest>
   <spine>
+    <itemref idref="cover"/>
     <itemref idref="title"/>
     <itemref idref="nav"/>
 ${bookSpine}
   </spine>
+  <guide>
+    <reference type="cover" title="Cover" href="text/cover.xhtml"/>
+  </guide>
 </package>
 `;
 }
@@ -238,10 +263,29 @@ ${books}
   </nav>
   <nav epub:type="landmarks" hidden="hidden">
     <ol>
+      <li><a epub:type="cover" href="text/cover.xhtml">Cover</a></li>
       <li><a epub:type="toc" href="nav.xhtml">Contents</a></li>
       <li><a epub:type="bodymatter" href="text/book-001.xhtml">Beginning</a></li>
     </ol>
   </nav>
+</body>
+</html>
+`;
+}
+
+function createCoverPage() {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Cover</title>
+  <link rel="stylesheet" type="text/css" href="../styles/book.css"/>
+</head>
+<body epub:type="frontmatter" class="cover-page">
+  <section epub:type="cover">
+    <img src="../images/cover.jpg" alt="The Holy Bible — World English Bible"/>
+  </section>
 </body>
 </html>
 `;
@@ -267,6 +311,7 @@ function createTitlePage() {
     <p>The World English Bible is in the public domain.</p>
     <p>This edition was generated from the Cross Canon Scripture source, including its deuterocanonical books.</p>
     <p>Source: World English Bible USFM data assembled at github.com/jacksonStone/Bible_as_JSON.</p>
+    <p>Cover: <i>Christ Pantocrator</i>, sixth century, Saint Catherine&apos;s Monastery, Sinai. Public-domain image via Wikimedia Commons.</p>
   </section>
 </body>
 </html>
@@ -318,6 +363,28 @@ function createBookStyles() {
   font-family: serif;
   line-height: 1.45;
   margin: 5%;
+}
+
+.cover-page {
+  background: #090704;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+
+.cover-page section {
+  margin: 0;
+  padding: 0;
+}
+
+.cover-page img {
+  display: block;
+  height: 100%;
+  margin: 0 auto;
+  max-height: 100vh;
+  max-width: 100%;
+  object-fit: contain;
+  width: auto;
 }
 
 h1 {

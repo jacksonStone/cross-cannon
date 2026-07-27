@@ -202,14 +202,17 @@ The generated personal-document artifact is written to:
 exports/kindle/cross-canon-bible.epub
 ```
 
-The EPUB includes a Kindle-compatible logical table of contents with Book and
-Chapter navigation. Upload it through Amazon Send to Kindle; generated EPUB
-artifacts are intentionally ignored by git. Override the source or destination
-when needed:
+The EPUB includes a Kindle-compatible cover, a concise Book-level table of
+contents, and compact Chapter navigation at the beginning of each Book. The
+cover uses the public-domain sixth-century Christ Pantocrator icon from Saint
+Catherine's Monastery, Sinai. Upload the EPUB through Amazon Send to Kindle;
+generated EPUB artifacts are intentionally ignored by git. Override the source,
+cover, or destination when needed:
 
 ```bash
 npm run export:kindle:bible -- \
   --input data/bible.json \
+  --cover assets/kindle/cross-canon-bible-cover.jpg \
   --output exports/kindle/cross-canon-bible.epub
 ```
 

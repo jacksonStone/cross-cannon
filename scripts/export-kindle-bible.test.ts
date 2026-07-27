@@ -21,6 +21,8 @@ test("the Kindle export command creates a navigable EPUB from Bible JSON", async
     ]);
     assert.ok(archive.has("EPUB/text/book-001.xhtml"));
     assert.ok(archive.has("EPUB/text/book-005.xhtml"));
+    assert.ok(archive.has("EPUB/images/cover.jpg"));
+    assert.ok(archive.has("EPUB/text/cover.xhtml"));
 
     const mimetype = readArchiveText(archive, "mimetype");
     assert.equal(mimetype, "application/epub+zip");
@@ -53,6 +55,16 @@ test("the Kindle export command creates a navigable EPUB from Bible JSON", async
     const packageDocument = readArchiveText(archive, "EPUB/package.opf");
     assert.match(packageDocument, /The Holy Bible — World English Bible/);
     assert.match(packageDocument, /properties="nav"/);
+    assert.match(packageDocument, /properties="cover-image"/);
+    assert.match(packageDocument, /<meta name="cover" content="cover-image"\/>/);
+    assert.ok(
+      packageDocument.indexOf('<itemref idref="cover"/>')
+      < packageDocument.indexOf('<itemref idref="title"/>')
+    );
+
+    const coverPage = readArchiveText(archive, "EPUB/text/cover.xhtml");
+    assert.match(coverPage, /src="\.\.\/images\/cover\.jpg"/);
+    assert.match(coverPage, /epub:type="cover"/);
   });
 });
 

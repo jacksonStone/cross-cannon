@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2560" viewBox="0 0 1600 2560">
+  <defs>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#090704" stop-opacity="0.16"/>
+      <stop offset="0.58" stop-color="#090704" stop-opacity="0"/>
+      <stop offset="1" stop-color="#090704" stop-opacity="0.96"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="2560" fill="#17100a"/>
+  <image
+    href="christ-pantocrator-sinai.jpg"
+    width="1600"
+    height="2560"
+    preserveAspectRatio="xMidYMid slice"
+  />
+  <rect width="1600" height="2560" fill="url(#shade)"/>
+
+  <g fill="#f4e8c8" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif">
+    <text x="800" y="2055" font-size="82" letter-spacing="15">THE HOLY BIBLE</text>
+    <line x1="430" y1="2120" x2="1170" y2="2120" stroke="#c9a55f" stroke-width="3"/>
+    <text x="800" y="2220" font-size="45" font-style="italic">World English Bible</text>
+    <text x="800" y="2390" font-size="28" letter-spacing="7" fill="#d5c398">CROSS CANON</text>
+  </g>
+</svg>
