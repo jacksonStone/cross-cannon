@@ -1,0 +1,90 @@
+{
+  "workId": "anf09:xii.iv",
+  "reviewedPassages": 517,
+  "issues": [
+    {
+      "key": "anf09:xii.iv.lix:1",
+      "severity": "high",
+      "currentModernizedText": "If, however, any should disobey the words spoken by Him through us, let them know that they will involve themselves in transgression and serious danger; but we shall be innocent of this sin and, constant in prayer and supplication, shall desire that the Creator of all preserve unbroken the full number of His elect in the whole world through His beloved Son Jesus Christ, through whom He called us from darkness to light and from ignorance to the knowledge of the glory of His name. Our hope rests on Your name, which is the primal cause of every creature, having opened the eyes of our heart to the knowledge of You, who alone “do rest highest among the highest, holy among the holy,” who “lay low the insolence of the haughty,” who “destroy the calculations of the heathen,” who “set the low on high and bring low the exalted;” who “make rich and make poor,” who “kill and make alive,” only Benefactor of spirits and God of all flesh, who behold the depths, the eyewitness of human works, the help of those in danger, the Savior of those in despair, the Creator and Guardian of every spirit, who multiply nations upon earth, and from all make choice of those who love You through Jesus Christ, Your beloved Son, through whom You instructed, sanctified, and honored us.",
+      "proposedModernizedText": "If, however, any should disobey the words spoken by Him through us, let them know that they will involve themselves in transgression and serious danger; but we shall be innocent of this sin and, constant in prayer and supplication, shall desire that the Creator of all preserve unbroken the full number of His elect in the whole world through His beloved Son Jesus Christ, through whom He called us from darkness to light and from ignorance to the knowledge of the glory of His name. Our hope rests on Your name, which is the primal cause of every creature. You have opened the eyes of our heart to the knowledge of You, who alone “rest highest among the highest, holy among the holy,” who “lay low the insolence of the haughty,” who “destroy the calculations of the heathen,” who “set the low on high and bring low the exalted;” who “make rich and make poor,” who “kill and make alive,” only Benefactor of spirits and God of all flesh, who behold the depths, the eyewitness of human works, the help of those in danger, the Savior of those in despair, the Creator and Guardian of every spirit, who multiply nations upon earth, and from all make choice of those who love You through Jesus Christ, Your beloved Son, through whom You instructed, sanctified, and honored us.",
+      "reason": "The participle “having opened” is left grammatically attached to “Your name,” making the divine name the subject that opened the heart; explicitly making God the subject restores the referent and preserves the prayer’s meaning."
+    },
+    {
+      "key": "anf09:xii.iv.lx:2",
+      "severity": "high",
+      "currentModernizedText": "Do not reckon every sin of Your servants and handmaids, but purify us with the purification of Your truth; and direct our steps so that we may walk in holiness of heart and do what is good and pleasing in Your sight and in the sight of our rulers.",
+      "proposedModernizedText": "Do not reckon every sin of Your servants and handmaids, but You will purify us with the purification of Your truth; and direct our steps so that we may walk in holiness of heart and do what is good and pleasing in Your sight and in the sight of our rulers.",
+      "reason": "The original says that God will purify the servants; changing “You will purify” to the imperative “purify us” changes the statement’s mood and meaning."
+    },
+    {
+      "key": "anf09:xii.iv.ii:5",
+      "severity": "medium",
+      "currentModernizedText": "Day and night you were anxious for the whole brotherhood, that God’s elect might be saved with mercy and a good conscience.",
+      "proposedModernizedText": "Day and night you were anxious for the whole brotherhood, that the number of God’s elect might be saved with mercy and a good conscience.",
+      "reason": "The modernization drops “the number of,” removing the original reference to the full number of the elect."
+    },
+    {
+      "key": "anf09:xii.iv.viii:2",
+      "severity": "medium",
+      "currentModernizedText": "Say to my people, Though your sins reach from earth to heaven, and though they are redder than scarlet, and blacker than sackcloth, yet if you turn to me with your whole heart, and say, Father!",
+      "proposedModernizedText": "Say to the children of my people, Though your sins reach from earth to heaven, and though they are redder than scarlet, and blacker than sackcloth, yet if you turn to me with your whole heart, and say, Father!",
+      "reason": "The modernization drops “the children of,” narrowing and changing the addressees of the quoted exhortation."
+    },
+    {
+      "key": "anf09:xii.iv.xxxv:14",
+      "severity": "medium",
+      "currentModernizedText": "But I will reprove you and set yourself before you.",
+      "proposedModernizedText": "But I will reprove you and set these things before you.",
+      "reason": "Converting “thyself” directly to “yourself” produces a nonsensical reflexive object; the preceding “these things” is the intended object."
+    },
+    {
+      "key": "anf09:xii.iv.xliv:4",
+      "severity": "medium",
+      "currentModernizedText": "For our sin will not be small if we eject from the episcopate those who have blamelessly and faithfully fulfilled its duties.",
+      "proposedModernizedText": "For our sin will not be small if we eject from the episcopate those who have blamelessly fulfilled its duties in holiness.",
+      "reason": "“Holily” describes the holiness in which the duties were fulfilled; replacing it with “faithfully” changes that quality rather than modernizing it."
+    },
+    {
+      "key": "anf09:xii.iv.ix:4",
+      "severity": "low",
+      "currentModernizedText": "Noah, being found faithful, preached regeneration to the world through his ministry; and the Lord saved the animals through him which, with one accord, entered into the ark.",
+      "proposedModernizedText": "Noah, being found faithful, preached regeneration to the world through his ministry; and the Lord saved through him the animals that, with one accord, entered into the ark.",
+      "reason": "The current word order makes “which” attach awkwardly after “through him”; reordering the phrase makes Noah’s instrumentality and the animals’ relative clause clear."
+    },
+    {
+      "key": "anf09:xii.iv.xix:2",
+      "severity": "low",
+      "currentModernizedText": "Therefore, having so many great and glorious examples set before us, let us turn again to the practice of that peace which from the beginning was the standard set before us; and let us look steadfastly to the Father and Creator of the universe, and cleave to His mighty and surpassingly great gifts and benefactions of peace.",
+      "proposedModernizedText": "Therefore, having so many great and glorious examples set before us, let us turn again to the practice of that peace which from the beginning was the goal set before us; and let us look steadfastly to the Father and Creator of the universe, and cleave to His mighty and surpassingly great gifts and benefactions of peace.",
+      "reason": "The original “mark set before us” means the goal or object pursued; “standard” shifts it toward a norm or measure."
+    },
+    {
+      "key": "anf09:xii.iv.xx:11",
+      "severity": "low",
+      "currentModernizedText": "The ever-flowing fountains, formed both for enjoyment and health, unfailingly provide their waters for human life.",
+      "proposedModernizedText": "The ever-flowing fountains, formed both for enjoyment and health, unfailingly provide their life-giving springs for human life.",
+      "reason": "The current wording replaces the original nourishing fountain imagery with the generic “waters”; “life-giving springs” keeps the image while modernizing the phrase."
+    },
+    {
+      "key": "anf09:xii.iv.xxxiv:4",
+      "severity": "low",
+      "currentModernizedText": "He exhorts us, therefore, with our whole heart to attend to this, so that we are not lazy or slothful in any good work.",
+      "proposedModernizedText": "He exhorts us, therefore, with our whole heart to attend to this, so that we may not be lazy or slothful in any good work.",
+      "reason": "The purpose clause should retain the original subjunctive force; “so that we are not” turns the exhortation into a flat statement."
+    },
+    {
+      "key": "anf09:xii.iv.lii:4",
+      "severity": "low",
+      "currentModernizedText": "And again he says, “Offer to God the sacrifice of praise, and pay Your vows to the Most High.",
+      "proposedModernizedText": "And again he says, “Offer to God the sacrifice of praise, and pay your vows to the Most High.",
+      "reason": "“Your” addresses the human worshiper in this quotation, not God; the capitalization is inconsistent with the referent."
+    },
+    {
+      "key": "anf09:xii.iv.lii:5",
+      "severity": "low",
+      "currentModernizedText": "And call upon me in the day of Your trouble: I will deliver You, and You shall glorify me.”",
+      "proposedModernizedText": "And call upon me in the day of your trouble: I will deliver you, and you shall glorify me.”",
+      "reason": "All three second-person pronouns address the human worshiper in the quotation; capitalizing them as divine pronouns reverses the capitalization cue."
+    }
+  ]
+}

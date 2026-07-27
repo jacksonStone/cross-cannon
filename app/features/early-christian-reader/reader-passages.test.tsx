@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { buildModernizedTextParts } from "./modernized-text";
 import {
   findLoadedPassage,
   groupChapterPassages,
@@ -44,5 +45,25 @@ test("findLoadedPassage and isSelectedReaderPassage match containing ranges", ()
       selectedRange: "2-3"
     }),
     true
+  );
+});
+
+test("buildModernizedTextParts marks only unmatched modernized words", () => {
+  assert.deepEqual(
+    buildModernizedTextParts(
+      "For ye did all things.",
+      "For you did all things."
+    ),
+    [
+      { changed: false, text: "For" },
+      { changed: false, text: " " },
+      { changed: true, text: "you" },
+      { changed: false, text: " " },
+      { changed: false, text: "did" },
+      { changed: false, text: " " },
+      { changed: false, text: "all" },
+      { changed: false, text: " " },
+      { changed: false, text: "things." }
+    ]
   );
 });

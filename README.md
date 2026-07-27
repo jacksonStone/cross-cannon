@@ -217,6 +217,46 @@ npm run export:kindle:bible -- \
   --output "exports/kindle/The Holy Bible.epub"
 ```
 
+Generate the modernized First Clement edition:
+
+```bash
+npm run export:kindle:first-clement
+```
+
+The resulting EPUB is written to
+`exports/kindle/The First Epistle of Clement to the Corinthians.epub`. It
+includes a compact five-column Chapter grid, a full Kindle navigation menu, and
+a fine dotted underline on words that differ from the original translation.
+
+## Church Fathers Modernization
+
+Generate a small passage batch directly with the OpenAI API:
+
+```bash
+npm run modernize:church-fathers -- \
+  --work anf09:xii.iv \
+  --limit 10
+```
+
+Agent-authored modernization batches can instead be assembled without another
+model call. Each input JSON record must preserve the exact original passage
+alongside its modernized text. The assembler rejects incomplete work coverage,
+duplicate passage keys, changed original text, and conflicting prior
+modernization. Pass `--replace` only when deliberately applying reviewed
+corrections to previously assembled text. It also writes a Markdown audit
+showing deleted original words and added modernized words:
+
+```bash
+npm run apply:church-fathers-modernization -- \
+  --work anf09:xii.iv \
+  --input .scratch/first-clement-modernization/batch-01-chapters-02-21.json \
+  --input .scratch/first-clement-modernization/batch-02-chapters-22-43.json \
+  --input .scratch/first-clement-modernization/batch-03-chapters-44-65.json \
+  --review .scratch/first-clement-modernization/quality-review.json \
+  --replace \
+  --audit .scratch/first-clement-modernization/audit.md
+```
+
 ## Early Christian Audio Alignment
 
 The Early Christian reader links remote audio instead of downloading MP3s into
