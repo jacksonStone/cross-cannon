@@ -23,16 +23,33 @@ test("the Kindle export command creates a navigable EPUB from Bible JSON", async
     assert.ok(archive.has("EPUB/text/book-005.xhtml"));
     assert.ok(archive.has("EPUB/images/cover.jpg"));
     assert.ok(archive.has("EPUB/text/cover.xhtml"));
+    assert.ok(archive.has("EPUB/text/contents.xhtml"));
 
     const mimetype = readArchiveText(archive, "mimetype");
     assert.equal(mimetype, "application/epub+zip");
     assert.equal(archive.get("mimetype")?.compressionMethod, 0);
 
     const navigation = readArchiveText(archive, "EPUB/nav.xhtml");
+    assert.match(
+      navigation,
+      /<li><a href="text\/contents\.xhtml">Contents<\/a><\/li>/
+    );
     assert.match(navigation, /<a href="text\/book-001\.xhtml">Genesis<\/a>/);
     assert.match(navigation, /<a href="text\/book-005\.xhtml">Romans<\/a>/);
+    assert.ok(
+      navigation.indexOf('href="text/contents.xhtml"')
+      < navigation.indexOf('href="text/book-001.xhtml"')
+    );
     assert.doesNotMatch(navigation, /#genesis-chapter-1/);
     assert.doesNotMatch(navigation, />Chapter 1<\/a>/);
+
+    const contents = readArchiveText(archive, "EPUB/text/contents.xhtml");
+    assert.match(contents, /<h1 class="contents-title">Contents<\/h1>/);
+    assert.match(contents, /<table class="book-grid">/);
+    assert.match(
+      contents,
+      /<tr>\s*<td><a href="book-001\.xhtml">Genesis<\/a><\/td>[\s\S]*?<td><a href="book-003\.xhtml">Matthew<\/a><\/td>\s*<\/tr>/
+    );
 
     const genesis = readArchiveText(archive, "EPUB/text/book-001.xhtml");
     assert.match(genesis, /<h1 class="book-title">Genesis<\/h1>/);
@@ -53,14 +70,28 @@ test("the Kindle export command creates a navigable EPUB from Bible JSON", async
     );
 
     const packageDocument = readArchiveText(archive, "EPUB/package.opf");
-    assert.match(packageDocument, /The Holy Bible — World English Bible/);
+    assert.match(packageDocument, /<dc:title>The Holy Bible<\/dc:title>/);
+    assert.doesNotMatch(packageDocument, /Cross Canon/);
     assert.match(packageDocument, /properties="nav"/);
     assert.match(packageDocument, /properties="cover-image"/);
     assert.match(packageDocument, /<meta name="cover" content="cover-image"\/>/);
+    assert.match(
+      packageDocument,
+      /<item id="contents" href="text\/contents\.xhtml" media-type="application\/xhtml\+xml"\/>/
+    );
+    assert.match(
+      packageDocument,
+      /<reference type="toc" title="Contents" href="text\/contents\.xhtml"\/>/
+    );
     assert.ok(
       packageDocument.indexOf('<itemref idref="cover"/>')
       < packageDocument.indexOf('<itemref idref="title"/>')
     );
+    assert.ok(
+      packageDocument.indexOf('<itemref idref="contents"/>')
+      < packageDocument.indexOf('<itemref idref="book-001"/>')
+    );
+    assert.doesNotMatch(packageDocument, /<itemref idref="nav"\/>/);
 
     const coverPage = readArchiveText(archive, "EPUB/text/cover.xhtml");
     assert.match(coverPage, /src="\.\.\/images\/cover\.jpg"/);
@@ -130,6 +161,34 @@ test("book chapter navigation uses a compact ten-column grid", async () => {
     assert.match(styles, /table-layout: fixed;/);
     assert.match(styles, /page-break-inside: avoid;/);
     assert.match(styles, /\.book-title\s*{[\s\S]*?font-size: 18pt;/);
+  });
+});
+
+test("the visible Contents page fits 81 Books into a compact three-column grid", async () => {
+  const inputBody = JSON.stringify(Array.from({ length: 81 }, (_, index) => ({
+    book: `Book ${index + 1}`,
+    chapters: [{
+      chapter: 1,
+      verses: [{ verse: 1, text: `Text ${index + 1}.` }]
+    }]
+  })));
+
+  await withBibleExport({ inputBody }, (archive) => {
+    const contents = readArchiveText(archive, "EPUB/text/contents.xhtml");
+    assert.match(
+      contents,
+      /<tr>\s*<td><a href="book-001\.xhtml">Book 1<\/a><\/td>[\s\S]*?<td><a href="book-003\.xhtml">Book 3<\/a><\/td>\s*<\/tr>/
+    );
+    assert.match(
+      contents,
+      /<tr>\s*<td><a href="book-079\.xhtml">Book 79<\/a><\/td>[\s\S]*?<td><a href="book-081\.xhtml">Book 81<\/a><\/td>\s*<\/tr>/
+    );
+    assert.equal(contents.match(/<tr>/g)?.length, 27);
+
+    const styles = readArchiveText(archive, "EPUB/styles/book.css");
+    assert.match(styles, /\.book-grid\s*{/);
+    assert.match(styles, /font-size: 9pt;/);
+    assert.match(styles, /page-break-inside: avoid;/);
   });
 });
 

@@ -27,9 +27,10 @@ type BibleVerse = {
 };
 
 const DEFAULT_INPUT_PATH = "data/bible.json";
-const DEFAULT_OUTPUT_PATH = "exports/kindle/cross-canon-bible.epub";
+const DEFAULT_OUTPUT_PATH = "exports/kindle/The Holy Bible.epub";
 const DEFAULT_COVER_PATH = "assets/kindle/cross-canon-bible-cover.jpg";
-const EPUB_TITLE = "The Holy Bible — World English Bible";
+const EPUB_TITLE = "The Holy Bible";
+const BOOK_GRID_COLUMNS = 3;
 const CHAPTER_GRID_COLUMNS = 10;
 
 async function run() {
@@ -173,7 +174,8 @@ function createBibleEpub(bible: Bible, coverImage: Buffer, generatedAt: Date) {
       path: "EPUB/images/cover.jpg"
     },
     epubTextEntry("EPUB/text/cover.xhtml", createCoverPage()),
-    epubTextEntry("EPUB/text/title.xhtml", createTitlePage())
+    epubTextEntry("EPUB/text/title.xhtml", createTitlePage()),
+    epubTextEntry("EPUB/text/contents.xhtml", createContentsDocument(bible))
   ];
 
   bible.books.forEach((book, index) => {
@@ -209,11 +211,10 @@ function createPackageDocument(bible: Bible, generatedAt: Date) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="book-id" xml:lang="en">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-    <dc:identifier id="book-id">https://www.crosscanon.com/exports/world-english-bible</dc:identifier>
+    <dc:identifier id="book-id">urn:world-english-bible:kindle-edition</dc:identifier>
     <dc:title>${escapeXml(EPUB_TITLE)}</dc:title>
     <dc:language>en</dc:language>
     <dc:creator>World English Bible</dc:creator>
-    <dc:publisher>Cross Canon</dc:publisher>
     <dc:rights>Public Domain</dc:rights>
     <meta property="dcterms:modified">${generatedAt.toISOString().replace(/\.\d{3}Z$/, "Z")}</meta>
     <meta property="rendition:layout">reflowable</meta>
@@ -225,16 +226,18 @@ function createPackageDocument(bible: Bible, generatedAt: Date) {
     <item id="cover-image" href="images/cover.jpg" media-type="image/jpeg" properties="cover-image"/>
     <item id="cover" href="text/cover.xhtml" media-type="application/xhtml+xml"/>
     <item id="title" href="text/title.xhtml" media-type="application/xhtml+xml"/>
+    <item id="contents" href="text/contents.xhtml" media-type="application/xhtml+xml"/>
 ${bookManifest}
   </manifest>
   <spine>
     <itemref idref="cover"/>
     <itemref idref="title"/>
-    <itemref idref="nav"/>
+    <itemref idref="contents"/>
 ${bookSpine}
   </spine>
   <guide>
     <reference type="cover" title="Cover" href="text/cover.xhtml"/>
+    <reference type="toc" title="Contents" href="text/contents.xhtml"/>
   </guide>
 </package>
 `;
@@ -259,13 +262,14 @@ function createNavigationDocument(bible: Bible) {
   <nav epub:type="toc" id="toc">
     <h1>Contents</h1>
     <ol class="contents">
+      <li><a href="text/contents.xhtml">Contents</a></li>
 ${books}
     </ol>
   </nav>
   <nav epub:type="landmarks" hidden="hidden">
     <ol>
       <li><a epub:type="cover" href="text/cover.xhtml">Cover</a></li>
-      <li><a epub:type="toc" href="nav.xhtml">Contents</a></li>
+      <li><a epub:type="toc" href="text/contents.xhtml">Contents</a></li>
       <li><a epub:type="bodymatter" href="text/book-001.xhtml">Beginning</a></li>
     </ol>
   </nav>
@@ -305,12 +309,11 @@ function createTitlePage() {
   <section epub:type="titlepage" class="title-page">
     <h1>The Holy Bible</h1>
     <p class="subtitle">World English Bible</p>
-    <p>Prepared for Kindle by Cross Canon</p>
   </section>
   <section epub:type="copyright-page" class="source-note">
     <h2>About this edition</h2>
     <p>The World English Bible is in the public domain.</p>
-    <p>This edition was generated from the Cross Canon Scripture source, including its deuterocanonical books.</p>
+    <p>This edition was generated from World English Bible source data, including its deuterocanonical books.</p>
     <p>Source: World English Bible USFM data assembled at github.com/jacksonStone/Bible_as_JSON.</p>
     <p>Cover: <i>Christ Pantocrator</i>, sixth century, Saint Catherine&apos;s Monastery, Sinai. Public-domain image via Wikimedia Commons.</p>
   </section>
@@ -319,14 +322,42 @@ function createTitlePage() {
 `;
 }
 
+function createContentsDocument(bible: Bible) {
+  const bookRows = groupIntoRows(bible.books, BOOK_GRID_COLUMNS)
+    .map((books, rowIndex) => (
+      `        <tr>\n${books
+        .map((book, columnIndex) => {
+          const bookIndex = rowIndex * BOOK_GRID_COLUMNS + columnIndex;
+          return `          <td><a href="${bookFileName(bookIndex)}">${escapeXml(book.name)}</a></td>`;
+        })
+        .join("\n")}\n        </tr>`
+    ))
+    .join("\n");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Contents</title>
+  <link rel="stylesheet" type="text/css" href="../styles/book.css"/>
+</head>
+<body epub:type="frontmatter" class="contents-page">
+  <section epub:type="toc" id="contents">
+    <h1 class="contents-title">Contents</h1>
+    <table class="book-grid">
+      <tbody>
+${bookRows}
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>
+`;
+}
+
 function createBookDocument(book: BibleBook) {
-  const chapterRows = Array.from(
-    { length: Math.ceil(book.chapters.length / CHAPTER_GRID_COLUMNS) },
-    (_, rowIndex) => book.chapters.slice(
-      rowIndex * CHAPTER_GRID_COLUMNS,
-      (rowIndex + 1) * CHAPTER_GRID_COLUMNS
-    )
-  )
+  const chapterRows = groupIntoRows(book.chapters, CHAPTER_GRID_COLUMNS)
     .map((chapters) => (
       `        <tr>\n${chapters
         .map((chapter) => (
@@ -434,14 +465,29 @@ h2 {
   break-before: page;
 }
 
-.contents {
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
+.contents-page {
+  margin: 3%;
 }
 
-.contents li {
-  margin: 0.2em 0;
+.contents-title {
+  font-size: 18pt;
+  margin-bottom: 8pt;
+}
+
+.book-grid {
+  border-collapse: collapse;
+  break-inside: avoid;
+  font-size: 9pt;
+  line-height: 1.15;
+  margin: 0;
+  page-break-inside: avoid;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.book-grid td {
+  padding: 1pt 2pt;
+  text-align: left;
 }
 
 .chapter-navigation {
@@ -475,6 +521,16 @@ h2 {
   text-align: center;
 }
 `;
+}
+
+function groupIntoRows<Item>(items: Item[], columnCount: number) {
+  return Array.from(
+    { length: Math.ceil(items.length / columnCount) },
+    (_, rowIndex) => items.slice(
+      rowIndex * columnCount,
+      (rowIndex + 1) * columnCount
+    )
+  );
 }
 
 function bookFileName(index: number) {

@@ -20,6 +20,5 @@
     <text x="800" y="2055" font-size="82" letter-spacing="15">THE HOLY BIBLE</text>
     <line x1="430" y1="2120" x2="1170" y2="2120" stroke="#c9a55f" stroke-width="3"/>
     <text x="800" y="2220" font-size="45" font-style="italic">World English Bible</text>
-    <text x="800" y="2390" font-size="28" letter-spacing="7" fill="#d5c398">CROSS CANON</text>
   </g>
 </svg>

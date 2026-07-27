@@ -199,7 +199,7 @@ npm run export:kindle
 The generated personal-document artifact is written to:
 
 ```text
-exports/kindle/cross-canon-bible.epub
+exports/kindle/The Holy Bible.epub
 ```
 
 The EPUB includes a Kindle-compatible cover, a concise Book-level table of
@@ -214,7 +214,7 @@ needed:
 npm run export:kindle:bible -- \
   --input data/bible.json \
   --cover assets/kindle/cross-canon-bible-cover.jpg \
-  --output exports/kindle/cross-canon-bible.epub
+  --output "exports/kindle/The Holy Bible.epub"
 ```
 
 ## Early Christian Audio Alignment
