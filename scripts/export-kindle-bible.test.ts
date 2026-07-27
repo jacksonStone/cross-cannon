@@ -35,7 +35,7 @@ test("the Kindle export command creates a navigable EPUB from Bible JSON", async
     assert.doesNotMatch(navigation, />Chapter 1<\/a>/);
 
     const genesis = readArchiveText(archive, "EPUB/text/book-001.xhtml");
-    assert.match(genesis, /<h1>Genesis<\/h1>/);
+    assert.match(genesis, /<h1 class="book-title">Genesis<\/h1>/);
     assert.match(
       genesis,
       /<nav class="chapter-navigation" aria-label="Genesis chapters">/
@@ -92,6 +92,44 @@ test("the Kindle export omits empty source records without renumbering", async (
     assert.match(chapter, /example-chapter-1-verse-2/);
     assert.match(chapter, /The preserved verse\./);
     assert.equal(archive.has("EPUB/text/book-002.xhtml"), false);
+  });
+});
+
+test("book chapter navigation uses a compact ten-column grid", async () => {
+  const inputBody = JSON.stringify([
+    {
+      book: "Psalms",
+      chapters: Array.from({ length: 150 }, (_, index) => ({
+        chapter: index + 1,
+        verses: [{ verse: 1, text: `Psalm ${index + 1}.` }]
+      }))
+    }
+  ]);
+
+  await withBibleExport({ inputBody }, (archive) => {
+    const psalms = readArchiveText(archive, "EPUB/text/book-001.xhtml");
+    const navigation = psalms.slice(
+      psalms.indexOf('<nav class="chapter-navigation"'),
+      psalms.indexOf("</nav>") + "</nav>".length
+    );
+
+    assert.match(navigation, /<table class="chapter-grid">/);
+    assert.match(
+      navigation,
+      /<tr>\s*<td><a href="#psalms-chapter-1">1<\/a><\/td>[\s\S]*?<td><a href="#psalms-chapter-10">10<\/a><\/td>\s*<\/tr>/
+    );
+    assert.match(
+      navigation,
+      /<tr>\s*<td><a href="#psalms-chapter-141">141<\/a><\/td>[\s\S]*?<td><a href="#psalms-chapter-150">150<\/a><\/td>\s*<\/tr>/
+    );
+    assert.equal(navigation.match(/<tr>/g)?.length, 15);
+
+    const styles = readArchiveText(archive, "EPUB/styles/book.css");
+    assert.match(styles, /\.chapter-grid\s*{/);
+    assert.match(styles, /font-size: 10pt;/);
+    assert.match(styles, /table-layout: fixed;/);
+    assert.match(styles, /page-break-inside: avoid;/);
+    assert.match(styles, /\.book-title\s*{[\s\S]*?font-size: 18pt;/);
   });
 });
 

@@ -30,6 +30,7 @@ const DEFAULT_INPUT_PATH = "data/bible.json";
 const DEFAULT_OUTPUT_PATH = "exports/kindle/cross-canon-bible.epub";
 const DEFAULT_COVER_PATH = "assets/kindle/cross-canon-bible-cover.jpg";
 const EPUB_TITLE = "The Holy Bible — World English Bible";
+const CHAPTER_GRID_COLUMNS = 10;
 
 async function run() {
   const { coverPath, inputPath, outputPath } = parseArgs(process.argv.slice(2));
@@ -319,9 +320,19 @@ function createTitlePage() {
 }
 
 function createBookDocument(book: BibleBook) {
-  const chapterLinks = book.chapters
-    .map((chapter) => (
-      `      <li><a href="#${chapterId(book.name, chapter.number)}">${chapter.number}</a></li>`
+  const chapterRows = Array.from(
+    { length: Math.ceil(book.chapters.length / CHAPTER_GRID_COLUMNS) },
+    (_, rowIndex) => book.chapters.slice(
+      rowIndex * CHAPTER_GRID_COLUMNS,
+      (rowIndex + 1) * CHAPTER_GRID_COLUMNS
+    )
+  )
+    .map((chapters) => (
+      `        <tr>\n${chapters
+        .map((chapter) => (
+          `          <td><a href="#${chapterId(book.name, chapter.number)}">${chapter.number}</a></td>`
+        ))
+        .join("\n")}\n        </tr>`
     ))
     .join("\n");
   const chapters = book.chapters.map((chapter) => {
@@ -345,12 +356,14 @@ ${verses}
   <link rel="stylesheet" type="text/css" href="../styles/book.css"/>
 </head>
 <body epub:type="bodymatter">
-  <h1>${escapeXml(book.name)}</h1>
+  <h1 class="book-title">${escapeXml(book.name)}</h1>
   <nav class="chapter-navigation" aria-label="${escapeXml(book.name)} chapters">
     <p class="chapter-navigation-label">Chapters</p>
-    <ol>
-${chapterLinks}
-    </ol>
+    <table class="chapter-grid">
+      <tbody>
+${chapterRows}
+      </tbody>
+    </table>
   </nav>
 ${chapters}
 </body>
@@ -432,25 +445,34 @@ h2 {
 }
 
 .chapter-navigation {
-  margin: 0 auto 1.25em;
+  break-inside: avoid;
+  margin: 0 auto 8pt;
+  page-break-inside: avoid;
   text-align: center;
+}
+
+.book-title {
+  font-size: 18pt;
+  margin-bottom: 8pt;
 }
 
 .chapter-navigation-label {
   font-style: italic;
-  margin: 0 0 0.4em;
+  margin: 0 0 3pt;
 }
 
-.chapter-navigation ol {
-  list-style-type: none;
+.chapter-grid {
+  border-collapse: collapse;
+  font-size: 10pt;
+  line-height: 1.2;
   margin: 0;
-  padding: 0;
+  table-layout: fixed;
+  width: 100%;
 }
 
-.chapter-navigation li {
-  display: inline;
-  line-height: 1.8;
-  margin: 0 0.35em;
+.chapter-grid td {
+  padding: 2pt 0;
+  text-align: center;
 }
 `;
 }

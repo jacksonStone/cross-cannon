@@ -203,11 +203,12 @@ exports/kindle/cross-canon-bible.epub
 ```
 
 The EPUB includes a Kindle-compatible cover, a concise Book-level table of
-contents, and compact Chapter navigation at the beginning of each Book. The
-cover uses the public-domain sixth-century Christ Pantocrator icon from Saint
-Catherine's Monastery, Sinai. Upload the EPUB through Amazon Send to Kindle;
-generated EPUB artifacts are intentionally ignored by git. Override the source,
-cover, or destination when needed:
+contents, and a ten-column Chapter grid at the beginning of each Book. Even
+Psalms fits into 15 compact navigation rows. The cover uses the public-domain
+sixth-century Christ Pantocrator icon from Saint Catherine's Monastery, Sinai.
+Upload the EPUB through Amazon Send to Kindle; generated EPUB artifacts are
+intentionally ignored by git. Override the source, cover, or destination when
+needed:
 
 ```bash
 npm run export:kindle:bible -- \
