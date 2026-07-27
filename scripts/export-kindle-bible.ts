@@ -215,22 +215,11 @@ ${bookSpine}
 }
 
 function createNavigationDocument(bible: Bible) {
-  const books = bible.books.map((book, index) => {
-    const fileName = bookFileName(index);
-    const chapters = book.chapters
-      .map((chapter) => (
-        `          <li><a href="text/${fileName}#${chapterId(book.name, chapter.number)}">`
-        + `Chapter ${chapter.number}</a></li>`
-      ))
-      .join("\n");
-
-    return `      <li>
-        <a href="text/${fileName}">${escapeXml(book.name)}</a>
-        <ol>
-${chapters}
-        </ol>
-      </li>`;
-  }).join("\n");
+  const books = bible.books
+    .map((book, index) => (
+      `      <li><a href="text/${bookFileName(index)}">${escapeXml(book.name)}</a></li>`
+    ))
+    .join("\n");
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
@@ -285,6 +274,11 @@ function createTitlePage() {
 }
 
 function createBookDocument(book: BibleBook) {
+  const chapterLinks = book.chapters
+    .map((chapter) => (
+      `      <li><a href="#${chapterId(book.name, chapter.number)}">${chapter.number}</a></li>`
+    ))
+    .join("\n");
   const chapters = book.chapters.map((chapter) => {
     const verses = chapter.verses.map((verse) => (
       `    <p id="${chapterId(book.name, chapter.number)}-verse-${verse.number}" class="verse">`
@@ -307,6 +301,12 @@ ${verses}
 </head>
 <body epub:type="bodymatter">
   <h1>${escapeXml(book.name)}</h1>
+  <nav class="chapter-navigation" aria-label="${escapeXml(book.name)} chapters">
+    <p class="chapter-navigation-label">Chapters</p>
+    <ol>
+${chapterLinks}
+    </ol>
+  </nav>
 ${chapters}
 </body>
 </html>
@@ -354,13 +354,36 @@ h2 {
   break-before: page;
 }
 
-.contents,
-.contents ol {
+.contents {
   list-style-type: none;
+  margin: 0;
+  padding: 0;
 }
 
 .contents li {
-  margin: 0.35em 0;
+  margin: 0.2em 0;
+}
+
+.chapter-navigation {
+  margin: 0 auto 1.25em;
+  text-align: center;
+}
+
+.chapter-navigation-label {
+  font-style: italic;
+  margin: 0 0 0.4em;
+}
+
+.chapter-navigation ol {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chapter-navigation li {
+  display: inline;
+  line-height: 1.8;
+  margin: 0 0.35em;
 }
 `;
 }

@@ -28,13 +28,21 @@ test("the Kindle export command creates a navigable EPUB from Bible JSON", async
 
     const navigation = readArchiveText(archive, "EPUB/nav.xhtml");
     assert.match(navigation, /<a href="text\/book-001\.xhtml">Genesis<\/a>/);
-    assert.match(
-      navigation,
-      /<a href="text\/book-001\.xhtml#genesis-chapter-1">Chapter 1<\/a>/
-    );
+    assert.match(navigation, /<a href="text\/book-005\.xhtml">Romans<\/a>/);
+    assert.doesNotMatch(navigation, /#genesis-chapter-1/);
+    assert.doesNotMatch(navigation, />Chapter 1<\/a>/);
 
     const genesis = readArchiveText(archive, "EPUB/text/book-001.xhtml");
     assert.match(genesis, /<h1>Genesis<\/h1>/);
+    assert.match(
+      genesis,
+      /<nav class="chapter-navigation" aria-label="Genesis chapters">/
+    );
+    assert.match(genesis, /<a href="#genesis-chapter-1">1<\/a>/);
+    assert.ok(
+      genesis.indexOf('class="chapter-navigation"')
+      < genesis.indexOf('<section epub:type="chapter"')
+    );
     assert.match(genesis, /id="genesis-chapter-1"/);
     assert.doesNotMatch(genesis, /class="verse-number"/);
     assert.match(
