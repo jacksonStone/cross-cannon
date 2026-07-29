@@ -23,7 +23,7 @@ export function useScriptureReaderNavigation({
   filters: StoredFilters;
   initialPassageId: string;
   isReady: boolean;
-  onChapterChange?: (chapterKey: string) => void;
+  onChapterChange?: (chapterKey: string, passageId?: string) => void;
   passages: BrowserPassage[];
 }) {
   const chapterIndex = useMemo(() => buildChapterIndex(passages), [passages]);
@@ -44,9 +44,12 @@ export function useScriptureReaderNavigation({
     setActiveChapterKey(initialChapterKey);
     setSelectedPassageId("");
   }, [initialChapterKey]);
-  const updateActiveChapterFromScroll = useCallback((chapterKey: string) => {
+  const updateActiveChapterFromScroll = useCallback((
+    chapterKey: string,
+    passageId?: string
+  ) => {
     setActiveChapterKey(chapterKey);
-    onChapterChange?.(chapterKey);
+    onChapterChange?.(chapterKey, passageId);
   }, [onChapterChange]);
   const scrollToTopWhenInitialPassageMissing = useCallback(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });

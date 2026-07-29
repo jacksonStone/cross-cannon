@@ -182,12 +182,21 @@ export default function Index() {
       return;
     }
 
+    const savedPassageId = savedReaderLocation?.passageKey ?? "";
+    const savedPassageChapterKey = getPassageChapterKey(
+      scriptureIndex,
+      savedPassageId
+    );
     const initialPassageId =
-      findFirstPassageIdForChapter(
-        scriptureIndex,
-        savedReaderLocation?.chapterKey ??
-          readReaderPosition(READER_POSITION_STORAGE_KEY)
-      ) ?? findDefaultReaderPassageId(scriptureIndex);
+      (savedPassageId
+        && savedPassageChapterKey === savedReaderLocation?.chapterKey
+        ? savedPassageId
+        : findFirstPassageIdForChapter(
+          scriptureIndex,
+          savedReaderLocation?.chapterKey ??
+            readReaderPosition(READER_POSITION_STORAGE_KEY)
+        ))
+      ?? findDefaultReaderPassageId(scriptureIndex);
 
     if (!initialPassageId) {
       return;
@@ -204,6 +213,7 @@ export default function Index() {
         createReaderLocation({
           chapterKey: initialChapterKey,
           corpus: "scripture",
+          passageKey: initialPassageId,
         }),
         {
           lastReportedRef: lastVisibleChapterKeyRef,
@@ -275,12 +285,16 @@ export default function Index() {
     onDismiss: closeSearch,
   });
 
-  const rememberReaderChapter = useCallback((chapterKeyValue: string) => {
+  const rememberReaderChapter = useCallback((
+    chapterKeyValue: string,
+    passageId?: string
+  ) => {
     rememberReaderLocation(
       READER_POSITION_STORAGE_KEY,
       createReaderLocation({
         chapterKey: chapterKeyValue,
         corpus: "scripture",
+        passageKey: passageId,
       }),
       {
         lastReportedRef: lastVisibleChapterKeyRef,

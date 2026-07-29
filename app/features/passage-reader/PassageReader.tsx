@@ -40,7 +40,7 @@ type PassageReaderProps = {
   filters: StoredFilters;
   initialPassageId: string;
   isScriptureReady: boolean;
-  onChapterChange?: (chapterKey: string) => void;
+  onChapterChange?: (chapterKey: string, passageId?: string) => void;
   onOpenSearch?: () => void;
   onThemeChange?: (theme: ReaderTheme) => void;
   passages: BrowserPassage[];

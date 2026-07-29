@@ -143,7 +143,7 @@ function useAnchoredReaderWindow({
   itemCount: number;
   minReadingAnchorOffset: number;
   minStartIndex?: number;
-  onActiveKeyChange: (key: string) => void;
+  onActiveKeyChange: (key: string, passageKey?: string) => void;
   onInitialScrollSettled?: () => void;
   onMissingInitialTarget?: () => void;
   onReset?: () => void;
@@ -236,7 +236,7 @@ export function useScriptureReaderWindow({
   initialPassageId: string;
   isReady: boolean;
   itemCount: number;
-  onActiveChapterChange: (chapterKey: string) => void;
+  onActiveChapterChange: (chapterKey: string, passageKey?: string) => void;
   onMissingInitialPassage?: () => void;
   onReset?: () => void;
 }) {
@@ -668,7 +668,7 @@ function useReaderScrollWindow({
   itemCount: number;
   minStartIndex?: number;
   minReadingAnchorOffset: number;
-  onActiveKeyChange: (key: string) => void;
+  onActiveKeyChange: (key: string, passageKey?: string) => void;
   onInitialScrollSettled: () => void;
   onMissingInitialTarget?: () => void;
   passageSelector?: string;
@@ -865,18 +865,23 @@ function useReaderScrollWindow({
       }
 
       lastReadingAnchorRef.current = captureCurrentReadingAnchor();
+      const currentPassage = findElementAtReadingAnchor(
+        [...document.querySelectorAll<HTMLElement>(passageSelector)],
+        anchorOptions
+      );
       const currentChapter = findElementAtReadingAnchor(
         [...document.querySelectorAll<HTMLElement>(chapterSelector)],
         anchorOptions
       );
       const currentKey = currentChapter ? getChapterKey(currentChapter) : null;
+      const currentPassageKey = currentPassage?.dataset.passageId;
 
-      if (!currentKey || currentKey === activeKeyRef.current) {
+      if (!currentKey || (!currentPassageKey && currentKey === activeKeyRef.current)) {
         return;
       }
 
       activeKeyRef.current = currentKey;
-      onActiveKeyChange(currentKey);
+      onActiveKeyChange(currentKey, currentPassageKey);
     };
 
     const scheduleLocationUpdate = () => {

@@ -51,6 +51,7 @@ async function main() {
     await step("Bible: load reader", () => loadBible(page));
     await step("Bible: cross chapter boundary down and up", () => crossBibleChapterBoundary(page));
     await step("Bible: persisted spot survives Fathers switch", () => exerciseBiblePositionPersistence(page));
+    await step("Bible: passage position updates and restores within a chapter", () => exerciseBiblePassagePositionPersistence(page));
     await step("Bible: explicit jump supports Back", () => exerciseBibleJumpHistory(page));
     await step("Bible: theme search, similar search, jump result", () => exerciseBibleSearch(page));
     await step("Bible: selected passage similar search", () => exerciseBibleReaderPassageSimilar(page));
@@ -183,6 +184,96 @@ async function exerciseBiblePositionPersistence(page: Page) {
   await waitForReader(page, "Psalms");
   await waitForReaderTitle(page, "Psalms 149");
   await assertReaderHealthy(page);
+}
+
+async function exerciseBiblePassagePositionPersistence(page: Page) {
+  await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+  const targetPassageId = await page.evaluate(async () => {
+    const cacheKey = document
+      .querySelector("data[data-scripture-cache-key]")
+      ?.getAttribute("value");
+
+    if (!cacheKey) {
+      return "";
+    }
+
+    const response = await fetch(`/scripture-cache/${cacheKey}.json`);
+    const cache: unknown = await response.json();
+
+    if (
+      !cache
+      || typeof cache !== "object"
+      || !Array.isArray((cache as { passages?: unknown }).passages)
+    ) {
+      return "";
+    }
+
+    const passage = (cache as {
+      passages: Array<{ id?: unknown; reference?: unknown }>;
+    }).passages.find((candidate) => candidate.reference === "Psalms 149:8-9");
+
+    if (!passage || typeof passage.id !== "string") {
+      return "";
+    }
+
+    window.localStorage.setItem(
+      "cross-cannon:reader-position:v1",
+      JSON.stringify({
+        chapterKey: "Psalms\t149",
+        corpus: "scripture",
+        version: 2
+      })
+    );
+    return passage.id;
+  });
+
+  assert(targetPassageId, "Could not find Psalms 149:8-9 in scripture cache.");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForReaderTitle(page, "Psalms 149");
+  await page.waitForSelector(`[data-passage-id="${targetPassageId}"]`, { visible: true });
+  await page.evaluate((passageId) => {
+    const passage = document.querySelector<HTMLElement>(
+      `[data-passage-id="${passageId}"]`
+    );
+
+    if (!passage) {
+      throw new Error("Target passage is missing.");
+    }
+
+    window.scrollTo({
+      behavior: "auto",
+      top: passage.getBoundingClientRect().top + window.scrollY - 170
+    });
+    window.dispatchEvent(new Event("scroll"));
+  }, targetPassageId);
+  await wait(250);
+
+  const savedLocation = await page.evaluate(() => {
+    const storedValue = window.localStorage.getItem(
+      "cross-cannon:reader-position:v1"
+    );
+
+    return storedValue ? JSON.parse(storedValue) : null;
+  });
+
+  assert(
+    savedLocation?.passageKey === targetPassageId,
+    "Expected reading within Psalms 149 to update the saved passage."
+  );
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForReaderTitle(page, "Psalms 149");
+  await page.waitForSelector(`[data-passage-id="${targetPassageId}"]`, { visible: true });
+
+  const targetTop = await page.$eval(
+    `[data-passage-id="${targetPassageId}"]`,
+    (passage) => Math.round(passage.getBoundingClientRect().top)
+  );
+
+  assert(
+    targetTop >= 80 && targetTop <= 220,
+    `Expected the saved passage near the reading header, got ${targetTop}px.`
+  );
 }
 
 async function simulateUserScroll(page: Page, deltaY: number) {
