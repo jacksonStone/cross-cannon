@@ -1,14 +1,24 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
 import { PassageReader } from "~/features/passage-reader/PassageReader";
+import {
+  buildChapterIndex,
+  getPassageChapterKey
+} from "~/features/passage-reader/chapter-index";
+import {
+  createReaderLocation,
+  rememberReaderLocation
+} from "~/features/reader-position/reader-position";
 import { rememberReaderCorpus } from "~/features/reader-switch/ReaderCorpusSwitch";
 import type { StoredFilters } from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";
+
+const READER_POSITION_STORAGE_KEY = "cross-cannon:reader-position:v1";
 
 export const meta: MetaFunction = () => [
   { title: "Reader | Cross Canon" },
@@ -34,10 +44,39 @@ export default function ReaderRoute() {
   const { filters, passageId, scriptureCacheKey, scriptureCacheUrl } =
     useLoaderData<typeof loader>();
   const scriptureLibrary = useScriptureLibrary({ scriptureCacheUrl });
+  const scriptureIndex = useMemo(
+    () => buildChapterIndex(scriptureLibrary.passages),
+    [scriptureLibrary.passages]
+  );
+  const rememberReaderChapter = useCallback((
+    chapterKey: string,
+    focusedPassageId?: string
+  ) => {
+    rememberReaderLocation(
+      READER_POSITION_STORAGE_KEY,
+      createReaderLocation({
+        chapterKey,
+        corpus: "scripture",
+        passageKey: focusedPassageId
+      })
+    );
+  }, []);
 
   useEffect(() => {
     rememberReaderCorpus("scripture");
   }, []);
+
+  useEffect(() => {
+    if (!scriptureLibrary.isReady || !passageId) {
+      return;
+    }
+
+    const chapterKey = getPassageChapterKey(scriptureIndex, passageId);
+
+    if (chapterKey) {
+      rememberReaderChapter(chapterKey, passageId);
+    }
+  }, [passageId, rememberReaderChapter, scriptureIndex, scriptureLibrary.isReady]);
 
   return (
     <main className="reader-shell">
@@ -46,6 +85,7 @@ export default function ReaderRoute() {
         filters={filters}
         initialPassageId={passageId}
         isScriptureReady={scriptureLibrary.isReady}
+        onChapterChange={rememberReaderChapter}
         passages={scriptureLibrary.passages}
       />
     </main>

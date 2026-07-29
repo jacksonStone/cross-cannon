@@ -313,6 +313,20 @@ async function exerciseBibleJumpHistory(page: Page) {
     `Expected Scripture jump URL, got ${page.url()}.`
   );
 
+  const jumpedPassageId = new URL(page.url()).pathname.split("/").at(-1);
+  const savedLocation = await page.evaluate(() => {
+    const storedValue = window.localStorage.getItem(
+      "cross-cannon:reader-position:v1"
+    );
+
+    return storedValue ? JSON.parse(storedValue) : null;
+  });
+
+  assert(
+    savedLocation?.passageKey === jumpedPassageId,
+    "Expected an explicit Scripture jump to update the saved reader passage."
+  );
+
   await page.evaluate(() => window.history.back());
   await page.waitForFunction((url) => location.href === url, {
     timeout: timeoutMs
