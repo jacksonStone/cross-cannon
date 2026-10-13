@@ -461,6 +461,16 @@ Supported Bible JSON shapes:
 
 ## Deployment
 
+Public icon assets receive long-lived immutable cache headers in production.
+When changing the icon, publish new SVG/PNG filenames (the current filenames
+include the first 12 characters of each file's SHA-256), update the links in
+`app/root.tsx` and `ReaderCorpusSwitch.tsx`, and publish a newly named manifest.
+Keep `public/manifest.webmanifest` consistent with the versioned manifest and
+update the service worker's precache list. Keep old asset URLs available for
+existing installations. An iOS Home Screen installation can retain its saved
+icon even after the new assets are available; check a fresh Add to Home Screen
+preview before replacing an existing installation.
+
 This repo includes:
 
 - `deploy.sh` to build, package, copy, install production dependencies, and
@@ -514,3 +524,57 @@ As of June 25, 2026, this checkout contains:
 
 Those local artifacts are large and operationally significant. Rebuild the cache
 with `npm run update-db:scripture-cache` after changing the runtime database.
+
+## Continuous Audio
+
+Bible books play as a single AAC file per book. Early Christian playback is
+unchanged in this initial rollout. The builder can also prepare files for those
+Works for a later rollout. Chapter changes within that file do not depend on background
+JavaScript. The player keeps chapter timestamps, pause/resume, and Media Session
+controls; a failed combined file falls back to the original chapter recording.
+Playback stops at the end of the book/Work. Existing approximate Confessions
+chapter offsets remain approximate; this does not create new audio alignments.
+
+Build these explicitly, separately from application releases:
+
+```bash
+npm run build:continuous-audio -- --bible
+# Or select explicit groups:
+npm run build:continuous-audio -- bible-genesis fathers-npnf102-iv
+```
+
+On the Mac mini, `AUDIO_ENCODER=aac_at npm run build:continuous-audio -- --bible` uses
+the faster native encoder; the default `aac` encoder also works on Linux.
+
+Requires `ffmpeg`, `curl`, the local `storage/audio/WEBD_AT/` source recordings,
+and access to the remote source URLs listed in the existing book index. The
+builder first preserves each source in
+`storage/audio-originals/continuous-2026-09-22/` on the Mac mini and writes
+SHA-256 checksums in that folder. It does not overwrite source files. Override
+`AUDIO_BACKUP_DIR` for a new backup snapshot. Decoded PCM sample counts determine
+chapter offsets, including when recordings have different sample rates.
+
+Generated, content-addressed `.m4a` files live in `storage/audio/continuous/`;
+`public/continuous-audio.json` maps existing chapter URLs/IDs to their timestamps.
+The `moov` metadata is placed at the front for streaming, and the audio route
+supports HTTP byte ranges. Listening or seeking does not require a complete book
+download. Builds resume by skipping completed groups; remove a group's manifest
+entries to explicitly regenerate it after changing its source recordings.
+
+Before shipping a new manifest, upload its derived media separately:
+
+```bash
+scripts/sync-continuous-audio.sh
+npm run ship
+```
+
+Normal deployment never packages recordings or backups. Rollback: remove the
+entries from `public/continuous-audio.json` (or remove that manifest) and redeploy;
+new playback sessions use the unchanged originals. No database/cache rebuild is
+needed. Existing playback sessions retain their current source until restarted.
+
+With the local app running, `node --import tsx scripts/e2e-continuous-audio.ts`
+checks real playback across a chapter boundary with JavaScript disabled,
+pause/resume, a distant chapter seek, partial responses, and missing-file
+fallback. Screenshots go in `docs/screenshots/`. Physical iPhone lock-screen
+playback still requires device testing; desktop emulation cannot certify it.

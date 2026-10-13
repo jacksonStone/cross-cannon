@@ -54,7 +54,7 @@ export function ReaderCorpusSwitch({ current }: ReaderCorpusSwitchProps) {
           alt=""
           aria-hidden="true"
           className="reader-corpus-switch-mark is-scripture"
-          src="/favicon.svg"
+          src="/favicon-c26c421629d8.svg"
         />
       )}
     </Link>

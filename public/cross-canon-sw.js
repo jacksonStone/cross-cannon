@@ -10,7 +10,10 @@ const PRECACHED_SHELL_URLS = [
   OFFLINE_READER_URL,
   "/offline-reader.js",
   "/favicon-512.png",
+  "/favicon-512-fd59821d9d5b.png",
+  "/favicon-c26c421629d8.svg",
   "/manifest.webmanifest",
+  "/manifest-closed-book-v2.webmanifest",
 ];
 const releaseId = sanitizeCachePart(
   new URL(self.location.href).searchParams.get("release") ?? "current"

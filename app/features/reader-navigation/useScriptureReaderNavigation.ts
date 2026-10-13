@@ -54,7 +54,7 @@ export function useScriptureReaderNavigation({
   const scrollToTopWhenInitialPassageMissing = useCallback(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, []);
-  const { renderedRange } = useScriptureReaderWindow({
+  const { renderedRange, setRenderedRange } = useScriptureReaderWindow({
     activeChapterKey,
     initialChapterIndex,
     initialChapterKey,
@@ -95,7 +95,7 @@ export function useScriptureReaderNavigation({
   ]);
   const isInitialChapterReadyToRender = Boolean(
     initialChapterKey
-    && renderedChapterEntries.some((entry) => entry.key === initialChapterKey)
+    && renderedChapterEntries.some((entry) => entry.key === activeChapterKey)
   );
   const toggleSelectedPassage = useCallback((passageId: string) => {
     const nextPassageId = selectedPassageId === passageId ? "" : passageId;
@@ -113,8 +113,25 @@ export function useScriptureReaderNavigation({
     }
   }, [activeChapter?.passages, filters, initialPassageId, selectedPassageId]);
 
+  const openAudioChapter = useCallback((key: string) => {
+    const index = orderedChapterEntries.findIndex(entry => entry.key === key);
+    const chapter = chapterIndex.chaptersByKey.get(key);
+    if (index < 0 || !chapter) return;
+    setRenderedRange({ startIndex: Math.max(0, index - 10), endIndex: Math.min(orderedChapterEntries.length - 1, index + 24) });
+    setActiveChapterKey(key);
+    setSelectedPassageId("");
+    const passageId = chapter.passages[0]?.id;
+    onChapterChange?.(key, passageId);
+    if (passageId) updateReaderUrl(buildScriptureReaderUrl(passageId, filters), "replace");
+    requestAnimationFrame(() => {
+      const element = document.querySelector<HTMLElement>(`[data-chapter-key="${CSS.escape(key)}"]`);
+      if (element) window.scrollTo({ top: element.getBoundingClientRect().top + window.scrollY - 118, behavior: "auto" });
+    });
+  }, [chapterIndex.chaptersByKey, filters, onChapterChange, orderedChapterEntries, setRenderedRange]);
+
   return {
     activeChapter,
+    openAudioChapter,
     chapterCountByBook: chapterIndex.chapterCountByBook,
     isInitialChapterReadyToRender,
     passageJumpInitialPassageId:

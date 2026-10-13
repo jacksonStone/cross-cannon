@@ -11,9 +11,9 @@ import stylesheet from "./styles.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
-  { rel: "manifest", href: "/manifest.webmanifest" },
-  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
-  { rel: "apple-touch-icon", href: "/favicon-512.png" },
+  { rel: "manifest", href: "/manifest-closed-book-v2.webmanifest" },
+  { rel: "icon", href: "/favicon-c26c421629d8.svg", type: "image/svg+xml" },
+  { rel: "apple-touch-icon", href: "/favicon-512-fd59821d9d5b.png", sizes: "512x512" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
   {

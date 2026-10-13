@@ -224,3 +224,20 @@ scripts/
   Index/build/download/deploy-adjacent operational scripts, shared Early
   Christian Work audio alignment, plus verification.
 ```
+
+## Continuous Audio Playback
+
+`app/features/audio/` owns the Scripture audio session,
+chapter timestamps, original-recording fallback, and Media Session controls.
+The Scripture reader adapts its chapter index to this player and does not
+advance between files inside a combined book. Early Christian playback is
+unchanged in the initial Bible-only rollout. Reader state follows audio time when
+JavaScript is active again.
+
+`scripts/build-continuous-audio.ts` preserves originals on the Mac mini and
+creates a separate AAC file per book/Work from decoded source samples.
+`public/continuous-audio.json` is a small timestamp manifest independent of the
+scripture cache and database. `audio.continuous.$fileName.ts` streams the
+content-addressed files from production storage with HTTP range support.
+Derived media is uploaded separately before the normal application release;
+original recordings and source mappings remain available for rollback.

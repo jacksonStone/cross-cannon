@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Cross Canon favicon</title>
+  <desc id="desc">A cream book with a cross cut into its cover on an oxblood field.</desc>
+  <rect width="64" height="64" rx="14" fill="#8f3526"/>
+  <path d="M23 12h24v32H23a4 4 0 0 0 0 8h22v-4H23v-2h24v10H23a8 8 0 0 1-8-8V20a8 8 0 0 1 8-8Z" fill="#fbfaf7"/>
+  <path d="M30 19h5v7h7v5h-7v9h-5v-9h-7v-5h7Z" fill="#8f3526"/>
+</svg>

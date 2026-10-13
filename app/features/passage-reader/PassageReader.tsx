@@ -1,11 +1,14 @@
 import {
   useCallback,
   useMemo,
-  useRef,
   useState
 } from "react";
 
 import { Form, Link, useNavigation } from "@remix-run/react";
+
+import { useContinuousAudio } from "~/features/audio/useContinuousAudio";
+import { useChapterAudioPlayback } from "~/features/audio/useChapterAudioPlayback";
+import { buildChapterIndex, chapterKey } from "./chapter-index";
 
 import { PassageJump } from "~/features/passage-jump/PassageJump";
 import { useOfflineStatus } from "~/features/offline/OfflineProvider";
@@ -58,14 +61,13 @@ export function PassageReader({
 }: PassageReaderProps) {
   const navigation = useNavigation();
   const { isOffline } = useOfflineStatus();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const { readerSettings, setReaderSettings } = useStoredReaderSettings({
     onThemeChange
   });
   const [isReaderToolsOpen, setIsReaderToolsOpen] = useState(false);
-  const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
   const {
     activeChapter,
+    openAudioChapter,
     chapterCountByBook,
     isInitialChapterReadyToRender,
     passageJumpInitialPassageId,
@@ -80,28 +82,21 @@ export function PassageReader({
     passages
   });
   const activeAudioUrl = activeChapter?.audioUrl ?? null;
-  const isActiveChapterPlaying = Boolean(
-    activeAudioUrl && playingAudioUrl === activeAudioUrl
-  );
-
-  const toggleActiveChapterAudio = useCallback(() => {
-    const audio = audioRef.current;
-
-    if (!audio || !activeAudioUrl) {
-      return;
-    }
-
-    if (isActiveChapterPlaying) {
-      audio.pause();
-      setPlayingAudioUrl(null);
-      return;
-    }
-
-    audio.src = activeAudioUrl;
-    void audio.play()
-      .then(() => setPlayingAudioUrl(activeAudioUrl))
-      .catch(() => setPlayingAudioUrl(null));
-  }, [activeAudioUrl, isActiveChapterPlaying]);
+  const continuous = useContinuousAudio();
+  const audioChapters = useMemo(() => buildChapterIndex(passages).orderedChapterEntries.map(({ key, chapter }) => {
+    const original = chapter.audioUrl ? { url: chapter.audioUrl, startSeconds: 0 } : null;
+    return {
+      id: key,
+      title: `${chapter.book} ${chapter.chapter}`,
+      workId: chapter.book,
+      audio: original ? continuous[original.url.split("?")[0]] ?? original : null,
+      originalAudio: original
+    };
+  }), [passages, continuous]);
+  const {
+    audioRef, isActiveChapterPlaying, toggleActiveChapterAudio,
+    handleAudioEnded, handleAudioPause, handleAudioPlay, handleAudioTimeUpdate, handleAudioSeeked, handleAudioError
+  } = useChapterAudioPlayback({ chapters: audioChapters, activeId: activeChapter ? chapterKey(activeChapter.book, activeChapter.chapter) : "", onChapterChange: openAudioChapter });
 
   const isSearchingSimilar = navigation.state === "submitting"
     && navigation.formData?.get("intent") === "similar-passage";
@@ -167,8 +162,12 @@ export function PassageReader({
       <header className="reader-header">
         <audio
           ref={audioRef}
-          onEnded={() => setPlayingAudioUrl(null)}
-          onPause={() => setPlayingAudioUrl(null)}
+          onEnded={handleAudioEnded}
+          onPause={handleAudioPause}
+          onPlay={handleAudioPlay}
+          onTimeUpdate={handleAudioTimeUpdate}
+          onSeeked={handleAudioSeeked}
+          onError={handleAudioError}
           preload="none"
         />
         <div className="reader-header-title">

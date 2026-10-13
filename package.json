@@ -12,7 +12,7 @@
     "dev": "remix vite:dev --host 127.0.0.1 --port 3005",
     "start": "NODE_ENV=production remix-serve ./build/server/index.js",
     "typecheck": "tsc --noEmit",
-    "test:unit": "node --import tsx --test app/features/reader-navigation/reader-links.test.ts app/features/reader-window/reader-resize.test.ts app/features/reader-window/window-range.test.ts app/features/reader-ui/fit-single-line-text.test.ts app/features/search/search-dialog-model.test.ts app/features/search/search-modal-flow.test.ts app/features/search/match-strength.test.ts app/features/search/search-request.test.ts app/features/passage-reader/chapter-index.test.ts app/features/reader-position/reader-position.test.ts app/features/early-christian-reader/reader-passages.test.tsx app/features/early-christian-reader/useEarlyChristianReaderNavigation.test.ts app/features/offline/early-christian-work-downloads.test.ts app/lib/scripture-cache-contract.test.ts app/lib/vector-search.test.ts scripts/lib/audio-alignment.test.ts scripts/export-kindle-bible.test.ts scripts/export-kindle-first-clement.test.ts",
+    "test:unit": "node --import tsx --test app/features/reader-navigation/reader-links.test.ts app/features/reader-window/reader-resize.test.ts app/features/reader-window/window-range.test.ts app/features/reader-ui/fit-single-line-text.test.ts app/features/search/search-dialog-model.test.ts app/features/search/search-modal-flow.test.ts app/features/search/match-strength.test.ts app/features/search/search-request.test.ts app/features/passage-reader/chapter-index.test.ts app/features/reader-position/reader-position.test.ts app/features/early-christian-reader/reader-passages.test.tsx app/features/early-christian-reader/useEarlyChristianReaderNavigation.test.ts app/features/offline/early-christian-work-downloads.test.ts app/lib/scripture-cache-contract.test.ts app/lib/vector-search.test.ts scripts/lib/audio-alignment.test.ts scripts/export-kindle-bible.test.ts scripts/export-kindle-first-clement.test.ts app/features/audio/audio-playlist.test.ts app/lib/audio-response.server.test.ts",
     "render:architecture": "node scripts/render-architecture.mjs",
     "parse:church-fathers": "python3 scripts/parse-church-fathers.py",
     "build:church-fathers-preview": "python3 scripts/build-church-fathers-preview-assets.py",
@@ -34,7 +34,11 @@
     "ship": "CROSS_CANNON_UPDATE_DB=0 npm run verify && CROSS_CANNON_UPDATE_DB=0 ./deploy.sh && sleep 4 && npm run verify-prod",
     "index:bible": "node --import tsx scripts/index-bible.ts",
     "index:genesis": "node --import tsx scripts/index-bible.ts data/bible.json --reset --passage-type paragraph --book Genesis",
-    "smoke:index": "EMBEDDING_PROVIDER=mock node --import tsx scripts/index-bible.ts data/sample-bible.json --reset --limit 10 --passage-type paragraph"
+    "smoke:index": "EMBEDDING_PROVIDER=mock node --import tsx scripts/index-bible.ts data/sample-bible.json --reset --limit 10 --passage-type paragraph",
+    "build:continuous-audio": "node --import tsx scripts/build-continuous-audio.ts",
+    "verify:continuous-audio": "node --import tsx scripts/verify-continuous-audio.ts",
+    "e2e:continuous-audio": "node --import tsx scripts/e2e-continuous-audio.ts",
+    "e2e:audio-start": "node --import tsx scripts/e2e-audio-start.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",
