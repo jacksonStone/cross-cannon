@@ -28,8 +28,19 @@ export function useScriptureReaderNavigation({
 }) {
   const chapterIndex = useMemo(() => buildChapterIndex(passages), [passages]);
   const orderedChapterEntries = chapterIndex.orderedChapterEntries;
+  const [readerTarget, setReaderTarget] = useState({
+    initialPassageId,
+    passageId: initialPassageId
+  });
+  // External navigation supersedes any target selected by the audio session.
+  if (readerTarget.initialPassageId !== initialPassageId) {
+    setReaderTarget({ initialPassageId, passageId: initialPassageId });
+  }
+  const targetPassageId = readerTarget.initialPassageId === initialPassageId
+    ? readerTarget.passageId
+    : initialPassageId;
   const initialChapterKey =
-    getPassageChapterKey(chapterIndex, initialPassageId)
+    getPassageChapterKey(chapterIndex, targetPassageId)
     ?? orderedChapterEntries[0]?.key
     ?? null;
   const [activeChapterKey, setActiveChapterKey] = useState(initialChapterKey);
@@ -54,11 +65,11 @@ export function useScriptureReaderNavigation({
   const scrollToTopWhenInitialPassageMissing = useCallback(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, []);
-  const { renderedRange, setRenderedRange } = useScriptureReaderWindow({
+  const { renderedRange } = useScriptureReaderWindow({
     activeChapterKey,
     initialChapterIndex,
     initialChapterKey,
-    initialPassageId,
+    initialPassageId: targetPassageId,
     isReady,
     itemCount: orderedChapterEntries.length,
     onActiveChapterChange: updateActiveChapterFromScroll,
@@ -114,20 +125,15 @@ export function useScriptureReaderNavigation({
   }, [activeChapter?.passages, filters, initialPassageId, selectedPassageId]);
 
   const openAudioChapter = useCallback((key: string) => {
-    const index = orderedChapterEntries.findIndex(entry => entry.key === key);
     const chapter = chapterIndex.chaptersByKey.get(key);
-    if (index < 0 || !chapter) return;
-    setRenderedRange({ startIndex: Math.max(0, index - 10), endIndex: Math.min(orderedChapterEntries.length - 1, index + 24) });
-    setActiveChapterKey(key);
-    setSelectedPassageId("");
-    const passageId = chapter.passages[0]?.id;
+    const passageId = chapter?.passages[0]?.id;
+    if (!passageId) return;
+    // Reuse saved-place restoration: center the chapter window, wait for the
+    // target passage to settle, then resume passive location tracking.
+    setReaderTarget({ initialPassageId, passageId });
     onChapterChange?.(key, passageId);
-    if (passageId) updateReaderUrl(buildScriptureReaderUrl(passageId, filters), "replace");
-    requestAnimationFrame(() => {
-      const element = document.querySelector<HTMLElement>(`[data-chapter-key="${CSS.escape(key)}"]`);
-      if (element) window.scrollTo({ top: element.getBoundingClientRect().top + window.scrollY - 118, behavior: "auto" });
-    });
-  }, [chapterIndex.chaptersByKey, filters, onChapterChange, orderedChapterEntries, setRenderedRange]);
+    updateReaderUrl(buildScriptureReaderUrl(passageId, filters), "replace");
+  }, [chapterIndex.chaptersByKey, filters, initialPassageId, onChapterChange]);
 
   return {
     activeChapter,

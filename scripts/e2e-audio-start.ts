@@ -9,7 +9,13 @@ import { build } from "vite";
 // A whole-book recording initially reports time zero before its chapter seek.
 const fixtureRoot = path.resolve("scripts/fixtures/audio-start");
 const fixtureOutput = path.resolve(".tmp/audio-start-fixture");
+const cacheManifest = JSON.parse(await fs.readFile("scripture-cache/manifest.json", "utf8"));
+const cache = JSON.parse(await fs.readFile(`.${cacheManifest.jsonPath}`, "utf8"));
+const scripturePassages = cache.passages.filter((p: { reference: string }) => /^(Mark|Luke) \d+:/.test(p.reference));
+const manifest = JSON.parse(await fs.readFile("public/continuous-audio.json", "utf8"));
+const lukeAudio = Object.fromEntries(Array.from({ length: 24 }, (_, i) => [`Luke\t${i + 1}`, manifest.chapters[`/audio/WEBD_AT/42_Luke_${String(i + 1).padStart(2, "0")}.mp3`]]));
 await build({ configFile: false, root: fixtureRoot, base: "./", logLevel: "silent",
+  define: { __SCRIPTURE_PASSAGES__: JSON.stringify(scripturePassages), __LUKE_AUDIO__: JSON.stringify(lukeAudio) },
   resolve: { alias: { "~": path.resolve("app") } },
   build: { outDir: fixtureOutput, emptyOutDir: true }
 });
@@ -87,6 +93,64 @@ try {
     };
   };
   await page.evaluateOnNewDocument(installMedia);
+  async function verifyAudioNavigation(width: number, height: number) {
+    const boundary = await browser.newPage();
+    const restored = await browser.newPage();
+    for (const target of [boundary, restored]) {
+      await target.setViewport({ width, height, isMobile: width < 600, hasTouch: width < 600 });
+      await target.evaluateOnNewDocument("window.__name = (fn) => fn");
+      await target.evaluateOnNewDocument(installMedia);
+      target.on("pageerror", error => errors.push(String(error)));
+    }
+    const fixtureUrl = pathToFileURL(path.join(fixtureOutput, "index.html")).href;
+    await boundary.bringToFront();
+    await boundary.goto(fixtureUrl + "?boundary", { waitUntil: "domcontentloaded" });
+    await boundary.waitForFunction(() => document.querySelector("#reader-title")?.textContent?.trim() === "Luke 9");
+    await new Promise(resolve => setTimeout(resolve, 800));
+    await boundary.click("button");
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const audioElement = await boundary.$("audio");
+    const source = await boundary.$eval("audio", audio => audio.currentSrc);
+    // Natural boundaries, a seek beyond the current window, and a backward seek
+    // must all restore the same passage as loading a saved Reader Location.
+    for (const chapter of [10, 11, 24, 1, 10]) {
+      await boundary.bringToFront();
+      const seconds = lukeAudio[`Luke\t${chapter}`].startSeconds + 0.25;
+      if (chapter === 10 || chapter === 11) {
+        await boundary.evaluate(time => (window as unknown as { advanceAudio: (seconds: number) => void }).advanceAudio(time), seconds);
+      } else {
+        await boundary.$eval("audio", (audio, time) => { audio.currentTime = time; }, seconds);
+      }
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const result = await boundary.evaluate(number => {
+        const key = `Luke\t${number}`;
+        return {
+          title: document.querySelector("#reader-title")?.textContent?.trim(),
+          visibleChapter: [...document.querySelectorAll<HTMLElement>(".reader-chapter")].find(element => { const rect = element.getBoundingClientRect(); return rect.top <= 220 && rect.bottom >= 220; })?.dataset.chapterKey,
+          firstPassageTop: [...document.querySelectorAll<HTMLElement>(".reader-chapter")].find(element => element.dataset.chapterKey === key)?.querySelector(".reader-passage")?.getBoundingClientRect().top,
+          paused: document.querySelector("audio")?.paused,
+          source: document.querySelector("audio")?.currentSrc,
+          time: document.querySelector("audio")?.currentTime
+        };
+      }, chapter);
+      assert.equal(result.visibleChapter, `Luke\t${chapter}`, JSON.stringify(result));
+      assert.equal(result.title, `Luke ${chapter}`, JSON.stringify(result));
+      assert.equal(result.paused, false);
+      assert.equal(result.time, seconds);
+      assert.equal(result.source, source);
+      assert(await boundary.evaluate(element => element === document.querySelector("audio"), audioElement), "Restoring a chapter must retain the playing audio element");
+      await restored.bringToFront();
+      await restored.goto(`${fixtureUrl}?boundary&restore=${chapter}`, { waitUntil: "domcontentloaded" });
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const restoredTop = await restored.evaluate(number => [...document.querySelectorAll<HTMLElement>(".reader-chapter")].find(element => element.dataset.chapterKey === `Luke\t${number}`)!.querySelector(".reader-passage")!.getBoundingClientRect().top, chapter);
+      assert(Math.abs(result.firstPassageTop! - restoredTop) < 1, `Audio transition must restore Luke ${chapter} like saved place: audio=${result.firstPassageTop}, restored=${restoredTop}`);
+    }
+    await boundary.close();
+    await restored.close();
+    assert.equal(errors.length, 0, errors.join("\n"));
+    console.log(`PASS: ${width}px Luke chapter boundaries and seeks match saved-place restoration and retain playback`);
+  }
+  if (process.env.AUDIO_START_SCENARIO !== "boundary") {
   if (process.env.AUDIO_START_SCENARIO !== "luke") {
   await page.goto(pathToFileURL(path.join(fixtureOutput, "index.html")).href, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => document.querySelector("#reader-title")?.textContent?.trim() === "Genesis 5");
@@ -204,4 +268,7 @@ try {
   await new Promise(resolve => setTimeout(resolve, 100));
   assert(await luke.evaluate(() => (window as unknown as { audioScrolls: unknown[][] }).audioScrolls.length > 0), "Finishing Luke 7 must scroll to Luke 8");
   console.log("PASS: fractional Luke 7 chapter start preserves the visible passage with iOS-style timestamp rounding");
+  }
+  await verifyAudioNavigation(390, 844);
+  await verifyAudioNavigation(1440, 1000);
 } finally { await browser.close(); await fs.rm(fixtureOutput, { recursive: true, force: true }); }
