@@ -130,13 +130,19 @@ The shared workspace release recipe must include the existing
 `data/public-domain/church-fathers/audio-sources.json` test fixture. The small
 allowlist correction is recorded in `rust/deploy/ship-audio-metadata.patch`
 and was applied to `../administrative_stuff/ship.py` for this release.
-The same patch bounds npm heap size and download/install parallelism for Cross Cannon in
-`../administrative_stuff/ship_remote.py` to fit its existing 900 MiB build cap.
 
 The second command is the standard web release. The resource route
 `app/routes/r.api.$.ts` forwards `/r/api` to the Rust service through the existing
 host proxy. This is only an HTTP bridge: all library, search, embedding, and
 ranking logic lives in Rust. Other routes continue to use the existing web app.
+
+If the shared host cannot reinstall the existing dependencies within its build
+memory limit, `scripts/deploy-rust-api-bridge.sh` publishes the locally verified
+compiled bridge only. It requires an identical production dependency lockfile,
+preserves installed dependencies and existing immutable client assets, backs up
+the server bundle, and rolls back on failed smoke checks. This was the release
+path used for the initial API publication after the standard remote build failed.
+No database or media artifacts are included.
 
 After publishing:
 
