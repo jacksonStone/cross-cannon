@@ -1,0 +1,23 @@
+[Unit]
+Description=R Cross Cannon native Rust search API
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cross-cannon
+EnvironmentFile=/home/ubuntu/.ubuntu-env
+Environment=CROSS_CANON_DATA_DIR=/home/ubuntu/cross-cannon
+Environment=R_CROSS_CANNON_BIND=127.0.0.1:3006
+ExecStart=/home/ubuntu/r-cross-cannon/current/target/release/r-cross-cannon
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+UMask=0077
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

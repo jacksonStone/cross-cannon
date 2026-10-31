@@ -1,0 +1,25 @@
+--- a/administrative_stuff/ship.py
++++ b/administrative_stuff/ship.py
+@@ -46,7 +46,8 @@
+          port=3004, status=302, public="https://bot.jacksonst.one/player"),
+     dict(name="cross-cannon", repo="cross-cannon", kind="node",
+          inputs=["app", "public", "scripts", "scripture-cache", "assets", "package.json", "package-lock.json",
+-                 "data/sample-bible.json", "tsconfig.json", "vite.config.*", "remix.config.js", "remix.env.d.ts", ".nvmrc", "cross-cannon.service"],
++                 "data/sample-bible.json", "data/public-domain/church-fathers/audio-sources.json",
++                 "tsconfig.json", "vite.config.*", "remix.config.js", "remix.env.d.ts", ".nvmrc", "cross-cannon.service"],
+          port=3005, status=200, public="https://www.crosscanon.com/"),
+     dict(name="reverse_proxy", repo="reverse_proxy_extended", kind="go", module=".",
+          inputs=["*.go", "go.mod", "go.sum", "reverse_proxy.service"], port=80, status=301),
+--- a/administrative_stuff/ship_remote.py
++++ b/administrative_stuff/ship_remote.py
+@@ -128,6 +128,10 @@
+         path = str(node_bin) + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+         install = "npm ci --include=dev --legacy-peer-deps\n"
+         prune = "npm prune --omit=dev --legacy-peer-deps\n"
++        if name == "cross-cannon":
++            # Bound concurrent npm downloads/install scripts within the 900 MiB build cgroup.
++            install = "NODE_OPTIONS=--max-old-space-size=384 npm ci --include=dev --legacy-peer-deps --maxsockets=2 --foreground-scripts\n"
++            prune = "NODE_OPTIONS=--max-old-space-size=384 npm prune --omit=dev --legacy-peer-deps --maxsockets=2 --foreground-scripts\n"
+         if name == "libby_cards":
+             recipe = (prefix + 'export CARDS_STRIPE_PUBLIC_KEY="${CARDS_STRIPE_PUBLIC_KEY_PROD:-${CARDS_STRIPE_PUBLIC_KEY:-}}"\n'
+                       + install + "npm run build\n" + prune + "npm run massage-assets\n")

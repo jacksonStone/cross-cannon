@@ -21,3 +21,7 @@ scripture-cache/
 cross-cannon/
 docs/screenshots/
 exports/kindle/*.epub
+
+# Rust build products and desktop bundles
+/target/
+/dist/
