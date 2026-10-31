@@ -66,14 +66,14 @@ flowchart TD
   Action --> RateLimit[rateLimit by client IP]
   RateLimit --> SearchRequest[Search Request module]
   SearchRequest --> Filters[canon / books / authors]
-  SearchRequest --> SearchEngine["app/lib/search.server.ts"]
+  SearchRequest --> SearchEngine["Rust adapter → loopback /r/api/search"]
 
-  SearchEngine --> OpenAI["OpenAI embeddings if configured"]
-  SearchEngine --> DB[("SQLite / libSQL passage index")]
-  SearchEngine --> FTS["FTS lexical fallback"]
-  SearchEngine --> Vector["Vector similarity / cached embeddings"]
-
-  DB --> IndexedBooks
+  SearchEngine --> Rust["R Cross Cannon / Axum"]
+  Rust --> OpenAI["OpenAI: new theme query embedding only"]
+  Rust --> DB[("Existing SQLite vectors, read-only")]
+  Rust --> Vector["Exact scoring + existing paragraph/verse refinement"]
+  Rust --> IndexedBooks
+  TextArtifacts["Existing immutable text artifacts"] -. catalog fallback .-> IndexedBooks
   DB --> StartupPassages
   DB --> CacheBuild[buildScriptureCachePayload]
   CacheBuild --> StaticCache["scripture-cache manifest/json/gzip"]
@@ -103,8 +103,8 @@ sequenceDiagram
   participant SearchForm
   participant IndexAction as / action
   participant SearchRequest as Search Request module
-  participant SearchEngine as Scripture search engine
-  participant DB as SQLite/libSQL
+  participant SearchEngine as Rust /r/api/search
+  participant DB as Existing SQLite vectors, read-only
   participant OpenAI
   participant UI as SearchResults
 
@@ -113,15 +113,15 @@ sequenceDiagram
   IndexAction->>IndexAction: rateLimit(client IP)
   IndexAction->>SearchRequest: handleSearchRequest(formData)
   SearchRequest->>SearchRequest: validate and prepare Search Request
-  SearchRequest->>DB: validate indexed books
+  SearchRequest->>SearchEngine: validate catalog /r/api/books
 
   alt Theme search
-    SearchRequest->>SearchEngine: searchScripture(question, limit, books)
-    SearchEngine->>OpenAI: embed query if API key configured
-    SearchEngine->>DB: vector search / cached embeddings / FTS fallback
+    SearchRequest->>SearchEngine: semantic query, target, books/authors, web=true
+    SearchEngine->>OpenAI: embed new query using indexed model/config
+    SearchEngine->>DB: read existing verse / best-paragraph vectors
   else Similar passage search
-    SearchRequest->>SearchEngine: searchSimilarScripture(sourcePassageId)
-    SearchEngine->>DB: load source embedding + neighbors
+    SearchRequest->>SearchEngine: sourceId, target, books/authors, web=true
+    SearchEngine->>DB: exact selected paragraph vector + refinement
   end
 
   SearchEngine-->>SearchRequest: passage IDs + score metadata
@@ -166,10 +166,12 @@ flowchart TD
 flowchart LR
   Dev[Local workspace] --> Verify[npm run verify]
   Verify --> Typecheck[tsc --noEmit]
+  Verify --> RustChecks["Rust API tests + release build"]
+  RustChecks --> LocalRust["Start loopback Rust API"]
   Verify --> Build[npm run build]
   Verify --> LocalServer[Start production server locally]
-  Verify --> LocalSmoke["HEAD / + POST search"]
-  Verify --> StopServer[Stop local server]
+  Verify --> LocalSmoke["HEAD / + web POST results and Rust header"]
+  Verify --> StopServer[Stop local web and Rust servers]
 
   Build --> RemixBuild["remix vite:build"]
   RemixBuild --> BuildDir["build/client + build/server"]

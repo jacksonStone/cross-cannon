@@ -7,13 +7,16 @@ cd "$(dirname "$0")/.."
 release="$(date -u +%Y%m%dT%H%M%SZ)"
 archive=".tmp/r-cross-cannon-${release}.tar.gz"
 mkdir -p .tmp
+source_id="$(node --input-type=module -e 'import fs from "node:fs"; const m=JSON.parse(fs.readFileSync("scripture-cache/manifest.json")); const c=JSON.parse(fs.readFileSync(`scripture-cache/${m.version}.json`)); console.log(c.passages.find(p=>p.reference.startsWith("Genesis 1:")).id)')"
+[[ "$source_id" =~ ^[a-f0-9]{24}$ ]]
 # Explicit allowlist: a release can never contain storage or secrets.
 COPYFILE_DISABLE=1 tar --no-xattrs -czf "$archive" Cargo.toml Cargo.lock rust
 ssh_args=(-o BatchMode=yes -o ConnectTimeout=15 -i "$EC2_PEM_PATH")
 scp -o BatchMode=yes -i "$EC2_PEM_PATH" "$archive" "ubuntu@${EC2_PUBLIC_IP}:/tmp/r-cross-cannon-${release}.tar.gz"
-ssh "${ssh_args[@]}" "ubuntu@${EC2_PUBLIC_IP}" bash -s -- "$release" <<'REMOTE'
+ssh "${ssh_args[@]}" "ubuntu@${EC2_PUBLIC_IP}" bash -s -- "$release" "$source_id" <<'REMOTE'
 set -euo pipefail
 release="$1"
+source_id="$2"
 base=/home/ubuntu/r-cross-cannon
 mkdir -p "$base/releases/$release" "$base/toolchain"
 tar -xzf "/tmp/r-cross-cannon-${release}.tar.gz" -C "$base/releases/$release"
@@ -38,6 +41,13 @@ for attempt in {1..90}; do
 done
 [[ "$ready" == 1 ]] || { cat /tmp/r-cross-cannon-smoke.log; exit 1; }
 curl -fsS --max-time 20 http://127.0.0.1:13006/r/api/search -H 'Content-Type: application/json' -d '{"query":"beginning","limit":3}' >/dev/null
+curl -fsS --max-time 20 http://127.0.0.1:13006/r/api/search -H 'Content-Type: application/json' -d "{\"sourceId\":\"$source_id\",\"corpus\":\"early-christian\",\"web\":true,\"authors\":[\"Clement of Rome\"],\"limit\":3}" > /tmp/r-cross-cannon-web-smoke.json
+python3 - <<'PY'
+import json
+data = json.load(open('/tmp/r-cross-cannon-web-smoke.json'))
+assert len(data['results']) == 3
+assert all(r['author'] == 'Clement of Rome' and r['highlightPassage']['text'] for r in data['results'])
+PY
 kill "$smoke_pid"
 wait "$smoke_pid" || true
 trap - EXIT

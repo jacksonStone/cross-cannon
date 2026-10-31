@@ -1,30 +1,14 @@
 import { json, type TypedResponse } from "@remix-run/node";
 
-import {
-  getEarlyChristianAuthors,
-  getEarlyChristianEmbeddingSource,
-  searchEarlyChristianWorks,
-  searchSimilarEarlyChristianFromScripture,
-  searchSimilarEarlyChristianPassages,
-  type EarlyChristianSearchResult,
-  type EarlyChristianSimilarSource
-} from "~/lib/early-christian-search.server";
-import {
-  ensureDatabase,
-  getDb,
-  type ScriptureResult
-} from "~/lib/db.server";
-import {
-  searchScripture,
-  searchScriptureByEmbedding,
-  searchSimilarScripture
-} from "~/lib/search.server";
+import type { EarlyChristianSearchResult, EarlyChristianSimilarSource } from "~/lib/early-christian-search.server";
+import type { ScriptureResult } from "~/lib/db.server";
+import { RustApiError, rustSearchAdapter } from "~/lib/r-cross-cannon.server";
+export { getIndexedBooks } from "~/lib/r-cross-cannon.server";
 
 import {
   BOOKS_BY_CANON,
   DEFAULT_MATCH_COUNT,
-  parseCanonMode,
-  sortCanonicalBooks
+  parseCanonMode
 } from "./canons";
 import { withCalibratedMatchStrength } from "./match-strength";
 import type {
@@ -133,23 +117,28 @@ export function createSearchRequestHandler(
     formData: FormData,
     readerCorpus: "fathers" | "scripture" = "scripture"
   ) => {
-    const prepared = readerCorpus === "fathers"
-      ? await prepareEarlyChristianReaderSearchRequest(formData, adapter)
-      : await prepareScriptureReaderSearchRequest(formData, adapter);
+    try {
+      const prepared = readerCorpus === "fathers"
+        ? await prepareEarlyChristianReaderSearchRequest(formData, adapter)
+        : await prepareScriptureReaderSearchRequest(formData, adapter);
 
-    if ("response" in prepared) {
-      return prepared.response;
+      if ("response" in prepared) {
+        return prepared.response;
+      }
+
+      const execution = await executeSearchRequest(prepared.request, adapter);
+
+      if (!execution) {
+        return missingSimilaritySourceResponse(prepared.request);
+      }
+
+      return readerCorpus === "fathers"
+        ? earlyChristianReaderSearchResponse(prepared.request, execution)
+        : scriptureReaderSearchResponse(prepared.request, execution);
+    } catch (error) {
+      if (error instanceof RustApiError) return json({ error: error.message, ...(error.retryAfterSeconds ? { retryAfterSeconds: error.retryAfterSeconds } : {}) }, { status: error.status });
+      throw error;
     }
-
-    const execution = await executeSearchRequest(prepared.request, adapter);
-
-    if (!execution) {
-      return missingSimilaritySourceResponse(prepared.request);
-    }
-
-    return readerCorpus === "fathers"
-      ? earlyChristianReaderSearchResponse(prepared.request, execution)
-      : scriptureReaderSearchResponse(prepared.request, execution);
   };
 
   return handleSearchRequest as SearchRequestHandler;
@@ -596,63 +585,10 @@ export function isSearchSourcePassageId(value: string) {
   return /^[a-f0-9]{24}$/.test(value);
 }
 
-let indexedBooksPromise: Promise<string[]> | null = null;
+const rustHandler = createSearchRequestHandler(rustSearchAdapter);
 
-export async function getIndexedBooks() {
-  indexedBooksPromise ??= readIndexedBooks().catch((error: unknown) => {
-    indexedBooksPromise = null;
-    throw error;
-  });
-  return indexedBooksPromise;
-}
-
-async function readIndexedBooks() {
-  await ensureDatabase();
-
-  const booksResponse = await getDb().execute(`
-    SELECT book
-    FROM passages
-    GROUP BY book
-    ORDER BY MIN(rowid)
-  `);
-
-  return sortCanonicalBooks(booksResponse.rows.map((row) => String(row.book)));
-}
-
-async function readSearchableScriptureBooks() {
-  const booksResponse = await getDb().execute(
-    "SELECT book FROM passages GROUP BY book"
-  );
-
-  return booksResponse.rows.map((row) => String(row.book));
-}
-
-const productionSearchRequestAdapter: SearchRequestAdapter = {
-  getEarlyChristianAuthors,
-  getIndexedScriptureBooks: readSearchableScriptureBooks,
-  searchEarlyChristianSimilarFromEarlyChristian: searchSimilarEarlyChristianPassages,
-  searchEarlyChristianSimilarFromScripture: searchSimilarEarlyChristianFromScripture,
-  searchEarlyChristianTheme: searchEarlyChristianWorks,
-  searchScriptureSimilarFromEarlyChristian: async (sourceKey, limit, books) => {
-    const source = await getEarlyChristianEmbeddingSource(sourceKey);
-
-    if (!source) {
-      return null;
-    }
-
-    return {
-      results: await searchScriptureByEmbedding(source.embedding, limit, books),
-      source: {
-        id: source.id,
-        reference: source.reference,
-        text: source.text
-      }
-    };
-  },
-  searchScriptureSimilarFromScripture: searchSimilarScripture,
-  searchScriptureTheme: searchScripture
-};
-
-export const handleSearchRequest = createSearchRequestHandler(
-  productionSearchRequestAdapter
-);
+export const handleSearchRequest: SearchRequestHandler = (async (formData: FormData, readerCorpus: "fathers" | "scripture" = "scripture") => {
+  const response = readerCorpus === "fathers" ? await rustHandler(formData, "fathers") : await rustHandler(formData, "scripture");
+  if (response.ok) response.headers.set("X-Cross-Canon-Search", "rust");
+  return response;
+}) as SearchRequestHandler;

@@ -84,6 +84,8 @@ curl http://127.0.0.1:3006/r/api/search \
 | `corpus` | `scripture`, `early-christian`, or omitted for both |
 | `canon` | `protestant` (default), `catholic`, or `orthodox` |
 | `books` | Optional list of existing book/work IDs |
+| `authors` | Up to three existing Early Christian author names (semantic search) |
+| `web` | `true` returns the existing web reader contracts; requires one semantic target corpus |
 | `limit` | 1–100, default 10 |
 
 Results: `{ mode, elapsedMs, results: [{ id, chapterId, reference, corpus, score }] }`.
@@ -98,6 +100,17 @@ Similar passage search needs no OpenAI call. A missing key returns an explicit
 503 for theme search. Requests are limited to 16 KiB, four concurrent searches,
 and 30 paid query embeddings per minute globally. This is an initial shared
 budget; it is not an account/authentication system.
+
+Both web readers now send theme and similar-passage searches through the
+loopback Rust API, including both cross-corpus directions. Remix still validates
+forms and applies canon/book/author filters and match-strength presentation.
+`web: true` selects Scripture verse highlights and the best existing Early
+Christian paragraph per chapter, with exact selected-source metadata. These
+paragraph and verse vectors are read from the existing databases; they are not
+regenerated. The default desktop response remains the compact ID/score contract.
+Successful web search data responses include `X-Cross-Canon-Search: rust`.
+Catalog loaders fall back to the existing text artifacts during API outages,
+allowing readers to open while search reports an explicit service error.
 
 Environment:
 
@@ -134,7 +147,8 @@ and was applied to `../administrative_stuff/ship.py` for this release.
 The second command is the standard web release. The resource route
 `app/routes/r.api.$.ts` forwards `/r/api` to the Rust service through the existing
 host proxy. This is only an HTTP bridge: all library, search, embedding, and
-ranking logic lives in Rust. Other routes continue to use the existing web app.
+ranking logic lives in Rust. The web reader search actions also call the Rust
+service directly over loopback; page rendering remains in Remix.
 
 If the shared host cannot reinstall the existing dependencies within its build
 memory limit, `scripts/deploy-rust-api-bridge.sh` publishes the locally verified
@@ -143,6 +157,11 @@ preserves installed dependencies and existing immutable client assets, backs up
 the server bundle, and rolls back on failed smoke checks. This was the release
 path used for the initial API publication after the standard remote build failed.
 No database or media artifacts are included.
+
+Deploy the Rust service before a web release requiring new API capabilities.
+The Rust deployment smoke-tests the web paragraph contract before switching;
+the compiled-web fallback verifies a real web search and its Rust header before
+accepting the release.
 
 After publishing:
 
@@ -159,6 +178,8 @@ scripts/rust.sh fmt --all -- --check
 scripts/rust.sh clippy --workspace -- -D warnings
 scripts/rust.sh test --workspace
 npm run verify
+NODE_ENV=production CROSS_CANNON_UPDATE_DB=0 BENCHMARK_THEMES=1 \
+  node --import tsx scripts/benchmark-rust-search.ts
 ```
 
 Rust tests load the actual existing library and both read-only databases,
@@ -168,6 +189,13 @@ contracts. A native egui test checks Command-F/Command-J, Escape dismissal,
 keyword search with an unreachable API, and stable explicit Chapter identity
 during passive scrolling. The package's `--check-library` mode validates a copied bundle without
 opening a window or making network calls.
+
+`npm run verify` starts and stops both a release Rust API and the production web
+server, then checks an actual web similar-search response. The benchmark uses
+identical stored sources and filters, alternates backends, and reports first
+requests separately from warmed median/p95 samples. Theme timings include live
+query embeddings. Incomplete legacy result sets are marked invalid comparisons;
+missing legacy ANN indexes are never rebuilt by verification or benchmarking.
 
 With the existing web app on port 3005, capture the actual native renderer and
 compose it beside the browser screenshot:

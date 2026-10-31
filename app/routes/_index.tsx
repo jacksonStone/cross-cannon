@@ -29,9 +29,9 @@ import {
 import type { SearchActionData } from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import {
-  getEarlyChristianAuthors,
   type EarlyChristianSearchResult,
 } from "~/lib/early-christian-search.server";
+import { getEarlyChristianAuthors } from "~/lib/r-cross-cannon.server";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";
 import { isBackdropClick, useEscapeDismiss } from "~/lib/use-dialog-dismiss";

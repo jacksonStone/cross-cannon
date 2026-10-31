@@ -45,8 +45,15 @@ for attempt in {1..40}; do
 done
 [[ "$ready" == 1 ]]
 curl -fsS --max-time 20 http://127.0.0.1:3005/r/api/search -H 'Content-Type: application/json' -d '{"query":"beginning","limit":3}' > "$staging/search.json"
+curl -fsS --max-time 20 'http://127.0.0.1:3005/?_data=routes%2F_index' -H 'Content-Type: application/x-www-form-urlencoded' --data 'question=fear+and+comfort&matchCount=5' -D "$staging/web-search.headers" > "$staging/web-search.json"
+python3 - "$staging" <<'PY'
+import json, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+assert 'x-cross-canon-search: rust' in (root / 'web-search.headers').read_text().lower()
+assert len(json.loads((root / 'web-search.json').read_text())['results']) == 5
+PY
 healthy=1
 cat "$staging/health.json"
 rm -f "/tmp/r-api-bridge-$release.tar.gz"
-echo "API bridge published; code backup: $staging/previous-server.js"
+echo "Rust web search published; code backup: $staging/previous-server.js"
 REMOTE

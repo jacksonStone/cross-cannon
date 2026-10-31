@@ -207,6 +207,8 @@ impl Desktop {
             corpus: self.search_corpus,
             canon: self.state.canon,
             books: vec![],
+            authors: vec![],
+            web: false,
             limit: 20,
             mode: if self.semantic {
                 SearchMode::Semantic

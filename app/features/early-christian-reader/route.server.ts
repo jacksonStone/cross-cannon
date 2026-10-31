@@ -6,7 +6,7 @@ import {
   EARLY_CHRISTIAN_PREVIEW_ASSET_VERSION
 } from "~/features/early-christian-preview/preview-cache";
 import { handleSearchRequest } from "~/features/search/search-request.server";
-import { getEarlyChristianAuthors } from "~/lib/early-christian-search.server";
+import { getEarlyChristianAuthors } from "~/lib/r-cross-cannon.server";
 import { parseJson } from "~/lib/json";
 import { getClientIp, rateLimit } from "~/lib/rate-limit.server";
 import { getScriptureCacheInfo } from "~/lib/scripture-cache.server";

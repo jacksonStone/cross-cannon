@@ -473,6 +473,10 @@ pub struct SearchRequest {
     pub canon: Canon,
     #[serde(default)]
     pub books: Vec<String>,
+    #[serde(default)]
+    pub authors: Vec<String>,
+    #[serde(default)]
+    pub web: bool,
     #[serde(default = "default_limit")]
     pub limit: usize,
     #[serde(default)]
@@ -486,6 +490,8 @@ impl Default for SearchRequest {
             corpus: None,
             canon: Canon::default(),
             books: vec![],
+            authors: vec![],
+            web: false,
             limit: default_limit(),
             mode: SearchMode::default(),
         }

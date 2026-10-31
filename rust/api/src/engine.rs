@@ -2,7 +2,11 @@ use anyhow::{bail, Context, Result};
 use cross_canon_core::{Corpus, Library, SearchHit, SearchRequest};
 use rayon::prelude::*;
 use rusqlite::{Connection, OpenFlags};
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EmbeddingConfig {
@@ -18,6 +22,8 @@ pub struct Engine {
     pub library: Arc<Library>,
     vectors: Vec<Vector>,
     configs: HashMap<u8, EmbeddingConfig>,
+    pub(crate) scripture_db: PathBuf,
+    pub(crate) fathers_db: PathBuf,
 }
 fn corpus_key(corpus: Corpus) -> u8 {
     if corpus == Corpus::Scripture {
@@ -33,6 +39,8 @@ impl Engine {
             library,
             vectors: vec![],
             configs: HashMap::new(),
+            scripture_db: scripture_db.to_path_buf(),
+            fathers_db: fathers_db.to_path_buf(),
         };
         for (corpus, path, table) in [
             (Corpus::Scripture, scripture_db, "passages"),
@@ -105,25 +113,9 @@ impl Engine {
             .context("Missing indexed embedding configuration")
     }
     pub fn source_embedding(&self, id: &str, target: Option<Corpus>) -> Result<Vec<f32>> {
-        let passage = self.library.passage(id).context("Unknown source passage")?;
-        if self.config(Some(passage.corpus))? != self.config(target)? {
-            bail!("Source and target embedding configurations differ")
-        }
-        let source = self
-            .vectors
-            .iter()
-            .find(|v| {
-                v.id == id
-                    || (v.corpus == passage.corpus
-                        && self
-                            .library
-                            .passage(&v.id)
-                            .is_some_and(|p| p.chapter_id == passage.chapter_id)
-                        && passage.corpus == Corpus::EarlyChristian)
-            })
-            .context("Source has no stored embedding")?;
-        Ok(source.embedding.clone())
+        Ok(self.source(id, target)?.embedding)
     }
+
     pub fn semantic(&self, query: &[f32], request: &SearchRequest) -> Result<Vec<SearchHit>> {
         let config = self.config(request.corpus)?;
         if query.len() != config.dimensions || query.iter().any(|n| !n.is_finite()) {
@@ -144,9 +136,17 @@ impl Engine {
                 if (p.corpus == Corpus::Scripture && !request.canon.includes(&p.book))
                     || request.corpus.is_some_and(|c| c != v.corpus)
                     || (!request.books.is_empty() && !request.books.contains(&p.book_id))
-                    || request.source_id.as_deref() == Some(p.id.as_str())
+                    || (request.source_id.as_deref() == Some(p.id.as_str())
+                        && (p.corpus == Corpus::Scripture || !request.web))
                     || (p.corpus == Corpus::EarlyChristian
+                        && !request.web
                         && source_chapter == Some(p.chapter_id.as_str()))
+                    || (p.corpus == Corpus::EarlyChristian
+                        && !request.authors.is_empty()
+                        && !p
+                            .author
+                            .as_ref()
+                            .is_some_and(|a| request.authors.contains(a)))
                 {
                     return None;
                 }
@@ -184,7 +184,7 @@ pub fn normalize(vector: &mut [f32]) -> Result<()> {
     }
     Ok(())
 }
-fn decode_embedding(bytes: &[u8], dimensions: usize) -> Result<Vec<f32>> {
+pub(crate) fn decode_embedding(bytes: &[u8], dimensions: usize) -> Result<Vec<f32>> {
     if bytes.len() != dimensions * 4 {
         bail!("Stored embedding size does not match indexed dimensions")
     }

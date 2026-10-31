@@ -1,0 +1,1909 @@
+{
+  "date": "2026-10-31T22:10:48.539Z",
+  "platform": "linux x64",
+  "cpu": "Intel(R) Xeon(R) Platinum 8259CL CPU @ 2.50GHz",
+  "node": "v26.13.0",
+  "cacheVersion": "98c414bddc31ea96",
+  "bibleId": "0f30e1c3b52c58a6c3c8da86",
+  "earlyId": "ecw:3188012fec5445b5c6078713",
+  "method": "Sequential alternating backends; one first request per case excluded, then warm samples. Legacy in-process libSQL + JS; Rust release process via loopback HTTP including response validation. Same existing vectors, ten results, identical filters. p95 is nearest-rank; three theme samples are descriptive, not a reliable tail estimate. Theme time includes live OpenAI query embedding. No artifact regeneration.",
+  "rows": [
+    {
+      "name": "Scripture → Scripture, Protestant canon",
+      "paid": false,
+      "firstRequestMs": {
+        "legacy": 8993.379584999999,
+        "rust": 76.39364399999977
+      },
+      "legacy": {
+        "medianMs": 131.51223899999968,
+        "p95Ms": 157.77472699999998,
+        "minMs": 71.59062799999992,
+        "samples": [
+          88.0200079999995,
+          131.51223899999968,
+          157.77472699999998,
+          116.77225700000054,
+          154.37934099999984,
+          139.66869100000076,
+          71.59062799999992
+        ]
+      },
+      "rust": {
+        "medianMs": 19.75785999999971,
+        "p95Ms": 23.38659600000028,
+        "minMs": 19.310182999999597,
+        "samples": [
+          23.38659600000028,
+          20.253477000000203,
+          19.324615999999878,
+          22.824400999999853,
+          19.381999000001088,
+          19.75785999999971,
+          19.310182999999597
+        ]
+      },
+      "legacyCount": 10,
+      "rustCount": 10,
+      "speedup": 6.656198545794009,
+      "top10Overlap": 10,
+      "sameOrder": true,
+      "results": {
+        "legacy": [
+          {
+            "id": "c38ac8a3c6b795d94958b03f",
+            "reference": "Genesis 1:7-11",
+            "type": "paragraph",
+            "score": 0.8069909263334071
+          },
+          {
+            "id": "a4c40b71786354e46eed4b73",
+            "reference": "Genesis 1:17-21",
+            "type": "paragraph",
+            "score": 0.737856046263113
+          },
+          {
+            "id": "0444f28e6b4acc2a8391cd27",
+            "reference": "Genesis 1:12-16",
+            "type": "paragraph",
+            "score": 0.7064136349569136
+          },
+          {
+            "id": "6cbbcf90f0daaae208a7ecb6",
+            "reference": "Genesis 2:1-5",
+            "type": "paragraph",
+            "score": 0.6258813383842946
+          },
+          {
+            "id": "e6891e5315088295ac3642ec",
+            "reference": "Genesis 1:31",
+            "type": "paragraph",
+            "score": 0.6150575034786091,
+            "highlightVerse": 31
+          },
+          {
+            "id": "c941eb25c1289500fb0581f6",
+            "reference": "Genesis 1:22-26",
+            "type": "paragraph",
+            "score": 0.613997032290454
+          },
+          {
+            "id": "516492ab83debf6ec33e560e",
+            "reference": "John 1:1-8",
+            "type": "paragraph",
+            "score": 0.6120685522784296
+          },
+          {
+            "id": "e5649ee4fef26021ab2b034d",
+            "reference": "Genesis 1:27-30",
+            "type": "paragraph",
+            "score": 0.5478872143534522
+          },
+          {
+            "id": "ac919c6b8feba9d429686ded",
+            "reference": "Psalms 19:1-6",
+            "type": "paragraph",
+            "score": 0.52493803308345
+          },
+          {
+            "id": "abf4544a421f7d172ada56b3",
+            "reference": "Genesis 2:6-10",
+            "type": "paragraph",
+            "score": 0.5232814415794224
+          }
+        ],
+        "rust": [
+          {
+            "id": "c38ac8a3c6b795d94958b03f",
+            "reference": "Genesis 1:7-11",
+            "score": 0.8069919943809509,
+            "type": "paragraph"
+          },
+          {
+            "id": "a4c40b71786354e46eed4b73",
+            "reference": "Genesis 1:17-21",
+            "score": 0.737855851650238,
+            "type": "paragraph"
+          },
+          {
+            "id": "0444f28e6b4acc2a8391cd27",
+            "reference": "Genesis 1:12-16",
+            "score": 0.7064134478569031,
+            "type": "paragraph"
+          },
+          {
+            "id": "6cbbcf90f0daaae208a7ecb6",
+            "reference": "Genesis 2:1-5",
+            "score": 0.6258821487426758,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 31,
+            "id": "e6891e5315088295ac3642ec",
+            "reference": "Genesis 1:31",
+            "score": 0.6150571703910828,
+            "type": "paragraph"
+          },
+          {
+            "id": "c941eb25c1289500fb0581f6",
+            "reference": "Genesis 1:22-26",
+            "score": 0.6139968037605286,
+            "type": "paragraph"
+          },
+          {
+            "id": "516492ab83debf6ec33e560e",
+            "reference": "John 1:1-8",
+            "score": 0.6120685338973999,
+            "type": "paragraph"
+          },
+          {
+            "id": "e5649ee4fef26021ab2b034d",
+            "reference": "Genesis 1:27-30",
+            "score": 0.5478862524032593,
+            "type": "paragraph"
+          },
+          {
+            "id": "ac919c6b8feba9d429686ded",
+            "reference": "Psalms 19:1-6",
+            "score": 0.5249387621879578,
+            "type": "paragraph"
+          },
+          {
+            "id": "abf4544a421f7d172ada56b3",
+            "reference": "Genesis 2:6-10",
+            "score": 0.5232815146446228,
+            "type": "paragraph"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Scripture → Scripture, John only",
+      "paid": false,
+      "firstRequestMs": {
+        "legacy": 77.45905100000164,
+        "rust": 15.543181999999433
+      },
+      "legacy": {
+        "medianMs": 5.151066999998875,
+        "p95Ms": 5.544668000000456,
+        "minMs": 4.814010000000053,
+        "samples": [
+          5.544668000000456,
+          4.814010000000053,
+          5.41323199999897,
+          5.151066999998875,
+          5.009342999999717,
+          5.046220000000176,
+          5.271485999999641
+        ]
+      },
+      "rust": {
+        "medianMs": 7.7152249999999185,
+        "p95Ms": 9.392041000000972,
+        "minMs": 7.395243999999366,
+        "samples": [
+          9.392041000000972,
+          7.807317000000694,
+          8.016233999998803,
+          7.7152249999999185,
+          7.60320800000045,
+          7.395243999999366,
+          7.401799999999639
+        ]
+      },
+      "legacyCount": 10,
+      "rustCount": 10,
+      "speedup": 0.6676496148847155,
+      "top10Overlap": 10,
+      "sameOrder": true,
+      "results": {
+        "legacy": [
+          {
+            "id": "516492ab83debf6ec33e560e",
+            "reference": "John 1:1-8",
+            "type": "paragraph",
+            "score": 0.6120685522784296
+          },
+          {
+            "id": "d339e9b5b930dbd0c50ca49d",
+            "reference": "John 1:9-14",
+            "type": "paragraph",
+            "score": 0.43484260650679485
+          },
+          {
+            "id": "49ea6a18760ff81898cbbe6e",
+            "reference": "John 2:1-7",
+            "type": "paragraph",
+            "score": 0.3641459781835484
+          },
+          {
+            "id": "af6b40126d59f2662b1071d8",
+            "reference": "John 6:16-21",
+            "type": "paragraph",
+            "score": 0.3628525395540996
+          },
+          {
+            "id": "7fc92af3260fa511ea99cfcf",
+            "reference": "John 3:18-22",
+            "type": "paragraph",
+            "score": 0.3553454021768211
+          },
+          {
+            "id": "4e4b28ff3b22a17a47146a82",
+            "reference": "John 9:1-6",
+            "type": "paragraph",
+            "score": 0.3464000360883134
+          },
+          {
+            "id": "e19f836b8e3bb5aced25f4af",
+            "reference": "John 21:1-4",
+            "type": "paragraph",
+            "score": 0.3390167516131273
+          },
+          {
+            "id": "af6ed57489e43d160b67dce9",
+            "reference": "John 1:33-38",
+            "type": "paragraph",
+            "score": 0.32993589949432395
+          },
+          {
+            "id": "8f560891a1bc159cb3f0a532",
+            "reference": "John 2:8-11",
+            "type": "paragraph",
+            "score": 0.3269496408610087
+          },
+          {
+            "id": "3540b9dfcdb3dcdeefb36878",
+            "reference": "John 20:16-19",
+            "type": "paragraph",
+            "score": 0.32570691727358486,
+            "highlightVerse": 19
+          }
+        ],
+        "rust": [
+          {
+            "id": "516492ab83debf6ec33e560e",
+            "reference": "John 1:1-8",
+            "score": 0.6120685338973999,
+            "type": "paragraph"
+          },
+          {
+            "id": "d339e9b5b930dbd0c50ca49d",
+            "reference": "John 1:9-14",
+            "score": 0.4348423480987549,
+            "type": "paragraph"
+          },
+          {
+            "id": "49ea6a18760ff81898cbbe6e",
+            "reference": "John 2:1-7",
+            "score": 0.36414575576782227,
+            "type": "paragraph"
+          },
+          {
+            "id": "af6b40126d59f2662b1071d8",
+            "reference": "John 6:16-21",
+            "score": 0.36285263299942017,
+            "type": "paragraph"
+          },
+          {
+            "id": "7fc92af3260fa511ea99cfcf",
+            "reference": "John 3:18-22",
+            "score": 0.3553454875946045,
+            "type": "paragraph"
+          },
+          {
+            "id": "4e4b28ff3b22a17a47146a82",
+            "reference": "John 9:1-6",
+            "score": 0.3464006781578064,
+            "type": "paragraph"
+          },
+          {
+            "id": "e19f836b8e3bb5aced25f4af",
+            "reference": "John 21:1-4",
+            "score": 0.3390166759490967,
+            "type": "paragraph"
+          },
+          {
+            "id": "af6ed57489e43d160b67dce9",
+            "reference": "John 1:33-38",
+            "score": 0.3299356997013092,
+            "type": "paragraph"
+          },
+          {
+            "id": "8f560891a1bc159cb3f0a532",
+            "reference": "John 2:8-11",
+            "score": 0.32694998383522034,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 19,
+            "id": "3540b9dfcdb3dcdeefb36878",
+            "reference": "John 20:16-19",
+            "score": 0.3257067799568176,
+            "type": "paragraph"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Scripture → Early Christian, all authors",
+      "paid": false,
+      "firstRequestMs": {
+        "legacy": 2865.6167909999986,
+        "rust": 1708.7821730000014
+      },
+      "legacy": {
+        "medianMs": 112.51102499999979,
+        "p95Ms": 378.1986849999994,
+        "minMs": 96.15819499999998,
+        "samples": [
+          127.58122500000172,
+          150.21884599999976,
+          378.1986849999994,
+          112.51102499999979,
+          109.30344899999909,
+          109.9275630000011,
+          96.15819499999998
+        ]
+      },
+      "rust": {
+        "medianMs": 106.83883900000001,
+        "p95Ms": 124.60191000000123,
+        "minMs": 89.17376100000183,
+        "samples": [
+          106.83883900000001,
+          121.5217819999998,
+          90.95579700000235,
+          124.60191000000123,
+          89.17376100000183,
+          116.75983500000075,
+          91.49158399999942
+        ]
+      },
+      "legacyCount": 10,
+      "rustCount": 10,
+      "speedup": 1.05309104865881,
+      "top10Overlap": 9,
+      "sameOrder": false,
+      "results": {
+        "legacy": [
+          {
+            "author": "Theophilus of Antioch",
+            "chapterId": "anf02:iv.ii.ii.xi",
+            "chapterReference": "Theophilus to Autolycus 25",
+            "date": "second century",
+            "highlightPassage": {
+              "id": "ecw:28d4462057fec3cd7e2e7165",
+              "rangeLabel": "4-6",
+              "reference": "Theophilus to Autolycus 25:4-6",
+              "text": "And the evening and the morning were the first day. And God said, Let there be a firmament in the midst of the waters, and let it divide the waters from the waters: and it was so. And God made the firmament, and divided the waters which were under the firmament from the waters which were above the firmament.",
+              "verseEnd": 6,
+              "verseStart": 4
+            },
+            "matchStrength": 4,
+            "score": 0.8077033101249406,
+            "source": "anf02",
+            "title": "Theophilus to Autolycus"
+          },
+          {
+            "author": "Basil of Caesarea",
+            "chapterId": "npnf208:viii.vii",
+            "chapterReference": "The Hexæmeron. 7",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:b4e2b4ee8bd5ad0fbbdfd558",
+              "rangeLabel": "19-21",
+              "reference": "The Hexæmeron. 7:19-21",
+              "text": "“And God said, Let there be lights in the firmament of the heaven to give light upon the earth, and to divide the day from the night.” Heaven and earth were the first; after them was created light; the day had been distinguished from the night, then had appeared the firmament and the dry element. The water had been gathered into the reservoir assigned to it, the earth displayed its productions, it had caused many kinds of herbs to germinate and it was adorned with all kinds of plants.",
+              "verseEnd": 21,
+              "verseStart": 19
+            },
+            "matchStrength": 4,
+            "score": 0.7860947102159352,
+            "source": "npnf208",
+            "title": "The Hexæmeron."
+          },
+          {
+            "author": "Basil of Caesarea",
+            "chapterId": "npnf208:viii.iii",
+            "chapterReference": "The Hexæmeron. 3",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:e1f7253b17d6cc12b2b83a53",
+              "rangeLabel": "136-138",
+              "reference": "The Hexæmeron. 3:136-138",
+              "text": "And God said, Let there be light. The first word of God created the nature of light; it made darkness vanish, dispelled gloom, illuminated the world, and gave to all beings at the same time a sweet and gracious aspect. The heavens, until then enveloped in darkness, appeared with that beauty which they still present to our eyes.",
+              "verseEnd": 138,
+              "verseStart": 136
+            },
+            "matchStrength": 4,
+            "score": 0.7428924071719664,
+            "source": "npnf208",
+            "title": "The Hexæmeron."
+          },
+          {
+            "author": "Theophilus of Antioch",
+            "chapterId": "anf02:iv.ii.ii.xiii",
+            "chapterReference": "Theophilus to Autolycus 27",
+            "date": "second century",
+            "highlightPassage": {
+              "id": "ecw:3308d77d1e7e67efb043984f",
+              "rangeLabel": "13-15",
+              "reference": "Theophilus to Autolycus 27:13-15",
+              "text": "And the light God called Day, and the darkness Night. Since man would not have been able to call the light Day, or the darkness Night, nor, indeed, to have given names to the other things, had not he received the nomenclature from God, who made the things themselves. In the very beginning, therefore, of the history and genesis of the world, the holy Scripture spoke not concerning this firmament [which we see], but concerning another heaven, which is to us invisible, after which this heaven which we see has been called “firmament,” and to which half the water was taken up that it might serve for rains, and showers, and dews to mankind.",
+              "verseEnd": 15,
+              "verseStart": 13
+            },
+            "matchStrength": 4,
+            "score": 0.7355863275878618,
+            "source": "anf02",
+            "title": "Theophilus to Autolycus"
+          },
+          {
+            "author": "Theophilus of Antioch",
+            "chapterId": "anf02:iv.ii.ii.x",
+            "chapterReference": "Theophilus to Autolycus 24",
+            "date": "second century",
+            "highlightPassage": {
+              "id": "ecw:475902d3076de985858372a0",
+              "rangeLabel": "10-14",
+              "reference": "Theophilus to Autolycus 24:10-14",
+              "text": "First he named the “beginning,” and “creation,” then he thus introduced God; for not lightly and on slight occasion is it right to name God. For the divine wisdom foreknew that some would trifle and name a multitude of gods that do not exist. In order, therefore, that the living God might be known by His works, and that [it might be known that] by His Word God created the heavens and the earth, and all that is therein, he said, “In the beginning God created the heavens and the earth.” Then having spoken of their creation, he explains to us: “And the earth was without form, and void, and darkness was upon the face of the deep; and the Spirit of God moved upon the water.” This, sacred Scripture teaches at the outset, to show that matter, from which God made and fashioned the world, was in some manner created, being produced by God.",
+              "verseEnd": 14,
+              "verseStart": 10
+            },
+            "matchStrength": 4,
+            "score": 0.7233487915297182,
+            "source": "anf02",
+            "title": "Theophilus to Autolycus"
+          },
+          {
+            "author": "John of Damascus",
+            "chapterId": "npnf209:iii.iv.ii.ix",
+            "chapterReference": "An Exact Exposition of the Orthodox Faith. 23",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:37b3228054ac18e73ce253d6",
+              "rangeLabel": "7-9",
+              "reference": "An Exact Exposition of the Orthodox Faith. 23:7-9",
+              "text": "And first God created the firmament to divide the water above the firmament from the water below the firmament. For in the midst of the sea of waters the firmament was established at the Master’s decree. And out of it God bade the firmament arise, and it arose.",
+              "verseEnd": 9,
+              "verseStart": 7
+            },
+            "matchStrength": 3,
+            "score": 0.6882377612601942,
+            "source": "npnf209",
+            "title": "An Exact Exposition of the Orthodox Faith."
+          },
+          {
+            "author": "Basil of Caesarea",
+            "chapterId": "npnf208:viii.iv",
+            "chapterReference": "The Hexæmeron. 4",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:d33500425a35bab0f0862c69",
+              "rangeLabel": "31-33",
+              "reference": "The Hexæmeron. 4:31-33",
+              "text": "Scripture might continue the history as it is begun: In the beginning God created the heaven and the earth; afterwards He created light, then He created the firmament. But, by making God command and speak, the Scripture tacitly shows us Him to Whom this order and these words are addressed. It is not that it grudges us the knowledge of the truth, but that it may kindle our desire by showing us some trace and indication of the mystery.",
+              "verseEnd": 33,
+              "verseStart": 31
+            },
+            "matchStrength": 3,
+            "score": 0.6870643306838183,
+            "source": "npnf208",
+            "title": "The Hexæmeron."
+          },
+          {
+            "author": "Tertullian",
+            "chapterId": "anf03:v.v.xxvi",
+            "chapterReference": "Against Hermogenes. 26",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:71f2150f1ff91b3c881bd527",
+              "rangeLabel": "1-3",
+              "reference": "Against Hermogenes. 26:1-3",
+              "text": "We, however, have but one God, and but one earth too, which in the beginning God made. The Scripture, which at its very outset proposes to run through the order thereof tells us as its first information that it was created; it next proceeds to set forth what sort of earth it was. In like manner with respect to the heaven, it informs us first of its creation—“In the beginning God made the heaven:” it then goes on to introduce its arrangement; how that God both separated “the water which was below the firmament from that which was above the firmament,” and called the firmament heaven,—the very thing He had created in the beginning.",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "matchStrength": 3,
+            "score": 0.6755769006625848,
+            "source": "anf03",
+            "title": "Against Hermogenes."
+          },
+          {
+            "author": "Basil of Caesarea",
+            "chapterId": "npnf208:viii.v",
+            "chapterReference": "The Hexæmeron. 5",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:937dba26b069b06dff770c72",
+              "rangeLabel": "28-30",
+              "reference": "The Hexæmeron. 5:28-30",
+              "text": "Think, in reality, that a word of God makes the nature, and that this order is for the creature a direction for its future course. There was only one creation of day and night, and since that moment they have incessantly succeeded each other and divided time into equal parts. “Let the waters be gathered together.”",
+              "verseEnd": 30,
+              "verseStart": 28
+            },
+            "matchStrength": 3,
+            "score": 0.6640643241068588,
+            "source": "npnf208",
+            "title": "The Hexæmeron."
+          },
+          {
+            "author": "Tertullian",
+            "chapterId": "anf03:v.v.xxxi",
+            "chapterReference": "Against Hermogenes. 31",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:d125b41d4c6a768eb362049b",
+              "rangeLabel": "4-6",
+              "reference": "Against Hermogenes. 31:4-6",
+              "text": "Now the appurtenances of the heaven and the earth, made then in the beginning, were the darkness and the deep, and the spirit, and the waters. For the depth and the darkness underlay the earth. Since the deep was under the earth, and the darkness was over the deep, undoubtedly both the darkness and the deep were under the earth.",
+              "verseEnd": 6,
+              "verseStart": 4
+            },
+            "matchStrength": 3,
+            "score": 0.66138948123585,
+            "source": "anf03",
+            "title": "Against Hermogenes."
+          }
+        ],
+        "rust": [
+          {
+            "author": "Theophilus of Antioch",
+            "chapterId": "anf02:iv.ii.ii.xi",
+            "chapterReference": "Theophilus to Autolycus 25",
+            "date": "second century",
+            "highlightPassage": {
+              "id": "ecw:28d4462057fec3cd7e2e7165",
+              "rangeLabel": "4-6",
+              "reference": "Theophilus to Autolycus 25:4-6",
+              "text": "And the evening and the morning were the first day. And God said, Let there be a firmament in the midst of the waters, and let it divide the waters from the waters: and it was so. And God made the firmament, and divided the waters which were under the firmament from the waters which were above the firmament.",
+              "verseEnd": 6,
+              "verseStart": 4
+            },
+            "score": 0.8077033758163452,
+            "source": "anf02",
+            "title": "Theophilus to Autolycus",
+            "matchStrength": 4
+          },
+          {
+            "author": "Basil of Caesarea",
+            "chapterId": "npnf208:viii.vii",
+            "chapterReference": "The Hexæmeron. 7",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:b4e2b4ee8bd5ad0fbbdfd558",
+              "rangeLabel": "19-21",
+              "reference": "The Hexæmeron. 7:19-21",
+              "text": "“And God said, Let there be lights in the firmament of the heaven to give light upon the earth, and to divide the day from the night.” Heaven and earth were the first; after them was created light; the day had been distinguished from the night, then had appeared the firmament and the dry element. The water had been gathered into the reservoir assigned to it, the earth displayed its productions, it had caused many kinds of herbs to germinate and it was adorned with all kinds of plants.",
+              "verseEnd": 21,
+              "verseStart": 19
+            },
+            "score": 0.7860943078994751,
+            "source": "npnf208",
+            "title": "The Hexæmeron.",
+            "matchStrength": 4
+          },
+          {
+            "author": "Basil of Caesarea",
+            "chapterId": "npnf208:viii.iii",
+            "chapterReference": "The Hexæmeron. 3",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:e1f7253b17d6cc12b2b83a53",
+              "rangeLabel": "136-138",
+              "reference": "The Hexæmeron. 3:136-138",
+              "text": "And God said, Let there be light. The first word of God created the nature of light; it made darkness vanish, dispelled gloom, illuminated the world, and gave to all beings at the same time a sweet and gracious aspect. The heavens, until then enveloped in darkness, appeared with that beauty which they still present to our eyes.",
+              "verseEnd": 138,
+              "verseStart": 136
+            },
+            "score": 0.742892324924469,
+            "source": "npnf208",
+            "title": "The Hexæmeron.",
+            "matchStrength": 4
+          },
+          {
+            "author": "Theophilus of Antioch",
+            "chapterId": "anf02:iv.ii.ii.xiii",
+            "chapterReference": "Theophilus to Autolycus 27",
+            "date": "second century",
+            "highlightPassage": {
+              "id": "ecw:3308d77d1e7e67efb043984f",
+              "rangeLabel": "13-15",
+              "reference": "Theophilus to Autolycus 27:13-15",
+              "text": "And the light God called Day, and the darkness Night. Since man would not have been able to call the light Day, or the darkness Night, nor, indeed, to have given names to the other things, had not he received the nomenclature from God, who made the things themselves. In the very beginning, therefore, of the history and genesis of the world, the holy Scripture spoke not concerning this firmament [which we see], but concerning another heaven, which is to us invisible, after which this heaven which we see has been called “firmament,” and to which half the water was taken up that it might serve for rains, and showers, and dews to mankind.",
+              "verseEnd": 15,
+              "verseStart": 13
+            },
+            "score": 0.735586404800415,
+            "source": "anf02",
+            "title": "Theophilus to Autolycus",
+            "matchStrength": 4
+          },
+          {
+            "author": "Theophilus of Antioch",
+            "chapterId": "anf02:iv.ii.ii.x",
+            "chapterReference": "Theophilus to Autolycus 24",
+            "date": "second century",
+            "highlightPassage": {
+              "id": "ecw:475902d3076de985858372a0",
+              "rangeLabel": "10-14",
+              "reference": "Theophilus to Autolycus 24:10-14",
+              "text": "First he named the “beginning,” and “creation,” then he thus introduced God; for not lightly and on slight occasion is it right to name God. For the divine wisdom foreknew that some would trifle and name a multitude of gods that do not exist. In order, therefore, that the living God might be known by His works, and that [it might be known that] by His Word God created the heavens and the earth, and all that is therein, he said, “In the beginning God created the heavens and the earth.” Then having spoken of their creation, he explains to us: “And the earth was without form, and void, and darkness was upon the face of the deep; and the Spirit of God moved upon the water.” This, sacred Scripture teaches at the outset, to show that matter, from which God made and fashioned the world, was in some manner created, being produced by God.",
+              "verseEnd": 14,
+              "verseStart": 10
+            },
+            "score": 0.7233490943908691,
+            "source": "anf02",
+            "title": "Theophilus to Autolycus",
+            "matchStrength": 4
+          },
+          {
+            "author": "John of Damascus",
+            "chapterId": "npnf209:iii.iv.ii.ix",
+            "chapterReference": "An Exact Exposition of the Orthodox Faith. 23",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:37b3228054ac18e73ce253d6",
+              "rangeLabel": "7-9",
+              "reference": "An Exact Exposition of the Orthodox Faith. 23:7-9",
+              "text": "And first God created the firmament to divide the water above the firmament from the water below the firmament. For in the midst of the sea of waters the firmament was established at the Master’s decree. And out of it God bade the firmament arise, and it arose.",
+              "verseEnd": 9,
+              "verseStart": 7
+            },
+            "score": 0.688236653804779,
+            "source": "npnf209",
+            "title": "An Exact Exposition of the Orthodox Faith.",
+            "matchStrength": 3
+          },
+          {
+            "author": "Basil of Caesarea",
+            "chapterId": "npnf208:viii.iv",
+            "chapterReference": "The Hexæmeron. 4",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:d33500425a35bab0f0862c69",
+              "rangeLabel": "31-33",
+              "reference": "The Hexæmeron. 4:31-33",
+              "text": "Scripture might continue the history as it is begun: In the beginning God created the heaven and the earth; afterwards He created light, then He created the firmament. But, by making God command and speak, the Scripture tacitly shows us Him to Whom this order and these words are addressed. It is not that it grudges us the knowledge of the truth, but that it may kindle our desire by showing us some trace and indication of the mystery.",
+              "verseEnd": 33,
+              "verseStart": 31
+            },
+            "score": 0.6870643496513367,
+            "source": "npnf208",
+            "title": "The Hexæmeron.",
+            "matchStrength": 3
+          },
+          {
+            "author": "Tertullian",
+            "chapterId": "anf03:v.v.xxvi",
+            "chapterReference": "Against Hermogenes. 26",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:71f2150f1ff91b3c881bd527",
+              "rangeLabel": "1-3",
+              "reference": "Against Hermogenes. 26:1-3",
+              "text": "We, however, have but one God, and but one earth too, which in the beginning God made. The Scripture, which at its very outset proposes to run through the order thereof tells us as its first information that it was created; it next proceeds to set forth what sort of earth it was. In like manner with respect to the heaven, it informs us first of its creation—“In the beginning God made the heaven:” it then goes on to introduce its arrangement; how that God both separated “the water which was below the firmament from that which was above the firmament,” and called the firmament heaven,—the very thing He had created in the beginning.",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "score": 0.6755772829055786,
+            "source": "anf03",
+            "title": "Against Hermogenes.",
+            "matchStrength": 3
+          },
+          {
+            "author": "Tertullian",
+            "chapterId": "anf03:vi.iii.iii",
+            "chapterReference": "On Baptism. 3",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:59e8dfa70e60f4f6be067144",
+              "rangeLabel": "7-9",
+              "reference": "On Baptism. 3:7-9",
+              "text": "But the earth was invisible, and unorganized, and darkness was over the abyss; and the Spirit of the Lord was hovering over the waters.” The first thing, O man, which you have to venerate, is the age of the waters in that their substance is ancient; the second, their dignity, in that they were the seat of the Divine Spirit, more pleasing to Him, no doubt, than all the other then existing elements. For the darkness was total thus far, shapeless, without the ornament of stars; and the abyss gloomy; and the earth unfurnished; and the heaven unwrought: water alone—always a perfect, gladsome, simple material substance, pure in itself—supplied a worthy vehicle to God.",
+              "verseEnd": 9,
+              "verseStart": 7
+            },
+            "score": 0.6752025485038757,
+            "source": "anf03",
+            "title": "On Baptism.",
+            "matchStrength": 3
+          },
+          {
+            "author": "Basil of Caesarea",
+            "chapterId": "npnf208:viii.v",
+            "chapterReference": "The Hexæmeron. 5",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:937dba26b069b06dff770c72",
+              "rangeLabel": "28-30",
+              "reference": "The Hexæmeron. 5:28-30",
+              "text": "Think, in reality, that a word of God makes the nature, and that this order is for the creature a direction for its future course. There was only one creation of day and night, and since that moment they have incessantly succeeded each other and divided time into equal parts. “Let the waters be gathered together.”",
+              "verseEnd": 30,
+              "verseStart": 28
+            },
+            "score": 0.6640638709068298,
+            "source": "npnf208",
+            "title": "The Hexæmeron.",
+            "matchStrength": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "Early Christian → Scripture",
+      "paid": false,
+      "firstRequestMs": {
+        "legacy": 7660.989228999999,
+        "rust": 46.155242000000726
+      },
+      "legacy": {
+        "medianMs": 134.55176399999982,
+        "p95Ms": 278.5728939999972,
+        "minMs": 86.12660799999867,
+        "samples": [
+          134.55176399999982,
+          278.5728939999972,
+          155.01963800000158,
+          86.12660799999867,
+          117.28888899999947,
+          127.8248339999991,
+          135.66094500000327
+        ]
+      },
+      "rust": {
+        "medianMs": 19.114128000001074,
+        "p95Ms": 23.506023999998433,
+        "minMs": 18.849115000000893,
+        "samples": [
+          23.506023999998433,
+          19.207876000000397,
+          18.849115000000893,
+          18.951460000000225,
+          19.405969999999797,
+          19.090328999998746,
+          19.114128000001074
+        ]
+      },
+      "legacyCount": 10,
+      "rustCount": 10,
+      "speedup": 7.03938803799955,
+      "top10Overlap": 10,
+      "sameOrder": true,
+      "results": {
+        "legacy": [
+          {
+            "id": "d23cd22fa9cec3d1ef769a42",
+            "reference": "Genesis 12:1-5",
+            "type": "paragraph",
+            "score": 0.6441809923110123
+          },
+          {
+            "id": "62babae48ff21a980a7bc8a7",
+            "reference": "Hebrews 11:6-9",
+            "type": "paragraph",
+            "score": 0.6154998474773693,
+            "highlightVerse": 8
+          },
+          {
+            "id": "028724ab9b19b40107986a0c",
+            "reference": "Genesis 24:1-5",
+            "type": "paragraph",
+            "score": 0.6028905789804965
+          },
+          {
+            "id": "e7d1f0b6640b51177801af85",
+            "reference": "Hebrews 11:14-18",
+            "type": "paragraph",
+            "score": 0.5946038355477671,
+            "highlightVerse": 17
+          },
+          {
+            "id": "916e29958ce5b118ed4f927a",
+            "reference": "Genesis 22:1-4",
+            "type": "paragraph",
+            "score": 0.591408671568716,
+            "highlightVerse": 1
+          },
+          {
+            "id": "404fa62df766993c6ede7e31",
+            "reference": "Romans 4:17-20",
+            "type": "paragraph",
+            "score": 0.5824571437134153
+          },
+          {
+            "id": "ed97b38570392beec696d695",
+            "reference": "Genesis 26:5-9",
+            "type": "paragraph",
+            "score": 0.5771999430354606
+          },
+          {
+            "id": "a3de75f2e86120acb1b18b66",
+            "reference": "Acts 7:1-5",
+            "type": "paragraph",
+            "score": 0.570002874002401,
+            "highlightVerse": 3
+          },
+          {
+            "id": "7aaac0cf0022ea8dc6846d6a",
+            "reference": "Hebrews 11:10-13",
+            "type": "paragraph",
+            "score": 0.5674211303153821
+          },
+          {
+            "id": "84df657450456faf5f46537f",
+            "reference": "Genesis 15:6-11",
+            "type": "paragraph",
+            "score": 0.5652234290217996
+          }
+        ],
+        "rust": [
+          {
+            "id": "d23cd22fa9cec3d1ef769a42",
+            "reference": "Genesis 12:1-5",
+            "score": 0.644180953502655,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 8,
+            "id": "62babae48ff21a980a7bc8a7",
+            "reference": "Hebrews 11:6-9",
+            "score": 0.6155005097389221,
+            "type": "paragraph"
+          },
+          {
+            "id": "028724ab9b19b40107986a0c",
+            "reference": "Genesis 24:1-5",
+            "score": 0.6028904914855957,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 17,
+            "id": "e7d1f0b6640b51177801af85",
+            "reference": "Hebrews 11:14-18",
+            "score": 0.5946038365364075,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 1,
+            "id": "916e29958ce5b118ed4f927a",
+            "reference": "Genesis 22:1-4",
+            "score": 0.5914081931114197,
+            "type": "paragraph"
+          },
+          {
+            "id": "404fa62df766993c6ede7e31",
+            "reference": "Romans 4:17-20",
+            "score": 0.5824570059776306,
+            "type": "paragraph"
+          },
+          {
+            "id": "ed97b38570392beec696d695",
+            "reference": "Genesis 26:5-9",
+            "score": 0.5771998763084412,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 3,
+            "id": "a3de75f2e86120acb1b18b66",
+            "reference": "Acts 7:1-5",
+            "score": 0.5700034499168396,
+            "type": "paragraph"
+          },
+          {
+            "id": "7aaac0cf0022ea8dc6846d6a",
+            "reference": "Hebrews 11:10-13",
+            "score": 0.5674212574958801,
+            "type": "paragraph"
+          },
+          {
+            "id": "84df657450456faf5f46537f",
+            "reference": "Genesis 15:6-11",
+            "score": 0.565222978591919,
+            "type": "paragraph"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Early Christian → Early Christian, Clement of Rome",
+      "paid": false,
+      "firstRequestMs": {
+        "legacy": 105.66094599999997,
+        "rust": 12.045855000000302
+      },
+      "legacy": {
+        "medianMs": 8.528895999999804,
+        "p95Ms": 9.125189999998838,
+        "minMs": 8.178435000001627,
+        "samples": [
+          8.178435000001627,
+          8.200668000001315,
+          8.528895999999804,
+          8.44415300000037,
+          9.125189999998838,
+          8.589621000002808,
+          8.574410999997781
+        ]
+      },
+      "rust": {
+        "medianMs": 11.289029999999912,
+        "p95Ms": 25.10242300000027,
+        "minMs": 10.955615999999281,
+        "samples": [
+          10.955615999999281,
+          11.863580000001093,
+          11.111230000002251,
+          25.10242300000027,
+          22.50363699999798,
+          11.15433800000028,
+          11.289029999999912
+        ]
+      },
+      "legacyCount": 10,
+      "rustCount": 10,
+      "speedup": 0.755502997157406,
+      "top10Overlap": 10,
+      "sameOrder": true,
+      "results": {
+        "legacy": [
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.x",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 10",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:28ff58e44ad208d39a2d465f",
+              "rangeLabel": "7-10",
+              "reference": "The First Epistle of Clement to the Corinthians. 10:7-10",
+              "text": "And I will make thy seed as the dust of the earth, [so that] if a man can number the dust of the earth, then shall thy seed also be numbered.” And again [the Scripture] saith, “God brought forth Abram, and spake unto him, Look up now to heaven, and count the stars if thou be able to number them; so shall thy seed be. And Abram believed God, and it was counted to him for righteousness.” On account of his faith and hospitality, a son was given him in his old age; and in the exercise of obedience, he offered him as a sacrifice to God on one of the mountains which He showed him.",
+              "verseEnd": 10,
+              "verseStart": 7
+            },
+            "matchStrength": 3,
+            "score": 0.6403672525477215,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians."
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xxxi",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 31",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:824e4e3886621b014c445104",
+              "rangeLabel": "4-6",
+              "reference": "The First Epistle of Clement to the Corinthians. 31:4-6",
+              "text": "Was it not because he wrought righteousness and truth through faith? Isaac, with perfect confidence, as if knowing what was to happen, cheerfully yielded himself as a sacrifice. Jacob, through reason of his brother, went forth with humility from his own land, and came to Laban and served him; and there was given to him the sceptre of the twelve tribes of Israel.",
+              "verseEnd": 6,
+              "verseStart": 4
+            },
+            "matchStrength": 2,
+            "score": 0.6262617993841931,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians."
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xvii",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 17",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:d445934da64f4a2815c656b0",
+              "rangeLabel": "1-3",
+              "reference": "The First Epistle of Clement to the Corinthians. 17:1-3",
+              "text": "Let us be imitators also of those who in goat-skins and sheep-skins went about proclaiming the coming of Christ; I mean Elijah, Elisha, and Ezekiel among the prophets, with those others to whom a like testimony is borne [in Scripture]. Abraham was specially honoured, and was called the friend of God; yet he, earnestly regarding the glory of God, humbly declared, “I am but dust and ashes.” Moreover, it is thus written of Job, “Job was a righteous man, and blameless, truthful, God-fearing, and one that kept himself from all evil.”",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "matchStrength": 2,
+            "score": 0.5945993783609771,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians."
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.ix",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 9",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:9fbde9ff6a55e544496ba155",
+              "rangeLabel": "1-4",
+              "reference": "The First Epistle of Clement to the Corinthians. 9:1-4",
+              "text": "Wherefore, let us yield obedience to His excellent and glorious will; and imploring His mercy and loving-kindness, while we forsake all fruitless labours and strife, and envy, which leads to death, let us turn and have recourse to His compassions. Let us stedfastly contemplate those who have perfectly ministered to his excellent glory. Let us take (for instance) Enoch, who, being found righteous in obedience, was translated, and death was never known to happen to him. Noah, being found faithful, preached regeneration to the world through his ministry; and the Lord saved by him the animals which, with one accord, entered into the ark.",
+              "verseEnd": 4,
+              "verseStart": 1
+            },
+            "matchStrength": 1,
+            "score": 0.4881558890256431,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians."
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.vi.v",
+            "chapterReference": "The Second Epistle of Clement. 5",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:a7e9038ff1c11ff16c45eec3",
+              "rangeLabel": "1-3",
+              "reference": "The Second Epistle of Clement. 5:1-3",
+              "text": "Wherefore, brethren, leaving [willingly] our sojourn in this present world, let us do the will of Him that called us, and not fear to depart out of this world. For the Lord saith, “Ye shall be as lambs in the midst of wolves.” And Peter answered and said unto Him, “What, then, if the wolves shall tear in pieces the lambs?”",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "matchStrength": 1,
+            "score": 0.4668148183169322,
+            "source": "anf09",
+            "title": "The Second Epistle of Clement."
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xxxv",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 35",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:6bb0160a4f0926c4f385b6ab",
+              "rangeLabel": "7-9",
+              "reference": "The First Epistle of Clement to the Corinthians. 35:7-9",
+              "text": "If our understanding be fixed by faith towards God; if we earnestly seek the things which are pleasing and acceptable to Him; if we do the things which are in harmony with His blameless will; and if we follow the way of truth, casting away from us all unrighteousness and iniquity, along with all covetousness, strife, evil practices, deceit, whispering, and evil-speaking, all hatred of God, pride and haughtiness, vain glory and ambition. For they that do such things are hateful to God; and not only they that do them, but also those that take pleasure in them that do them. For the Scripture saith, “But to the sinner God said, Wherefore dost thou declare my statutes, and take my covenant into thy mouth, seeing thou hatest instruction, and castest my words behind thee?",
+              "verseEnd": 9,
+              "verseStart": 7
+            },
+            "matchStrength": 1,
+            "score": 0.45474791068158776,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians."
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.iv",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 4",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:a6aac1664a2b9c6cd2d2a7b9",
+              "rangeLabel": "1-3",
+              "reference": "The First Epistle of Clement to the Corinthians. 4:1-3",
+              "text": "For thus it is written: “And it came to pass after certain days, that Cain brought of the fruits of the earth a sacrifice unto God; and Abel also brought of the firstlings of his sheep, and of the fat thereof. And God had respect to Abel and to his offerings, but Cain and his sacrifices He did not regard. And Cain was deeply grieved, and his countenance fell.",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "matchStrength": 1,
+            "score": 0.45103719579329293,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians."
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xlvi",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 46",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:5fa32672dcc208bcce26aecf",
+              "rangeLabel": "1-3",
+              "reference": "The First Epistle of Clement to the Corinthians. 46:1-3",
+              "text": "Such examples, therefore, brethren, it is right that we should follow; since it is written, “Cleave to the holy, for those that cleave to them shall [themselves] be made holy.” And again, in another place, [the Scripture] saith, “With a harmless man thou shalt prove thyself harmless, and with an elect man thou shalt be elect, and with a perverse man thou shalt show thyself perverse.” Let us cleave, therefore, to the innocent and righteous, since these are the elect of God.",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "matchStrength": 1,
+            "score": 0.44848663355419655,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians."
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xii",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 12",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:930e969c130898c873129d96",
+              "rangeLabel": "7-11",
+              "reference": "The First Epistle of Clement to the Corinthians. 12:7-11",
+              "text": "And they said to her, “It shall be as thou hast spoken to us. As soon, therefore, as thou knowest that we are at hand, thou shalt gather all thy family under thy roof, and they shall be preserved, but all that are found outside of thy dwelling shall perish.” Moreover, they gave her a sign to this effect, that she should hang forth from her house a scarlet thread. And thus they made it manifest that redemption should flow through the blood of the Lord to all them that believe and hope in God. Ye see, beloved, that there was not only faith, but prophecy, in this woman.",
+              "verseEnd": 11,
+              "verseStart": 7
+            },
+            "matchStrength": 1,
+            "score": 0.44755166839845567,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians."
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xxix",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 29",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:525c7691143fd59c432c0e99",
+              "rangeLabel": "1-4",
+              "reference": "The First Epistle of Clement to the Corinthians. 29:1-4",
+              "text": "Let us then draw near to Him with holiness of spirit, lifting up pure and undefiled hands unto Him, loving our gracious and merciful Father, who has made us partakers in the blessings of His elect. For thus it is written, “When the Most High divided the nations, when He scattered the sons of Adam, He fixed the bounds of the nations according to the number of the angels of God. His people Jacob became the portion of the Lord, and Israel the lot of His inheritance. And in another place [the Scripture] saith, “Behold, the Lord taketh unto Himself a nation out of the midst of the nations, as a man takes the first-fruits of his threshing-floor; and from that nation shall come forth the Most Holy.”",
+              "verseEnd": 4,
+              "verseStart": 1
+            },
+            "matchStrength": 1,
+            "score": 0.4364778729732138,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians."
+          }
+        ],
+        "rust": [
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.x",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 10",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:28ff58e44ad208d39a2d465f",
+              "rangeLabel": "7-10",
+              "reference": "The First Epistle of Clement to the Corinthians. 10:7-10",
+              "text": "And I will make thy seed as the dust of the earth, [so that] if a man can number the dust of the earth, then shall thy seed also be numbered.” And again [the Scripture] saith, “God brought forth Abram, and spake unto him, Look up now to heaven, and count the stars if thou be able to number them; so shall thy seed be. And Abram believed God, and it was counted to him for righteousness.” On account of his faith and hospitality, a son was given him in his old age; and in the exercise of obedience, he offered him as a sacrifice to God on one of the mountains which He showed him.",
+              "verseEnd": 10,
+              "verseStart": 7
+            },
+            "score": 0.6403676271438599,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians.",
+            "matchStrength": 3
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xxxi",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 31",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:824e4e3886621b014c445104",
+              "rangeLabel": "4-6",
+              "reference": "The First Epistle of Clement to the Corinthians. 31:4-6",
+              "text": "Was it not because he wrought righteousness and truth through faith? Isaac, with perfect confidence, as if knowing what was to happen, cheerfully yielded himself as a sacrifice. Jacob, through reason of his brother, went forth with humility from his own land, and came to Laban and served him; and there was given to him the sceptre of the twelve tribes of Israel.",
+              "verseEnd": 6,
+              "verseStart": 4
+            },
+            "score": 0.6262617111206055,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians.",
+            "matchStrength": 2
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xvii",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 17",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:d445934da64f4a2815c656b0",
+              "rangeLabel": "1-3",
+              "reference": "The First Epistle of Clement to the Corinthians. 17:1-3",
+              "text": "Let us be imitators also of those who in goat-skins and sheep-skins went about proclaiming the coming of Christ; I mean Elijah, Elisha, and Ezekiel among the prophets, with those others to whom a like testimony is borne [in Scripture]. Abraham was specially honoured, and was called the friend of God; yet he, earnestly regarding the glory of God, humbly declared, “I am but dust and ashes.” Moreover, it is thus written of Job, “Job was a righteous man, and blameless, truthful, God-fearing, and one that kept himself from all evil.”",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "score": 0.5945992469787598,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians.",
+            "matchStrength": 2
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.ix",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 9",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:9fbde9ff6a55e544496ba155",
+              "rangeLabel": "1-4",
+              "reference": "The First Epistle of Clement to the Corinthians. 9:1-4",
+              "text": "Wherefore, let us yield obedience to His excellent and glorious will; and imploring His mercy and loving-kindness, while we forsake all fruitless labours and strife, and envy, which leads to death, let us turn and have recourse to His compassions. Let us stedfastly contemplate those who have perfectly ministered to his excellent glory. Let us take (for instance) Enoch, who, being found righteous in obedience, was translated, and death was never known to happen to him. Noah, being found faithful, preached regeneration to the world through his ministry; and the Lord saved by him the animals which, with one accord, entered into the ark.",
+              "verseEnd": 4,
+              "verseStart": 1
+            },
+            "score": 0.4881552457809448,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians.",
+            "matchStrength": 1
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.vi.v",
+            "chapterReference": "The Second Epistle of Clement. 5",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:a7e9038ff1c11ff16c45eec3",
+              "rangeLabel": "1-3",
+              "reference": "The Second Epistle of Clement. 5:1-3",
+              "text": "Wherefore, brethren, leaving [willingly] our sojourn in this present world, let us do the will of Him that called us, and not fear to depart out of this world. For the Lord saith, “Ye shall be as lambs in the midst of wolves.” And Peter answered and said unto Him, “What, then, if the wolves shall tear in pieces the lambs?”",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "score": 0.46681466698646545,
+            "source": "anf09",
+            "title": "The Second Epistle of Clement.",
+            "matchStrength": 1
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xxxv",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 35",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:6bb0160a4f0926c4f385b6ab",
+              "rangeLabel": "7-9",
+              "reference": "The First Epistle of Clement to the Corinthians. 35:7-9",
+              "text": "If our understanding be fixed by faith towards God; if we earnestly seek the things which are pleasing and acceptable to Him; if we do the things which are in harmony with His blameless will; and if we follow the way of truth, casting away from us all unrighteousness and iniquity, along with all covetousness, strife, evil practices, deceit, whispering, and evil-speaking, all hatred of God, pride and haughtiness, vain glory and ambition. For they that do such things are hateful to God; and not only they that do them, but also those that take pleasure in them that do them. For the Scripture saith, “But to the sinner God said, Wherefore dost thou declare my statutes, and take my covenant into thy mouth, seeing thou hatest instruction, and castest my words behind thee?",
+              "verseEnd": 9,
+              "verseStart": 7
+            },
+            "score": 0.4547480046749115,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians.",
+            "matchStrength": 1
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.iv",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 4",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:a6aac1664a2b9c6cd2d2a7b9",
+              "rangeLabel": "1-3",
+              "reference": "The First Epistle of Clement to the Corinthians. 4:1-3",
+              "text": "For thus it is written: “And it came to pass after certain days, that Cain brought of the fruits of the earth a sacrifice unto God; and Abel also brought of the firstlings of his sheep, and of the fat thereof. And God had respect to Abel and to his offerings, but Cain and his sacrifices He did not regard. And Cain was deeply grieved, and his countenance fell.",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "score": 0.45103728771209717,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians.",
+            "matchStrength": 1
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xlvi",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 46",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:5fa32672dcc208bcce26aecf",
+              "rangeLabel": "1-3",
+              "reference": "The First Epistle of Clement to the Corinthians. 46:1-3",
+              "text": "Such examples, therefore, brethren, it is right that we should follow; since it is written, “Cleave to the holy, for those that cleave to them shall [themselves] be made holy.” And again, in another place, [the Scripture] saith, “With a harmless man thou shalt prove thyself harmless, and with an elect man thou shalt be elect, and with a perverse man thou shalt show thyself perverse.” Let us cleave, therefore, to the innocent and righteous, since these are the elect of God.",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "score": 0.4484865069389343,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians.",
+            "matchStrength": 1
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xii",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 12",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:930e969c130898c873129d96",
+              "rangeLabel": "7-11",
+              "reference": "The First Epistle of Clement to the Corinthians. 12:7-11",
+              "text": "And they said to her, “It shall be as thou hast spoken to us. As soon, therefore, as thou knowest that we are at hand, thou shalt gather all thy family under thy roof, and they shall be preserved, but all that are found outside of thy dwelling shall perish.” Moreover, they gave her a sign to this effect, that she should hang forth from her house a scarlet thread. And thus they made it manifest that redemption should flow through the blood of the Lord to all them that believe and hope in God. Ye see, beloved, that there was not only faith, but prophecy, in this woman.",
+              "verseEnd": 11,
+              "verseStart": 7
+            },
+            "score": 0.4475512206554413,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians.",
+            "matchStrength": 1
+          },
+          {
+            "author": "Clement of Rome",
+            "chapterId": "anf09:xii.iv.xxix",
+            "chapterReference": "The First Epistle of Clement to the Corinthians. 29",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:525c7691143fd59c432c0e99",
+              "rangeLabel": "1-4",
+              "reference": "The First Epistle of Clement to the Corinthians. 29:1-4",
+              "text": "Let us then draw near to Him with holiness of spirit, lifting up pure and undefiled hands unto Him, loving our gracious and merciful Father, who has made us partakers in the blessings of His elect. For thus it is written, “When the Most High divided the nations, when He scattered the sons of Adam, He fixed the bounds of the nations according to the number of the angels of God. His people Jacob became the portion of the Lord, and Israel the lot of His inheritance. And in another place [the Scripture] saith, “Behold, the Lord taketh unto Himself a nation out of the midst of the nations, as a man takes the first-fruits of his threshing-floor; and from that nation shall come forth the Most Holy.”",
+              "verseEnd": 4,
+              "verseStart": 1
+            },
+            "score": 0.43647825717926025,
+            "source": "anf09",
+            "title": "The First Epistle of Clement to the Corinthians.",
+            "matchStrength": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "Theme Scripture: fear and comfort",
+      "paid": true,
+      "firstRequestMs": {
+        "legacy": 7822.016381000001,
+        "rust": 337.04099800000404
+      },
+      "legacy": {
+        "medianMs": 336.90053400000033,
+        "p95Ms": 385.4558429999961,
+        "minMs": 280.14910399999644,
+        "samples": [
+          336.90053400000033,
+          280.14910399999644,
+          385.4558429999961
+        ]
+      },
+      "rust": {
+        "medianMs": 226.14667899999768,
+        "p95Ms": 277.9876579999982,
+        "minMs": 209.94016700000066,
+        "samples": [
+          209.94016700000066,
+          277.9876579999982,
+          226.14667899999768
+        ]
+      },
+      "legacyCount": 10,
+      "rustCount": 10,
+      "speedup": 1.4897434509750365,
+      "top10Overlap": 10,
+      "sameOrder": true,
+      "results": {
+        "legacy": [
+          {
+            "id": "6264f968e8a050386f2e3dfc",
+            "reference": "Proverbs 15:33",
+            "type": "paragraph",
+            "score": 0.2948725619779569
+          },
+          {
+            "id": "068b237c979c38e9a34c033b",
+            "reference": "Proverbs 3:22-28",
+            "type": "paragraph",
+            "score": 0.29224711518145124,
+            "highlightVerse": 24
+          },
+          {
+            "id": "1a9c6f8dd99eda408f078d6d",
+            "reference": "Job 7:13-19",
+            "type": "paragraph",
+            "score": 0.27834179515580115,
+            "highlightVerse": 14
+          },
+          {
+            "id": "a8fe49d53bf1d71387d54fe0",
+            "reference": "Psalms 34:8-14",
+            "type": "paragraph",
+            "score": 0.2756395381564063
+          },
+          {
+            "id": "667da68ee784564d79c88c7f",
+            "reference": "Psalms 27:1-4",
+            "type": "paragraph",
+            "score": 0.25995590028942567
+          },
+          {
+            "id": "dd698a44956fab5632829e8a",
+            "reference": "Proverbs 15:14-19",
+            "type": "paragraph",
+            "score": 0.25782956726139866,
+            "highlightVerse": 16
+          },
+          {
+            "id": "8000efca1a808891b5229ec5",
+            "reference": "Psalms 91:1-6",
+            "type": "paragraph",
+            "score": 0.254127562011213,
+            "highlightVerse": 5
+          },
+          {
+            "id": "0831f46666659462a3c64387",
+            "reference": "Isaiah 8:10-14",
+            "type": "paragraph",
+            "score": 0.2516679074225581
+          },
+          {
+            "id": "e71d22b8b0b08ea6c380c18b",
+            "reference": "Proverbs 25:19-24",
+            "type": "paragraph",
+            "score": 0.24913934668211937,
+            "highlightVerse": 19
+          },
+          {
+            "id": "c869ce8c5b2985d7c82e2bc2",
+            "reference": "Job 5:21-26",
+            "type": "paragraph",
+            "score": 0.24795316464030875,
+            "highlightVerse": 22
+          }
+        ],
+        "rust": [
+          {
+            "id": "6264f968e8a050386f2e3dfc",
+            "reference": "Proverbs 15:33",
+            "score": 0.2948724627494812,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 24,
+            "id": "068b237c979c38e9a34c033b",
+            "reference": "Proverbs 3:22-28",
+            "score": 0.29224690794944763,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 14,
+            "id": "1a9c6f8dd99eda408f078d6d",
+            "reference": "Job 7:13-19",
+            "score": 0.27834177017211914,
+            "type": "paragraph"
+          },
+          {
+            "id": "a8fe49d53bf1d71387d54fe0",
+            "reference": "Psalms 34:8-14",
+            "score": 0.2756396234035492,
+            "type": "paragraph"
+          },
+          {
+            "id": "667da68ee784564d79c88c7f",
+            "reference": "Psalms 27:1-4",
+            "score": 0.259956032037735,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 16,
+            "id": "dd698a44956fab5632829e8a",
+            "reference": "Proverbs 15:14-19",
+            "score": 0.2578296661376953,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 5,
+            "id": "8000efca1a808891b5229ec5",
+            "reference": "Psalms 91:1-6",
+            "score": 0.25412750244140625,
+            "type": "paragraph"
+          },
+          {
+            "id": "0831f46666659462a3c64387",
+            "reference": "Isaiah 8:10-14",
+            "score": 0.25166797637939453,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 19,
+            "id": "e71d22b8b0b08ea6c380c18b",
+            "reference": "Proverbs 25:19-24",
+            "score": 0.24913941323757172,
+            "type": "paragraph"
+          },
+          {
+            "highlightVerse": 22,
+            "id": "c869ce8c5b2985d7c82e2bc2",
+            "reference": "Job 5:21-26",
+            "score": 0.2479531466960907,
+            "type": "paragraph"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Theme Early Christian: fear and comfort",
+      "paid": true,
+      "firstRequestMs": {
+        "legacy": 2430.331029000001,
+        "rust": 1329.2024349999992
+      },
+      "legacy": {
+        "medianMs": 311.733266999996,
+        "p95Ms": 483.3683930000043,
+        "minMs": 310.03138000000035,
+        "samples": [
+          310.03138000000035,
+          311.733266999996,
+          483.3683930000043
+        ]
+      },
+      "rust": {
+        "medianMs": 268.0647420000023,
+        "p95Ms": 307.68173399999796,
+        "minMs": 264.2512459999998,
+        "samples": [
+          264.2512459999998,
+          307.68173399999796,
+          268.0647420000023
+        ]
+      },
+      "legacyCount": 10,
+      "rustCount": 10,
+      "speedup": 1.162902904254351,
+      "top10Overlap": 8,
+      "sameOrder": false,
+      "results": {
+        "legacy": [
+          {
+            "author": "John of Damascus",
+            "chapterId": "npnf209:iii.iv.ii.xv",
+            "chapterReference": "An Exact Exposition of the Orthodox Faith. 29",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:6970045477b518e1c075c884",
+              "rangeLabel": "1-3",
+              "reference": "An Exact Exposition of the Orthodox Faith. 29:1-3",
+              "text": "Fear is divided into six varieties: viz., shrinking, shame, disgrace, consternation, panic, anxiety. Shrinking is fear of some act about to take place. Shame is fear arising from the anticipation of blame: and this is the highest form of the affection.",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "matchStrength": 1,
+            "score": 0.4527476335013766,
+            "source": "npnf209",
+            "title": "An Exact Exposition of the Orthodox Faith."
+          },
+          {
+            "author": "John of Damascus",
+            "chapterId": "npnf209:iii.iv.iii.xxiii",
+            "chapterReference": "An Exact Exposition of the Orthodox Faith. 67",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:e50f4c7361b0b2e780ef8435",
+              "rangeLabel": "1-3",
+              "reference": "An Exact Exposition of the Orthodox Faith. 67:1-3",
+              "text": "The word fear has a double meaning. For fear is natural when the soul is unwilling to be separated from the body, on account of the natural sympathy and close relationship planted in it in the beginning by the Creator, which makes it fear and struggle against death and pray for an escape from it. It may be defined thus: natural fear is the force whereby we cling to being with shrinking.",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "matchStrength": 1,
+            "score": 0.4397002054039602,
+            "source": "npnf209",
+            "title": "An Exact Exposition of the Orthodox Faith."
+          },
+          {
+            "author": "Augustine of Hippo",
+            "chapterId": "npnf102:iv.XIV.7",
+            "chapterReference": "City of God 380",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:2f8c4d87b8da6d7e1a5e2f45",
+              "rangeLabel": "28-31",
+              "reference": "City of God 380:28-31",
+              "text": "Fear is used in a good sense by the apostle when he says, “Work out your salvation with fear and trembling.” And, “Be not high-minded, but fear.” And, “I fear, lest by any means, as the serpent beguiled Eve through his subtilty, so your minds should be corrupted from the simplicity that is in Christ.” But with respect to sadness, which Cicero prefer to calls sickness (œgritudo), and Virgil pain (dolor) (as he says, “Dolent gaudentque”), but which I prefer to call sorrow, because sickness and pain are more commonly used to express bodily suffering,—with respect to this emotion, I say, the question whether it can be used in a good sense is more difficult.",
+              "verseEnd": 31,
+              "verseStart": 28
+            },
+            "matchStrength": 1,
+            "score": 0.42429251626829073,
+            "source": "npnf102",
+            "title": "City of God"
+          },
+          {
+            "author": "Tertullian",
+            "chapterId": "anf03:v.x.xii",
+            "chapterReference": "Scorpiace. 12",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:c633d8d9cebc979c4a4fe605",
+              "rangeLabel": "10-12",
+              "reference": "Scorpiace. 12:10-12",
+              "text": "What fear would it be better to understand (as here meant), than that which gives rise to denial? What love does he assert to be perfect, but that which puts fear to flight, and gives courage to confess? What penalty will he appoint as the punishment of fear, but that which he who denies is about to pay, who has to be slain, body and soul, in hell?",
+              "verseEnd": 12,
+              "verseStart": 10
+            },
+            "matchStrength": 1,
+            "score": 0.39876347893286124,
+            "source": "anf03",
+            "title": "Scorpiace."
+          },
+          {
+            "author": "Augustine of Hippo",
+            "chapterId": "npnf103:v.iii.xl",
+            "chapterReference": "Of Holy Virginity. 39",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:5f45173a737622cebdac827f",
+              "rangeLabel": "16-20",
+              "reference": "Of Holy Virginity. 39:16-20",
+              "text": "They are different sayings, “Whither shall I go away from Thy Spirit, and from Thy face whither shall I flee?” and, “One thing I have sought of the Lord, this I will seek after; that I may dwell in the house of the Lord through all the days of my life, that I may consider the delight of the Lord, that I be protected in His temple:” and, “Turn not away Thy face from me:” and, “My soul longeth and fainteth unto the courts of the Lord.” Those sayings let him have had, who dared not to lift up his eyes to heaven; and she who was watering with tears His feet, in order to obtain pardon for her grievous sins; but these do thou have, who art careful about the things of the Lord, to be holy both in body and spirit. With those sayings there companies fear which hath torment, which perfect charity casteth forth; but with these sayings there companies chaste fear of the Lord, that abideth for ever and ever. And to both kinds it must be said, “Be not thou high-minded, but fear;” that man neither of defense of his sins, nor of presumption of righteousness set himself up. For Paul also himself, who saith, “For ye have not received the spirit of bondage again to fear;” yet, fear being a companion of charity, saith, “With fear and much trembling was I towards you:” and that saying, which I have mentioned, that the engrafted wild olive tree be not proud against the broken branches of the olive tree, himself made use of, saying, “Be not thou high-minded, but fear;” himself admonishing all the members of Christ in general, saith, “With fear and trembling work out your own salvation; for it is God Who worketh in you both to will and to do, according to His good pleasure;” that it seem not to pertain unto the Old Testament what is written, “Serve the Lord in fear, and rejoice unto Him with trembling.”",
+              "verseEnd": 20,
+              "verseStart": 16
+            },
+            "matchStrength": 1,
+            "score": 0.3837154020267552,
+            "source": "npnf103",
+            "title": "Of Holy Virginity."
+          },
+          {
+            "author": "Augustine of Hippo",
+            "chapterId": "npnf105:xvi.vi.x",
+            "chapterReference": "On Marriage and Concupiscence. 52",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:e6f3d30b4e50f1db909ab1af",
+              "rangeLabel": "16-18",
+              "reference": "On Marriage and Concupiscence. 52:16-18",
+              "text": "Entertaining such impious views as these, of what use is it that you fearlessly face that which is enacted for you in order to induce salutary fear and to treat you as a human being, and not as that poor animal of yours which was surrounded with the coloured feathers to be driven into the hunting toils? Need was that you should hold the truth, and, on account of zeal for it, have no fear; but, as things are, you evade fear in such wise that, if you feared, you would rather run away from the net of the malignant one than run into it. The reason why your catholic mother alarms you is, because she fears for both you and others from you; and if by the help of her sons who possess any authority in the State she acts with a view to make you afraid, she does so, not from cruelty, but from love.",
+              "verseEnd": 18,
+              "verseStart": 16
+            },
+            "matchStrength": 1,
+            "score": 0.3830867571734173,
+            "source": "npnf105",
+            "title": "On Marriage and Concupiscence."
+          },
+          {
+            "author": "Tertullian",
+            "chapterId": "anf04:iii.iii.ii.ii",
+            "chapterReference": "On the Apparel of Women - Book II 2",
+            "date": "third century",
+            "highlightPassage": {
+              "id": "ecw:0a5c126c38ffaae9eb8e6dfb",
+              "rangeLabel": "4-6",
+              "reference": "On the Apparel of Women - Book II 2:4-6",
+              "text": "Fear is the foundation of salvation; presumption is an impediment to fear. More useful, then, is it to apprehend that we may possibly fail, than to presume that we cannot; for apprehending will lead us to fear, fearing to caution, and caution to salvation. On the other hand, if we presume, there will be neither fear nor caution to save us.",
+              "verseEnd": 6,
+              "verseStart": 4
+            },
+            "matchStrength": 1,
+            "score": 0.37581430124432136,
+            "source": "anf04",
+            "title": "On the Apparel of Women - Book II"
+          },
+          {
+            "author": "Augustine of Hippo",
+            "chapterId": "npnf102:iv.XIV.9",
+            "chapterReference": "City of God 382",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:9b0d11b7071d37f0955ac774",
+              "rangeLabel": "40-42",
+              "reference": "City of God 382:40-42",
+              "text": "For where the love of acquired good is unchangeable, there certainly the fear that avoids evil is, if I may say so, free from anxiety. For under the name of “clean fear” David signifies that will by which we shall necessarily shrink from sin, and guard against it, not with the anxiety of weakness, which fears that we may strongly sin, but with the tranquillity of perfect love. Or if no kind of fear at all shall exist in that most imperturbable security of perpetual and blissful delights, then the expression, “The fear of the Lord is clean, enduring for ever,” must be taken in the same sense as that other, “The patience of the poor shall not perish for ever.”",
+              "verseEnd": 42,
+              "verseStart": 40
+            },
+            "matchStrength": 1,
+            "score": 0.37388380044024205,
+            "source": "npnf102",
+            "title": "City of God"
+          },
+          {
+            "author": "Augustine of Hippo",
+            "chapterId": "npnf101:vi.VII.V",
+            "chapterReference": "The Confessions 90",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:4a7585289d992f17bffb9823",
+              "rangeLabel": "13-15",
+              "reference": "The Confessions 90:13-15",
+              "text": "Or if we fear it needlessly, then surely is that fear evil whereby the heart is unnecessarily pricked and tormented,—and so much a greater evil, as we have naught to fear, and yet do fear. Therefore either that is evil which we fear, or the act of fearing is in itself evil. Whence, therefore, is it, seeing that God, who is good, hath made all these things good?",
+              "verseEnd": 15,
+              "verseStart": 13
+            },
+            "matchStrength": 1,
+            "score": 0.37002055461568845,
+            "source": "npnf101",
+            "title": "The Confessions"
+          },
+          {
+            "author": "Tertullian",
+            "chapterId": "anf03:iv.x.iv",
+            "chapterReference": "The Soul's Testimony. 4",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:0a9a5d9221bd3b9eb3b46127",
+              "rangeLabel": "22-24",
+              "reference": "The Soul's Testimony. 4:22-24",
+              "text": "Thy dread of it is the proof that thou art aware of its evil. Thou wouldst never think it evil—thou wouldst have no fear of it at all—if thou wert not sure that after it there is something to make it evil, and so a thing of terror. Let us leave unnoted at this time that natural way of fearing death.",
+              "verseEnd": 24,
+              "verseStart": 22
+            },
+            "matchStrength": 1,
+            "score": 0.36732907503526147,
+            "source": "anf03",
+            "title": "The Soul's Testimony."
+          }
+        ],
+        "rust": [
+          {
+            "author": "John of Damascus",
+            "chapterId": "npnf209:iii.iv.ii.xv",
+            "chapterReference": "An Exact Exposition of the Orthodox Faith. 29",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:6970045477b518e1c075c884",
+              "rangeLabel": "1-3",
+              "reference": "An Exact Exposition of the Orthodox Faith. 29:1-3",
+              "text": "Fear is divided into six varieties: viz., shrinking, shame, disgrace, consternation, panic, anxiety. Shrinking is fear of some act about to take place. Shame is fear arising from the anticipation of blame: and this is the highest form of the affection.",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "score": 0.4527474343776703,
+            "source": "npnf209",
+            "title": "An Exact Exposition of the Orthodox Faith.",
+            "matchStrength": 1
+          },
+          {
+            "author": "John of Damascus",
+            "chapterId": "npnf209:iii.iv.iii.xxiii",
+            "chapterReference": "An Exact Exposition of the Orthodox Faith. 67",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:e50f4c7361b0b2e780ef8435",
+              "rangeLabel": "1-3",
+              "reference": "An Exact Exposition of the Orthodox Faith. 67:1-3",
+              "text": "The word fear has a double meaning. For fear is natural when the soul is unwilling to be separated from the body, on account of the natural sympathy and close relationship planted in it in the beginning by the Creator, which makes it fear and struggle against death and pray for an escape from it. It may be defined thus: natural fear is the force whereby we cling to being with shrinking.",
+              "verseEnd": 3,
+              "verseStart": 1
+            },
+            "score": 0.439700186252594,
+            "source": "npnf209",
+            "title": "An Exact Exposition of the Orthodox Faith.",
+            "matchStrength": 1
+          },
+          {
+            "author": "Ambrose of Milan",
+            "chapterId": "npnf210:iv.i.iii.vii",
+            "chapterReference": "On the Duties of the Clergy. 58",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:111fde71afd2421eed288239",
+              "rangeLabel": "58-60",
+              "reference": "On the Duties of the Clergy. 58:58-60",
+              "text": "Thus David failed not, for he was dear to all, and wished to be loved rather than feared by his subjects. Fear keeps the watch of temporal protection, but knows not how to keep guard permanently. And so where fear has departed, boldness often creeps in; for fear does not force confidence but affection calls it forth.",
+              "verseEnd": 60,
+              "verseStart": 58
+            },
+            "score": 0.424538791179657,
+            "source": "npnf210",
+            "title": "On the Duties of the Clergy.",
+            "matchStrength": 1
+          },
+          {
+            "author": "Augustine of Hippo",
+            "chapterId": "npnf102:iv.XIV.7",
+            "chapterReference": "City of God 380",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:2f8c4d87b8da6d7e1a5e2f45",
+              "rangeLabel": "28-31",
+              "reference": "City of God 380:28-31",
+              "text": "Fear is used in a good sense by the apostle when he says, “Work out your salvation with fear and trembling.” And, “Be not high-minded, but fear.” And, “I fear, lest by any means, as the serpent beguiled Eve through his subtilty, so your minds should be corrupted from the simplicity that is in Christ.” But with respect to sadness, which Cicero prefer to calls sickness (œgritudo), and Virgil pain (dolor) (as he says, “Dolent gaudentque”), but which I prefer to call sorrow, because sickness and pain are more commonly used to express bodily suffering,—with respect to this emotion, I say, the question whether it can be used in a good sense is more difficult.",
+              "verseEnd": 31,
+              "verseStart": 28
+            },
+            "score": 0.42429229617118835,
+            "source": "npnf102",
+            "title": "City of God",
+            "matchStrength": 1
+          },
+          {
+            "author": "Augustine of Hippo",
+            "chapterId": "npnf102:iv.XIV.6",
+            "chapterReference": "City of God 379",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:4c5dac4d8b433ab22a7db6ab",
+              "rangeLabel": "4-6",
+              "reference": "City of God 379:4-6",
+              "text": "And what are fear and sadness but a volition of aversion from the things which we do not wish? But when consent takes the form of seeking to possess the things we wish, this is called desire; and when consent takes the form of enjoying the things we wish, this is called joy. In like manner, when we turn with aversion from that which we do not wish to happen, this volition is termed fear; and when we turn away from that which has happened against our will, this act of will is called sorrow.",
+              "verseEnd": 6,
+              "verseStart": 4
+            },
+            "score": 0.4045387804508209,
+            "source": "npnf102",
+            "title": "City of God",
+            "matchStrength": 1
+          },
+          {
+            "author": "Tertullian",
+            "chapterId": "anf03:v.x.xii",
+            "chapterReference": "Scorpiace. 12",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:c633d8d9cebc979c4a4fe605",
+              "rangeLabel": "10-12",
+              "reference": "Scorpiace. 12:10-12",
+              "text": "What fear would it be better to understand (as here meant), than that which gives rise to denial? What love does he assert to be perfect, but that which puts fear to flight, and gives courage to confess? What penalty will he appoint as the punishment of fear, but that which he who denies is about to pay, who has to be slain, body and soul, in hell?",
+              "verseEnd": 12,
+              "verseStart": 10
+            },
+            "score": 0.3987635374069214,
+            "source": "anf03",
+            "title": "Scorpiace.",
+            "matchStrength": 1
+          },
+          {
+            "author": "Augustine of Hippo",
+            "chapterId": "npnf103:v.iii.xl",
+            "chapterReference": "Of Holy Virginity. 39",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:5f45173a737622cebdac827f",
+              "rangeLabel": "16-20",
+              "reference": "Of Holy Virginity. 39:16-20",
+              "text": "They are different sayings, “Whither shall I go away from Thy Spirit, and from Thy face whither shall I flee?” and, “One thing I have sought of the Lord, this I will seek after; that I may dwell in the house of the Lord through all the days of my life, that I may consider the delight of the Lord, that I be protected in His temple:” and, “Turn not away Thy face from me:” and, “My soul longeth and fainteth unto the courts of the Lord.” Those sayings let him have had, who dared not to lift up his eyes to heaven; and she who was watering with tears His feet, in order to obtain pardon for her grievous sins; but these do thou have, who art careful about the things of the Lord, to be holy both in body and spirit. With those sayings there companies fear which hath torment, which perfect charity casteth forth; but with these sayings there companies chaste fear of the Lord, that abideth for ever and ever. And to both kinds it must be said, “Be not thou high-minded, but fear;” that man neither of defense of his sins, nor of presumption of righteousness set himself up. For Paul also himself, who saith, “For ye have not received the spirit of bondage again to fear;” yet, fear being a companion of charity, saith, “With fear and much trembling was I towards you:” and that saying, which I have mentioned, that the engrafted wild olive tree be not proud against the broken branches of the olive tree, himself made use of, saying, “Be not thou high-minded, but fear;” himself admonishing all the members of Christ in general, saith, “With fear and trembling work out your own salvation; for it is God Who worketh in you both to will and to do, according to His good pleasure;” that it seem not to pertain unto the Old Testament what is written, “Serve the Lord in fear, and rejoice unto Him with trembling.”",
+              "verseEnd": 20,
+              "verseStart": 16
+            },
+            "score": 0.3837154805660248,
+            "source": "npnf103",
+            "title": "Of Holy Virginity.",
+            "matchStrength": 1
+          },
+          {
+            "author": "Augustine of Hippo",
+            "chapterId": "npnf105:xvi.vi.x",
+            "chapterReference": "On Marriage and Concupiscence. 52",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:e6f3d30b4e50f1db909ab1af",
+              "rangeLabel": "16-18",
+              "reference": "On Marriage and Concupiscence. 52:16-18",
+              "text": "Entertaining such impious views as these, of what use is it that you fearlessly face that which is enacted for you in order to induce salutary fear and to treat you as a human being, and not as that poor animal of yours which was surrounded with the coloured feathers to be driven into the hunting toils? Need was that you should hold the truth, and, on account of zeal for it, have no fear; but, as things are, you evade fear in such wise that, if you feared, you would rather run away from the net of the malignant one than run into it. The reason why your catholic mother alarms you is, because she fears for both you and others from you; and if by the help of her sons who possess any authority in the State she acts with a view to make you afraid, she does so, not from cruelty, but from love.",
+              "verseEnd": 18,
+              "verseStart": 16
+            },
+            "score": 0.3830867409706116,
+            "source": "npnf105",
+            "title": "On Marriage and Concupiscence.",
+            "matchStrength": 1
+          },
+          {
+            "author": "Tertullian",
+            "chapterId": "anf04:iii.iii.ii.ii",
+            "chapterReference": "On the Apparel of Women - Book II 2",
+            "date": "third century",
+            "highlightPassage": {
+              "id": "ecw:0a5c126c38ffaae9eb8e6dfb",
+              "rangeLabel": "4-6",
+              "reference": "On the Apparel of Women - Book II 2:4-6",
+              "text": "Fear is the foundation of salvation; presumption is an impediment to fear. More useful, then, is it to apprehend that we may possibly fail, than to presume that we cannot; for apprehending will lead us to fear, fearing to caution, and caution to salvation. On the other hand, if we presume, there will be neither fear nor caution to save us.",
+              "verseEnd": 6,
+              "verseStart": 4
+            },
+            "score": 0.37581419944763184,
+            "source": "anf04",
+            "title": "On the Apparel of Women - Book II",
+            "matchStrength": 1
+          },
+          {
+            "author": "Augustine of Hippo",
+            "chapterId": "npnf102:iv.XIV.9",
+            "chapterReference": "City of God 382",
+            "date": null,
+            "highlightPassage": {
+              "id": "ecw:9b0d11b7071d37f0955ac774",
+              "rangeLabel": "40-42",
+              "reference": "City of God 382:40-42",
+              "text": "For where the love of acquired good is unchangeable, there certainly the fear that avoids evil is, if I may say so, free from anxiety. For under the name of “clean fear” David signifies that will by which we shall necessarily shrink from sin, and guard against it, not with the anxiety of weakness, which fears that we may strongly sin, but with the tranquillity of perfect love. Or if no kind of fear at all shall exist in that most imperturbable security of perpetual and blissful delights, then the expression, “The fear of the Lord is clean, enduring for ever,” must be taken in the same sense as that other, “The patience of the poor shall not perish for ever.”",
+              "verseEnd": 42,
+              "verseStart": 40
+            },
+            "score": 0.37388402223587036,
+            "source": "npnf102",
+            "title": "City of God",
+            "matchStrength": 1
+          }
+        ]
+      }
+    }
+  ]
+}
