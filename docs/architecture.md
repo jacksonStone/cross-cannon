@@ -28,8 +28,10 @@ VS Code also renders this file with an extension such as
 
 ```mermaid
 flowchart TD
-  User["Browser User"] --> Root["Index Route /"]
-  User --> ReaderRoute["Reader Route /reader/:passageId"]
+  User["Browser User"] --> EdgeProxy["Go reverse proxy"]
+  EdgeProxy -->|"React pages / data / actions"| Root["Index Route /"]
+  EdgeProxy --> ReaderRoute["Reader Route /reader/:passageId"]
+  EdgeProxy -->|"/r/api"| Rust
 
   Root --> Loader[Index loader]
   Root --> Action[Index action]
@@ -44,8 +46,8 @@ flowchart TD
 
   ScriptureLibrary --> BrowserCache["/scripture-cache/:version.json"]
   BrowserCache --> FullPassageCache["Full browser passage cache"]
-  BrowserCache --> ResourceBridge["Resource-first streaming transport"]
-  ResourceBridge --> RustResources["Rust /r/api/resources"]
+  BrowserCache --> EdgeProxy
+  EdgeProxy -->|"Text / metadata / audio paths"| RustResources["Rust /r/api/resources"]
   RustResources --> ExistingFiles["Existing text, gzip, metadata and recordings"]
   ScriptureLibrary --> PassageLookup["Shared passageLookup Map"]
 

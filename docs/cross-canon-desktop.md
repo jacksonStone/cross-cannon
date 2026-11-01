@@ -114,16 +114,19 @@ allowing readers to open while search reports an explicit service error.
 
 All non-React resource handlers also run in Rust under `/r/api/resources/`:
 Scripture cache JSON/gzip, Early Christian metadata/alignment and Chapter JSON,
-and original/continuous audio. Existing browser URLs remain unchanged through
-small Remix streaming transport shims. The shims preserve raw compressed bytes,
-range headers, content lengths, and cancellation; Rust streams files in 64 KiB
+and original/continuous audio. The production Go reverse proxy sends `/r/api`
+directly to loopback port 3006 and rewrites existing browser resource URLs into
+the Rust resource namespace. Node is bypassed. Raw compressed bytes, range
+headers, content lengths and cache headers are preserved. Rust streams files in 64 KiB
 chunks instead of loading recordings into memory. Cache headers and ETags remain
 intact. The localhost-only service-worker test wrapper is also generated in Rust
 and remains unavailable on the public host. Resource responses carry
-`X-Cross-Canon-Resource: rust`.
+`X-Cross-Canon-Resource: rust`; direct edge responses also carry
+`X-Cross-Canon-Upstream: rust`.
 
-`scripts/serve-web.mjs` routes resources before static middleware so copies in
-`public/` or `build/client/` cannot bypass Rust. React page rendering, page
+`scripts/serve-web.mjs` retains resource forwarding before static middleware for
+local development and direct port-3005 compatibility. These shims are unused by
+the production API/resource edge routes. React page rendering, page
 loader/action orchestration and static build assets remain in Remix/Node.
 Production starts `build/server/serve.mjs`; the compiled-build release installs
 a systemd drop-in and rolls it back with the server bundle if smoke tests fail.
@@ -162,11 +165,18 @@ The shared workspace release recipe must include the existing
 allowlist correction is recorded in `rust/deploy/ship-audio-metadata.patch`
 and was applied to `../administrative_stuff/ship.py` for this release.
 
-The second command is the standard web release. The resource route
-`app/routes/r.api.$.ts` forwards `/r/api` to the Rust service through the existing
-host proxy. This is only an HTTP bridge: all library, search, embedding, and
-ranking logic lives in Rust. The web reader search actions also call the Rust
-service directly over loopback; page rendering remains in Remix.
+The second command is the standard web release. Public API and resource requests
+go from the Go edge directly to Rust. React page loaders/actions remain in Remix;
+their search actions call Rust over loopback. The resource route
+`app/routes/r.api.$.ts` remains a local compatibility bridge.
+
+Direct routing is owned by `../reverse_proxy_extended/cross_canon.go`. Its
+Cross Canon paths take precedence over shared reserved suffix handlers, while
+other domains and React paths retain their existing upstreams. Keep
+`DOMAINS_TO_PORTS` mapping Cross Canon to port 3005 for React; the path rules use
+Rust port 3006. Deploy proxy changes separately with
+`../reverse_proxy_extended/deploy.sh` (the standard proxy-only release). A failed
+Rust connection returns an explicit 503; it does not fall back through Node.
 
 If the shared host cannot reinstall the existing dependencies within its build
 memory limit, `scripts/deploy-rust-api-bridge.sh` publishes the locally verified
