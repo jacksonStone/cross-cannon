@@ -1,7 +1,7 @@
 //! Native playback. Existing manifest URLs and offsets are the playback contract.
 use anyhow::{Context, Result};
 use cross_canon_core::AudioLocation;
-use rodio::{Decoder, OutputStream, Sink, Source};
+use rodio::{Decoder, OutputStreamBuilder, Sink, Source};
 use std::{
     io::{Cursor, Read},
     path::PathBuf,
@@ -34,13 +34,18 @@ pub fn start(root: PathBuf, ctx: eframe::egui::Context) -> (Sender<Command>, Rec
                     let result = (|| -> Result<()> {
                         if output.is_none() {
                             output = Some(
-                                OutputStream::try_default().context("Audio device unavailable")?,
+                                OutputStreamBuilder::open_default_stream()
+                                    .context("Audio device unavailable")?,
                             )
                         }
                         let bytes = audio_bytes(&root, &audio.url)?;
-                        let source = Decoder::new(Cursor::new(bytes))?
-                            .skip_duration(Duration::from_secs_f64(audio.start_seconds.max(0.0)));
-                        let next = Sink::try_new(&output.as_ref().unwrap().1)?;
+                        let mut source = decode_audio(bytes)?;
+                        source
+                            .try_seek(Duration::from_secs_f64(audio.start_seconds.max(0.0)))
+                            .map_err(|e| {
+                                anyhow::anyhow!("Cannot seek to chapter timestamp: {e}")
+                            })?;
+                        let next = Sink::connect_new(output.as_ref().unwrap().mixer());
                         if let Some(end) = audio.end_seconds {
                             next.append(source.take_duration(Duration::from_secs_f64(
                                 (end - audio.start_seconds).max(0.0),
@@ -113,4 +118,31 @@ fn audio_bytes(root: &std::path::Path, url: &str) -> Result<Vec<u8>> {
         .read_to_end(&mut bytes)?;
     anyhow::ensure!(bytes.len() <= 256 * 1024 * 1024, "Recording is too large");
     Ok(bytes)
+}
+
+fn decode_audio(bytes: Vec<u8>) -> Result<Decoder<Cursor<Vec<u8>>>> {
+    // MP4 requires a known byte length. Decoder::new in Rodio 0.20 discarded
+    // it even for an in-memory Cursor, causing a panic in existing M4A files.
+    Ok(Decoder::builder()
+        .with_byte_len(bytes.len() as u64)
+        .with_seekable(true)
+        .with_data(Cursor::new(bytes))
+        .build()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn existing_continuous_recording_decodes_and_seeks() {
+        let bytes = include_bytes!("../tests/fixtures/2-john.m4a").to_vec();
+        let mut source = decode_audio(bytes).expect("Existing M4A must decode without panicking");
+        assert!(source.total_duration().unwrap() > Duration::from_secs(20));
+        assert!(source.next().is_some());
+        source
+            .try_seek(Duration::from_secs(1))
+            .expect("Existing timestamp offsets must be seekable");
+        assert!(source.next().is_some());
+    }
 }

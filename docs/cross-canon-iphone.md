@@ -66,12 +66,17 @@ CROSS_CANON_PHONE_PREVIEW=1 scripts/rust.sh run -p cross-canon-desktop
 
 ## Verification status
 
-See [the verification record](../.scratch/iphone/verification.md). Desktop build,
-bundle signing/resource resolution, shared Rust tests, and phone layout/interaction
-checks run locally. The iOS simulator build, device signing, software keyboard,
-safe-area behavior, audio and suspend/resume still require verification after
-Xcode's license/first-launch setup. Do not treat the desktop phone preview as
-proof of those platform behaviors.
+See [the verification record](../.scratch/iphone/verification.md). The app builds,
+installs and launches on the iPhone 16e simulator with iOS 26.3.1. Its real native
+software keyboard, safe areas, chapter navigation, corpus switching and saved
+passage restoration were checked there. Native audio reaches playing state and
+pauses successfully after the M4A decoder fix. Recordings still download before
+playback; range streaming is not implemented. Both simulator and unsigned physical iPhone targets compile
+and link. The shared Rust regression suite passes, including an existing M4A
+decode/seek test added after native testing exposed an older audio-library bug.
+
+Physical-device runtime testing and signing/provisioning remain pending. The
+desktop phone preview is separate from the real simulator verification.
 
 The build uses Rust's documented [iOS device and simulator targets](https://doc.rust-lang.org/rustc/platform-support/apple-ios.html)
 and follows the existing winit iOS integration: an exported Rust entry point is

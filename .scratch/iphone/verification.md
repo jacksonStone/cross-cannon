@@ -16,7 +16,7 @@ Xcode setup and explicitly preserve the functional desktop version.
 - `scripts/run-ios.sh` checks Xcode setup, chooses an iPhone simulator, builds,
   installs and launches the development target.
 
-## Verified locally
+## Preparation checks before Xcode setup
 
 - Host Rust check and all seven Rust workspace tests pass (one core, two reader,
   three API library and one API socket test). The socket test requires the
@@ -34,25 +34,70 @@ Xcode setup and explicitly preserve the functional desktop version.
 - Native desktop screenshots are saved under `docs/screenshots/`; a phone-size
   macOS preview is explicitly separate from an iPhone simulator screenshot.
 
-## Pending Apple setup
+## Xcode verification on 2026-11-01
 
-Xcode 26.3 is installed, but its license/first-launch setup is incomplete. The
-simulator launcher stops with setup instructions. Direct cross-target checking
-cannot locate an active iOS SDK in the selected command-line-tools environment.
-Both ARM64 Rust device/simulator standard libraries have been installed into the
-isolated toolchain; no Apple license has been accepted by the agent.
+The user completed Apple's license/first-launch setup. The missing ARM64
+iOS 26.3.1 simulator runtime was installed through Xcode's official
+`xcodebuild -downloadPlatform iOS -architectureVariant arm64` command.
 
-After Xcode setup, run `scripts/run-ios.sh`. The iOS build/link, simulator launch,
-keyboard, actual safe areas, audio and suspend/resume remain unverified. Physical
-iPhone installation additionally needs the user's Apple signing team and device
-provisioning. No installable iPhone release is claimed yet.
+- `scripts/run-ios.sh` builds, installs and launches on the iPhone 16e simulator.
+  The actual UI renders through Metal, respecting the notch and home indicator.
+- Native UIKit software-keyboard entry works. On the initial prepared reader,
+  entering `beginning` and choosing keyword search returns 20 passages. The
+  subsequent desktop-search parity edits belong to a concurrent user chat; the
+  iPhone app was rebuilt with those shared changes, but that task owns detailed
+  search contract and result-layout acceptance.
+- Jump navigates from Genesis 1 to Genesis 3. After pressing Home, terminating
+  the app, and launching it again, Genesis 3 and its focused passage restore.
+- The corpus switch opens the bundled Early Christian reader (The Pastor of
+  Hermas), displaying its local text and chapter heading.
+- All 13,687 JSON files in the installed simulator bundle match their original
+  source SHA-256 hashes. This includes the existing text and timestamp metadata.
+- A generic physical ARM64 iPhone build also compiles and links with signing
+  disabled. This proves the device target builds, not that it is installed on a
+  physical phone.
+- The complete Rust workspace test run passes: 12 tests pass and one live
+  search-parity test is explicitly ignored by the concurrent desktop task.
+- A real simulator screenshot is saved at
+  `docs/screenshots/cross-canon-iphone-simulator.png`.
 
-The existing production API and existing user changes are outside this commit.
+The first simulator boot's launch service returned a transient no-process error;
+opening the app succeeded, and subsequent complete build/install/launch runs
+succeeded. The runtime's initial boot/migration took several minutes.
+
+## Runtime fixes found by verification
+
+macOS Bash 3 treats an empty array expansion as unbound with `set -u`. The Debug
+Xcode phase initially failed at `build_options[@]`. Building the nonempty argument
+array first fixes Debug while retaining the Release flag.
+
+Native audio testing reproduced a Rodio 0.20 decoder panic: its `ReadSeekSource`
+reports no byte length, but Symphonia's MP4 reader requires one for seekable input.
+The panic killed the audio worker and left the UI on `Loading audio…`. A local
+regression using byte-identical existing 2 John M4A bytes failed with that exact
+panic before the fix. Rodio 0.21.1, an explicit byte length/seekable decoder, and
+direct seeking to the existing chapter offset pass the same test. Playback is
+still bounded by the unchanged `end_seconds - start_seconds` timestamps.
+The new fixture copies existing audio; it does not re-encode or generate media.
+After the fix, Genesis 3 reaches the playing state in the actual simulator,
+clears `Loading audio…`, and changes the control to Pause. Tapping Pause returns
+it to Play. This verifies native playback initialization and pause state;
+sound quality and physical-device audio remain outside this check. Recordings
+are still downloaded before playback, so large book recordings have a loading
+delay; this release does not implement range streaming.
+
+## Remaining distribution checks
+
+Physical iPhone installation needs the user's signing team and device
+provisioning. No App Store/TestFlight release or physical-device runtime test is
+claimed. The production API and concurrent desktop-search edits are outside
+this verification commit.
 
 ## Review
 
 Spec review reports no material gaps for this preparation stage. Standards
 review reports no documented violations or correctness findings, with one minor
 nonblocking duplication observation: desktop and phone toolbars share the same
-audio play/pause logic in two handlers. Platform build/runtime checks remain
-pending, as described above.
+audio play/pause logic in two handlers. Follow-up Standards and Spec reviews of
+the runtime fixes report no actionable findings. Simulator playback confirmation,
+pending Mac unlock at review time, subsequently passed as described above.
