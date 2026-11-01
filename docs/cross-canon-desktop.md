@@ -5,6 +5,9 @@ webview, JavaScript runtime, or local HTTP server. R Cross Cannon is an Axum Rus
 service mounted at `https://www.crosscanon.com/r/api` (the bare domain redirects
 through the existing site configuration).
 
+The [iPhone target](cross-canon-iphone.md) shares this Rust reader and local
+library. Its separate Xcode launcher uses Metal while desktop retains OpenGL.
+
 ## Run and build
 
 Install Rust 1.88 or newer, then run from this repository:

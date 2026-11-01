@@ -598,6 +598,14 @@ pub fn data_root() -> Result<PathBuf> {
         return Ok(path.into());
     }
     let exe = std::env::current_exe()?;
+    // iOS puts its resources beside the executable, unlike a macOS .app.
+    let mobile = exe
+        .parent()
+        .context("Executable has no directory")?
+        .join("library");
+    if mobile.join("scripture-cache/manifest.json").is_file() {
+        return Ok(mobile);
+    }
     let bundled = exe
         .parent()
         .context("Executable has no directory")?
@@ -609,7 +617,7 @@ pub fn data_root() -> Result<PathBuf> {
     if current.join("scripture-cache/manifest.json").is_file() {
         return Ok(current);
     }
-    bail!("Local texts are missing. Install the complete Cross Canon Desktop app or set CROSS_CANON_DATA_DIR.")
+    bail!("Local texts are missing. Install the complete Cross Canon app or set CROSS_CANON_DATA_DIR.")
 }
 
 #[cfg(test)]

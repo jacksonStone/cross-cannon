@@ -4,7 +4,14 @@ impl Desktop {
     pub(super) fn dialogs(&mut self, ctx: &egui::Context) {
         let Some(dialog) = self.dialog else { return };
         let p = self.state.theme.palette();
-        let width = (ctx.screen_rect().width() - 64.0).clamp(260.0, 850.0);
+        let compact = Self::compact(ctx);
+        let insets = mobile::insets();
+        let width = (ctx.screen_rect().width()
+            - if compact { 64.0 } else { 104.0 }
+            - insets.left
+            - insets.right)
+            .clamp(220.0, 850.0);
+        let height = (ctx.screen_rect().height() - insets.top - insets.bottom - 150.0).max(180.0);
         let response = egui::Modal::new(Id::new("reader-dialog"))
             .frame(
                 egui::Frame::window(&ctx.style())
@@ -22,7 +29,7 @@ impl Desktop {
                             Dialog::Search => "Search",
                             Dialog::Settings => "Reader settings",
                         })
-                        .font(heading(29.6)),
+                        .font(heading(if compact { 23.0 } else { 29.6 })),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if control(ui, "×").clicked() {
@@ -33,11 +40,14 @@ impl Desktop {
                 ui.add_space(12.0);
                 ui.separator();
                 ui.add_space(14.0);
-                match dialog {
-                    Dialog::Jump => self.jump_dialog(ui),
-                    Dialog::Search => self.search_dialog(ui, ctx),
-                    Dialog::Settings => self.settings_dialog(ui),
-                }
+                egui::ScrollArea::vertical()
+                    .id_salt("dialog-body")
+                    .max_height(height)
+                    .show(ui, |ui| match dialog {
+                        Dialog::Jump => self.jump_dialog(ui),
+                        Dialog::Search => self.search_dialog(ui, ctx),
+                        Dialog::Settings => self.settings_dialog(ui),
+                    });
             });
         if response.should_close() {
             self.dialog = None;
@@ -67,6 +77,50 @@ impl Desktop {
             })
             .cloned()
             .collect::<Vec<_>>();
+        if Self::compact(ui.ctx()) {
+            egui::ComboBox::from_id_salt("phone-book")
+                .width(ui.available_width() - 12.0)
+                .selected_text(
+                    self.library
+                        .book(&self.jump_book)
+                        .map(|b| b.title.as_str())
+                        .unwrap_or("Choose a book"),
+                )
+                .show_ui(ui, |ui| {
+                    for book in &books {
+                        ui.selectable_value(
+                            &mut self.jump_book,
+                            book.id.clone(),
+                            format!(
+                                "{}{}",
+                                book.title,
+                                book.author
+                                    .as_ref()
+                                    .map(|a| format!(" · {a}"))
+                                    .unwrap_or_default()
+                            ),
+                        );
+                    }
+                });
+            ui.add_space(12.0);
+            if let Some(book) = self.library.book(&self.jump_book).cloned() {
+                ui.label(RichText::new(&book.title).font(heading(23.0)));
+                ui.horizontal_wrapped(|ui| {
+                    for chapter in book.chapters {
+                        if ui
+                            .add_sized([48.0, 44.0], egui::Button::new(chapter.number.to_string()))
+                            .on_hover_text(&chapter.title)
+                            .clicked()
+                        {
+                            if let Some(id) = chapter.passage_ids.first() {
+                                self.open(id.clone());
+                            }
+                        }
+                    }
+                });
+            }
+            return;
+        }
         ui.columns(2, |cols| {
             egui::ScrollArea::vertical()
                 .id_salt("book-list")
@@ -212,7 +266,7 @@ impl Desktop {
             });
     }
     pub(super) fn settings_dialog(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             for theme in [Theme::Paper, Theme::Sepia, Theme::Dark, Theme::Contrast] {
                 if ui
                     .selectable_value(&mut self.state.theme, theme, format!("{theme:?}"))
@@ -223,7 +277,7 @@ impl Desktop {
             }
         });
         ui.add_space(16.0);
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             for (label, scale, height, width) in [
                 ("Default", 1.0, 1.72, 820.0),
                 ("Compact", 0.94, 1.54, 880.0),
@@ -252,7 +306,7 @@ impl Desktop {
         }
         ui.add_space(12.0);
         ui.label("Scripture canon");
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             for canon in [Canon::Protestant, Canon::Catholic, Canon::Orthodox] {
                 ui.selectable_value(&mut self.state.canon, canon, format!("{canon:?}"));
             }

@@ -25,3 +25,7 @@ exports/kindle/*.epub
 # Rust build products and desktop bundles
 /target/
 /dist/
+
+# Per-user Xcode state
+ios/**/xcuserdata/
+ios/**/*.xcuserstate

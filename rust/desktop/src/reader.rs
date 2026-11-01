@@ -14,8 +14,13 @@ impl Desktop {
         } else {
             focused.book.clone()
         };
+        if Self::compact(ctx) {
+            self.phone_toolbar(ui, &focused, &label);
+            return;
+        }
         let (rect, _) =
             ui.allocate_exact_size(Vec2::new(ui.available_width(), 59.0), Sense::hover());
+        self.toolbar_rect = rect;
         ui.painter().text(
             rect.left_top() + egui::vec2(0.0, 3.0),
             Align2::LEFT_TOP,
@@ -79,6 +84,56 @@ impl Desktop {
             },
         );
         let _ = ctx;
+    }
+    fn phone_toolbar(&mut self, ui: &mut egui::Ui, focused: &Passage, label: &str) {
+        let start = ui.cursor().min;
+        ui.horizontal(|ui| {
+            let text_width = (ui.available_width() - 58.0).max(100.0);
+            ui.add_sized(
+                [text_width, 48.0],
+                egui::Label::new(RichText::new(label).font(heading(23.0))).truncate(),
+            );
+            if control(ui, if self.tools { "×" } else { "···" })
+                .on_hover_text("Reader tools")
+                .clicked()
+            {
+                self.tools = !self.tools;
+            }
+        });
+        if self.tools {
+            ui.horizontal_wrapped(|ui| {
+                if control(ui, "Jump").clicked() {
+                    self.jump_book = focused.book_id.clone();
+                    self.dialog = Some(Dialog::Jump);
+                }
+                if control(ui, "Aa").clicked() {
+                    self.dialog = Some(Dialog::Settings);
+                }
+                if control(ui, "Search").clicked() {
+                    self.dialog = Some(Dialog::Search);
+                }
+                let audio = self.library.audio(&focused.chapter_id);
+                if ui
+                    .add_enabled(
+                        audio.is_some(),
+                        egui::Button::new(if self.playing { "Pause" } else { "Play" })
+                            .min_size(egui::vec2(44.0, 44.0)),
+                    )
+                    .clicked()
+                {
+                    if self.audio_chapter.as_deref() == Some(&focused.chapter_id) {
+                        let _ = self.audio_tx.send(audio::Command::Toggle);
+                    } else if let Some(audio) = audio {
+                        let _ = self.audio_tx.send(audio::Command::Play(audio));
+                        self.audio_chapter = Some(focused.chapter_id.clone());
+                        self.message = "Loading audio…".into();
+                    }
+                }
+            });
+        }
+        ui.separator();
+        self.toolbar_rect =
+            Rect::from_min_max(start, egui::pos2(ui.max_rect().right(), ui.cursor().top()));
     }
     pub(super) fn reader(&mut self, ui: &mut egui::Ui) {
         let p = self.state.theme.palette();
@@ -237,7 +292,8 @@ impl Desktop {
     pub(super) fn book_heading(&self, ui: &mut egui::Ui, book: &Book) {
         let p = self.state.theme.palette();
         let width = ui.available_width();
-        ui.add_space(46.0);
+        let compact = Self::compact(ui.ctx());
+        ui.add_space(if compact { 24.0 } else { 46.0 });
         let (top, _) = ui.allocate_exact_size(egui::vec2(width, 3.0), Sense::hover());
         ui.painter().hline(
             top.x_range(),
@@ -251,7 +307,7 @@ impl Desktop {
             ],
             Stroke::new(3.0_f32, p.accent),
         );
-        ui.add_space(58.0);
+        ui.add_space(if compact { 30.0 } else { 58.0 });
         ui.label(
             RichText::new("B O O K")
                 .size(11.52)
@@ -259,7 +315,7 @@ impl Desktop {
                 .color(p.accent),
         );
         ui.add_space(10.0);
-        let size = 89.6_f32.min(width * 0.12);
+        let size = 89.6_f32.min(width * if compact { 0.15 } else { 0.12 });
         ui.add(egui::Label::new(RichText::new(&book.title).font(heading(size))).wrap());
         ui.add_space(10.0);
         ui.label(
