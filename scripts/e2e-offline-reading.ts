@@ -1776,8 +1776,8 @@ async function waitForServer(
 async function startManagedServer(port: number, timeout: number) {
   const appPort = port + 10_000;
   const app = spawn(
-    path.resolve("node_modules/.bin/remix-serve"),
-    ["./build/server/index.js"],
+    process.execPath,
+    ["./build/server/serve.mjs"],
     {
       cwd: process.cwd(),
       env: {

@@ -83,12 +83,13 @@ done
 echo
 echo "==> Start production server"
 : > "$server_log"
-PORT="$verify_port" NODE_ENV=production node node_modules/@remix-run/serve/dist/cli.js build/server/index.js >"$server_log" 2>&1 &
+PORT="$verify_port" NODE_ENV=production node build/server/serve.mjs >"$server_log" 2>&1 &
 server_pid="$!"
 
 run_step "Wait for ${base_url}" wait_for_server
 run_step "Homepage HEAD" curl -fsS -I "$base_url/"
 run_step "Web search uses Rust" node --import tsx scripts/smoke-rust-web.ts "$base_url"
+run_step "Resource routes use Rust" node scripts/smoke-rust-resources.mjs "$base_url"
 
 echo
 echo "Verification passed."

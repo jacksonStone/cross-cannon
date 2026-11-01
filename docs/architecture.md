@@ -44,6 +44,9 @@ flowchart TD
 
   ScriptureLibrary --> BrowserCache["/scripture-cache/:version.json"]
   BrowserCache --> FullPassageCache["Full browser passage cache"]
+  BrowserCache --> ResourceBridge["Resource-first streaming transport"]
+  ResourceBridge --> RustResources["Rust /r/api/resources"]
+  RustResources --> ExistingFiles["Existing text, gzip, metadata and recordings"]
   ScriptureLibrary --> PassageLookup["Shared passageLookup Map"]
 
   Root --> PassageReader[PassageReader]
@@ -239,7 +242,7 @@ JavaScript is active again.
 `scripts/build-continuous-audio.ts` preserves originals on the Mac mini and
 creates a separate AAC file per book/Work from decoded source samples.
 `public/continuous-audio.json` is a small timestamp manifest independent of the
-scripture cache and database. `audio.continuous.$fileName.ts` streams the
-content-addressed files from production storage with HTTP range support.
+scripture cache and database. `audio.continuous.$fileName.ts` forwards to Rust,
+which streams content-addressed files from production storage with byte ranges.
 Derived media is uploaded separately before the normal application release;
 original recordings and source mappings remain available for rollback.

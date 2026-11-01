@@ -1,4 +1,5 @@
 pub mod engine;
+mod resources;
 mod web;
 use axum::{
     extract::{DefaultBodyLimit, State},
@@ -57,6 +58,10 @@ fn internal(error: impl std::fmt::Display) -> ApiError {
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
+        .nest(
+            "/r/api/resources",
+            resources::router(state.engine.library.root.clone()),
+        )
         .route("/r/api", get(health))
         .route("/r/api/health", get(health))
         .route("/r/api/books", get(books))
@@ -74,7 +79,7 @@ pub fn router(state: Arc<AppState>) -> Router {
 }
 async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
     Json(
-        json!({"service":"R Cross Cannon","version":env!("CARGO_PKG_VERSION"),"status":"ok","cacheVersion":state.engine.library.version,"books":state.engine.library.books.len(),"passages":state.engine.library.passages.len(),"storedVectors":state.engine.count(),"semanticQueries":state.api_key.is_some(),"webSearch":true}),
+        json!({"service":"R Cross Cannon","version":env!("CARGO_PKG_VERSION"),"status":"ok","cacheVersion":state.engine.library.version,"books":state.engine.library.books.len(),"passages":state.engine.library.passages.len(),"storedVectors":state.engine.count(),"semanticQueries":state.api_key.is_some(),"webSearch":true,"resourceRoutes":true}),
     )
 }
 async fn books(State(state): State<Arc<AppState>>) -> Json<Value> {

@@ -34,6 +34,7 @@ verify_remote_service() {
 run_step "Remote service status: ${remote_service}" verify_remote_service
 run_step "Production homepage HEAD: ${prod_url}" curl -fsS -I "${prod_url}/"
 run_step "Production web search uses Rust" node --import tsx scripts/smoke-rust-web.ts "$prod_url"
+run_step "Production resources use Rust" node scripts/smoke-rust-resources.mjs "$prod_url"
 run_step "Production search POST smoke" curl -fsS -X POST "${prod_url}/?index" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   --data-urlencode "question=fear and comfort" \

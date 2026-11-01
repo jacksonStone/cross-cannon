@@ -112,6 +112,24 @@ Successful web search data responses include `X-Cross-Canon-Search: rust`.
 Catalog loaders fall back to the existing text artifacts during API outages,
 allowing readers to open while search reports an explicit service error.
 
+All non-React resource handlers also run in Rust under `/r/api/resources/`:
+Scripture cache JSON/gzip, Early Christian metadata/alignment and Chapter JSON,
+and original/continuous audio. Existing browser URLs remain unchanged through
+small Remix streaming transport shims. The shims preserve raw compressed bytes,
+range headers, content lengths, and cancellation; Rust streams files in 64 KiB
+chunks instead of loading recordings into memory. Cache headers and ETags remain
+intact. The localhost-only service-worker test wrapper is also generated in Rust
+and remains unavailable on the public host. Resource responses carry
+`X-Cross-Canon-Resource: rust`.
+
+`scripts/serve-web.mjs` routes resources before static middleware so copies in
+`public/` or `build/client/` cannot bypass Rust. React page rendering, page
+loader/action orchestration and static build assets remain in Remix/Node.
+Production starts `build/server/serve.mjs`; the compiled-build release installs
+a systemd drop-in and rolls it back with the server bundle if smoke tests fail.
+Start Rust before running browser journeys that download text/audio.
+`npm run verify` starts and stops both servers automatically.
+
 Environment:
 
 ```text

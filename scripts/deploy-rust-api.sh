@@ -28,6 +28,8 @@ if [[ ! -x "$CARGO_HOME/bin/cargo" ]]; then
   sh "$base/toolchain/rustup-init.sh" -y --profile minimal --no-modify-path
 fi
 cd "$base/releases/$release"
+# Copy cached build products into this isolated release; never build in current.
+if [[ -d "$base/current/target" ]]; then cp -a "$base/current/target" ./target; fi
 cargo build --release --locked -p r-cross-cannon -j 2
 # Validate the new binary against the existing production artifacts before switch.
 CROSS_CANON_DATA_DIR=/home/ubuntu/cross-cannon R_CROSS_CANNON_BIND=127.0.0.1:13006 target/release/r-cross-cannon > /tmp/r-cross-cannon-smoke.log 2>&1 &
@@ -48,6 +50,11 @@ data = json.load(open('/tmp/r-cross-cannon-web-smoke.json'))
 assert len(data['results']) == 3
 assert all(r['author'] == 'Clement of Rome' and r['highlightPassage']['text'] for r in data['results'])
 PY
+cache_version="$(python3 -c 'import json; print(json.load(open("/home/ubuntu/cross-cannon/scripture-cache/manifest.json"))["version"])')"
+curl -fsS --max-time 20 -H 'Accept-Encoding: gzip' "http://127.0.0.1:13006/r/api/resources/scripture-cache/$cache_version.json" > /tmp/r-cross-cannon-cache-smoke.gz
+cmp /tmp/r-cross-cannon-cache-smoke.gz "/home/ubuntu/cross-cannon/scripture-cache/$cache_version.json.gz"
+curl -fsS --max-time 20 -H 'Range: bytes=0-1023' http://127.0.0.1:13006/r/api/resources/audio/WEBD_AT/01_Genesis_01.mp3 > /tmp/r-cross-cannon-audio-smoke.bin
+[[ "$(wc -c < /tmp/r-cross-cannon-audio-smoke.bin)" == 1024 ]]
 kill "$smoke_pid"
 wait "$smoke_pid" || true
 trap - EXIT
