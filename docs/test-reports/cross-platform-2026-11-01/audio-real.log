@@ -1,0 +1,6 @@
+
+> cross-cannon@0.1.0 e2e:continuous-audio
+> node --import tsx scripts/e2e-continuous-audio.ts
+
+PASS: continuous playback with JS suspended, chapter sync, pause/resume, long seek, 1024-byte range, desktop/mobile screenshots
+PASS: missing combined recording falls back to the preserved original URL

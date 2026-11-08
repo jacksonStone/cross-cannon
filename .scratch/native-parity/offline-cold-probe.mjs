@@ -1,0 +1,12 @@
+import puppeteer from 'puppeteer';
+const b=await puppeteer.launch({headless:true,args:['--no-sandbox']});
+const p=await b.newPage();const errors=[],failed=[],messages=[];
+p.on('console',m=>{if(m.type()==='error')errors.push(m.text())});p.on('requestfailed',r=>failed.push(r.url()));
+await p.goto('http://127.0.0.1:13616/church-fathers',{waitUntil:'networkidle0'});
+await p.evaluate(()=>navigator.serviceWorker.ready);await p.reload({waitUntil:'networkidle0'});
+await p.click('[aria-label="Open reader tools"]');await p.click('[aria-label="Download work"]');await p.waitForSelector('[aria-label="Remove download"]');
+await p.setOfflineMode(true);await p.reload({waitUntil:'networkidle0'});
+await p.evaluate(()=>{window.workerEvents=[];navigator.serviceWorker.addEventListener('message',e=>window.workerEvents.push(e.data));});
+await new Promise(r=>setTimeout(r,6500));
+console.log(JSON.stringify(await p.evaluate(()=>({online:navigator.onLine,indicator:!!document.querySelector('.offline-indicator'),events:window.workerEvents,routeModules:Object.keys(window.__remixRouteModules??{}),reactRoot:Object.keys(document.body).filter(k=>k.startsWith('__react')),scripts:[...document.scripts].map(s=>s.src),body:document.body.textContent.slice(0,600)})),null,2));
+console.log(JSON.stringify({errors,failed},null,2));await b.close();

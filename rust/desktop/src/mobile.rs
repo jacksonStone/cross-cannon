@@ -27,7 +27,9 @@ pub(crate) fn insets() -> Insets {
 
 impl Desktop {
     pub(crate) fn compact(ctx: &egui::Context) -> bool {
-        ctx.screen_rect().width() < 600.0
+        cfg!(target_os = "ios")
+            || ctx.screen_rect().width() < 600.0
+            || ctx.screen_rect().height() < 500.0
     }
 }
 

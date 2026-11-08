@@ -1,0 +1,62 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.54s
+     Running unittests src/lib.rs (target/debug/deps/cross_canon_core-c367c6cd8db9cfb4)
+
+running 1 test
+test tests::actual_artifacts_are_complete_and_searchable_offline ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.17s
+
+     Running unittests src/lib.rs (target/debug/deps/cross_canon_desktop-dc184963ca5295c8)
+
+running 8 tests
+test search::tests::live_web_search_parity ... ignored, Live comparison against production web forms and the online API
+test audio::tests::existing_continuous_recording_decodes_and_seeks ... ok
+test search::tests::native_search_sends_web_contract_and_preserves_highlights ... ok
+test search::tests::refined_early_christian_results_open_matching_local_range_and_keep_exact_source ... ok
+test tests::theme_search_defaults_to_web_semantics ... ok
+test search::tests::scrolling_results_keeps_search_controls_visible ... ok
+test tests::native_keyboard_dismissal_and_local_search_work_without_api ... ok
+test tests::phone_touch_navigation_offline_search_and_saved_focus ... ok
+
+test result: ok. 7 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 12.59s
+
+     Running unittests src/main.rs (target/debug/deps/cross_canon_desktop-2d75a4290d7c42e0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/r_cross_cannon-b9c67b591690a058)
+
+running 3 tests
+test engine::tests::libsql_blob_contract_and_invalid_vectors ... ok
+test resources::tests::existing_resource_contracts ... ok
+test tests::actual_readonly_indexes_search_and_api_contract ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.46s
+
+     Running unittests src/main.rs (target/debug/deps/r_cross_cannon-8f1d72d87db9c131)
+
+running 1 test
+test tests::accepted_streaming_connections_disable_nagle ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests cross_canon_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests cross_canon_desktop
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests r_cross_cannon
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

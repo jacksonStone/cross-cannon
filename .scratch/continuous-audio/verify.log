@@ -1,0 +1,182 @@
+
+> cross-cannon@0.1.0 verify
+> scripts/verify.sh
+
+
+==> Unit tests
+
+> cross-cannon@0.1.0 test:unit
+> node --import tsx --test app/features/reader-navigation/reader-links.test.ts app/features/reader-window/reader-resize.test.ts app/features/reader-window/window-range.test.ts app/features/reader-ui/fit-single-line-text.test.ts app/features/search/search-dialog-model.test.ts app/features/search/search-modal-flow.test.ts app/features/search/match-strength.test.ts app/features/search/search-request.test.ts app/features/passage-reader/chapter-index.test.ts app/features/reader-position/reader-position.test.ts app/features/early-christian-reader/reader-passages.test.tsx app/features/early-christian-reader/useEarlyChristianReaderNavigation.test.ts app/features/offline/early-christian-work-downloads.test.ts app/lib/scripture-cache-contract.test.ts app/lib/vector-search.test.ts scripts/lib/audio-alignment.test.ts scripts/export-kindle-bible.test.ts scripts/export-kindle-first-clement.test.ts app/features/audio/audio-playlist.test.ts app/lib/audio-response.server.test.ts
+
+✔ resuming after suspended JS finds the audible chapter without replaying skipped chapters (0.42925ms)
+✔ next/previous chapter stay within a work and do not skip missing audio (0.099875ms)
+✔ ambiguous legacy track offsets preserve the first mapped chapter (0.065292ms)
+✔ groupChapterPassages groups short trailing passages into the previous passage (0.576542ms)
+✔ findLoadedPassage and isSelectedReaderPassage match containing ranges (0.223708ms)
+✔ buildModernizedTextParts marks only unmatched modernized words (0.638708ms)
+✔ initial navigation gives URL chapter and passage priority (13.685ms)
+✔ initial navigation ignores saved passage when URL specifies only a chapter (0.102083ms)
+✔ initial navigation restores saved chapter and passage without a URL chapter (0.064083ms)
+✔ navigation resolution falls back from invalid active chapter to initial chapter (0.285208ms)
+✔ navigation resolution falls back to first chapter when no saved target exists (0.086834ms)
+✔ navigation keeps the explicit target range stable when selection changes (0.067084ms)
+✔ open state selects the requested passage and target chapter (0.078958ms)
+✔ target window readiness requires target and earlier rendered chapters to load (0.144708ms)
+✔ validates a downloaded Early Christian Chapter (34.45975ms)
+✔ rejects corrupt or unexpected Chapter responses (0.625666ms)
+✔ promotes only validated Work replacements on the next reader mount (0.554042ms)
+✔ parsePassageLocation reads book, chapter, and verse range (0.901583ms)
+✔ buildChapterIndex groups passages by chapter and preserves passage locations (0.374375ms)
+✔ buildChapterIndex orders chapter keys within each book (0.128917ms)
+✔ buildChapterIndex creates jump options from verse targets (0.12375ms)
+✔ filterJumpBooksByCanon keeps only books in the selected canon (0.233416ms)
+✔ filterJumpBooksByCanon defaults to the Protestant canon (0.073667ms)
+✔ reader index resolves saved chapters, passage chapter keys, and defaults (0.180042ms)
+✔ Scripture Reader Links preserve passage and filter scope (2.279625ms)
+✔ Early Christian Reader Links encode chapter and optional passage range (0.301166ms)
+✔ rememberReaderPosition writes once and updates tracking refs (0.509125ms)
+✔ rememberReaderPosition writes when reported and saved refs diverge (0.079625ms)
+✔ readReaderLocation migrates legacy chapter keys (0.709584ms)
+✔ rememberReaderLocation stores a versioned reader location (0.166959ms)
+✔ single-line text fitting corrects residual overflow after the first scale (0.452541ms)
+✔ reader anchor preservation ignores toolbar-only viewport height changes (0.396333ms)
+✔ reader anchor preservation runs when the layout width changes (0.067375ms)
+✔ getCenteredWindowRange returns an empty range without items (0.7375ms)
+✔ getCenteredWindowRange clamps around a valid index (0.074583ms)
+✔ getCenteredWindowRange falls back to the first item for missing indexes (0.064291ms)
+✔ rangeContainsIndex only matches indexes inside a non-empty range (0.077958ms)
+✔ expandWindowStart and expandWindowEnd clamp to available bounds (0.093167ms)
+✔ expandWindowStart respects a minimum start index (0.062458ms)
+✔ scoreToMatchStrength uses calibrated cosine thresholds (0.398ms)
+✔ withCalibratedMatchStrength does not rank scores relative to the result set (0.389875ms)
+✔ scripture dialog maps theme scripture intent (0.495875ms)
+✔ scripture dialog maps theme early-christian intent (0.06ms)
+✔ scripture dialog maps focused scripture intent (0.047875ms)
+✔ scripture dialog maps focused early-christian intent (0.045125ms)
+✔ early-christian dialog maps theme early-christian intent (0.049833ms)
+✔ early-christian dialog maps theme scripture intent (0.039709ms)
+✔ early-christian dialog maps focused early-christian intent (0.042667ms)
+✔ early-christian dialog maps focused scripture intent (0.036792ms)
+✔ dialog filters count only the active corpus scope (0.409167ms)
+✔ dialog target resolves explicit results before reader defaults (0.114375ms)
+✔ search modal flow opens and closes without changing focus (0.737875ms)
+✔ theme results clear focused passage and open search (0.071291ms)
+✔ similar transitions focus the submitted source and open search (0.0685ms)
+✔ Search Request preserves a Scripture reader theme search (3.320208ms)
+✔ Search Request preserves a Scripture reader Early Christian theme search (0.456208ms)
+✔ Search Request preserves a Scripture reader similar Scripture search (3.825459ms)
+✔ Search Request preserves a Scripture reader similar Early Christian search (1.403458ms)
+✔ Search Request preserves an Early Christian reader theme search (1.128042ms)
+✔ Search Request preserves an Early Christian reader similar search (0.311542ms)
+✔ Search Request preserves an Early Christian reader Scripture theme search (0.310667ms)
+✔ Search Request preserves an Early Christian reader similar Scripture search (0.243209ms)
+✔ parseSearchMatchCount accepts valid match counts (0.075292ms)
+✔ parseSearchMatchCount rejects out-of-range counts (0.094125ms)
+✔ validateSearchQuestion enforces length limits (0.065833ms)
+✔ isSearchSourcePassageId accepts indexed passage ids (0.049417ms)
+✔ audio streams byte ranges and HEAD without downloading the whole work (24.026041ms)
+✔ isScriptureCachePayload accepts valid browser passages (0.454125ms)
+✔ isBrowserPassage rejects invalid verse shapes (0.076375ms)
+✔ isScriptureCachePayload rejects invalid audio URL shapes (0.062666ms)
+✔ readStoredEmbedding decodes ArrayBuffer embeddings (1.291458ms)
+✔ readEmbeddingBlob decodes typed array views (0.102584ms)
+✔ readEmbeddingBlob rejects invalid byte lengths (0.083916ms)
+✔ cosineSimilarity scores overlapping vector dimensions (0.068791ms)
+✔ the Kindle export command creates a navigable EPUB from Bible JSON (165.373ms)
+✔ the Kindle export omits empty source records without renumbering (117.17525ms)
+✔ book chapter navigation uses a compact ten-column grid (114.558625ms)
+✔ the visible Contents page fits 81 Books into a compact three-column grid (118.310666ms)
+✔ the First Clement export creates compact navigation and marks changed words (209.92875ms)
+✔ audio alignment selects an Early Christian Work by exact CCEL ID (1.012875ms)
+✔ an Alignment Policy can prefer a Work-specific start hint (0.468ms)
+✔ alignment artifacts merge by default and reset only when requested (0.186208ms)
+✔ the shared command dry-runs every configured Early Christian Work (736.722209ms)
+✔ audio alignment normalization preserves the existing token contract (0.313167ms)
+✔ audio alignment finds the same best LCS window (0.068792ms)
+✔ audio alignment shares numeral and timestamp formatting (0.109958ms)
+ℹ tests 86
+ℹ suites 0
+ℹ pass 86
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1394.85875
+
+==> Typecheck
+
+> cross-cannon@0.1.0 typecheck
+> tsc --noEmit
+
+
+==> Production build
+
+> cross-cannon@0.1.0 build
+> remix vite:build
+
+[warn] Route discovery/manifest behavior is changing in React Router v7
+┃ You can use the `v3_lazyRouteDiscovery` future flag to opt-in early.
+┃ -> https://remix.run/docs/en/2.13.1/start/future-flags#v3_lazyRouteDiscovery
+┗
+[warn] Data fetching is changing to a single fetch in React Router v7
+┃ You can use the `v3_singleFetch` future flag to opt-in early.
+┃ -> https://remix.run/docs/en/2.13.1/start/future-flags#v3_singleFetch
+┗
+vite v5.4.21 building for production...
+transforming...
+✓ 159 modules transformed.
+Generated an empty chunk: "audio.WEBD_AT._fileName".
+Generated an empty chunk: "audio.continuous._fileName".
+Generated an empty chunk: "church-fathers-preview._assetFile".
+Generated an empty chunk: "church-fathers-preview.chapters._chapterFile".
+Generated an empty chunk: "cross-canon-sw-release-test_._js".
+Generated an empty chunk: "scripture-cache._cacheFile".
+rendering chunks...
+computing gzip size...
+build/client/.vite/manifest.json                                                4.80 kB │ gzip:   0.78 kB
+build/client/assets/styles-Cbu04kL-.css                                        46.98 kB │ gzip:   9.01 kB
+build/client/assets/audio.WEBD_AT._fileName-l0sNRNKZ.js                         0.00 kB │ gzip:   0.02 kB
+build/client/assets/audio.continuous._fileName-l0sNRNKZ.js                      0.00 kB │ gzip:   0.02 kB
+build/client/assets/church-fathers-preview._assetFile-l0sNRNKZ.js               0.00 kB │ gzip:   0.02 kB
+build/client/assets/church-fathers-preview.chapters._chapterFile-l0sNRNKZ.js    0.00 kB │ gzip:   0.02 kB
+build/client/assets/cross-canon-sw-release-test_._js-l0sNRNKZ.js                0.00 kB │ gzip:   0.02 kB
+build/client/assets/scripture-cache._cacheFile-l0sNRNKZ.js                      0.00 kB │ gzip:   0.02 kB
+build/client/assets/OfflineProvider-CXpbwYLI.js                                 0.72 kB │ gzip:   0.41 kB
+build/client/assets/reader._passageId-MXsXCaNX.js                               1.01 kB │ gzip:   0.59 kB
+build/client/assets/root-DKHCRUft.js                                            1.81 kB │ gzip:   0.77 kB
+build/client/assets/entry.client-BnPVIO_x.js                                    4.35 kB │ gzip:   1.74 kB
+build/client/assets/_index-D5pfdOfK.js                                         10.64 kB │ gzip:   3.65 kB
+build/client/assets/search-modal-flow-DugoqmJm.js                              12.87 kB │ gzip:   4.11 kB
+build/client/assets/PassageReader-nSac1-DX.js                                  14.41 kB │ gzip:   4.79 kB
+build/client/assets/useScriptureLibrary-BsHPjKtN.js                            29.97 kB │ gzip:   9.66 kB
+build/client/assets/church-fathers-DFtPAlkr.js                                 49.73 kB │ gzip:  15.46 kB
+build/client/assets/components-CFe__AtP.js                                    445.60 kB │ gzip: 138.02 kB
+✓ built in 4.76s
+vite v5.4.21 building SSR bundle for production...
+transforming...
+✓ 83 modules transformed.
+[plugin:vite:reporter] [plugin vite:reporter] 
+(!) /Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/app/features/search/search-request.server.ts is dynamically imported by /Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/app/entry.server.tsx but also statically imported by /Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/app/features/early-christian-reader/route.server.ts, /Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/app/routes/_index.tsx, dynamic import will not move module into another chunk.
+
+rendering chunks...
+build/server/.vite/manifest.json           0.43 kB
+build/server/assets/styles-Cbu04kL-.css   46.98 kB
+build/server/index.js                    344.04 kB
+✓ built in 485ms
+
+==> Start production server
+
+==> Wait for http://127.0.0.1:3015
+
+==> Homepage HEAD
+HTTP/1.1 200 OK
+content-type: text/html; charset=utf-8
+Vary: Accept-Encoding
+Date: Tue, 22 Sep 2026 14:15:41 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+
+==> Search POST smoke
+
+Verification passed.

@@ -1,0 +1,326 @@
+{
+  "date": "2026-11-03T15:15:40.230Z",
+  "gitHead": "54ee9899c0c73f8043b9a6230675b13f3b29a0d3",
+  "node": "v24.13.0",
+  "web": "https://www.crosscanon.com",
+  "native": "current working tree; pre-existing changes preserved",
+  "ios": "iPhone 16e / iOS 26.3 Simulator / Debug build; installed and launched freshly",
+  "limitations": [
+    "Mac locked: hands-on native desktop and simulator interaction unavailable",
+    "No physical-device keyboard, touch feel, VoiceOver, background-audio, or Safari certification"
+  ],
+  "hashes": {
+    "rust/desktop/src/lib.rs": "eb96cf1e589cc2d667b5076c37ee6d38b7bf676d6e5bb1b932181ab7cd6891a2",
+    "rust/desktop/src/dialogs.rs": "c42da4c0a8deb480181f1f5593a8d07e0f7b397737da47bf77442b4e788e6bc2",
+    "rust/desktop/src/search.rs": "07c7a28e592e166d5116fda2998ca447ddbc0a659d9171a60d7a8225ead4435c",
+    "rust/desktop/src/reader.rs": "213e47992ad4f2a397151f769d871b5a673ab654329120570a71dd48c68cd012",
+    "rust/desktop/src/touch_scroll.rs": "7b63ef9691723727212e26f384c609da29e62215c32aee7af5ff76227416d819",
+    "app/features/search/SearchForm.tsx": "15bb3b61222e2bea3f4bbf9b15b5b9f552e0fd355e4829c9914f85b188255f45",
+    "app/features/search/SearchResults.tsx": "6dcd0a33086b87047375717fa19dd4816d039bad7c307d1562e9655e8a3e98e3",
+    "app/features/search/useSearchFilters.ts": "b90376443dcd7ef4bdabbe75f4b0f2f741033fd384c836820e9048aa0f7132ae",
+    "app/features/early-christian-reader/ChapterJump.tsx": "daf97aa252b03c037a1a3edfa0e003aa04ab137364964474986f9deca17f63b7",
+    "app/styles.css": "f2d6d29969ecf4c3e7dd6b2e78c9408ff428d95a0cee25e240b3286dfc6485ec"
+  },
+  "images": [
+    {
+      "name": "desktop-comparison.png",
+      "width": 2050,
+      "height": 1200,
+      "bytes": 623182
+    },
+    {
+      "name": "ios-fathers-jump-system.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 469130
+    },
+    {
+      "name": "ios-fathers-jump.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 758371
+    },
+    {
+      "name": "ios-fathers-reader-system.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 530033
+    },
+    {
+      "name": "ios-fathers-reader.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 664456
+    },
+    {
+      "name": "ios-fathers-search-system.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 440257
+    },
+    {
+      "name": "ios-fathers-search.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 635077
+    },
+    {
+      "name": "ios-jump-system.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 384115
+    },
+    {
+      "name": "ios-jump.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 554594
+    },
+    {
+      "name": "ios-reader-system.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 457178
+    },
+    {
+      "name": "ios-reader.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 562121
+    },
+    {
+      "name": "ios-search-form-system.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 425253
+    },
+    {
+      "name": "ios-search-form.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 608489
+    },
+    {
+      "name": "ios-search-results-system.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 616117
+    },
+    {
+      "name": "ios-search-results.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 854492
+    },
+    {
+      "name": "ios-settings-system.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 434779
+    },
+    {
+      "name": "ios-settings.png",
+      "width": 1170,
+      "height": 2532,
+      "bytes": 522422
+    },
+    {
+      "name": "mobile-comparison.png",
+      "width": 900,
+      "height": 2198,
+      "bytes": 976616
+    },
+    {
+      "name": "native-desktop-fathers-jump.png",
+      "width": 1003,
+      "height": 886,
+      "bytes": 256245
+    },
+    {
+      "name": "native-desktop-fathers-reader.png",
+      "width": 1003,
+      "height": 886,
+      "bytes": 496294
+    },
+    {
+      "name": "native-desktop-fathers-search.png",
+      "width": 1003,
+      "height": 886,
+      "bytes": 143878
+    },
+    {
+      "name": "native-desktop-jump.png",
+      "width": 1003,
+      "height": 886,
+      "bytes": 148500
+    },
+    {
+      "name": "native-desktop-reader.png",
+      "width": 1003,
+      "height": 886,
+      "bytes": 452183
+    },
+    {
+      "name": "native-desktop-search-form.png",
+      "width": 1003,
+      "height": 886,
+      "bytes": 131222
+    },
+    {
+      "name": "native-desktop-search.png",
+      "width": 1003,
+      "height": 886,
+      "bytes": 354263
+    },
+    {
+      "name": "native-desktop-settings.png",
+      "width": 1003,
+      "height": 886,
+      "bytes": 430437
+    },
+    {
+      "name": "web-back-from-result.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 242772
+    },
+    {
+      "name": "web-desktop-fathers-jump.png",
+      "width": 1000,
+      "height": 900,
+      "bytes": 391703
+    },
+    {
+      "name": "web-desktop-fathers-reader.png",
+      "width": 1000,
+      "height": 900,
+      "bytes": 573872
+    },
+    {
+      "name": "web-desktop-fathers-search.png",
+      "width": 1000,
+      "height": 900,
+      "bytes": 392017
+    },
+    {
+      "name": "web-desktop-jump.png",
+      "width": 1000,
+      "height": 900,
+      "bytes": 401055
+    },
+    {
+      "name": "web-desktop-rate-limit.png",
+      "width": 1000,
+      "height": 900,
+      "bytes": 126691
+    },
+    {
+      "name": "web-desktop-reader.png",
+      "width": 1000,
+      "height": 900,
+      "bytes": 42354
+    },
+    {
+      "name": "web-desktop-search.png",
+      "width": 1000,
+      "height": 900,
+      "bytes": 335943
+    },
+    {
+      "name": "web-desktop-selected.png",
+      "width": 1000,
+      "height": 900,
+      "bytes": 356374
+    },
+    {
+      "name": "web-desktop-settings.png",
+      "width": 1000,
+      "height": 900,
+      "bytes": 477583
+    },
+    {
+      "name": "web-mobile-dark.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 252639
+    },
+    {
+      "name": "web-mobile-fathers-jump.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 181284
+    },
+    {
+      "name": "web-mobile-fathers-reader.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 29965
+    },
+    {
+      "name": "web-mobile-fathers-search.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 172569
+    },
+    {
+      "name": "web-mobile-filters.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 115515
+    },
+    {
+      "name": "web-mobile-jump.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 166413
+    },
+    {
+      "name": "web-mobile-reader.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 243185
+    },
+    {
+      "name": "web-mobile-search-form.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 162938
+    },
+    {
+      "name": "web-mobile-search-results.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 217577
+    },
+    {
+      "name": "web-mobile-settings.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 246427
+    },
+    {
+      "name": "web-mobile-three-authors.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 127336
+    },
+    {
+      "name": "web-resize-preserved-position.png",
+      "width": 1000,
+      "height": 900,
+      "bytes": 576871
+    },
+    {
+      "name": "web-theme-after.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 274647
+    },
+    {
+      "name": "web-theme-before.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 252781
+    }
+  ]
+}

@@ -855,6 +855,10 @@ function useReaderScrollWindow({
     }
 
     let updateTimer = 0;
+    // The initial target has already supplied the explicit Reader Location.
+    // A short last paragraph can put the reading anchor in the next chapter;
+    // don't replace that target until the viewport actually moves.
+    let trackedScrollY = window.scrollY;
 
     const updateActiveKeyFromAnchor = () => {
       if (
@@ -885,6 +889,8 @@ function useReaderScrollWindow({
     };
 
     const scheduleLocationUpdate = () => {
+      if (Math.abs(window.scrollY - trackedScrollY) < 1) return;
+      trackedScrollY = window.scrollY;
       if (updateTimer) {
         return;
       }
@@ -897,7 +903,6 @@ function useReaderScrollWindow({
 
     window.addEventListener("scroll", scheduleLocationUpdate, { passive: true });
     document.addEventListener("scroll", scheduleLocationUpdate, { passive: true });
-    scheduleLocationUpdate();
 
     return () => {
       window.removeEventListener("scroll", scheduleLocationUpdate);

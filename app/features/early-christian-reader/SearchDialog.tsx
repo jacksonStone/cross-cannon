@@ -1,3 +1,4 @@
+import type { RefObject } from "react";
 import { Form } from "@remix-run/react";
 
 import { FilterModal } from "~/features/search/FilterModal";
@@ -33,7 +34,9 @@ export function SearchDialog({
   onOpenResult,
   onSetFocusedPassageKey,
   passageLookup,
-  readerTheme
+  readerTheme,
+  searchBodyRef,
+  onSearchScroll
 }: {
   actionData?: ChurchFathersActionData;
   authorOptions: string[];
@@ -48,6 +51,8 @@ export function SearchDialog({
   onSetFocusedPassageKey: (focusedId: string | null) => void;
   passageLookup: PassageLookup;
   readerTheme: string;
+  searchBodyRef: RefObject<HTMLDivElement>;
+  onSearchScroll: () => void;
 }) {
   const {
     activeFilterCount,
@@ -103,7 +108,7 @@ export function SearchDialog({
           </button>
         </header>
 
-        <div className="search-modal-body">
+        <div className="search-modal-body" onScroll={onSearchScroll} ref={searchBodyRef}>
           <section
             aria-busy={isSearching}
             aria-label="Early Christian search"

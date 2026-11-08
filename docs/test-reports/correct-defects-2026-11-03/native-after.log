@@ -1,0 +1,23 @@
+   Compiling cross-canon-desktop v0.1.0 (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/rust/desktop)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.49s
+     Running unittests src/lib.rs (target/debug/deps/cross_canon_desktop-2a5363cea5e66146)
+
+running 5 tests
+Observed native canon after Clear all: Catholic
+test search_regressions::clear_all_preserves_selected_canon_like_web ... ok
+Desktop first result reference visible before scrolling: true
+test search_regressions::desktop_search_shows_a_result_without_scrolling ... ok
+Offline Clement / Rome results: 1
+test search_regressions::keyword_author_scope_and_validation ... ok
+Observed native books after Catholic → Protestant → Catholic: []
+test search_regressions::out_of_canon_books_stay_cleared_like_web ... ok
+test search_regressions::online_failure_recovers_to_local_keywords ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 4.64s
+
+     Running unittests src/main.rs (target/debug/deps/cross_canon_desktop-f7b26a816fb1e94f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,383 @@
+{
+  "title": "The First Epistle of Clement to the Corinthians. 1",
+  "saved": "{\"chapterKey\":\"anf09:xii.iv.i\",\"corpus\":\"fathers\",\"passageRange\":\"4-6\",\"version\":2}",
+  "chapters": [
+    {
+      "id": "anf09:xii.iv.i",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": true
+        },
+        {
+          "range": "7-9",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.ii",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        },
+        {
+          "range": "7-11",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.iii",
+      "ranges": [
+        {
+          "range": "1-4",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.iv",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        },
+        {
+          "range": "7-9",
+          "selected": false
+        },
+        {
+          "range": "10-12",
+          "selected": false
+        },
+        {
+          "range": "13-16",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.v",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-8",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.vi",
+      "ranges": [
+        {
+          "range": "1-4",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.vii",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-8",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.viii",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-7",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.ix",
+      "ranges": [
+        {
+          "range": "1-4",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.x",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        },
+        {
+          "range": "7-10",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xi",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xii",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        },
+        {
+          "range": "7-11",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xiii",
+      "ranges": [
+        {
+          "range": "1-4",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xiv",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xv",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xvi",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        },
+        {
+          "range": "7-9",
+          "selected": false
+        },
+        {
+          "range": "10-12",
+          "selected": false
+        },
+        {
+          "range": "13-15",
+          "selected": false
+        },
+        {
+          "range": "16-20",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xvii",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-8",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xviii",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        },
+        {
+          "range": "7-9",
+          "selected": false
+        },
+        {
+          "range": "10-12",
+          "selected": false
+        },
+        {
+          "range": "13-15",
+          "selected": false
+        },
+        {
+          "range": "16-18",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xix",
+      "ranges": [
+        {
+          "range": "1-4",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xx",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        },
+        {
+          "range": "7-9",
+          "selected": false
+        },
+        {
+          "range": "10-13",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xxi",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        },
+        {
+          "range": "7-10",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xxii",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        },
+        {
+          "range": "7-9",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xxiii",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-6",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xxiv",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-7",
+          "selected": false
+        }
+      ]
+    },
+    {
+      "id": "anf09:xii.iv.xxv",
+      "ranges": [
+        {
+          "range": "1-3",
+          "selected": false
+        },
+        {
+          "range": "4-8",
+          "selected": false
+        }
+      ]
+    }
+  ]
+}

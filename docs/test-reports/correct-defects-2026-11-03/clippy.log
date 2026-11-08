@@ -1,0 +1,8 @@
+    Checking ring v0.17.14
+    Checking rustls-webpki v0.103.16
+    Checking rustls v0.23.46
+    Checking tokio-rustls v0.26.6
+    Checking hyper-rustls v0.27.10
+    Checking reqwest v0.12.28
+    Checking cross-canon-desktop v0.1.0 (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/rust/desktop)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.77s

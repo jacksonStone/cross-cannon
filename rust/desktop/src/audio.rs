@@ -1,25 +1,56 @@
 //! Native playback. Existing manifest URLs and offsets are the playback contract.
-use anyhow::{Context, Result};
+#[cfg(not(target_vendor = "apple"))]
+use anyhow::Context;
+#[cfg(any(not(target_vendor = "apple"), test))]
+use anyhow::Result;
 use cross_canon_core::AudioLocation;
-use rodio::{Decoder, OutputStreamBuilder, Sink, Source};
+#[cfg(any(not(target_vendor = "apple"), test))]
+use rodio::{Decoder, Source};
+#[cfg(not(target_vendor = "apple"))]
+use rodio::{OutputStreamBuilder, Sink};
+#[cfg(any(not(target_vendor = "apple"), test))]
+use std::io::Cursor;
+#[cfg(not(target_vendor = "apple"))]
+use std::io::Read;
+#[cfg(any(not(target_vendor = "apple"), test))]
+use std::time::Duration;
 use std::{
-    io::{Cursor, Read},
     path::PathBuf,
-    sync::mpsc::{self, Receiver, Sender},
-    time::Duration,
+    sync::{
+        mpsc::{self, Receiver, Sender},
+        Arc,
+    },
 };
+#[derive(Clone, serde::Serialize)]
+pub struct PlaybackChapter {
+    pub id: String,
+    pub title: String,
+    pub audio: AudioLocation,
+    pub fallback: Option<AudioLocation>,
+}
+#[derive(Clone, serde::Serialize)]
+pub struct PlaybackPlan {
+    pub chapters: Vec<PlaybackChapter>,
+    pub index: usize,
+}
 pub enum Command {
-    Play(AudioLocation),
+    Play(PlaybackPlan),
     Toggle,
     Stop,
+    #[cfg(target_vendor = "apple")]
+    Wake,
 }
 pub enum Event {
+    Loading,
+    Chapter(String),
+    Position { chapter: String, seconds: f64 },
     Playing,
     Paused,
     Stopped,
     Error(String),
 }
-pub fn start(root: PathBuf, ctx: eframe::egui::Context) -> (Sender<Command>, Receiver<Event>) {
+#[cfg(not(target_vendor = "apple"))]
+pub fn start(root: PathBuf, ctx: eframe::egui::Context) -> (Arc<Sender<Command>>, Receiver<Event>) {
     let (tx, rx) = mpsc::channel();
     let (events, out) = mpsc::channel();
     std::thread::spawn(move || {
@@ -27,7 +58,8 @@ pub fn start(root: PathBuf, ctx: eframe::egui::Context) -> (Sender<Command>, Rec
         let mut sink: Option<Sink> = None;
         loop {
             match rx.recv_timeout(Duration::from_millis(200)) {
-                Ok(Command::Play(audio)) => {
+                Ok(Command::Play(plan)) => {
+                    let audio = plan.chapters[plan.index].audio.clone();
                     if let Some(previous) = sink.take() {
                         previous.stop()
                     }
@@ -92,9 +124,13 @@ pub fn start(root: PathBuf, ctx: eframe::egui::Context) -> (Sender<Command>, Rec
             }
         }
     });
-    (tx, out)
+    (Arc::new(tx), out)
 }
+#[cfg(not(target_vendor = "apple"))]
 fn audio_bytes(root: &std::path::Path, url: &str) -> Result<Vec<u8>> {
+    if std::path::Path::new(url).is_absolute() && std::path::Path::new(url).is_file() {
+        return Ok(std::fs::read(url)?);
+    }
     if url.starts_with("/audio/") && !url.contains("..") {
         let path = root.join("storage").join(url.trim_start_matches('/'));
         if path.is_file() {
@@ -120,6 +156,7 @@ fn audio_bytes(root: &std::path::Path, url: &str) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
+#[cfg(any(not(target_vendor = "apple"), test))]
 fn decode_audio(bytes: Vec<u8>) -> Result<Decoder<Cursor<Vec<u8>>>> {
     // MP4 requires a known byte length. Decoder::new in Rodio 0.20 discarded
     // it even for an in-memory Cursor, causing a panic in existing M4A files.
@@ -128,6 +165,95 @@ fn decode_audio(bytes: Vec<u8>) -> Result<Decoder<Cursor<Vec<u8>>>> {
         .with_seekable(true)
         .with_data(Cursor::new(bytes))
         .build()?)
+}
+
+#[cfg(target_vendor = "apple")]
+static AUDIO_WAKE_TARGET: std::sync::Mutex<std::sync::Weak<Sender<Command>>> =
+    std::sync::Mutex::new(std::sync::Weak::new());
+
+#[cfg(target_vendor = "apple")]
+#[no_mangle]
+pub extern "C" fn cross_canon_audio_wake() {
+    let target = AUDIO_WAKE_TARGET
+        .lock()
+        .ok()
+        .and_then(|target| target.upgrade());
+    if let Some(target) = target {
+        let _ = target.send(Command::Wake);
+    }
+}
+
+#[cfg(target_vendor = "apple")]
+pub fn start(
+    _root: PathBuf,
+    ctx: eframe::egui::Context,
+) -> (Arc<Sender<Command>>, Receiver<Event>) {
+    use std::ffi::{CStr, CString};
+    unsafe extern "C" {
+        fn cross_canon_audio_play(json: *const std::ffi::c_char);
+        fn cross_canon_audio_command(command: i32);
+        fn cross_canon_audio_poll() -> *mut std::ffi::c_char;
+        fn cross_canon_audio_free(event: *mut std::ffi::c_char);
+    }
+    let (tx, rx) = mpsc::channel();
+    let tx = Arc::new(tx);
+    *AUDIO_WAKE_TARGET.lock().unwrap() = Arc::downgrade(&tx);
+    let (events, out) = mpsc::channel();
+    std::thread::spawn(move || loop {
+        match rx.recv() {
+            Ok(Command::Play(plan)) => {
+                if let Ok(json) = serde_json::to_string(&plan)
+                    .and_then(|s| CString::new(s).map_err(serde::ser::Error::custom))
+                {
+                    // SAFETY: the adapter copies this nul-terminated string before returning.
+                    unsafe { cross_canon_audio_play(json.as_ptr()) };
+                }
+            }
+            Ok(Command::Toggle) => unsafe { cross_canon_audio_command(0) },
+            Ok(Command::Stop) => unsafe { cross_canon_audio_command(1) },
+            Ok(Command::Wake) => {}
+            Err(_) => break,
+        }
+        loop {
+            // SAFETY: poll returns either null or an owned nul-terminated allocation;
+            // free uses the same allocator in the adapter. No Objective-C object crosses FFI.
+            let raw = unsafe { cross_canon_audio_poll() };
+            if raw.is_null() {
+                break;
+            }
+            let event = unsafe { CStr::from_ptr(raw) }
+                .to_string_lossy()
+                .into_owned();
+            unsafe { cross_canon_audio_free(raw) };
+            let Ok(value) = serde_json::from_str::<serde_json::Value>(&event) else {
+                continue;
+            };
+            let chapter = || value["chapter"].as_str().unwrap_or_default().to_string();
+            let event = match value["type"].as_str() {
+                Some("loading") => Event::Loading,
+                Some("playing") => Event::Playing,
+                Some("paused") => Event::Paused,
+                Some("stopped") => Event::Stopped,
+                Some("chapter") => Event::Chapter(chapter()),
+                Some("position") => Event::Position {
+                    chapter: chapter(),
+                    seconds: value["seconds"].as_f64().unwrap_or(0.0),
+                },
+                Some("error") => Event::Error(
+                    value["message"]
+                        .as_str()
+                        .unwrap_or("Recording is unavailable")
+                        .into(),
+                ),
+                _ => continue,
+            };
+            if events.send(event).is_err() {
+                return;
+            }
+            ctx.request_repaint();
+        }
+    });
+    (tx, out)
 }
 
 #[cfg(test)]

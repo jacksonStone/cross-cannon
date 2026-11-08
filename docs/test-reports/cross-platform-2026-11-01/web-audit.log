@@ -1,0 +1,42 @@
+PASS desktop-bible: reader and default visual
+PASS desktop-bible: all themes, presets, settings persistence and dismiss
+PASS desktop-bible: jump, canon/author, and dismissal
+PASS desktop-bible: semantic search, filters, highlights, cross-corpus similarity
+PASS desktop-fathers: reader and default visual
+PASS desktop-fathers: all themes, presets, settings persistence and dismiss
+FAIL desktop-fathers: jump, canon/author, and dismissal Expected values to be strictly equal:
++ actual - expected
+
++ CdpElementHandle {
++   Symbol(_isElementHandle): true,
++   handle: CdpJSHandle {},
++   isolatedHandle: undefined
++ }
+- null
+
+PASS desktop-fathers: semantic search, filters, highlights, cross-corpus similarity
+PASS mobile-bible: reader and default visual
+PASS mobile-bible: all themes, presets, settings persistence and dismiss
+PASS mobile-bible: jump, canon/author, and dismissal
+PASS mobile-bible: semantic search, filters, highlights, cross-corpus similarity
+PASS mobile-fathers: reader and default visual
+PASS mobile-fathers: all themes, presets, settings persistence and dismiss
+FAIL mobile-fathers: jump, canon/author, and dismissal Expected values to be strictly equal:
++ actual - expected
+
++ CdpElementHandle {
++   Symbol(_isElementHandle): true,
++   handle: CdpJSHandle {},
++   isolatedHandle: undefined
++ }
+- null
+
+PASS mobile-fathers: semantic search, filters, highlights, cross-corpus similarity
+PASS Fathers: author filtering, favorite persistence, original/modernized text
+PASS Mobile: validation, outside-dismiss and landscape overflow
+PASS Fathers: saved selected paragraph diagnostic
+{
+  "passed": 17,
+  "failed": 2,
+  "errors": []
+}

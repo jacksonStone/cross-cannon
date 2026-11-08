@@ -1,0 +1,13 @@
+{
+  "head": "54ee9899c0c73f8043b9a6230675b13f3b29a0d3",
+  "node": "v24.13.0",
+  "files": {
+    "rust/desktop/src/lib.rs": "1277ed48ec93c612152d2f93595ee0bf65a58fe4c8a2729a96c9471318541d99",
+    "rust/desktop/src/dialogs.rs": "1de3e25b3ce0ea868746223692b8ef2e3473fc4cd69f3abfdba5dea89817c481",
+    "rust/desktop/src/reader.rs": "eec312fc6a90b1b1f508b0c2cb1791e2ea76fffb7e99072a74b7ba955f4eff97",
+    "rust/desktop/src/search.rs": "bef3438f92b0a4378486d4490dd89b9174ba9dc1a3e11090a143e72575e09179",
+    "rust/core/src/lib.rs": "11cb0045fc2a6995ac4d9f417535f3fb21296459e9054b915b7dc138a01abe56",
+    "public/cross-canon-sw.js": "def8ef71b7a67aad0ee77c4d67909a93281074826c6d157d0e0097e1f5ba5d8b",
+    "build/server/serve.mjs": "6b2c7b5c2ecfde10a6846773f71ea37b09530647cd2c2a172e0b6dfb3e2e1912"
+  }
+}

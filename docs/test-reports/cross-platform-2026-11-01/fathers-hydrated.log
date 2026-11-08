@@ -1,0 +1,18 @@
+{
+  "after": {
+    "firstPassageTop": -693.0625,
+    "scrollY": 890,
+    "top": 171.15625,
+    "url": "http://127.0.0.1:13616/church-fathers?chapter=anf09%3Axii.iv.i&passage=1-3"
+  },
+  "before": {
+    "firstPassageTop": -675.0625,
+    "scrollY": 872,
+    "top": 127.8125,
+    "url": "http://127.0.0.1:13616/church-fathers"
+  },
+  "passed": true,
+  "selectedPassageRange": "1-3",
+  "tappedPassageRange": "1-3",
+  "topDelta": 43.34375
+}

@@ -1,0 +1,8 @@
+{
+  "query": "Hope after death",
+  "resultCount": 10,
+  "destination": "http://127.0.0.1:13835/reader/40c782b1851d11c9c27e7f7d?canon=protestant&matchCount=10",
+  "scrollBefore": 132,
+  "scrollAfter": 218,
+  "forwardAndBack": "pass"
+}

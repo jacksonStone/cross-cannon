@@ -1,0 +1,9 @@
+AUDIT FAILURE: server-outage search did not enter offline mode; closing search to continue cold-reading checks
+/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/.scratch/cross-platform-e2e/offline-continue.ts:442
+    throw new Error(`Offline indicator missing: ${JSON.stringify(diagnostic)}`);
+          ^
+
+Error: Offline indicator missing: {"bodyText":"Early Christian WorksOn Proverbs. 1×🔍Remove downloadDownload interrupted. Try again.JumpAaOn Proverbs. 1HippolytusFrom the Commentary of St. Hippolytus on Proverbs.1-3On Proverbs. From the Commentary of St. Hippolytus on Proverbs. Proverbs","controlled":true,"hasOfflineFallback":false,"online":true,"title":"Early Christian Reader | Cross Canon","url":"http://127.0.0.1:13627/church-fathers?chapter=anf05%3Aiii.iv.i.vi.i"}
+    at <anonymous> (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/.scratch/cross-platform-e2e/offline-continue.ts:442:11)
+
+Node.js v24.13.0

@@ -1,0 +1,5 @@
+
+> cross-cannon@0.1.0 e2e:reader-responsive
+> node --import tsx scripts/e2e-reader-responsive.ts
+
+Responsive reader checks passed.

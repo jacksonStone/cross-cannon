@@ -29,8 +29,10 @@ notarization, installers, and Windows/Linux packaging are not part of this build
 `scripts/rust.sh` uses the isolated toolchain in `.tmp/` when present and otherwise
 uses the normal installed `cargo`. `Cargo.lock` pins the dependencies.
 
-Desktop controls: the upper-right tools button opens audio, search, `Aa`, and
-Jump. Command-F opens search; Command-J opens jump. Clicking a paragraph reveals
+Desktop controls: the upper-right three-dot button opens a floating tools
+popover with audio, search, `Aa`, and Jump. Its dots are drawn directly, avoiding
+missing font glyphs. Opening or closing tools preserves the title width and
+reader position; long titles wrap within a header sized to their actual height. Command-F opens search; Command-J opens jump. Clicking a paragraph reveals
 its reference, copy, and similar-passage actions. Click outside a dialog or press
 Escape to dismiss it. The lower-right corpus button switches between Scripture
 and Early Christian works. Reader settings persist the focused passage, canon,
@@ -50,22 +52,45 @@ The shared Rust core reads these existing artifacts directly:
   `storage/early-christian-works.db` **read-only**, reusing 21,316 stored Scripture
   paragraph and Early Christian chapter vectors and their embedding config.
 
-Packaging copies text/timestamp artifacts byte for byte. It never runs indexers,
+Packaging prepares the same losslessly compressed native text/timestamp library
+as iOS, preserving every Book, Passage and alignment. It never runs indexers,
 cache builders, transcription, alignment, or media builders. Neither databases
 nor recordings are packaged into the desktop app. Fonts are bundled under their
 included open-source licenses.
 
 Offline: all reading, navigation, settings, and keyword search. Online: semantic
-queries, similar passage requests, and playback of recordings not already in a
-local developer library. Semantic responses contain only passage IDs and ranking
+queries, similar passage requests, and playback of recordings not already downloaded
+through **Aa → Offline audio** or present in a local developer library.
+Semantic responses contain only passage IDs and ranking
 metadata; desktop display text always comes from the local library.
 
-Native audio uses rodio and the existing audio URLs/offsets. It currently loads a
-recording before playing the selected chapter segment. The web player's HTTP
-range streaming, background Media Session controls, original-track fallback,
-and continuous chapter-following are not yet ported. Early Christian semantic
-results are ranked at chapter level and open that chapter's first paragraph;
-verse highlight selection is not yet ported. Text selection uses paragraph copy.
+Search defaults to **Search Index (Online)**, using the same refined API contract
+as the web readers. **Search Keywords** runs entirely against the bundled library.
+The mode and corpus choices, query/source, and submit controls remain above a
+separate scrolling result list. Filters include canon, Scripture books, up to
+three Early Christian authors, and 5–40 matches (default 10). Result cards retain
+full local passage text, web verse highlights and calibrated match strengths,
+context navigation, copy, and both similarity targets. Early Christian results
+resolve the exact indexed paragraph to its local reading range; subsequent
+similarity requests preserve the indexed paragraph ID.
+
+On macOS and iOS, native audio uses a thin AVPlayer adapter for progressive/range
+loading, retained recordings across aligned chapters, original Scripture recording
+fallback, continuous chapter following, and system play/pause/seek/next controls.
+iOS also handles interruptions and headphone disconnection and declares background
+audio support. Physical-device lock-screen/interruption behavior still needs a
+device pass. Other desktop targets retain the Rodio backend. Every backend uses
+the existing recording URLs and alignment offsets; no audio artifacts are rebuilt.
+Text selection uses paragraph copy.
+
+The reader now restores a separate focused Passage for Bible and Fathers. Jump
+includes individual Scripture verses, Fathers author filters and persistent work
+favorites. Back/Forward are available in Jump and with Alt-Left/Alt-Right.
+Copy reader links use the same HTTPS URLs as the web app; paste one into Jump to
+open it locally. The `crosscanon://reader/<passage-id>` and
+`crosscanon://church-fathers?chapter=...&passage=...` schemes open the native apps.
+HTTPS universal-link association is not configured; HTTPS links remain shareable
+web links. The lower-left Mod/Orig control switches Fathers wording directly.
 
 ## API contract
 
@@ -110,7 +135,8 @@ forms and applies canon/book/author filters and match-strength presentation.
 `web: true` selects Scripture verse highlights and the best existing Early
 Christian paragraph per chapter, with exact selected-source metadata. These
 paragraph and verse vectors are read from the existing databases; they are not
-regenerated. The default desktop response remains the compact ID/score contract.
+regenerated. The native reader now requests this same refined contract. API clients omitting
+`web: true` retain the compact ID/score contract.
 Successful web search data responses include `X-Cross-Canon-Search: rust`.
 Catalog loaders fall back to the existing text artifacts during API outages,
 allowing readers to open while search reports an explicit service error.
@@ -217,8 +243,8 @@ Rust tests load the actual existing library and both read-only databases,
 validate full book/chapter/passage counts, audio offsets, canon membership,
 float32 decoding, similar-search exclusions, book filters, and HTTP error/result
 contracts. A native egui test checks Command-F/Command-J, Escape dismissal,
-keyword search with an unreachable API, and stable explicit Chapter identity
-during passive scrolling. The package's `--check-library` mode validates a copied bundle without
+keyword search with an unreachable API, and headings that follow visible Passage
+metadata while scrolling across Chapters without adding history. The package's `--check-library` mode validates a copied bundle without
 opening a window or making network calls.
 
 `npm run verify` starts and stops both a release Rust API and the production web
@@ -242,5 +268,41 @@ node scripts/compare-desktop.mjs
 Previews are saved under the ignored `docs/screenshots/`. `CROSS_CANON_FRESH=1`
 prevents preview runs from changing the user's saved reader state.
 `CROSS_CANON_PASSAGE=<local ID>` opens a specific passage for comparison.
-`CROSS_CANON_PREVIEW=settings|jump|search|dark` selects a reproducible preview
+`CROSS_CANON_PREVIEW=settings|jump|search|search-results|tools|dark` selects a reproducible preview
 when `CROSS_CANON_FRESH=1` is set.
+
+## Search parity verification (2026-11-01)
+
+The native search adapter was compared directly with production Remix form
+responses, checking every ranked indexed passage ID, result count, verse
+highlight, calibrated match strength, and cosine score (tolerance 0.0001).
+All eight scenarios passed:
+
+| Search | Scope | Matches |
+| --- | --- | ---: |
+| Theme: More money More Problems | Scripture, Protestant | 10 |
+| Scripture → Scripture | Catholic, Sirach | 5 |
+| Theme: More money More Problems | Early Christian, Clement of Rome | 5 |
+| Scripture → Scripture | Protestant, John | 5 |
+| Scripture → Early Christian | Clement of Rome | 5 |
+| Early Christian → Scripture | Orthodox, 1 Esdras | 5 |
+| Early Christian → Early Christian | Augustine of Hippo | 10 |
+| Theme: More money More Problems | Early Christian, all authors | 10 |
+
+Repeat this optional live check (it sends theme queries and respects the web
+rate-limit cooldown):
+
+```sh
+scripts/rust.sh test -p cross-canon-desktop live_web_search_parity -- --ignored --nocapture
+```
+
+Regular native tests cover the default search mode, HTTP request/result contract,
+exact local paragraph range resolution, offline keyword search, keyboard and
+touch dismissal, and controls/results sizing while scrolling at 320, 393, and
+1000 points wide. The results-sizing assertion reproduces the former collapsed
+loading-state viewport before its fix. The request/default assertions reproduce
+the former keyword/compact-contract mismatch.
+
+The comparison covers search. Audio differences remain listed above. Keyword
+search intentionally requires every query word to occur in the local passage or
+reference and shows that rule below the search form.

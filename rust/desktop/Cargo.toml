@@ -18,7 +18,10 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 rodio = { version = "0.21.1", default-features = false, features = ["playback", "symphonia-all"] }
 
 [target.'cfg(not(target_os = "ios"))'.dependencies]
-eframe = { version = "0.31", default-features = false, features = ["glow", "x11", "wayland"] }
+eframe = { version = "0.31", default-features = false, features = ["glow", "x11", "wayland", "accesskit"] }
 
 [target.'cfg(target_os = "ios")'.dependencies]
 eframe = { version = "0.31", default-features = false, features = ["wgpu"] }
+
+[build-dependencies]
+cc = "1"

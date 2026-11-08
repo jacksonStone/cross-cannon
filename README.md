@@ -87,7 +87,7 @@ passive scrolling only persists Reader Location.
 
 Requirements:
 
-- Node.js `>=20.15.0`
+- Node.js `26.13.0` (run `nvm use` to select the checked-in `.nvmrc`)
 - npm
 - optional `OPENAI_API_KEY` for semantic embeddings
 - optional `sqlite3` CLI for `scripts/index-remaining-books.sh`

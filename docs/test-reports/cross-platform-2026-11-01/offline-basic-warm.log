@@ -1,0 +1,5 @@
+PASS Download a complete Fathers work using the real UI
+FAIL Offline cold reload of downloaded Fathers text Waiting for selector `.offline-indicator` failed
+PASS Offline cold navigation to Bible
+FAIL Offline Bible verse jump Waiting for selector `.reader-passage-text` failed
+PASS Offline cached reader opens in a new tab

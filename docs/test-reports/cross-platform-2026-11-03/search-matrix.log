@@ -1,0 +1,25 @@
+FAIL Theme anxiety / John and Romans / 5 The expression evaluated to a falsy value:
+
+  assert(req.books.includes(hit.book))
+
+PASS Theme hope after death / Orthodox / 40
+PASS Theme punctuation and apostrophe / Catholic / 5
+FAIL Similar Scripture / John and Romans / 40 The expression evaluated to a falsy value:
+
+  assert(req.books.includes(hit.book))
+
+Cooldown 27s for /?_data=routes%2F_index
+PASS Scripture to Fathers / three authors / 40
+PASS Fathers theme / three authors / 5
+PASS API validation: blank query
+PASS API validation: query over 2000
+PASS API validation: zero limit
+PASS API validation: unknown book
+PASS API validation: unknown author
+PASS API validation: four authors
+PASS API validation: unknown source
+PASS API validation: query plus source
+PASS API validation: web keyword contract
+PASS Keyword: no matches
+PASS Keyword: case and whitespace normalization
+{"passed":15,"failed":2}

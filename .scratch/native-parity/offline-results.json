@@ -1,0 +1,95 @@
+{
+  "results": [
+    {
+      "name": "Download a complete Fathers work using the real UI",
+      "status": "pass",
+      "detail": {
+        "title": "The First Epistle of Clement to the Corinthians. 1",
+        "cacheKeys": [
+          "cross-canon-shell-v2-manifest-2a5695ec.js",
+          "cross-canon-offline-meta-v1",
+          "cross-canon-content-v2",
+          "cross-canon-content-v1",
+          "cross-canon-work-v1-anf09-xii.iv-early-christian-preview-20260704b"
+        ]
+      }
+    },
+    {
+      "name": "Offline cold reload of downloaded Fathers text",
+      "status": "fail",
+      "error": "Waiting for selector `.offline-indicator` failed"
+    },
+    {
+      "name": "Offline cold navigation to Bible",
+      "status": "pass"
+    },
+    {
+      "name": "Offline Bible verse jump",
+      "status": "pass",
+      "detail": "John 1"
+    },
+    {
+      "name": "Offline cached reader opens in a new tab",
+      "status": "pass"
+    }
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "url": "http://127.0.0.1:13616/?offline-health=reader",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/?offline-health=reader",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/?offline-health=reader",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/?offline-health=reader",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/?offline-health=reader",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/?offline-health=reader",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/?offline-health=reader",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/?reader=scripture&_data=routes%2F_index",
+      "error": "net::ERR_INTERNET_DISCONNECTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/?reader=scripture&_data=routes%2F_index",
+      "error": "net::ERR_INTERNET_DISCONNECTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/continuous-audio.json",
+      "error": "net::ERR_INTERNET_DISCONNECTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/?offline-health=reader",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/?offline-health=reader",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/church-fathers?_data=routes%2Fchurch-fathers",
+      "error": "net::ERR_INTERNET_DISCONNECTED"
+    },
+    {
+      "url": "http://127.0.0.1:13616/church-fathers?_data=routes%2Fchurch-fathers",
+      "error": "net::ERR_INTERNET_DISCONNECTED"
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+==> Bible: load reader
+==> Bible: cross chapter boundary down and up
+==> Bible: persisted spot survives Fathers switch
+==> Bible: passage position updates and restores within a chapter
+AUDIT FAILURE: Bible: passage position updates and restores within a chapter: Expected reader title "Psalms 149", got "Psalms 150".
+==> Bible: explicit jump supports Back
+    jumped to http://127.0.0.1:13616/reader/28a01d452ab068cbfc7852ab
+    direct Reader Location rendered
+    Back restored http://127.0.0.1:13616/
+==> Bible: theme search, similar search, jump result
+==> Bible: selected passage similar search
+==> Fathers: invalid bookmark falls back to first work
+==> Fathers: jump picker to work and chapter
+==> Fathers: cross chapter boundary down and up
+==> Fathers: theme search and jump result
+==> Fathers: selected passage similar search and jump result
+{
+  "baseUrl": "http://127.0.0.1:13616",
+  "headless": true,
+  "passed": false,
+  "auditFailures": [
+    "Bible: passage position updates and restores within a chapter: Expected reader title \"Psalms 149\", got \"Psalms 150\"."
+  ],
+  "requestFailures": {},
+  "steps": [
+    {
+      "ms": 607.4,
+      "name": "Bible: load reader"
+    },
+    {
+      "ms": 654.1,
+      "name": "Bible: cross chapter boundary down and up"
+    },
+    {
+      "ms": 1436.8,
+      "name": "Bible: persisted spot survives Fathers switch"
+    },
+    {
+      "ms": 36225.6,
+      "name": "Bible: passage position updates and restores within a chapter"
+    },
+    {
+      "ms": 1652.5,
+      "name": "Bible: explicit jump supports Back"
+    },
+    {
+      "ms": 2279.9,
+      "name": "Bible: theme search, similar search, jump result"
+    },
+    {
+      "ms": 517.9,
+      "name": "Bible: selected passage similar search"
+    },
+    {
+      "ms": 630.5,
+      "name": "Fathers: invalid bookmark falls back to first work"
+    },
+    {
+      "ms": 1375.7,
+      "name": "Fathers: jump picker to work and chapter"
+    },
+    {
+      "ms": 724.9,
+      "name": "Fathers: cross chapter boundary down and up"
+    },
+    {
+      "ms": 1510.1,
+      "name": "Fathers: theme search and jump result"
+    },
+    {
+      "ms": 1391,
+      "name": "Fathers: selected passage similar search and jump result"
+    }
+  ]
+}

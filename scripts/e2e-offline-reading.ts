@@ -1474,7 +1474,7 @@ async function readOnlyDownloadedWorkStorage(
     const entries = Object.values(records);
 
     if (entries.length !== 1) {
-      throw new Error(`Expected one downloaded Work, found ${entries.length}.`);
+      throw new Error(`Expected one downloaded Work, found ${entries.length}: ${JSON.stringify(Object.entries(records).map(([id, record]) => ({id, complete: record.complete, version: record.version})))}`);
     }
 
     const record = entries[0];

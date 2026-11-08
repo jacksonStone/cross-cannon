@@ -1,0 +1,14 @@
+
+> cross-cannon@0.1.0 e2e:reader
+> node --import tsx scripts/e2e-reader-kitchen-sink.ts
+
+==> Bible: load reader
+==> Bible: cross chapter boundary down and up
+==> Bible: persisted spot survives Fathers switch
+==> Bible: passage position updates and restores within a chapter
+Error: Expected reader title "Psalms 149", got "Psalms 150".
+    at waitForReaderTitle (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/scripts/e2e-reader-kitchen-sink.ts:997:9)
+    at async exerciseBiblePassagePositionPersistence (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/scripts/e2e-reader-kitchen-sink.ts:265:3)
+    at async step (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/scripts/e2e-reader-kitchen-sink.ts:84:5)
+    at async main (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/scripts/e2e-reader-kitchen-sink.ts:54:5)
+    at async <anonymous> (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/scripts/e2e-reader-kitchen-sink.ts:1086:1)

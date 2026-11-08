@@ -1,0 +1,44 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.51s
+     Running unittests src/lib.rs (target/debug/deps/cross_canon_desktop-2a5363cea5e66146)
+
+running 25 tests
+test search::tests::live_web_search_parity ... ignored, Live comparison against production web forms and the online API
+test audio::tests::existing_continuous_recording_decodes_and_seeks ... ok
+test search_regressions::clear_all_preserves_selected_canon_like_web ... ok
+test search_regressions::desktop_search_shows_a_result_without_scrolling ... ok
+test search_regressions::keyword_author_scope_and_validation ... ok
+test search_regressions::online_failure_recovers_to_local_keywords ... ok
+test search_regressions::out_of_canon_books_stay_cleared_like_web ... ok
+test navigation::tests::corpus_locations_history_favorites_and_reader_links_survive_navigation ... ok
+test search::tests::refined_early_christian_results_open_matching_local_range_and_keep_exact_source ... ok
+test search::tests::native_search_sends_web_contract_and_preserves_highlights ... ok
+test navigation::tests::opening_reader_link_positions_the_requested_passage_in_the_viewport ... ok
+test search::tests::search_matches_mobile_web_scrolling_and_full_passages ... ok
+test dialogs::tests::phone_jump_keeps_picker_visible_and_navigates_both_corpora ... ok
+test tests::native_keyboard_dismissal_and_local_search_work_without_api ... ok
+test touch_scroll::tests::flick_distance_is_consistent_at_60_and_120_hz ... ok
+test touch_scroll::tests::held_release_cancel_and_other_fingers_do_not_launch_a_flick ... ok
+test touch_scroll::tests::lifting_a_finger_does_not_abruptly_brake_a_flick ... ok
+test touch_scroll::tests::nested_dialog_flick_moves_only_the_touched_viewport_and_coasts ... ok
+test tests::chapter_heading_follows_visible_passages_when_scrolling_both_directions ... ok
+test tests::phone_flick_coasts_and_touch_stops_it ... ok
+test tests::phone_scroll_work_stays_bounded_on_long_books ... ok
+test tests::phone_cached_layout_preserves_distant_jumps_after_settings_changes ... ok
+test tests::phone_touch_navigation_offline_search_and_saved_focus ... ok
+test tests::theme_search_defaults_to_web_semantics ... ok
+test tests::toolbar_title_stays_readable_after_repeated_tools_toggles ... ok
+
+test result: ok. 24 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 16.53s
+
+     Running unittests src/main.rs (target/debug/deps/cross_canon_desktop-f7b26a816fb1e94f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests cross_canon_desktop
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

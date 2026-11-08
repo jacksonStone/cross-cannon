@@ -1,0 +1,24 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.64s
+     Running unittests src/lib.rs (target/debug/deps/cross_canon_desktop-2a5363cea5e66146)
+
+running 1 test
+PASS theme, Scripture, Protestant, book=None, author=None: 10 identical ranked passages and highlights
+PASS similar-passage, Scripture, Catholic, book=Some("Sirach"), author=None: 5 identical ranked passages and highlights
+PASS theme-early-christian, EarlyChristian, Protestant, book=None, author=Some("Clement of Rome"): 5 identical ranked passages and highlights
+PASS similar-passage, Scripture, Protestant, book=Some("John"), author=None: 5 identical ranked passages and highlights
+PASS similar-early-christian, EarlyChristian, Protestant, book=None, author=Some("Clement of Rome"): 5 identical ranked passages and highlights
+Web rate limit: respecting 58s cooldown before similar-scripture
+test search::tests::live_web_search_parity has been running for over 60 seconds
+PASS similar-scripture, Scripture, Orthodox, book=Some("1 Esdras"), author=None: 5 identical ranked passages and highlights
+PASS similar-passage, EarlyChristian, Protestant, book=None, author=Some("Augustine of Hippo"): 10 identical ranked passages and highlights
+PASS theme, EarlyChristian, Protestant, book=None, author=None: 10 identical ranked passages and highlights
+test search::tests::live_web_search_parity ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 19 filtered out; finished in 89.92s
+
+     Running unittests src/main.rs (target/debug/deps/cross_canon_desktop-f7b26a816fb1e94f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

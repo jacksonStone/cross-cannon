@@ -1,0 +1,175 @@
+{
+  "desktopMetrics": [
+    {
+      "background": "rgb(251, 250, 247)",
+      "font": "Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+      "height": 852,
+      "lineHeight": "24px",
+      "overflow": "hidden",
+      "selector": ".search-modal",
+      "size": "16px",
+      "weight": "400",
+      "width": 952,
+      "x": 24,
+      "y": 24
+    },
+    {
+      "background": "color(srgb 0.967373 0.957804 0.93851)",
+      "font": "Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+      "height": 89.8125,
+      "lineHeight": "24px",
+      "overflow": "visible",
+      "selector": ".search-modal .search-modal-header",
+      "size": "16px",
+      "weight": "400",
+      "width": 950,
+      "x": 25,
+      "y": 25
+    },
+    {
+      "background": "rgba(0, 0, 0, 0)",
+      "font": "Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+      "height": 760.1875,
+      "lineHeight": "24px",
+      "overflow": "auto",
+      "selector": ".search-modal .search-modal-body",
+      "size": "16px",
+      "weight": "400",
+      "width": 950,
+      "x": 25,
+      "y": 114.8125
+    },
+    {
+      "background": "color(srgb 0.560784 0.207843 0.14902 / 0.05)",
+      "font": "Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+      "height": 285.75,
+      "lineHeight": "24px",
+      "overflow": "visible",
+      "selector": ".search-modal .scripture-result-button",
+      "size": "16px",
+      "weight": "700",
+      "width": 896,
+      "x": 59,
+      "y": 352.28125
+    },
+    {
+      "background": "rgba(0, 0, 0, 0)",
+      "font": "Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+      "height": 18.71875,
+      "lineHeight": "18.72px",
+      "overflow": "visible",
+      "selector": ".search-modal .result-meta",
+      "size": "12.48px",
+      "weight": "700",
+      "width": 876,
+      "x": 69,
+      "y": 360.28125
+    },
+    {
+      "background": "rgb(255, 255, 255)",
+      "font": "Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+      "height": 148,
+      "lineHeight": "26.04px",
+      "overflow": "auto",
+      "selector": "#question",
+      "size": "16.8px",
+      "weight": "400",
+      "width": 726,
+      "x": 45,
+      "y": 172.28125
+    }
+  ],
+  "mobileMetrics": [
+    {
+      "font": "Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+      "height": 820,
+      "lineHeight": "24px",
+      "overflow": "hidden",
+      "selector": ".search-modal",
+      "size": "16px",
+      "weight": "400",
+      "width": 366,
+      "x": 12,
+      "y": 12
+    },
+    {
+      "font": "Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+      "height": 70.21875,
+      "lineHeight": "24px",
+      "overflow": "visible",
+      "selector": ".search-modal-header",
+      "size": "16px",
+      "weight": "400",
+      "width": 364,
+      "x": 13,
+      "y": 13
+    },
+    {
+      "font": "Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+      "height": 747.78125,
+      "lineHeight": "24px",
+      "overflow": "auto",
+      "selector": ".search-modal-body",
+      "size": "16px",
+      "weight": "400",
+      "width": 364,
+      "x": 13,
+      "y": 83.21875
+    },
+    {
+      "font": "Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+      "height": 138,
+      "lineHeight": "24.8px",
+      "overflow": "auto",
+      "selector": "#question",
+      "size": "16px",
+      "weight": "400",
+      "width": 340,
+      "x": 25,
+      "y": 261.6875
+    },
+    {
+      "missing": true,
+      "selector": ".result-text"
+    },
+    {
+      "font": "Inter, system-ui, -apple-system, \"system-ui\", \"Segoe UI\", sans-serif",
+      "height": 49.4375,
+      "lineHeight": "18.72px",
+      "overflow": "visible",
+      "selector": ".result-meta",
+      "size": "12.48px",
+      "weight": "700",
+      "width": 306,
+      "x": 49,
+      "y": 557.6875
+    }
+  ],
+  "fathersJumpEscape": {
+    "desktopDismissed": false,
+    "mobileDismissed": false
+  },
+  "backFromContext": {
+    "reopenedQuery": "",
+    "reopenedResultCount": 0
+  },
+  "sourceClearing": "Cross-corpus search Luke 16:10-14 to Fathers completed with ten results; clearing source restored theme field.",
+  "authorLimit": {
+    "checked": 3,
+    "fourthEnabled": false
+  },
+  "clearFilters": {
+    "canon": "catholic",
+    "matches": 10,
+    "checkedBooks": 0
+  },
+  "scrolling": {
+    "headerY": 13,
+    "formY": -290.78125,
+    "bodyScroll": 386
+  },
+  "notes": [
+    "Mobile browser is responsive Chromium, not Safari.",
+    "Theme/focus movement seen during rapid interactions was not stable in a minimized retry; not counted as a confirmed defect."
+  ]
+}

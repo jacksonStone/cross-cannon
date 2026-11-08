@@ -1,0 +1,37 @@
+   Compiling cross-canon-desktop v0.1.0 (/private/tmp/crosscanon-audit-20261103/rust/desktop)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.90s
+     Running unittests src/lib.rs (target/debug/deps/cross_canon_desktop-2a5363cea5e66146)
+
+running 5 tests
+Observed native canon after Clear all: Protestant
+
+thread 'audit_20261103::audit_clear_all_preserves_selected_canon_like_web' (4898283) panicked at rust/desktop/src/lib.rs:1264:9:
+assertion `left == right` failed: Web Clear all preserves the selected canon
+  left: Protestant
+ right: Catholic
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test audit_20261103::audit_clear_all_preserves_selected_canon_like_web ... FAILED
+Desktop first result reference visible before scrolling: false
+
+thread 'audit_20261103::audit_desktop_search_shows_a_result_without_scrolling' (4898284) panicked at rust/desktop/src/lib.rs:1326:9:
+Web displays its first result beneath the form at 1000 × 900; native must not consume all remaining height for the action row
+test audit_20261103::audit_desktop_search_shows_a_result_without_scrolling ... FAILED
+Observed native books after Catholic → Protestant → Catholic: ["Sirach"]
+
+thread 'audit_20261103::audit_out_of_canon_books_stay_cleared_like_web' (4898287) panicked at rust/desktop/src/lib.rs:1276:9:
+Web prunes Sirach when leaving its canon; it must not silently reactivate
+test audit_20261103::audit_out_of_canon_books_stay_cleared_like_web ... FAILED
+Offline Clement / Rome results: 1
+test audit_20261103::audit_keyword_author_scope_and_validation ... ok
+test audit_20261103::audit_online_failure_recovers_to_local_keywords ... ok
+
+failures:
+
+failures:
+    audit_20261103::audit_clear_all_preserves_selected_canon_like_web
+    audit_20261103::audit_desktop_search_shows_a_result_without_scrolling
+    audit_20261103::audit_out_of_canon_books_stay_cleared_like_web
+
+test result: FAILED. 2 passed; 3 failed; 0 ignored; 0 measured; 20 filtered out; finished in 4.39s
+
+error: test failed, to rerun pass `-p cross-canon-desktop --lib`

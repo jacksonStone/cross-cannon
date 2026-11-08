@@ -1,0 +1,21 @@
+{
+  "fathers_json_files": 13684,
+  "source_bytes": 131700278,
+  "bundles": {
+    "desktop": {
+      "missing": [],
+      "different": [],
+      "files_compared": 13684
+    },
+    "ios-built": {
+      "missing": [],
+      "different": [],
+      "files_compared": 13684
+    },
+    "ios-installed": {
+      "missing": [],
+      "different": [],
+      "files_compared": 13684
+    }
+  }
+}

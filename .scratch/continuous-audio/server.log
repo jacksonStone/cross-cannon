@@ -1,0 +1,186 @@
+
+> cross-cannon@0.1.0 start
+> NODE_ENV=production remix-serve ./build/server/index.js
+
+[remix-serve] http://localhost:3016 (http://192.168.1.80:3016)
+GET /reader/0f30e1c3b52c58a6c3c8da86 200 - - 14.928 ms
+GET /scripture-cache/98c414bddc31ea96.json 200 2145149 - 8.788 ms
+LibsqlError: SQLITE_BUSY: database is locked
+    at mapSqliteError (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:392:16)
+    at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:297:15)
+    at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+    at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+  code: 'SQLITE_BUSY',
+  rawCode: 5,
+  [cause]: SqliteError: database is locked
+      at convertError (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:59:12)
+      at Database.prepare (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:131:13)
+      at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:268:28)
+      at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+      at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+    code: 'SQLITE_BUSY',
+    rawCode: 5
+  }
+}
+Failed to warm indexed books cache LibsqlError: SQLITE_BUSY: database is locked
+    at mapSqliteError (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:392:16)
+    at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:297:15)
+    at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+    at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+  code: 'SQLITE_BUSY',
+  rawCode: 5,
+  [cause]: SqliteError: database is locked
+      at convertError (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:59:12)
+      at Database.prepare (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:131:13)
+      at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:268:28)
+      at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+      at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+    code: 'SQLITE_BUSY',
+    rawCode: 5
+  }
+}
+[Error: Unexpected Server Error]
+GET / 500 - - 22.629 ms
+GET /church-fathers 200 - - 7.878 ms
+GET /church-fathers?_data=routes%2Fchurch-fathers 200 - - 2.923 ms
+GET /audio/continuous/bible-genesis-3da6b712c2662ba8.m4a 206 106727438 - 5.720 ms
+GET /reader/0f30e1c3b52c58a6c3c8da86 200 - - 10.076 ms
+GET /scripture-cache/98c414bddc31ea96.json 200 2145149 - 7.063 ms
+LibsqlError: SQLITE_BUSY: database is locked
+    at mapSqliteError (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:392:16)
+    at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:297:15)
+    at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+    at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+  code: 'SQLITE_BUSY',
+  rawCode: 5,
+  [cause]: SqliteError: database is locked
+      at convertError (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:59:12)
+      at Database.prepare (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:131:13)
+      at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:268:28)
+      at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+      at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+    code: 'SQLITE_BUSY',
+    rawCode: 5
+  }
+}
+[Error: Unexpected Server Error]
+GET / 500 - - 5.022 ms
+GET /church-fathers 200 - - 9.315 ms
+GET /church-fathers?_data=routes%2Fchurch-fathers 200 - - 18.193 ms
+GET /audio/continuous/bible-genesis-3da6b712c2662ba8.m4a 206 106727438 - 2.063 ms
+GET /reader/68d9194462ac0808ad5ef109 200 - - 8.391 ms
+GET /audio/continuous/bible-genesis-3da6b712c2662ba8.m4a 206 25757710 - 2.232 ms
+LibsqlError: SQLITE_BUSY: database is locked
+    at mapSqliteError (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:392:16)
+    at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:297:15)
+    at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+    at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+  code: 'SQLITE_BUSY',
+  rawCode: 5,
+  [cause]: SqliteError: database is locked
+      at convertError (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:59:12)
+      at Database.prepare (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:131:13)
+      at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:268:28)
+      at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+      at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+    code: 'SQLITE_BUSY',
+    rawCode: 5
+  }
+}
+[Error: Unexpected Server Error]
+GET / 500 - - 4.778 ms
+GET /church-fathers 200 - - 14.281 ms
+GET /church-fathers?_data=routes%2Fchurch-fathers 200 - - 1.082 ms
+GET /audio/continuous/bible-genesis-3da6b712c2662ba8.m4a 206 1024 - 0.857 ms
+GET /reader/0f30e1c3b52c58a6c3c8da86 200 - - 2.018 ms
+LibsqlError: SQLITE_BUSY: database is locked
+    at mapSqliteError (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:392:16)
+    at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:297:15)
+    at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+    at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+  code: 'SQLITE_BUSY',
+  rawCode: 5,
+  [cause]: SqliteError: database is locked
+      at convertError (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:59:12)
+      at Database.prepare (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:131:13)
+      at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:268:28)
+      at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+      at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+    code: 'SQLITE_BUSY',
+    rawCode: 5
+  }
+}
+[Error: Unexpected Server Error]
+GET / 500 - - 5.006 ms
+GET /church-fathers 200 - - 7.598 ms
+GET /reader/0f30e1c3b52c58a6c3c8da86 200 - - 3.845 ms
+GET /scripture-cache/98c414bddc31ea96.json 200 2145149 - 6.246 ms
+LibsqlError: SQLITE_BUSY: database is locked
+    at mapSqliteError (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:392:16)
+    at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:297:15)
+    at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+    at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+  code: 'SQLITE_BUSY',
+  rawCode: 5,
+  [cause]: SqliteError: database is locked
+      at convertError (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:59:12)
+      at Database.prepare (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:131:13)
+      at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:268:28)
+      at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+      at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+    code: 'SQLITE_BUSY',
+    rawCode: 5
+  }
+}
+[Error: Unexpected Server Error]
+GET / 500 - - 4.329 ms
+GET /church-fathers 200 - - 5.876 ms
+GET /church-fathers?_data=routes%2Fchurch-fathers 200 - - 4.261 ms
+GET /audio/continuous/bible-genesis-3da6b712c2662ba8.m4a 206 106727438 - 2.106 ms
+GET /reader/68d9194462ac0808ad5ef109 200 - - 4.760 ms
+GET /audio/continuous/bible-genesis-3da6b712c2662ba8.m4a 206 25757710 - 1.080 ms
+LibsqlError: SQLITE_BUSY: database is locked
+    at mapSqliteError (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:392:16)
+    at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:297:15)
+    at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+    at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+  code: 'SQLITE_BUSY',
+  rawCode: 5,
+  [cause]: SqliteError: database is locked
+      at convertError (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:59:12)
+      at Database.prepare (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:131:13)
+      at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:268:28)
+      at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+      at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+    code: 'SQLITE_BUSY',
+    rawCode: 5
+  }
+}
+[Error: Unexpected Server Error]
+GET / 500 - - 3.689 ms
+GET /church-fathers 200 - - 5.484 ms
+GET /church-fathers?_data=routes%2Fchurch-fathers 200 - - 4.923 ms
+GET /audio/continuous/bible-genesis-3da6b712c2662ba8.m4a 206 1024 - 2.263 ms
+GET /reader/0f30e1c3b52c58a6c3c8da86 200 - - 2.666 ms
+LibsqlError: SQLITE_BUSY: database is locked
+    at mapSqliteError (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:392:16)
+    at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:297:15)
+    at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+    at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+  code: 'SQLITE_BUSY',
+  rawCode: 5,
+  [cause]: SqliteError: database is locked
+      at convertError (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:59:12)
+      at Database.prepare (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/libsql/index.js:131:13)
+      at executeStmt (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:268:28)
+      at Sqlite3Client.execute (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/node_modules/@libsql/client/lib-esm/sqlite3.js:81:16)
+      at readIndexedBooks (file:///Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/build/server/index.js?t=1790086278702.2744:6378:39) {
+    code: 'SQLITE_BUSY',
+    rawCode: 5
+  }
+}
+[Error: Unexpected Server Error]
+GET / 500 - - 3.599 ms
+GET /church-fathers 200 - - 5.184 ms
+GET /church-fathers?_data=routes%2Fchurch-fathers 200 - - 3.636 ms
+GET /audio/WEBD_AT/01_Genesis_01.mp3 206 1339004 - 1.161 ms

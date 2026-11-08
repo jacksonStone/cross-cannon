@@ -2,14 +2,13 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useReducer,
   useRef,
   useState,
 } from "react";
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
 
 import { PassageReader } from "~/features/passage-reader/PassageReader";
 import { useOfflineStatus } from "~/features/offline/OfflineProvider";
@@ -22,10 +21,7 @@ import {
   getIndexedBooks,
   handleSearchRequest,
 } from "~/features/search/search-request.server";
-import {
-  initialSearchModalFlowState,
-  searchModalFlowReducer,
-} from "~/features/search/search-modal-flow";
+import { useScriptureSearchHistory } from "~/features/search/useSearchHistory";
 import type { SearchActionData } from "~/features/search/types";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import {
@@ -100,13 +96,9 @@ export async function action({ request }: ActionFunctionArgs) {
 export default function Index() {
   const { books, earlyChristianAuthors, scriptureCacheKey, scriptureCacheUrl } =
     useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
+  const incomingActionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const { isOffline } = useOfflineStatus();
-  const [searchFlow, dispatchSearchFlow] = useReducer(
-    searchModalFlowReducer,
-    initialSearchModalFlowState
-  );
   const savedReaderLocation = readReaderLocation(
     READER_POSITION_STORAGE_KEY,
     "scripture"
@@ -122,6 +114,8 @@ export default function Index() {
     () => buildChapterIndex(scriptureLibrary.passages),
     [scriptureLibrary.passages]
   );
+  const { actionData, dispatchSearchFlow, rememberSearchScroll, searchBodyRef, searchFlow } =
+    useScriptureSearchHistory(incomingActionData, scriptureLibrary.isReady);
   const focusedPassageId = searchFlow.focusedId;
   const isSearchOpen = searchFlow.isOpen;
   const closeSearch = useCallback(
@@ -251,6 +245,10 @@ export default function Index() {
   }, [navigation.formData, navigation.state]);
 
   useEffect(() => {
+    // Restored responses retain the entry's open/closed state. Only a new
+    // submission should drive a fresh result transition.
+    if (!incomingActionData) return;
+
     if (actionData?.mode === "similar" && actionData.similarSource) {
       dispatchSearchFlow({
         focusedId: actionData.similarSource.id,
@@ -278,7 +276,7 @@ export default function Index() {
     if (actionData?.mode === "theme-early-christian") {
       dispatchSearchFlow({ type: "theme-results" });
     }
-  }, [actionData?.mode, actionData?.similarSource?.id]);
+  }, [incomingActionData, actionData?.mode, actionData?.similarSource?.id]);
 
   useEscapeDismiss({
     isOpen: isSearchOpen,
@@ -358,7 +356,7 @@ export default function Index() {
               </button>
             </header>
 
-            <div className="search-modal-body">
+            <div className="search-modal-body" onScroll={rememberSearchScroll} ref={searchBodyRef}>
               <SearchForm
                 actionData={actionData}
                 books={books}
@@ -493,15 +491,15 @@ function EarlyChristianCrossResults({
             </button>
             {isSelected ? (
               <div className="result-actions">
-                <a
+                <Link
                   className="context-button"
-                  href={buildEarlyChristianReaderUrl(
+                  to={buildEarlyChristianReaderUrl(
                     result.chapterId,
                     result.highlightPassage.rangeLabel ?? ""
                   )}
                 >
                   Jump to
-                </a>
+                </Link>
               </div>
             ) : null}
           </article>

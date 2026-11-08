@@ -1,0 +1,21 @@
+
+> cross-cannon@0.1.0 start
+> NODE_ENV=production remix-serve ./build/server/index.js
+
+[remix-serve] http://localhost:3017 (http://192.168.1.80:3017)
+GET /reader/0f30e1c3b52c58a6c3c8da86 200 - - 17.747 ms
+GET /scripture-cache/98c414bddc31ea96.json 200 2145149 - 5.968 ms
+Warmed indexed books cache: 81 books
+GET / 200 - - 16.141 ms
+GET /church-fathers 200 - - 10.239 ms
+GET /scripture-cache/98c414bddc31ea96.json 200 2145149 - 9.031 ms
+GET /?reader=scripture 200 - - 4.360 ms
+GET /church-fathers?_data=routes%2Fchurch-fathers 200 - - 5.563 ms
+GET /audio/continuous/bible-genesis-3da6b712c2662ba8.m4a 206 106727438 - 2.288 ms
+GET /reader/68d9194462ac0808ad5ef109 200 - - 7.805 ms
+GET /audio/continuous/bible-genesis-3da6b712c2662ba8.m4a 206 25757710 - 2.553 ms
+GET /audio/continuous/bible-genesis-3da6b712c2662ba8.m4a 206 1024 - 1.561 ms
+GET /reader/0f30e1c3b52c58a6c3c8da86 200 - - 6.415 ms
+GET /church-fathers?_data=routes%2Fchurch-fathers 200 - - 7.831 ms
+GET /church-fathers?_data=routes%2Fchurch-fathers 200 - - 1.785 ms
+GET /audio/WEBD_AT/01_Genesis_01.mp3 206 1339004 - 1.729 ms

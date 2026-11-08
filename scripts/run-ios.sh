@@ -17,9 +17,14 @@ print(devices[0]["udid"])
 xcrun simctl boot "$simulator_id" 2>/dev/null || xcrun simctl bootstatus "$simulator_id" -b
 open -a "$DEVELOPER_DIR/Applications/Simulator.app"
 xcrun simctl bootstatus "$simulator_id" -b
-xcodebuild -project ios/CrossCanon.xcodeproj -scheme CrossCanon -configuration Debug \
+# A project in a synced Desktop folder can stall in Xcode's file coordination.
+# Mirror the small host project; Rust and bundled texts still come from this checkout.
+ios_project="$(mktemp -d /private/tmp/crosscanon-ios-project.XXXXXX)"
+trap 'rm -rf "$ios_project"' EXIT
+cp -R ios/. "$ios_project/"
+xcodebuild -project "$ios_project/CrossCanon.xcodeproj" -scheme CrossCanon -configuration "${IOS_CONFIGURATION:-Release}" \
   -destination "platform=iOS Simulator,id=$simulator_id" -derivedDataPath "$PWD/.tmp/ios-build" \
-  CODE_SIGNING_ALLOWED=NO build
-bundle="$PWD/.tmp/ios-build/Build/Products/Debug-iphonesimulator/Cross Canon.app"
+  SRCROOT="$PWD/ios" CODE_SIGNING_ALLOWED=NO build
+bundle="$PWD/.tmp/ios-build/Build/Products/${IOS_CONFIGURATION:-Release}-iphonesimulator/Cross Canon.app"
 xcrun simctl install "$simulator_id" "$bundle"
 xcrun simctl launch "$simulator_id" com.crosscanon.mobile

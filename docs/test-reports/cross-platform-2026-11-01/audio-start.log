@@ -1,0 +1,10 @@
+
+> cross-cannon@0.1.0 e2e:audio-start
+> node --import tsx scripts/e2e-audio-start.ts
+
+scripts/fixtures/audio-start/main.tsx (101:3): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+PASS: starting later-chapter audio preserves the reader chapter during loading and seeking
+PASS: pause/resume, same-recording chapter start, settled chapter seeks, retained audio element, and desktop start
+PASS: fractional Luke 7 chapter start preserves the visible passage with iOS-style timestamp rounding
+PASS: 390px Luke chapter boundaries and seeks match saved-place restoration and retain playback
+PASS: 1440px Luke chapter boundaries and seeks match saved-place restoration and retain playback

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo } from "react";
 
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, type ClientLoaderFunctionArgs } from "@remix-run/react";
 
 import { PassageReader } from "~/features/passage-reader/PassageReader";
 import {
@@ -38,6 +38,21 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     scriptureCacheKey: scriptureCache.version,
     scriptureCacheUrl: scriptureCache.url
   });
+}
+
+export async function clientLoader({ params, request, serverLoader }: ClientLoaderFunctionArgs) {
+  // The current reader already identifies the complete immutable text cache.
+  // Jumps need no server data, including when the network has just disappeared.
+  const version = document.querySelector("data[data-scripture-cache-key]")?.getAttribute("value");
+  if (version && /^[a-f0-9]+$/i.test(version)) {
+    return {
+      filters: readFilters(new URL(request.url).searchParams),
+      passageId: params.passageId ?? "",
+      scriptureCacheKey: version,
+      scriptureCacheUrl: `/scripture-cache/${version}.json`
+    };
+  }
+  return serverLoader<typeof loader>();
 }
 
 export default function ReaderRoute() {

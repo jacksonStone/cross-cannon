@@ -1,0 +1,512 @@
+{
+  "origin": "https://www.crosscanon.com",
+  "at": "2026-11-03T14:55:15.599Z",
+  "health": {
+    "books": 491,
+    "cacheVersion": "98c414bddc31ea96",
+    "passages": 150073,
+    "resourceRoutes": true,
+    "semanticQueries": true,
+    "service": "R Cross Cannon",
+    "status": "ok",
+    "storedVectors": 21316,
+    "version": "0.1.0",
+    "webSearch": true
+  },
+  "records": [
+    {
+      "name": "Theme hope after death / Orthodox / 40",
+      "evidence": {
+        "request": {
+          "mode": "semantic",
+          "corpus": "scripture",
+          "canon": "orthodox",
+          "web": true,
+          "query": "Hope after death",
+          "limit": 40
+        },
+        "count": 40,
+        "apiMs": 334,
+        "webMs": 338,
+        "first": {
+          "id": "40c782b1851d11c9c27e7f7d",
+          "reference": "Job 17:15-16",
+          "score": 0.48974889516830444,
+          "type": "paragraph"
+        },
+        "rankedIds": [
+          "40c782b1851d11c9c27e7f7d",
+          "ff92e57b9e0524a720f2e56e",
+          "45e502286ddd2f24254995a5",
+          "9ab0d6f8b873ddbe09349a12",
+          "ad50417b10c34a22fe31f70c",
+          "b23adf4a370e782f6c888418",
+          "0b6731e509a77974f18d1f33",
+          "3a70208fbb4c1d30fe49346d",
+          "0fc15c2f1b36ae804bebfbbd",
+          "add4fb029a23c16df11cdb8b",
+          "ddb1f3eb1efa261827fa8f4b",
+          "ad47f18bc3ce18fcd47811d4",
+          "a038116c7ccb3f0b443dacf1",
+          "015fd3bd81ed5a849d74f660",
+          "bda91bdcce8c7fecbb5c1bae",
+          "cc4b15c6a64602d71334f65b",
+          "6b831f310305c3ab4b6f1179",
+          "7a00e32940e05c401d8436e4",
+          "0dd901fa05d332a2569fac87",
+          "be2710a0dbc1ad229cff1f84",
+          "7220161f7205d8fc067f6158",
+          "d723324b91adc1ef539476bd",
+          "d4c232699e136c186cf3cb7d",
+          "5c4bea9cb9c67988a4cc6b3c",
+          "d58545a6bbbb1dd155723522",
+          "451515a1b21c0ce2cdcd8b13",
+          "c221275202f2fab52a238757",
+          "69e08e9a557b12e230555dc8",
+          "9be03a8883e54a94751ff553",
+          "a00e9072190838de385a65f4",
+          "4002e5af422105b9d9ef004e",
+          "e0d92e76bf794b104c6a7a47",
+          "52eba5e2bacf17ce1c101a51",
+          "b977d48124372d6dc464d31b",
+          "bcfe6bc53f7c42a073ea7982",
+          "1e8aceb5a3453c20b0067783",
+          "a21b42cf0be7abf1cfdb2c13",
+          "c893df8b47561f66fdddd28f",
+          "5a908899fba4a7a5eaf638da",
+          "a32d61878c14d78d402a73b1"
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "name": "Theme punctuation and apostrophe / Catholic / 5",
+      "evidence": {
+        "request": {
+          "mode": "semantic",
+          "corpus": "scripture",
+          "canon": "catholic",
+          "web": true,
+          "query": "God’s mercy, forgiveness & hope?",
+          "limit": 5
+        },
+        "count": 5,
+        "apiMs": 228,
+        "webMs": 283,
+        "first": {
+          "highlightVerse": 7,
+          "id": "7a0293620c6605f317159517",
+          "reference": "Psalms 130:1-7",
+          "score": 0.5078971982002258,
+          "type": "paragraph"
+        },
+        "rankedIds": [
+          "7a0293620c6605f317159517",
+          "9df49f250521f3c51799584d",
+          "568d970dcf47f1b7a49c6305",
+          "ca5fae30b6ec453081b8a823",
+          "e13ece3778c4a93001abd6de"
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "name": "Scripture to Fathers / three authors / 40",
+      "evidence": {
+        "request": {
+          "mode": "semantic",
+          "corpus": "early-christian",
+          "canon": "protestant",
+          "web": true,
+          "sourceId": "7b3acf6bf6ecb9d135581d57",
+          "authors": [
+            "Clement of Rome",
+            "Augustine of Hippo",
+            "Tertullian"
+          ],
+          "limit": 40
+        },
+        "count": 40,
+        "apiMs": 936,
+        "webMs": 1011,
+        "first": {
+          "author": "Augustine of Hippo",
+          "chapterId": "npnf102:iv.XVI.3",
+          "chapterReference": "City of God 431",
+          "date": null,
+          "highlightPassage": {
+            "id": "ecw:c7118a57c4ea9a3297419d36",
+            "rangeLabel": "1-3",
+            "reference": "City of God 431:1-3",
+            "text": "We must therefore introduce into this work an explanation of the generations of the three sons of Noah, in so far as that may illustrate the progress in time of the two cities. Scripture first mentions that of the youngest son, who is called Japheth: he had eight sons, and by two of these sons seven grandchildren, three by one son, four by the other; in all, fifteen descendants. Ham, Noah’s middle son, had four sons, and by one of them five grandsons, and by one of these two great-grandsons; in all, eleven.",
+            "verseEnd": 3,
+            "verseStart": 1
+          },
+          "score": 0.7210744023323059,
+          "source": "npnf102",
+          "title": "City of God"
+        },
+        "rankedIds": [
+          "ecw:c7118a57c4ea9a3297419d36",
+          "ecw:9ba57cd634367f7ef62dd9d1",
+          "ecw:ef6961a12985a6637d7709fe",
+          "ecw:230104a843a251460159d4df",
+          "ecw:0640f062a1155dfaf8e47d0c",
+          "ecw:c7dffef533dd61874bfad0fb",
+          "ecw:dc582f8f860f9c6c01307946",
+          "ecw:cd98e56b4a34cded9f8854c4",
+          "ecw:72caac0f4bf9990478bea148",
+          "ecw:be97620e9315ebdedd37d03f",
+          "ecw:8f524cc80513cc619a9b1506",
+          "ecw:59beccea115152dd12013425",
+          "ecw:d00a2310968788373b9ef063",
+          "ecw:843828a961cc13ddef42785e",
+          "ecw:13dab694ee97829a4898668b",
+          "ecw:22a9a8040dbcdef8df4569d1",
+          "ecw:57c975c5b097395434cd7be1",
+          "ecw:32702aa1e5b51179499f7543",
+          "ecw:b9b039b759dd264300b62c54",
+          "ecw:1e5858534fcdc8beb6f4e24d",
+          "ecw:fd40ff224675e45fb4e1140d",
+          "ecw:983df5257dd83a576ee80a16",
+          "ecw:ac395dccbd977c727e2f6156",
+          "ecw:2f5d4748f61ce18ee8ed1b23",
+          "ecw:ab930313575a6f2a76bcb9fa",
+          "ecw:ce6673dc2aec60856748edbb",
+          "ecw:14e69b0da8303533855554b3",
+          "ecw:92d77a3a271af3098b7450c4",
+          "ecw:08a1f820cfefbfce4da4fcc2",
+          "ecw:209ef038c1555eec7e75c042",
+          "ecw:88e7e09d4edd4f869fa84ffc",
+          "ecw:d266f8c2d61413f73e7ae26f",
+          "ecw:f521aa5befebed5f8bdb0158",
+          "ecw:3557aed9d4052c2c5ef1f36e",
+          "ecw:bfa7fa8d88a18a923cee2203",
+          "ecw:8a2162e6942e01b6677556fb",
+          "ecw:e1f13e9cc5b52dd55540fd9d",
+          "ecw:98c0a71adc475e1117c34b16",
+          "ecw:fae18a958d5b2c24fdf690af",
+          "ecw:d39569edd13a185cb55b3711"
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "name": "Fathers theme / three authors / 5",
+      "evidence": {
+        "request": {
+          "mode": "semantic",
+          "corpus": "early-christian",
+          "canon": "protestant",
+          "web": true,
+          "query": "forgiving enemies",
+          "authors": [
+            "Clement of Rome",
+            "Augustine of Hippo",
+            "Tertullian"
+          ],
+          "limit": 5
+        },
+        "count": 5,
+        "apiMs": 1088,
+        "webMs": 1101,
+        "first": {
+          "author": "Augustine of Hippo",
+          "chapterId": "npnf103:iv.ii.lxxv",
+          "chapterReference": "The Enchiridion. 74",
+          "date": null,
+          "highlightPassage": {
+            "id": "ecw:42c260c4066fe099035107cb",
+            "rangeLabel": "1-3",
+            "reference": "The Enchiridion. 74:1-3",
+            "text": "But none of those is greater than to forgive from the heart a sin that has been committed against us. For it is a comparatively small thing to wish well to, or even to do good to, a man who has done no evil to you. It is a much higher thing, and is the result of the most exalted goodness, to love your enemy, and always to wish well to, and when you have the opportunity, to do good to, the man who wishes you ill, and, when he can, does you harm.",
+            "verseEnd": 3,
+            "verseStart": 1
+          },
+          "score": 0.6093079447746277,
+          "source": "npnf103",
+          "title": "The Enchiridion."
+        },
+        "rankedIds": [
+          "ecw:42c260c4066fe099035107cb",
+          "ecw:d4daf73e77e937493efc6f42",
+          "ecw:27c8a3b00ca9440929de2f23",
+          "ecw:00af7bc220458fc104b63ff0",
+          "ecw:8502739888bb8b24356ed2be"
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "name": "API validation: blank query",
+      "evidence": {
+        "status": 400,
+        "ms": 40,
+        "upstream": null,
+        "payload": {
+          "error": "Provide query or sourceId"
+        }
+      },
+      "status": "pass"
+    },
+    {
+      "name": "API validation: query over 2000",
+      "evidence": {
+        "status": 400,
+        "ms": 33,
+        "upstream": null,
+        "payload": {
+          "error": "Search is too large"
+        }
+      },
+      "status": "pass"
+    },
+    {
+      "name": "API validation: zero limit",
+      "evidence": {
+        "status": 400,
+        "ms": 37,
+        "upstream": null,
+        "payload": {
+          "error": "limit must be between 1 and 100"
+        }
+      },
+      "status": "pass"
+    },
+    {
+      "name": "API validation: unknown book",
+      "evidence": {
+        "status": 400,
+        "ms": 34,
+        "upstream": null,
+        "payload": {
+          "error": "Unknown book filter"
+        }
+      },
+      "status": "pass"
+    },
+    {
+      "name": "API validation: unknown author",
+      "evidence": {
+        "status": 400,
+        "ms": 37,
+        "upstream": null,
+        "payload": {
+          "error": "Unknown author filter"
+        }
+      },
+      "status": "pass"
+    },
+    {
+      "name": "API validation: four authors",
+      "evidence": {
+        "status": 400,
+        "ms": 36,
+        "upstream": null,
+        "payload": {
+          "error": "Search is too large"
+        }
+      },
+      "status": "pass"
+    },
+    {
+      "name": "API validation: unknown source",
+      "evidence": {
+        "status": 400,
+        "ms": 39,
+        "upstream": null,
+        "payload": {
+          "error": "Unknown source passage"
+        }
+      },
+      "status": "pass"
+    },
+    {
+      "name": "API validation: query plus source",
+      "evidence": {
+        "status": 400,
+        "ms": 33,
+        "upstream": null,
+        "payload": {
+          "error": "Provide either query or sourceId"
+        }
+      },
+      "status": "pass"
+    },
+    {
+      "name": "API validation: web keyword contract",
+      "evidence": {
+        "status": 400,
+        "ms": 117,
+        "upstream": null,
+        "payload": {
+          "error": "Web searches require a semantic target corpus"
+        }
+      },
+      "status": "pass"
+    },
+    {
+      "name": "Keyword: no matches",
+      "evidence": {
+        "status": 200,
+        "ms": 45,
+        "upstream": null,
+        "payload": {
+          "elapsedMs": 12.450209000000001,
+          "mode": "keyword",
+          "results": [],
+          "source": null
+        }
+      },
+      "status": "pass"
+    },
+    {
+      "name": "Keyword: case and whitespace normalization",
+      "evidence": {
+        "count": 5,
+        "results": [
+          {
+            "chapterId": "Genesis:44",
+            "corpus": "scripture",
+            "id": "fda2dadbfc4fc27874cc0102",
+            "reference": "Genesis 44:10-14",
+            "score": 0.043478261679410934
+          },
+          {
+            "chapterId": "Genesis:49",
+            "corpus": "scripture",
+            "id": "4697ac109ece49d9512cd7ff",
+            "reference": "Genesis 49:1-5",
+            "score": 0.04315318539738655
+          },
+          {
+            "chapterId": "Genesis:1",
+            "corpus": "scripture",
+            "id": "0f30e1c3b52c58a6c3c8da86",
+            "reference": "Genesis 1:1-6",
+            "score": 0.04152274131774902
+          },
+          {
+            "chapterId": "Genesis:10",
+            "corpus": "scripture",
+            "id": "7688a1256f70e0beca0f3ab0",
+            "reference": "Genesis 10:7-13",
+            "score": 0.04148699343204498
+          },
+          {
+            "chapterId": "Genesis:13",
+            "corpus": "scripture",
+            "id": "ca134708bab615e26d73cc16",
+            "reference": "Genesis 13:1-6",
+            "score": 0.04106507822871208
+          }
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "name": "Theme anxiety / John and Romans / 5",
+      "evidence": {
+        "request": {
+          "mode": "semantic",
+          "corpus": "scripture",
+          "canon": "protestant",
+          "web": true,
+          "query": "anxiety",
+          "books": [
+            "John",
+            "Romans"
+          ],
+          "limit": 5
+        },
+        "count": 5,
+        "apiMs": 466,
+        "webMs": 498,
+        "first": {
+          "highlightVerse": 21,
+          "id": "09aea84ede3a1a6edf1e365a",
+          "reference": "John 16:21-24",
+          "score": 0.13078729808330536,
+          "type": "paragraph"
+        },
+        "rankedIds": [
+          "09aea84ede3a1a6edf1e365a",
+          "69da595e597ac358d9b96f2e",
+          "4b1bbc1a5220a45a329bf8d8",
+          "af6b40126d59f2662b1071d8",
+          "f3bac81890554323519e71e8"
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "name": "Similar Scripture / John and Romans / 40",
+      "evidence": {
+        "request": {
+          "mode": "semantic",
+          "corpus": "scripture",
+          "canon": "protestant",
+          "web": true,
+          "sourceId": "7b3acf6bf6ecb9d135581d57",
+          "books": [
+            "John",
+            "Romans"
+          ],
+          "limit": 40
+        },
+        "count": 40,
+        "apiMs": 41,
+        "webMs": 46,
+        "first": {
+          "id": "a268dbb5439f286a148449b5",
+          "reference": "Romans 9:7-11",
+          "score": 0.39298316836357117,
+          "type": "paragraph"
+        },
+        "rankedIds": [
+          "a268dbb5439f286a148449b5",
+          "aeb98267c94b038751bc88ba",
+          "404fa62df766993c6ede7e31",
+          "3fd94f2b31b1db13dfd763c7",
+          "56e578a666002ea322ac94d9",
+          "7097b9f28676558ba83f7634",
+          "a5f124b54ef7502a47878bca",
+          "89bd63641b76ee3ccd1f4b86",
+          "f9dbb2d65dd5d9eaecbf990d",
+          "870f2504ced842d51c74aa0d",
+          "575211f8d72d0c3ebdf57b7a",
+          "6108ad4a12706f9abc95294f",
+          "0456654777457027c1cdc3e4",
+          "23e84ca42c852a433100d864",
+          "6e4fe11231e154778bd43b2a",
+          "ebdbea73244c7ea3b400ba08",
+          "10a0c1b2956e7dc0b2a250d2",
+          "ebf99c2e28989eaae678eb86",
+          "e82f77cb46d2464d33c17e6d",
+          "0a93ba168a18f11152e9d4b8",
+          "0dd81dde02b44eac03dd06da",
+          "618b4374d81ff3185b514057",
+          "9be89e8465db774d0f30f85e",
+          "5aedb1a1ce9e08d37b679151",
+          "3982d8f5b5307f46de6c6cd4",
+          "81954605348f154244a3b3d4",
+          "65fb85630fa7f3d86591e8ba",
+          "0241787c6eabb3c99ade496b",
+          "24cad292c68dd82155f7f318",
+          "00ab5ddbc9bc4fc9221dd56a",
+          "b256a0e7997a29b20b301385",
+          "1c74c5c3516da70ec8f2511d",
+          "9344012f2f90952228aea2fb",
+          "e19f836b8e3bb5aced25f4af",
+          "404575f75ced1e910cd59873",
+          "d339e9b5b930dbd0c50ca49d",
+          "d54af30122b72c44e2f61200",
+          "2b78ee848574da38fd913c8d",
+          "5d088da28885fa41850dbd7e",
+          "cb66f69fca67438d9200854a"
+        ]
+      },
+      "status": "pass"
+    }
+  ]
+}

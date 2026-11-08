@@ -27,7 +27,6 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     stageShellGeneration(candidateShellCache)
       .then(() => writeMetaText(PENDING_SHELL_URL, candidateShellCache))
-      .then(() => self.skipWaiting())
   );
 });
 

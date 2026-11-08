@@ -1,0 +1,207 @@
+{
+  "origin": "http://127.0.0.1:13616",
+  "results": [
+    {
+      "name": "desktop-bible: reader and default visual",
+      "status": "pass",
+      "ms": 1737,
+      "detail": {
+        "font": "\"Source Serif 4\", Georgia, serif",
+        "weight": "700",
+        "size": "19.84px",
+        "lineHeight": "34.1248px",
+        "width": 800,
+        "top": 99.859375,
+        "background": "rgb(251, 250, 247)",
+        "horizontalOverflow": false
+      }
+    },
+    {
+      "name": "desktop-bible: all themes, presets, settings persistence and dismiss",
+      "status": "pass",
+      "ms": 1476
+    },
+    {
+      "name": "desktop-bible: jump, canon/author, and dismissal",
+      "status": "pass",
+      "ms": 267
+    },
+    {
+      "name": "desktop-bible: semantic search, filters, highlights, cross-corpus similarity",
+      "status": "pass",
+      "ms": 4530,
+      "detail": {
+        "count": 5,
+        "mode": "theme",
+        "crossMode": "similar-early-christian"
+      }
+    },
+    {
+      "name": "desktop-fathers: reader and default visual",
+      "status": "pass",
+      "ms": 1868,
+      "detail": {
+        "font": "\"Source Serif 4\", Georgia, serif",
+        "weight": "700",
+        "size": "19.84px",
+        "lineHeight": "34.1248px",
+        "width": 800,
+        "top": 170.40625,
+        "background": "rgb(251, 250, 247)",
+        "horizontalOverflow": false
+      }
+    },
+    {
+      "name": "desktop-fathers: all themes, presets, settings persistence and dismiss",
+      "status": "pass",
+      "ms": 2248
+    },
+    {
+      "name": "desktop-fathers: jump, canon/author, and dismissal",
+      "status": "pass",
+      "ms": 307
+    },
+    {
+      "name": "desktop-fathers: semantic search, filters, highlights, cross-corpus similarity",
+      "status": "pass",
+      "ms": 3623,
+      "detail": {
+        "count": 5,
+        "mode": "theme",
+        "crossMode": "similar-scripture"
+      }
+    },
+    {
+      "name": "mobile-bible: reader and default visual",
+      "status": "pass",
+      "ms": 2689,
+      "detail": {
+        "font": "\"Source Serif 4\", Georgia, serif",
+        "weight": "700",
+        "size": "19.84px",
+        "lineHeight": "34.1248px",
+        "width": 341,
+        "top": 135.515625,
+        "background": "rgb(251, 250, 247)",
+        "horizontalOverflow": false
+      }
+    },
+    {
+      "name": "mobile-bible: all themes, presets, settings persistence and dismiss",
+      "status": "pass",
+      "ms": 1750
+    },
+    {
+      "name": "mobile-bible: jump, canon/author, and dismissal",
+      "status": "pass",
+      "ms": 346
+    },
+    {
+      "name": "mobile-bible: semantic search, filters, highlights, cross-corpus similarity",
+      "status": "pass",
+      "ms": 4481,
+      "detail": {
+        "count": 5,
+        "mode": "theme",
+        "crossMode": "similar-early-christian"
+      }
+    },
+    {
+      "name": "mobile-fathers: reader and default visual",
+      "status": "pass",
+      "ms": 1678,
+      "detail": {
+        "font": "\"Source Serif 4\", Georgia, serif",
+        "weight": "700",
+        "size": "19.84px",
+        "lineHeight": "34.1248px",
+        "width": 341,
+        "top": 204.9375,
+        "background": "rgb(251, 250, 247)",
+        "horizontalOverflow": false
+      }
+    },
+    {
+      "name": "mobile-fathers: all themes, presets, settings persistence and dismiss",
+      "status": "pass",
+      "ms": 2236
+    },
+    {
+      "name": "mobile-fathers: jump, canon/author, and dismissal",
+      "status": "pass",
+      "ms": 295
+    },
+    {
+      "name": "mobile-fathers: semantic search, filters, highlights, cross-corpus similarity",
+      "status": "pass",
+      "ms": 3328,
+      "detail": {
+        "count": 5,
+        "mode": "theme",
+        "crossMode": "similar-scripture"
+      }
+    },
+    {
+      "name": "Fathers: author filtering, favorite persistence, original/modernized text",
+      "status": "pass",
+      "ms": 3169
+    },
+    {
+      "name": "Mobile: validation, outside-dismiss and landscape overflow",
+      "status": "pass",
+      "ms": 1685
+    },
+    {
+      "name": "Fathers: saved selected paragraph diagnostic",
+      "status": "pass",
+      "ms": 4246
+    }
+  ],
+  "errors": [],
+  "metrics": [
+    {
+      "prefix": "desktop-bible",
+      "font": "\"Source Serif 4\", Georgia, serif",
+      "weight": "700",
+      "size": "19.84px",
+      "lineHeight": "34.1248px",
+      "width": 800,
+      "top": 99.859375,
+      "background": "rgb(251, 250, 247)",
+      "horizontalOverflow": false
+    },
+    {
+      "prefix": "desktop-fathers",
+      "font": "\"Source Serif 4\", Georgia, serif",
+      "weight": "700",
+      "size": "19.84px",
+      "lineHeight": "34.1248px",
+      "width": 800,
+      "top": 170.40625,
+      "background": "rgb(251, 250, 247)",
+      "horizontalOverflow": false
+    },
+    {
+      "prefix": "mobile-bible",
+      "font": "\"Source Serif 4\", Georgia, serif",
+      "weight": "700",
+      "size": "19.84px",
+      "lineHeight": "34.1248px",
+      "width": 341,
+      "top": 135.515625,
+      "background": "rgb(251, 250, 247)",
+      "horizontalOverflow": false
+    },
+    {
+      "prefix": "mobile-fathers",
+      "font": "\"Source Serif 4\", Georgia, serif",
+      "weight": "700",
+      "size": "19.84px",
+      "lineHeight": "34.1248px",
+      "width": 341,
+      "top": 204.9375,
+      "background": "rgb(251, 250, 247)",
+      "horizontalOverflow": false
+    }
+  ]
+}

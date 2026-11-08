@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { keywordMatches } from "~/features/search/keyword-match";
-import { isBackdropClick } from "~/lib/use-dialog-dismiss";
+import { isBackdropClick, useEscapeDismiss } from "~/lib/use-dialog-dismiss";
 
 import {
   dedupeBooks,
@@ -25,6 +25,7 @@ export function ChapterJump({
   onClose: () => void;
   onJump: (chapterId: string) => void;
 }) {
+  useEscapeDismiss({ isOpen: true, onDismiss: onClose });
   const activeEntry = chapters.find((entry) => entry.chapter.id === activeChapterId)
     ?? chapters[0];
   const books = useMemo(() => dedupeBooks(chapters), [chapters]);

@@ -1,0 +1,124 @@
+
+> cross-cannon@0.1.0 build:continuous-audio
+> node --import tsx scripts/build-continuous-audio.ts
+
+Already built: bible-genesis
+Already built: bible-exodus
+Already built: bible-leviticus
+Already built: bible-numbers
+Already built: bible-deuteronomy
+Already built: bible-joshua
+Already built: bible-judges
+Already built: bible-ruth
+Already built: bible-1-samuel
+Already built: bible-2-samuel
+Already built: bible-1-kings
+Already built: bible-2-kings
+Already built: bible-1-chronicles
+Already built: bible-2-chronicles
+Already built: bible-ezra
+Already built: bible-nehemiah
+Already built: bible-esther
+Preserving and assembling bible-job
+Built bible-job: 1.78 hours, 42 chapter entries
+Preserving and assembling bible-psalms
+Built bible-psalms: 4.32 hours, 150 chapter entries
+Preserving and assembling bible-proverbs
+Built bible-proverbs: 1.54 hours, 31 chapter entries
+Preserving and assembling bible-ecclesiastes
+Built bible-ecclesiastes: 0.55 hours, 12 chapter entries
+Preserving and assembling bible-song-of-songs
+Built bible-song-of-songs: 0.27 hours, 8 chapter entries
+Preserving and assembling bible-isaiah
+Built bible-isaiah: 3.68 hours, 66 chapter entries
+Preserving and assembling bible-jeremiah
+Built bible-jeremiah: 4.17 hours, 52 chapter entries
+Preserving and assembling bible-lamentations
+Built bible-lamentations: 0.31 hours, 5 chapter entries
+Preserving and assembling bible-ezekiel
+Built bible-ezekiel: 3.70 hours, 48 chapter entries
+Preserving and assembling bible-daniel
+Built bible-daniel: 1.09 hours, 12 chapter entries
+Preserving and assembling bible-hosea
+Built bible-hosea: 0.48 hours, 14 chapter entries
+Preserving and assembling bible-joel
+Built bible-joel: 0.18 hours, 3 chapter entries
+Preserving and assembling bible-amos
+Built bible-amos: 0.37 hours, 9 chapter entries
+Preserving and assembling bible-obadiah
+Built bible-obadiah: 0.06 hours, 1 chapter entries
+Preserving and assembling bible-jonah
+Built bible-jonah: 0.12 hours, 4 chapter entries
+Preserving and assembling bible-micah
+Built bible-micah: 0.27 hours, 7 chapter entries
+Preserving and assembling bible-nahum
+Built bible-nahum: 0.11 hours, 3 chapter entries
+Preserving and assembling bible-habakkuk
+Built bible-habakkuk: 0.13 hours, 3 chapter entries
+Preserving and assembling bible-zephaniah
+Built bible-zephaniah: 0.15 hours, 3 chapter entries
+Preserving and assembling bible-haggai
+Built bible-haggai: 0.10 hours, 2 chapter entries
+Preserving and assembling bible-zechariah
+Built bible-zechariah: 0.56 hours, 14 chapter entries
+Preserving and assembling bible-malachi
+Built bible-malachi: 0.15 hours, 4 chapter entries
+Preserving and assembling bible-matthew
+Built bible-matthew: 2.09 hours, 28 chapter entries
+Preserving and assembling bible-mark
+Built bible-mark: 1.26 hours, 16 chapter entries
+Preserving and assembling bible-luke
+Built bible-luke: 2.19 hours, 24 chapter entries
+Preserving and assembling bible-john
+Built bible-john: 1.69 hours, 21 chapter entries
+Preserving and assembling bible-acts
+Built bible-acts: 1.95 hours, 28 chapter entries
+Preserving and assembling bible-romans
+Built bible-romans: 0.85 hours, 16 chapter entries
+Preserving and assembling bible-1-corinthians
+Built bible-1-corinthians: 0.84 hours, 16 chapter entries
+Preserving and assembling bible-2-corinthians
+Built bible-2-corinthians: 0.55 hours, 13 chapter entries
+Preserving and assembling bible-galatians
+Built bible-galatians: 0.27 hours, 6 chapter entries
+Preserving and assembling bible-ephesians
+Built bible-ephesians: 0.27 hours, 6 chapter entries
+Preserving and assembling bible-philippians
+Built bible-philippians: 0.20 hours, 4 chapter entries
+Preserving and assembling bible-colossians
+Built bible-colossians: 0.19 hours, 4 chapter entries
+Preserving and assembling bible-1-thessalonians
+Built bible-1-thessalonians: 0.16 hours, 5 chapter entries
+Preserving and assembling bible-2-thessalonians
+Built bible-2-thessalonians: 0.09 hours, 3 chapter entries
+Preserving and assembling bible-1-timothy
+Built bible-1-timothy: 0.23 hours, 6 chapter entries
+Preserving and assembling bible-2-timothy
+Built bible-2-timothy: 0.16 hours, 4 chapter entries
+Preserving and assembling bible-titus
+Built bible-titus: 0.09 hours, 3 chapter entries
+Preserving and assembling bible-philemon
+Built bible-philemon: 0.04 hours, 1 chapter entries
+Preserving and assembling bible-hebrews
+Built bible-hebrews: 0.59 hours, 13 chapter entries
+Preserving and assembling bible-james
+Built bible-james: 0.21 hours, 5 chapter entries
+Preserving and assembling bible-1-peter
+Built bible-1-peter: 0.24 hours, 5 chapter entries
+Preserving and assembling bible-2-peter
+Built bible-2-peter: 0.15 hours, 3 chapter entries
+Preserving and assembling bible-1-john
+Built bible-1-john: 0.23 hours, 5 chapter entries
+Preserving and assembling bible-2-john
+Built bible-2-john: 0.03 hours, 1 chapter entries
+Preserving and assembling bible-3-john
+Built bible-3-john: 0.03 hours, 1 chapter entries
+Preserving and assembling bible-jude
+Built bible-jude: 0.06 hours, 1 chapter entries
+Preserving and assembling bible-revelation
+Built bible-revelation: 0.97 hours, 22 chapter entries
+Preserving and assembling fathers-anf09-xii-iv
+Built fathers-anf09-xii-iv: 0.12 hours, 1 chapter entries
+Preserving and assembling fathers-npnf101-vi
+Built fathers-npnf101-vi: 13.83 hours, 275 chapter entries
+Preserving and assembling fathers-npnf102-iv

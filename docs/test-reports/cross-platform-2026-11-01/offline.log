@@ -1,0 +1,13 @@
+
+> cross-cannon@0.1.0 e2e:offline
+> node --import tsx scripts/e2e-offline-reading.ts
+
+/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/scripts/e2e-offline-reading.ts:1743
+    throw new Error(message);
+          ^
+
+Error: Expected a complete shell/Scripture generation to wait without disrupting the current session: {"afterFailure":"cross-canon-shell-v2-manifest-d71cd824.js","afterSuccess":"cross-canon-shell-v2-e2e-success","before":"cross-canon-shell-v2-manifest-d71cd824.js","registration":{"active":"http://127.0.0.1:13625/cross-canon-sw-release-test.js?release=e2e-success","installing":"","waiting":""},"successfulState":false}
+    at assert (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/scripts/e2e-offline-reading.ts:1743:11)
+    at <anonymous> (/Users/jacksonstone/Desktop/ubuntu_box_software/cross-cannon/scripts/e2e-offline-reading.ts:134:3)
+
+Node.js v24.13.0

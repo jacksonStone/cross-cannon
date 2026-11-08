@@ -3,7 +3,6 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
-  useReducer,
   useRef,
   useState,
 } from "react";
@@ -47,10 +46,7 @@ import { BOOKS_BY_CANON } from "~/features/search/canons";
 import { readerSettingsStyle } from "~/features/reader-settings/reader-settings";
 import { fitSingleLineText } from "~/features/reader-ui/fit-single-line-text";
 import { useStoredReaderSettings } from "~/features/reader-ui/ReaderControls";
-import {
-  initialSearchModalFlowState,
-  searchModalFlowReducer,
-} from "~/features/search/search-modal-flow";
+import { useFathersSearchHistory } from "~/features/search/useSearchHistory";
 import { useSearchDialogState } from "~/features/search/useSearchDialogState";
 import { useScriptureLibrary } from "~/features/scripture/useScriptureLibrary";
 import { type EarlyChristianSearchResult } from "~/lib/early-christian-search.server";
@@ -85,7 +81,7 @@ export default function ChurchFathersReaderRoute() {
     scriptureCacheKey,
     scriptureCacheUrl,
   } = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
+  const incomingActionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const { bookIndex, loadError } = useEarlyChristianBookIndex({
     manifestUrl,
@@ -115,10 +111,6 @@ export default function ChurchFathersReaderRoute() {
     setChapterLoadErrors,
     setLoadedChapters,
   } = useEarlyChristianChapterAssets(previewAssetVersion);
-  const [searchFlow, dispatchSearchFlow] = useReducer(
-    searchModalFlowReducer,
-    initialSearchModalFlowState
-  );
   const { readerSettings, setReaderSettings } = useStoredReaderSettings();
   const readerTheme = readerSettings.theme;
   const readerStyles = readerSettingsStyle(readerSettings);
@@ -152,6 +144,8 @@ export default function ChurchFathersReaderRoute() {
     loadedChapters,
     positionStorageKey: READER_POSITION_STORAGE_KEY,
   });
+  const { actionData, dispatchSearchFlow, rememberSearchScroll, searchBodyRef, searchFlow } =
+    useFathersSearchHistory(incomingActionData, isReady);
   const focusedPassageKey = searchFlow.focusedId;
   const isSearchOpen = searchFlow.isOpen;
   const openSearch = useCallback(
@@ -341,6 +335,8 @@ export default function ChurchFathersReaderRoute() {
   }, [navigation.formData, navigation.state]);
 
   useEffect(() => {
+    if (!incomingActionData) return;
+
     if (actionData?.mode === "similar" && actionData.similarSource) {
       dispatchSearchFlow({
         focusedId: actionData.similarSource.id,
@@ -364,6 +360,7 @@ export default function ChurchFathersReaderRoute() {
       dispatchSearchFlow({ type: "theme-results" });
     }
   }, [
+    incomingActionData,
     actionData?.mode,
     actionData?.similarScriptureSource?.id,
     actionData?.similarSource?.id,
@@ -551,6 +548,8 @@ export default function ChurchFathersReaderRoute() {
           onSetFocusedPassageKey={setFocusedPassageKey}
           passageLookup={scriptureLibrary.passageLookup}
           readerTheme={readerTheme}
+          searchBodyRef={searchBodyRef}
+          onSearchScroll={rememberSearchScroll}
         />
       ) : null}
 

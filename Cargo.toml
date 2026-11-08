@@ -17,3 +17,7 @@ cross-canon-core = { path = "rust/core" }
 lto = "thin"
 codegen-units = 1
 strip = false
+
+# Keep lossless native-library compression fast in debug builds and artifact tests.
+[profile.dev.package.zlib-rs]
+opt-level = 3
