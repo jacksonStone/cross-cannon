@@ -81,6 +81,7 @@ impl Desktop {
                         ui.vertical(|ui| {
                             ui.label(
                                 RichText::new(match dialog {
+                                    Dialog::Collections => "LIBRARY",
                                     Dialog::Jump => "JUMP",
                                     Dialog::Downloads => "LISTEN",
                                     _ => "SEARCH",
@@ -90,7 +91,9 @@ impl Desktop {
                                 .color(p.accent),
                             );
                             ui.label(
-                                RichText::new(if dialog == Dialog::Jump {
+                                RichText::new(if dialog == Dialog::Collections {
+                                    "Choose collection"
+                                } else if dialog == Dialog::Jump {
                                     if self.jump_corpus == Corpus::Scripture {
                                         "Choose a passage"
                                     } else {
@@ -114,6 +117,7 @@ impl Desktop {
                     } else {
                         ui.label(
                             RichText::new(match dialog {
+                                Dialog::Collections => "Choose collection",
                                 Dialog::Jump => "Jump to a passage",
                                 Dialog::Search => "Search",
                                 Dialog::Settings => "Reader settings",
@@ -177,7 +181,12 @@ impl Desktop {
                     self.search_max_scroll =
                         (output.content_size.y - output.inner_rect.height()).max(0.0);
                 } else {
-                    let body_height = if dialog != Dialog::Settings {
+                    let body_height = if dialog == Dialog::Collections {
+                        182.0_f32.min(
+                            (ctx.screen_rect().bottom() - insets.bottom - ui.cursor().top() - 22.0)
+                                .max(48.0),
+                        )
+                    } else if dialog != Dialog::Settings {
                         (ctx.screen_rect().bottom()
                             - insets.bottom
                             - if compact { 22.0 } else { 40.0 }
@@ -189,13 +198,15 @@ impl Desktop {
                     touch_scroll::vertical(
                         ui,
                         match dialog {
+                            Dialog::Collections => "collections-body",
                             Dialog::Jump => "jump-body",
                             Dialog::Downloads => "audio-downloads-body",
                             _ => "settings-body",
                         },
                         body_height,
-                        dialog == Dialog::Jump || dialog == Dialog::Downloads,
+                        dialog != Dialog::Settings,
                         |ui, suppress_click| match dialog {
+                            Dialog::Collections => self.collections_dialog(ui, suppress_click),
                             Dialog::Jump => self.jump_dialog(ui, suppress_click),
                             Dialog::Settings => self.settings_dialog(ui),
                             Dialog::Search => self.search_dialog(ui, ctx, suppress_click),
@@ -211,6 +222,33 @@ impl Desktop {
             self.search_filter_modal(ctx);
         }
     }
+    fn collections_dialog(&mut self, ui: &mut egui::Ui, suppress_click: bool) {
+        let current = self.current_passage().corpus;
+        for (corpus, name, _) in COLLECTIONS {
+            let count = self
+                .library
+                .books
+                .iter()
+                .filter(|book| book.corpus == corpus)
+                .count();
+            if count == 0 {
+                continue;
+            }
+            if ui
+                .add_sized(
+                    [ui.available_width(), 52.0],
+                    egui::Button::new(RichText::new(name).strong()).selected(current == corpus),
+                )
+                .clicked()
+                && !suppress_click
+            {
+                self.switch_corpus(corpus);
+                self.dialog = None;
+            }
+            ui.add_space(6.0);
+        }
+    }
+
     pub(super) fn jump_dialog(&mut self, ui: &mut egui::Ui, suppress_click: bool) {
         let library = self.library.clone();
         let p = self.state.theme.palette();
@@ -220,12 +258,9 @@ impl Desktop {
         if !compact {
             ui.horizontal_wrapped(|ui| {
                 let previous = self.jump_corpus;
-                ui.selectable_value(&mut self.jump_corpus, Corpus::Scripture, "Bible");
-                ui.selectable_value(
-                    &mut self.jump_corpus,
-                    Corpus::EarlyChristian,
-                    "Early Christian works",
-                );
+                for (corpus, name, _) in COLLECTIONS {
+                    ui.selectable_value(&mut self.jump_corpus, corpus, name);
+                }
                 if previous != self.jump_corpus {
                     self.jump_filter.clear();
                     self.jump_author.clear();
@@ -276,7 +311,7 @@ impl Desktop {
                 .library
                 .books
                 .iter()
-                .filter(|b| b.corpus == Corpus::EarlyChristian)
+                .filter(|b| b.corpus == self.jump_corpus)
                 .filter_map(|b| b.author.clone())
                 .collect::<Vec<_>>();
             authors.sort();
@@ -303,7 +338,7 @@ impl Desktop {
                             .contains(&query))
             })
             .collect::<Vec<_>>();
-        if self.jump_corpus == Corpus::EarlyChristian {
+        if self.jump_corpus != Corpus::Scripture {
             books.sort_by_key(|b| {
                 (
                     !self.state.favorite_books.contains(&b.id),
@@ -446,7 +481,7 @@ impl Desktop {
                         && !suppress_click
                     {
                         self.jump_chapter = chapter.number;
-                        if book.corpus == Corpus::EarlyChristian {
+                        if book.corpus != Corpus::Scripture {
                             if let Some(id) = chapter.passage_ids.first() {
                                 self.open(id.clone());
                             }
@@ -553,17 +588,14 @@ impl Desktop {
                 .inner_margin(4.0)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        let width = ((ui.available_width().min(252.0) - 8.0) / 2.0).max(60.0);
-                        for (corpus, label) in [
-                            (Corpus::Scripture, "BIBLE"),
-                            (Corpus::EarlyChristian, "FATHERS"),
-                        ] {
+                        let width = ((ui.available_width() - 16.0) / 3.0).max(60.0);
+                        for (corpus, _, label) in COLLECTIONS {
                             if ui
                                 .add_sized(
                                     [width, 40.0],
                                     egui::RadioButton::new(
                                         self.search_corpus == Some(corpus),
-                                        RichText::new(label).strong(),
+                                        RichText::new(label.to_uppercase()).strong(),
                                     ),
                                 )
                                 .clicked()
@@ -577,6 +609,9 @@ impl Desktop {
             if self.search_corpus != previous_target {
                 self.results.clear();
                 self.message.clear();
+                self.search_books.clear();
+                self.search_authors.clear();
+                self.author_filter.clear();
             }
             ui.add_space(if compact { 4.0 } else { 12.0 });
             if let Some(source) = self.search_source.clone() {
@@ -608,6 +643,8 @@ impl Desktop {
                 ui.label(
                     RichText::new(if self.search_corpus == Some(Corpus::Scripture) {
                         "SEARCH BIBLE FOR…"
+                    } else if self.search_corpus == Some(Corpus::ChristianClassics) {
+                        "SEARCH CHRISTIAN CLASSICS FOR…"
                     } else {
                         "SEARCH EARLY CHRISTIAN WORKS FOR…"
                     })
@@ -675,11 +712,7 @@ impl Desktop {
                     }
                     let ready =
                         self.search_source.is_some() || self.query.trim().chars().count() >= 3;
-                    let target = if self.search_corpus == Some(Corpus::Scripture) {
-                        "Bible"
-                    } else {
-                        "Fathers"
-                    };
+                    let target = collection_short_name(self.search_corpus.unwrap_or_default());
                     let button_width = if compact { ui.available_width() } else { 132.0 };
                     if ui
                         .add_enabled_ui(ready, |ui| {
@@ -875,24 +908,16 @@ impl Desktop {
                                         self.search_corpus = Some(hit.corpus);
                                         self.search(ctx, Some(hit.source_id.clone()));
                                     }
-                                    if control(
-                                        ui,
-                                        if hit.corpus == Corpus::Scripture {
-                                            "Find Fathers"
-                                        } else {
-                                            "Find Bible"
-                                        },
-                                    )
-                                    .clicked()
-                                        && !suppress_click
-                                    {
-                                        self.search_corpus =
-                                            Some(if hit.corpus == Corpus::Scripture {
-                                                Corpus::EarlyChristian
-                                            } else {
-                                                Corpus::Scripture
-                                            });
-                                        self.search(ctx, Some(hit.source_id.clone()));
+                                    for (target, _, label) in COLLECTIONS {
+                                        if target != hit.corpus
+                                            && control(ui, &format!("Find {label}")).clicked()
+                                            && !suppress_click
+                                        {
+                                            self.search_corpus = Some(target);
+                                            self.search_books.clear();
+                                            self.search_authors.clear();
+                                            self.search(ctx, Some(hit.source_id.clone()));
+                                        }
                                     }
                                 });
                                 if control(ui, "Copy").clicked() && !suppress_click {
@@ -1051,7 +1076,10 @@ impl Desktop {
                         },
                     );
                 } else {
-                    ui.label("Fathers authors · choose up to 3, or leave blank for all");
+                    ui.label(format!(
+                        "{} authors · choose up to 3, or leave blank for all",
+                        collection_short_name(self.search_corpus.unwrap_or_default())
+                    ));
                     ui.add(
                         egui::TextEdit::singleline(&mut self.author_filter)
                             .hint_text("Find author…")
@@ -1061,6 +1089,7 @@ impl Desktop {
                         .library
                         .books
                         .iter()
+                        .filter(|b| Some(b.corpus) == self.search_corpus)
                         .filter_map(|b| b.author.clone())
                         .collect();
                     touch_scroll::vertical(
@@ -1334,12 +1363,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn phone_jump_keeps_picker_visible_and_navigates_both_corpora() {
+    fn phone_jump_keeps_picker_visible_and_navigates_all_collections() {
         let library = Arc::new(
             Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
         );
         for width in [320.0, 393.0, 1000.0] {
-            for corpus in [Corpus::Scripture, Corpus::EarlyChristian] {
+            for corpus in [
+                Corpus::Scripture,
+                Corpus::EarlyChristian,
+                Corpus::ChristianClassics,
+            ] {
                 let ctx = egui::Context::default();
                 let mut app = Desktop::initialize(&ctx, None, library.clone());
                 let passage = library
@@ -1362,6 +1395,52 @@ mod tests {
                         |ctx| app.render(ctx),
                     )
                 };
+                if corpus == Corpus::ChristianClassics {
+                    app.dialog = Some(Dialog::Collections);
+                    for _ in 0..3 {
+                        render(&mut app, vec![]);
+                    }
+                    let output = render(&mut app, vec![]);
+                    let mut classics = None;
+                    for (_, name, _) in COLLECTIONS {
+                        let text = output
+                            .shapes
+                            .iter()
+                            .find_map(|shape| match &shape.shape {
+                                egui::Shape::Text(text) if text.galley.job.text == name => {
+                                    Some(text)
+                                }
+                                _ => None,
+                            })
+                            .unwrap_or_else(|| {
+                                panic!("Collection {name} must be visible at {width}")
+                            });
+                        assert!(
+                            text.pos.x >= 8.0 && text.pos.x + text.galley.size().x <= width - 8.0
+                        );
+                        if name == "Christian Classics" {
+                            classics = Some(text.pos + text.galley.size() / 2.0);
+                        }
+                    }
+                    let pos = classics.unwrap();
+                    for pressed in [true, false] {
+                        render(
+                            &mut app,
+                            vec![
+                                egui::Event::PointerMoved(pos),
+                                egui::Event::PointerButton {
+                                    pos,
+                                    button: egui::PointerButton::Primary,
+                                    pressed,
+                                    modifiers: egui::Modifiers::NONE,
+                                },
+                            ],
+                        );
+                    }
+                    assert!(app.dialog.is_none());
+                    assert_eq!(app.current_passage().corpus, corpus);
+                    app.show_jump();
+                }
                 for _ in 0..3 {
                     render(&mut app, vec![]);
                 }
@@ -1420,7 +1499,7 @@ mod tests {
                     );
                 }
                 assert_eq!(app.jump_chapter, 2);
-                if corpus == Corpus::EarlyChristian {
+                if corpus != Corpus::Scripture {
                     assert!(
                         app.dialog.is_none(),
                         "Choosing a work chapter opens it immediately"

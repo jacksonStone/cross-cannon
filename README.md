@@ -4,7 +4,8 @@
 
 Public Remix app for `crosscanon.com`.
 
-Cross Cannon searches Scripture by theme and returns Scripture only. It does not
+Cross Cannon searches Scripture, Early Christian Works, and Christian Classics
+by theme or passage similarity, returning original source passages. It does not
 generate commentary, answers, summaries, or application text. The runtime search
 returns paragraph-level passage IDs from a persisted libSQL/SQLite index, and
 the browser loads the full passage text from a versioned static scripture cache.
@@ -16,7 +17,7 @@ the browser loads the full passage text from a versioned static scripture cache.
    scripture cache, and composes the reader, search form, and results
    components.
 2. `app/features/search/search-request.server.ts` handles Search Requests from
-   both reader routes, preserving their form/result contracts while keeping
+   all three reading collections, preserving their form/result contracts while keeping
    validation, corpus selection, canon/book/author scope, and result shaping in
    one module.
 3. The route action rate-limits each client IP to 5 searches per minute before
@@ -32,7 +33,7 @@ the browser loads the full passage text from a versioned static scripture cache.
    chapters for backtracking, expands the window as the user scrolls up or down,
    and preserves scroll position when chapters are prepended.
 7. A service worker retains the Scripture reader and lets readers download
-   complete, text-only Early Christian Works for offline reading from the
+   complete, text-only Works from either non-scriptural collection for offline reading from the
    reader tools menu.
 
 The current index shape is paragraph-only. The `paragraph_verses` table stores
@@ -79,7 +80,8 @@ attachment point for result-card UI. New Search Request modes belong in
 ranking behavior belongs in `app/lib/search.server.ts`.
 
 Reader Links use `/reader/:passageId` for Scripture and
-`/church-fathers?chapter=...&passage=...` for Early Christian Works. Explicit
+`/church-fathers?chapter=...&passage=...` for Early Christian Works and
+`/christian-classics/read?chapter=...&passage=...` for Christian Classics. Explicit
 jumps create browser history; selecting a Passage replaces the current link;
 passive scrolling only persists Reader Location.
 
@@ -578,3 +580,114 @@ checks real playback across a chapter boundary with JavaScript disabled,
 pause/resume, a distant chapter seek, partial responses, and missing-file
 fallback. Screenshots go in `docs/screenshots/`. Physical iPhone lock-screen
 playback still requires device testing; desktop emulation cannot certify it.
+
+
+## Native iPhone app
+
+The shared Rust reader includes Scripture, Early Christian Works, and Christian
+Classics. Its named collection chooser, Work reader, chapter jump, search target,
+author filters, favorites and saved Passage locations reuse the existing native
+UI. All text is bundled for offline reading; recordings remain optional downloads.
+
+Run `scripts/run-ios.sh` for the simulator. A physical-device Release build uses
+`ios/CrossCanon.xcodeproj`, Apple development signing, and the `iphoneos` SDK.
+Install its signed `.app` with `xcrun devicectl device install app`; updating the
+same `com.crosscanon.mobile` bundle preserves app data. Launching requires an
+unlocked phone. See `.scratch/christian-classics-ui/mobile-release.md` for the
+latest build and installation receipt.
+
+## Christian Classics
+
+The named collection chooser opens the shared reader or the browsing library at
+`/christian-classics`. The first collection includes The Imitation of Christ,
+Catena Aurea, Matthew Henry’s complete commentary, and Wesley’s Notes on the
+Bible. Source editions, translators, and rights are available through “About this
+edition.” Wesley’s CCEL source omits 2 Samuel 24; that gap is explicitly recorded.
+
+Selected Scripture Passages offer “Read with Classics.” This shows original
+commentary whose source verse coverage overlaps the selection, with a choice of
+commentator. It uses the same imported Chapter text as the full reader.
+
+Text importing and paid semantic indexing are explicit operations:
+
+```bash
+npm run import:christian-classics -- --download
+npm run index:christian-classics
+# Resume completed vectors without rewriting unchanged source metadata:
+npm run index:christian-classics -- --embeddings-only
+```
+
+The importer pins source hashes in `data/public-domain/christian-classics/sources.json`,
+uses the existing sentence parser, and emits versioned assets under
+`public/christian-classics-text/`. Raw source downloads are ignored by git.
+The shared indexer writes a separate `storage/christian-classics.db`; it leaves
+Scripture and Early Christian databases intact. Rust loads that database
+read-only when present (`CHRISTIAN_CLASSICS_DATABASE_PATH` can override its path).
+Provision the indexed database separately before deploying the feature: normal
+deploys preserve production `storage/` and reject packages containing databases.
+Neither importing nor indexing runs as part of verify, build, or deploy.
+
+`npm run e2e:christian-classics` checks the desktop/mobile library, collection
+chooser, reader details, Jump, original commentary selection, and a full Classic
+Work download followed by offline reading with the origin stopped. It manages a
+local production web server on port 3115 and expects the Rust API to be running.
+Set `R_CROSS_CANNON_ORIGIN` and `E2E_PORT` for isolated local ports. Screenshots are
+saved under `docs/screenshots/christian-classics/`.
+
+
+Release the Rust API from its hosted Linux build:
+
+```bash
+scripts/deploy-rust-api.sh
+```
+
+The release command publishes a small source snapshot to the dedicated
+`ops/rust-api-ci-release` branch using `scripts/publish-rust-api-build.sh`. It
+includes the current Cargo/Rust source and release tooling, including uncommitted
+changes, without changing the working checkout or Git index or pushing unrelated
+local history. This GitHub repository and build branch are public, so publishing
+a build also publishes that source. Review the intended Rust changes before
+releasing.
+
+The GitHub Actions workflow `.github/workflows/rust-api-release.yml` builds that
+snapshot on an Ubuntu x86-64 runner and publishes a prerelease tagged
+`rust-api-<snapshot SHA>`. The command waits for that artifact, verifies its
+checksums and source revision, and uploads it over the existing SSH connection.
+Use `scripts/deploy-rust-api.sh --revision <full SHA>` to deploy an already built
+snapshot. Normal releases do not use Docker Desktop, need a macOS approval
+prompt, or expose SSH credentials to GitHub. A usable Git SSH identity and EC2
+SSH identity must still be available to the release process.
+
+Optional local builds use `scripts/build-rust-api-container.sh`; an explicit
+`scripts/deploy-rust-api.sh --build-local` builds and deploys from the working
+tree. This fallback requires a running local Docker engine. The Dockerfile pins
+the official Rust 1.99.1 Bookworm image by digest and targets `linux/amd64`
+(Intel/AMD x86-64). Its context
+includes only Cargo manifests, the lockfile, and Rust source. It runs the Linux
+API tests that need no private indexes; `npm run verify` retains the integration
+test against existing local indexes. Docker build caches stay on the builder.
+
+`scripts/deploy-rust-api.sh` uploads only the Linux binary, systemd unit, build
+metadata, and SHA256 checksums. Production verifies the package, checks dynamic
+library compatibility, and takes the same deployment lock as the web release.
+It never installs a toolchain, copies Cargo build caches, or runs Cargo remotely.
+A missing/invalid hosted artifact or failed local build stops before any SSH/SCP
+operation. Remote Docker contexts are refused for local builds. The web release
+still uses its separately bounded remote build.
+
+The Rust release helper verifies the replacement through the managed service
+after restarting it, and restores the previous release if a check fails. The
+production host has 2 GB RAM; running an additional
+full-library smoke instance alongside the live process can exhaust memory. The
+completed three-collection service measured approximately 848 MiB resident memory
+locally. Do not start a second production library instance during deployment.
+The managed Rust service has a 1,200 MiB memory limit. Production also has a
+1 GiB swap buffer at `/swapfile-cross-cannon`, enabled through `/etc/fstab`, to
+absorb temporary memory spikes. Swap does not replace checking deployment memory
+headroom. Keep the active Rust release and rollback versions when pruning old
+build releases to recover disk space.
+Production's web build also requires `fs.inotify.max_user_watches=65536`, persisted
+in `/etc/sysctl.d/60-cross-cannon-build.conf`. The Remix/Vite build creates file
+watchers while processing the text library; Ubuntu's previous 15,217-watch limit
+caused `ENOSPC: System limit for number of file watchers reached` before release
+activation. This error is distinct from running out of disk space.

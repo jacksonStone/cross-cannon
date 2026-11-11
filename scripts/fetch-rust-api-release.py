@@ -6,11 +6,14 @@ import pathlib
 import re
 import sys
 import tarfile
+import time
 import urllib.error
 import urllib.request
 import importlib.util
 
-revision, destination = sys.argv[1:]
+revision, destination = sys.argv[1:3]
+wait = sys.argv[3:] == ['--wait']
+deadline = time.monotonic() + 2400
 if not re.fullmatch(r'[a-f0-9]{40}', revision):
     raise SystemExit('Expected a full Git commit SHA for the hosted release')
 origin = 'https://github.com/jacksonStone/cross-cannon/releases/download/rust-api-' + revision
@@ -18,15 +21,19 @@ name = 'r-cross-cannon-linux-amd64.tar.gz'
 
 
 def download(filename):
-    try:
-        request = urllib.request.Request(origin + '/' + filename, headers={'User-Agent': 'cross-cannon-release'})
-        with urllib.request.urlopen(request, timeout=60) as response:
-            return response.read()
-    except urllib.error.HTTPError as error:
-        if error.code == 404:
-            raise SystemExit('Hosted Rust release is not ready for ' + revision +
-                             '. Check https://github.com/jacksonStone/cross-cannon/actions')
-        raise
+    while True:
+        try:
+            request = urllib.request.Request(origin + '/' + filename, headers={'User-Agent': 'cross-cannon-release'})
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return response.read()
+        except urllib.error.HTTPError as error:
+            if error.code != 404:
+                raise
+            if not wait or time.monotonic() >= deadline:
+                raise SystemExit('Hosted Rust release is not ready for ' + revision +
+                                 '. Check https://github.com/jacksonStone/cross-cannon/actions')
+            print('Waiting for hosted Rust build '+revision[:12]+'...', file=sys.stderr, flush=True)
+            time.sleep(30)
 
 
 payload = download(name)

@@ -99,14 +99,9 @@ impl Desktop {
         self.state.location_passage_id = id;
     }
 
-    pub(super) fn switch_corpus(&mut self) {
+    pub(super) fn switch_corpus(&mut self, target: Corpus) {
         // Migrate old installations' single saved location before leaving it.
         self.remember_location(self.state.location_passage_id.clone());
-        let target = if self.current_passage().corpus == Corpus::Scripture {
-            Corpus::EarlyChristian
-        } else {
-            Corpus::Scripture
-        };
         let saved = match target {
             Corpus::Scripture => &self.state.scripture_location,
             Corpus::EarlyChristian => &self.state.fathers_location,
@@ -118,10 +113,10 @@ impl Desktop {
             .filter(|p| p.corpus == target)
             .map(|p| p.id.clone())
             .or_else(|| {
-                let default = if target == Corpus::Scripture {
-                    "Genesis"
-                } else {
-                    "anf09:xii.iv"
+                let default = match target {
+                    Corpus::Scripture => "Genesis",
+                    Corpus::EarlyChristian => "anf09:xii.iv",
+                    Corpus::ChristianClassics => "classics:imitation",
                 };
                 self.library
                     .book(default)
@@ -163,7 +158,7 @@ impl Desktop {
         } else if self
             .library
             .book(book)
-            .is_some_and(|b| b.corpus == Corpus::EarlyChristian)
+            .is_some_and(|b| b.corpus != Corpus::Scripture)
         {
             self.state.favorite_books.push(book.into());
         }
@@ -175,7 +170,11 @@ pub(super) fn reader_link(passage: &Passage) -> String {
     if passage.corpus == Corpus::Scripture {
         url.set_path(&format!("/reader/{}", passage.id));
     } else {
-        url.set_path("/church-fathers");
+        url.set_path(if passage.corpus == Corpus::ChristianClassics {
+            "/christian-classics/read"
+        } else {
+            "/church-fathers"
+        });
         url.query_pairs_mut()
             .append_pair("chapter", &passage.chapter_id)
             .append_pair(
@@ -210,14 +209,19 @@ pub(super) fn passage_from_link(library: &Library, text: &str) -> Option<String>
     if let Some(id) = path.strip_prefix("/reader/") {
         return library.passage(id).map(|p| p.id.clone());
     }
-    if path.trim_end_matches('/') != "/church-fathers" {
-        return None;
-    }
+    let corpus = match path.trim_end_matches('/') {
+        "/church-fathers" => Corpus::EarlyChristian,
+        "/christian-classics/read" => Corpus::ChristianClassics,
+        _ => return None,
+    };
     let query = url
         .query_pairs()
         .collect::<std::collections::HashMap<_, _>>();
     let chapter = query.get("chapter")?;
-    let (_, entry) = library.chapter(chapter)?;
+    let (book, entry) = library.chapter(chapter)?;
+    if book.corpus != corpus {
+        return None;
+    }
     let range = query.get("passage").map(|s| s.as_ref()).unwrap_or("");
     entry
         .passage_ids
@@ -246,26 +250,41 @@ mod tests {
             .unwrap()
             .clone();
         app.open(john.clone());
-        app.switch_corpus();
+        app.switch_corpus(Corpus::EarlyChristian);
         assert_eq!(app.current_passage().book_id, "anf09:xii.iv");
         let clement = library.book("anf09:xii.iv").unwrap().chapters[3].passage_ids[0].clone();
         app.open(clement.clone());
-        app.switch_corpus();
+        app.switch_corpus(Corpus::Scripture);
         assert_eq!(app.state.location_passage_id, john);
-        app.switch_corpus();
+        app.switch_corpus(Corpus::EarlyChristian);
         assert_eq!(app.state.location_passage_id, clement);
         app.go_back();
         assert_eq!(app.state.location_passage_id, john);
         app.go_forward();
         assert_eq!(app.state.location_passage_id, clement);
         app.toggle_favorite("anf09:xii.iv");
+        app.switch_corpus(Corpus::ChristianClassics);
+        assert_eq!(app.current_passage().book_id, "classics:imitation");
+        let classic =
+            library.book("classics:imitation").unwrap().chapters[1].passage_ids[0].clone();
+        app.open(classic.clone());
+        app.toggle_favorite("classics:imitation");
+        app.switch_corpus(Corpus::Scripture);
+        assert_eq!(app.state.location_passage_id, john);
+        app.switch_corpus(Corpus::ChristianClassics);
+        assert_eq!(app.state.location_passage_id, classic);
         let mut storage = crate::tests::MemoryStorage::default();
         eframe::App::save(&mut app, &mut storage);
         let mut restored = Desktop::initialize(&ctx, Some(&storage), library.clone());
-        assert_eq!(restored.state.favorite_books, ["anf09:xii.iv"]);
-        restored.switch_corpus();
+        assert_eq!(
+            restored.state.favorite_books,
+            ["anf09:xii.iv", "classics:imitation"]
+        );
+        restored.switch_corpus(Corpus::Scripture);
         assert_eq!(restored.state.location_passage_id, john);
-        for id in [john, clement] {
+        restored.switch_corpus(Corpus::ChristianClassics);
+        assert_eq!(restored.state.location_passage_id, classic);
+        for id in [john, clement, classic] {
             let link = reader_link(library.passage(&id).unwrap());
             assert_eq!(passage_from_link(&library, &link), Some(id));
         }

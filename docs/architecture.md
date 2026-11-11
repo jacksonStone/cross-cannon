@@ -181,6 +181,15 @@ flowchart LR
   Build --> RemixBuild["remix vite:build"]
   RemixBuild --> BuildDir["build/client + build/server"]
 
+  Dev --> RustSnapshot["Publish compiler-input snapshot on dedicated build branch"]
+  RustSnapshot --> RustCI["GitHub Actions queue; working checkout/index unchanged"]
+  RustCI --> RustContainer["Hosted Linux Docker: pinned Rust image, linux/amd64"]
+  RustContainer --> RustArtifact["Tested binary + systemd unit + checksums"]
+  RustArtifact --> RustRelease["Commit-specific public release artifact"]
+  RustRelease --> RustUpload["Download + verify + upload; shared deploy lock"]
+  RustUpload --> RustReplace["Replace single managed Rust instance"]
+  RustReplace --> RustHealth["Search/resource checks; rollback on failure"]
+
   Dev --> UpdateDbCache["npm run update-db:scripture-cache"]
   UpdateDbCache --> CacheScript["scripts/build-scripture-cache.ts"]
   CacheScript --> DB[("Local active DB")]
@@ -248,3 +257,25 @@ scripture cache and database. `audio.continuous.$fileName.ts` forwards to Rust,
 which streams content-addressed files from production storage with byte ranges.
 Derived media is uploaded separately before the normal application release;
 original recordings and source mappings remain available for rollback.
+
+
+## Christian Classics
+
+`app/features/work-reader/` configures the existing Work reader for Early
+Christian Works and Christian Classics. The routes are thin adapters; chapter
+rendering, navigation, selected Passage links, settings, Jump, search, audio
+availability, and offline Work downloads share the existing implementation.
+`/christian-classics` provides the browsing view and `/christian-classics/read`
+opens the reader. Collections retain independent Reader Locations and favorites.
+
+`scripts/import-christian-classics.py` verifies pinned raw sources and emits the
+same book index, manifest, and immutable Chapter assets as Early Christian Works.
+Commentaries additionally retain Scripture chapter/verse coverage. The Scripture
+reader’s “Read with Classics” action uses that coverage to show original notes.
+
+`npm run index:christian-classics` explicitly indexes these artifacts with the
+shared indexer into `storage/christian-classics.db`. Rust loads this optional
+third corpus read-only, preserving collection-specific author filters and vector
+scoring. Existing Scripture and Early Christian databases are unchanged. A
+normal deploy preserves production storage, so deploying this feature requires
+separately provisioning the indexed Classics database before release.

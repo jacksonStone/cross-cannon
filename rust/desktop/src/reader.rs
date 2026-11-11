@@ -35,7 +35,7 @@ impl Desktop {
         // Reserve the same title width in both states. Tools float above the reader,
         // so toggling them cannot change title fitting or the reader's origin.
         let title_width = (ui.available_width() - 56.0).max(20.0);
-        let fathers = focused.corpus == Corpus::EarlyChristian;
+        let fathers = focused.corpus != Corpus::Scripture;
         let base = if fathers {
             if compact {
                 28.48
@@ -69,7 +69,7 @@ impl Desktop {
             ui.painter().text(
                 title_origin,
                 Align2::LEFT_TOP,
-                "EARLY CHRISTIAN WORKS",
+                collection_name(focused.corpus).to_uppercase(),
                 FontId::proportional(10.5),
                 p.accent,
             );
@@ -317,7 +317,7 @@ impl Desktop {
                 let title = ui.fonts(|f| {
                     f.layout(
                         format!("{} {}", book.title, chapter.number),
-                        heading(if book.corpus == Corpus::EarlyChristian {
+                        heading(if book.corpus != Corpus::Scripture {
                             13.12
                         } else {
                             15.2
@@ -352,7 +352,7 @@ impl Desktop {
                     p.muted.gamma_multiply(0.58),
                 );
                 ui.add_space(12.0);
-                if book.corpus == Corpus::EarlyChristian {
+                if book.corpus != Corpus::Scripture {
                     let title = ui.fonts(|f| {
                         f.layout(
                             chapter.title.clone(),

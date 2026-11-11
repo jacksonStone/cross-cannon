@@ -12,11 +12,14 @@ mkdir -p .tmp
 case "${1:-}" in
   --build-local) scripts/build-rust-api-container.sh "$artifact" ;;
   '')
-    git diff --quiet HEAD -- Cargo.toml Cargo.lock rust || { echo 'Commit Rust changes before requesting a hosted release.' >&2; exit 1; }
-    [[ -z "$(git ls-files --others --exclude-standard -- Cargo.toml Cargo.lock rust)" ]] || { echo 'Commit new Rust files before requesting a hosted release.' >&2; exit 1; }
-    python3 scripts/fetch-rust-api-release.py "$(git rev-parse HEAD)" "$artifact"
+    revision="$(scripts/publish-rust-api-build.sh)"
+    python3 scripts/fetch-rust-api-release.py "$revision" "$artifact" --wait
     ;;
-  *) echo 'Usage: scripts/deploy-rust-api.sh [--build-local]' >&2; exit 1 ;;
+  --revision)
+    [[ "$#" == 2 ]] || { echo 'Provide the hosted build revision.' >&2; exit 1; }
+    python3 scripts/fetch-rust-api-release.py "$2" "$artifact" --wait
+    ;;
+  *) echo 'Usage: scripts/deploy-rust-api.sh [--build-local | --revision SHA]' >&2; exit 1 ;;
 esac
 python3 scripts/validate-rust-api-artifact.py "$artifact"
 # Explicit allowlist: only the built binary, unit, and verification metadata.

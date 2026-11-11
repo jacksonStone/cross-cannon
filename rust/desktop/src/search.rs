@@ -310,30 +310,43 @@ mod tests {
         assert_eq!(similar.source_id.as_deref(), Some(passage.id.as_str()));
         assert!(similar.books.is_empty());
         assert_eq!(similar.authors, ["Clement of Rome"]);
+        app.search_corpus = Some(Corpus::ChristianClassics);
+        app.search_authors = vec!["Thomas à Kempis".into()];
+        let classics = app.search_request();
+        assert_eq!(classics.corpus, Some(Corpus::ChristianClassics));
+        assert_eq!(classics.authors, ["Thomas à Kempis"]);
+        assert_eq!(classics.source_id, similar.source_id);
+        assert_eq!(
+            serde_json::to_value(&classics).unwrap()["corpus"],
+            "christian-classics"
+        );
     }
 
     #[test]
-    fn refined_early_christian_results_open_matching_local_range_and_keep_exact_source() {
+    fn refined_work_results_open_matching_local_range_and_keep_exact_source() {
         let library = library();
-        let p = library
-            .passages
-            .iter()
-            .find(|p| p.corpus == Corpus::EarlyChristian && p.verses.len() >= 3)
-            .unwrap();
-        // The server's indexed paragraph can be smaller than a merged reader paragraph.
-        let start = p.verses[1].number;
-        let end = p.verses[2].number;
-        let payload = serde_json::json!({"results":[{"chapterId":p.chapter_id,"score":0.65,
+        for corpus in [Corpus::EarlyChristian, Corpus::ChristianClassics] {
+            let p = library
+                .passages
+                .iter()
+                .find(|p| p.corpus == corpus && p.verses.len() >= 3)
+                .unwrap();
+            // The server's indexed paragraph can be smaller than a merged reader paragraph.
+            let start = p.verses[1].number;
+            let end = p.verses[2].number;
+            let payload = serde_json::json!({"results":[{"chapterId":p.chapter_id,"score":0.65,
             "highlightPassage":{"id":"ecw:exact-indexed-paragraph","reference":"Selected paragraph","verseStart":start,"verseEnd":end}}]});
-        let hits = decode_results(&library, Corpus::EarlyChristian, &payload).unwrap();
-        assert_eq!(hits[0].id, p.id);
-        assert_eq!(hits[0].source_id, "ecw:exact-indexed-paragraph");
-        assert_eq!(
-            hits[0].text,
-            format!("{} {}", p.verses[1].text, p.verses[2].text)
-        );
-        assert_eq!(hits[0].reference, "Selected paragraph");
-        assert_eq!(hits[0].strength(), 3);
+            let hits = decode_results(&library, corpus, &payload).unwrap();
+            assert_eq!(hits[0].corpus, corpus);
+            assert_eq!(hits[0].id, p.id);
+            assert_eq!(hits[0].source_id, "ecw:exact-indexed-paragraph");
+            assert_eq!(
+                hits[0].text,
+                format!("{} {}", p.verses[1].text, p.verses[2].text)
+            );
+            assert_eq!(hits[0].reference, "Selected paragraph");
+            assert_eq!(hits[0].strength(), 3);
+        }
         assert!(decode_results(
             &library,
             Corpus::Scripture,
