@@ -1,0 +1,12 @@
+--- a/administrative_stuff/ship.py
++++ b/administrative_stuff/ship.py
+@@ -46,7 +46,8 @@
+          port=3004, status=302, public="https://bot.jacksonst.one/player"),
+     dict(name="cross-cannon", repo="cross-cannon", kind="node",
+          inputs=["app", "public", "scripts", "scripture-cache", "assets", "package.json", "package-lock.json",
+-                 "data/sample-bible.json", "tsconfig.json", "vite.config.*", "remix.config.js", "remix.env.d.ts", ".nvmrc", "cross-cannon.service"],
++                 "data/sample-bible.json", "data/public-domain/church-fathers/audio-sources.json",
++                 "tsconfig.json", "vite.config.*", "remix.config.js", "remix.env.d.ts", ".nvmrc", "cross-cannon.service"],
+          port=3005, status=200, public="https://www.crosscanon.com/"),
+     dict(name="reverse_proxy", repo="reverse_proxy_extended", kind="go", module=".",
+          inputs=["*.go", "go.mod", "go.sum", "reverse_proxy.service"], port=80, status=301),

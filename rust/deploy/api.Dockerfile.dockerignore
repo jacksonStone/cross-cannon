@@ -1,0 +1,6 @@
+# Allowlist the compiler inputs. Never send storage, credentials, or text data.
+**
+!Cargo.toml
+!Cargo.lock
+!rust/
+!rust/**

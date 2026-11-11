@@ -1,0 +1,27 @@
+[package]
+name = "cross-canon-desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["rlib", "staticlib"]
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+cross-canon-core.workspace = true
+eframe = { version = "0.31", default-features = false, features = ["default_fonts", "persistence"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+rodio = { version = "0.21.1", default-features = false, features = ["playback", "symphonia-all"] }
+
+[target.'cfg(not(target_os = "ios"))'.dependencies]
+eframe = { version = "0.31", default-features = false, features = ["glow", "x11", "wayland", "accesskit"] }
+
+[target.'cfg(target_os = "ios")'.dependencies]
+eframe = { version = "0.31", default-features = false, features = ["wgpu"] }
+
+[build-dependencies]
+cc = "1"
