@@ -1,0 +1,63 @@
+name: Build Rust API release
+
+on:
+  push:
+    branches: [main, ops/rust-api-ci-release]
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - rust/**
+      - scripts/build-rust-api-container.sh
+      - scripts/validate-rust-api-artifact.py
+      - .github/workflows/rust-api-release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-api-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify release boundaries
+        run: node --test scripts/rust-api-release.test.mjs
+      - name: Build and test the Linux binary
+        env:
+          RUST_RELEASE_REVISION: ${{ github.sha }}
+        run: scripts/build-rust-api-container.sh "$RUNNER_TEMP/rust-api"
+      - name: Package the verified artifact
+        run: |
+          mkdir -p "$RUNNER_TEMP/release"
+          tar -czf "$RUNNER_TEMP/release/r-cross-cannon-linux-amd64.tar.gz" -C "$RUNNER_TEMP/rust-api" \
+            target/release/r-cross-cannon rust/deploy/r-cross-cannon.service BUILD-INFO SHA256SUMS
+          cd "$RUNNER_TEMP/release"
+          sha256sum r-cross-cannon-linux-amd64.tar.gz > r-cross-cannon-linux-amd64.tar.gz.sha256
+      - name: Publish the commit-specific binary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+        run: |
+          tag="rust-api-$REVISION"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            if [[ "$(gh release view "$tag" --json isDraft --jq '.isDraft')" == false ]]; then
+              echo "This revision already has a published release."
+              exit 0
+            fi
+            gh release upload "$tag" "$RUNNER_TEMP/release/"* --clobber
+          else
+            gh release create "$tag" "$RUNNER_TEMP/release/"* --target "$REVISION" \
+              --draft --prerelease --title "Rust API $REVISION" \
+              --notes "Linux x86-64 binary built and tested in the pinned Rust container. Source: $REVISION."
+          fi
+          gh release edit "$tag" --draft=false

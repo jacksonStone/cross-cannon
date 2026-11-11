@@ -35,6 +35,8 @@ struct ReaderState {
     location_passage_id: String,
     scripture_location: String,
     fathers_location: String,
+    #[serde(default)]
+    classics_location: String,
     favorite_books: Vec<String>,
     canon: Canon,
     theme: Theme,
@@ -50,6 +52,7 @@ impl Default for ReaderState {
             location_passage_id: String::new(),
             scripture_location: String::new(),
             fathers_location: String::new(),
+            classics_location: String::new(),
             favorite_books: vec![],
             canon: Canon::Protestant,
             theme: Theme::Paper,

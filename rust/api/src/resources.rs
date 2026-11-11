@@ -18,6 +18,8 @@ pub fn router<S: Clone + Send + Sync + 'static>(root: PathBuf) -> Router<S> {
         .route("/scripture-cache/{file}", get(scripture))
         .route("/church-fathers-preview/{file}", get(preview))
         .route("/church-fathers-preview/chapters/{file}", get(chapter))
+        .route("/christian-classics-text/{file}", get(preview))
+        .route("/christian-classics-text/chapters/{file}", get(chapter))
         .route("/audio/WEBD_AT/{file}", get(original_audio))
         .route("/audio/continuous/{file}", get(continuous_audio))
         .route("/cross-canon-sw-release-test.js", get(service_worker_test))
@@ -93,6 +95,7 @@ async fn scripture(
     response
 }
 async fn preview(
+    uri: Uri,
     State(root): State<PathBuf>,
     Path(file): Path<String>,
     method: Method,
@@ -109,7 +112,11 @@ async fn preview(
         return not_found();
     }
     serve_file(
-        root.join("public/church-fathers-preview"),
+        root.join(if uri.path().contains("/christian-classics-text/") {
+            "public/christian-classics-text"
+        } else {
+            "public/church-fathers-preview"
+        }),
         &file,
         JSON,
         "public, max-age=60",
@@ -120,6 +127,7 @@ async fn preview(
     .await
 }
 async fn chapter(
+    uri: Uri,
     State(root): State<PathBuf>,
     Path(file): Path<String>,
     method: Method,
@@ -128,7 +136,11 @@ async fn chapter(
         return not_found();
     }
     serve_file(
-        root.join("public/church-fathers-preview/chapters"),
+        root.join(if uri.path().contains("/christian-classics-text/") {
+            "public/christian-classics-text/chapters"
+        } else {
+            "public/church-fathers-preview/chapters"
+        }),
         &file,
         JSON,
         "public, max-age=60",

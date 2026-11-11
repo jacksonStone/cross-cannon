@@ -94,6 +94,7 @@ impl Desktop {
         match passage.corpus {
             Corpus::Scripture => self.state.scripture_location = id.clone(),
             Corpus::EarlyChristian => self.state.fathers_location = id.clone(),
+            Corpus::ChristianClassics => self.state.classics_location = id.clone(),
         }
         self.state.location_passage_id = id;
     }
@@ -109,6 +110,7 @@ impl Desktop {
         let saved = match target {
             Corpus::Scripture => &self.state.scripture_location,
             Corpus::EarlyChristian => &self.state.fathers_location,
+            Corpus::ChristianClassics => &self.state.classics_location,
         };
         let id = self
             .library

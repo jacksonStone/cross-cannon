@@ -12,6 +12,8 @@ Environment=R_CROSS_CANNON_BIND=127.0.0.1:3006
 ExecStart=/home/ubuntu/r-cross-cannon/current/target/release/r-cross-cannon
 Restart=on-failure
 RestartSec=5
+# Bound the search process on the shared 2 GB production host.
+MemoryMax=1200M
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only

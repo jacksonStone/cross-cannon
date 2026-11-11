@@ -14,10 +14,10 @@ pub struct Source {
 
 impl Engine {
     pub(crate) fn connection(&self, corpus: Corpus) -> Result<Connection> {
-        let path = if corpus == Corpus::Scripture {
-            &self.scripture_db
-        } else {
-            &self.fathers_db
+        let path = match corpus {
+            Corpus::Scripture => &self.scripture_db,
+            Corpus::EarlyChristian => &self.fathers_db,
+            Corpus::ChristianClassics => &self.classics_db,
         };
         let connection = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
         connection.busy_timeout(std::time::Duration::from_secs(5))?;
@@ -29,6 +29,7 @@ impl Engine {
         let corpus = local
             .map(|p| p.corpus)
             .or_else(|| id.starts_with("ecw:").then_some(Corpus::EarlyChristian))
+            .or_else(|| id.starts_with("ccw:").then_some(Corpus::ChristianClassics))
             .context("Unknown source passage")?;
         if self.config(Some(corpus))? != self.config(target)? {
             anyhow::bail!("Source and target embedding configurations differ");
@@ -79,7 +80,9 @@ impl Engine {
             .context("Web searches require one target corpus")?
         {
             Corpus::Scripture => self.scripture_web_results(query, request),
-            Corpus::EarlyChristian => self.fathers_web_results(query, request, source),
+            Corpus::EarlyChristian | Corpus::ChristianClassics => {
+                self.fathers_web_results(query, request, source)
+            }
         }
     }
     fn scripture_web_results(&self, query: &[f32], request: &SearchRequest) -> Result<Vec<Value>> {
@@ -113,7 +116,7 @@ impl Engine {
             self.library
                 .books
                 .iter()
-                .filter(|b| b.corpus == Corpus::EarlyChristian)
+                .filter(|b| Some(b.corpus) == request.corpus)
                 .map(|b| b.chapters.len())
                 .sum()
         };
@@ -121,7 +124,7 @@ impl Engine {
         if chapters.is_empty() {
             return Ok(vec![]);
         }
-        let db = self.connection(Corpus::EarlyChristian)?;
+        let db = self.connection(request.corpus.context("Missing Work collection")?)?;
         let marks = vec!["?"; chapters.len()].join(",");
         let sql=format!("SELECT p.id,p.reference,p.text,p.embedding,p.verse_start,p.verse_end,c.id,c.reference,w.title,w.author,w.authorship_date_range,w.ccel_id FROM passages p JOIN early_christian_passage_metadata pm ON pm.passage_id=p.id JOIN early_christian_chapters c ON c.id=pm.chapter_id LEFT JOIN early_christian_works w ON w.id=pm.work_id WHERE p.embedding IS NOT NULL AND pm.chapter_id IN ({marks})");
         let excluded = source.map(|s| s.database_id.as_str());

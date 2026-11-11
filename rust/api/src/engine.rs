@@ -24,23 +24,33 @@ pub struct Engine {
     configs: HashMap<u8, EmbeddingConfig>,
     pub(crate) scripture_db: PathBuf,
     pub(crate) fathers_db: PathBuf,
+    pub(crate) classics_db: PathBuf,
 }
 fn corpus_key(corpus: Corpus) -> u8 {
-    if corpus == Corpus::Scripture {
-        0
-    } else {
-        1
+    match corpus {
+        Corpus::Scripture => 0,
+        Corpus::EarlyChristian => 1,
+        Corpus::ChristianClassics => 2,
     }
 }
 
 impl Engine {
     pub fn load(library: Arc<Library>, scripture_db: &Path, fathers_db: &Path) -> Result<Self> {
+        let classics_db = std::env::var_os("CHRISTIAN_CLASSICS_DATABASE_PATH")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                scripture_db
+                    .parent()
+                    .unwrap_or(Path::new("storage"))
+                    .join("christian-classics.db")
+            });
         let mut engine = Self {
             library,
             vectors: vec![],
             configs: HashMap::new(),
             scripture_db: scripture_db.to_path_buf(),
             fathers_db: fathers_db.to_path_buf(),
+            classics_db: classics_db.clone(),
         };
         for (corpus, path, table) in [
             (Corpus::Scripture, scripture_db, "passages"),
@@ -49,7 +59,15 @@ impl Engine {
                 fathers_db,
                 "early_christian_chapters",
             ),
+            (
+                Corpus::ChristianClassics,
+                classics_db.as_path(),
+                "early_christian_chapters",
+            ),
         ] {
+            if corpus == Corpus::ChristianClassics && !path.is_file() {
+                continue;
+            }
             // Never run schema migrations or rebuild either the vectors or vector indexes.
             let connection = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
                 .with_context(|| format!("Open existing embedding DB {}", path.display()))?;
@@ -105,7 +123,12 @@ impl Engine {
         self.vectors.len()
     }
     pub fn config(&self, corpus: Option<Corpus>) -> Result<&EmbeddingConfig> {
-        if corpus.is_none() && self.configs.get(&0) != self.configs.get(&1) {
+        if corpus.is_none()
+            && self
+                .configs
+                .values()
+                .any(|config| Some(config) != self.configs.get(&0))
+        {
             bail!("Cross-corpus embedding configurations differ; select one corpus")
         }
         self.configs
@@ -138,10 +161,10 @@ impl Engine {
                     || (!request.books.is_empty() && !request.books.contains(&p.book_id))
                     || (request.source_id.as_deref() == Some(p.id.as_str())
                         && (p.corpus == Corpus::Scripture || !request.web))
-                    || (p.corpus == Corpus::EarlyChristian
+                    || (p.corpus != Corpus::Scripture
                         && !request.web
                         && source_chapter == Some(p.chapter_id.as_str()))
-                    || (p.corpus == Corpus::EarlyChristian
+                    || (p.corpus != Corpus::Scripture
                         && !request.authors.is_empty()
                         && !p
                             .author

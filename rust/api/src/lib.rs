@@ -333,6 +333,36 @@ mod tests {
             .map(|r| r["chapterId"].as_str().unwrap())
             .collect();
         assert_eq!(unique.len(), early.len());
+        let classic_id =
+            engine.library.book("classics:imitation").unwrap().chapters[0].passage_ids[0].clone();
+        let classic_source = engine.source(&classic_id, Some(Corpus::Scripture)).unwrap();
+        assert!(classic_source.database_id.starts_with("ccw:"));
+        assert_eq!(
+            engine
+                .source(&classic_source.database_id, Some(Corpus::ChristianClassics))
+                .unwrap()
+                .embedding,
+            classic_source.embedding
+        );
+        let classics = engine
+            .web_results(
+                &query,
+                &SearchRequest {
+                    corpus: Some(Corpus::ChristianClassics),
+                    authors: vec!["Thomas à Kempis".into()],
+                    limit: 5,
+                    web: true,
+                    ..Default::default()
+                },
+                None,
+            )
+            .unwrap();
+        assert_eq!(classics.len(), 5);
+        assert!(classics.iter().all(|result| result["chapterId"]
+            .as_str()
+            .unwrap()
+            .starts_with("classics:imitation:")
+            && result["author"] == "Thomas à Kempis"));
         let app = router(Arc::new(AppState::new(engine, None).unwrap()));
         for (body, status) in [
             (
@@ -340,6 +370,14 @@ mod tests {
                 200,
             ),
             (json!({"sourceId":genesis.clone(),"limit":3}), 200),
+            (
+                json!({"sourceId":genesis.clone(),"corpus":"christian-classics","web":true,"authors":["Thomas à Kempis"],"limit":3}),
+                200,
+            ),
+            (
+                json!({"sourceId":classic_source.database_id,"corpus":"scripture","web":true,"limit":3}),
+                200,
+            ),
             (json!({"query":"love","mode":"semantic"}), 503),
             (json!({"query":""}), 400),
             (json!({"query":"love","limit":101}), 400),

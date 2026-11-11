@@ -16,6 +16,7 @@ pub enum Corpus {
     #[default]
     Scripture,
     EarlyChristian,
+    ChristianClassics,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -258,109 +259,124 @@ impl Library {
                 .position(|b| *b == book.title)
                 .unwrap_or(999)
         });
-        let index = read_json(
-            &library
-                .root
-                .join("public/church-fathers-preview/books.json"),
-        )?;
-        for work in index["books"]
-            .as_array()
-            .context("Missing Early Christian book index")?
-        {
-            let mut book = Book {
-                id: string(work, "id"),
-                title: string(work, "book"),
-                author: work["author"].as_str().map(str::to_owned),
-                corpus: Corpus::EarlyChristian,
-                chapters: vec![],
-            };
-            for entry in work["chapters"]
+        for (corpus, index_path, asset_prefix) in [
+            (
+                Corpus::EarlyChristian,
+                "public/church-fathers-preview/books.json",
+                "/church-fathers-preview/chapters/",
+            ),
+            (
+                Corpus::ChristianClassics,
+                "public/christian-classics-text/books.json",
+                "/christian-classics-text/chapters/",
+            ),
+        ] {
+            let index_path = library.root.join(index_path);
+            if corpus == Corpus::ChristianClassics && !index_path.is_file() {
+                continue;
+            }
+            let index = read_json(&index_path)?;
+            for work in index["books"]
                 .as_array()
-                .context("Missing work chapters")?
+                .context("Missing Early Christian book index")?
             {
-                let asset_path = string(entry, "assetPath");
-                if !asset_path.starts_with("/church-fathers-preview/chapters/")
-                    || asset_path.contains("..")
-                {
-                    bail!("Invalid chapter asset path");
-                }
-                let asset = read_json(
-                    &library
-                        .root
-                        .join("public")
-                        .join(asset_path.trim_start_matches('/')),
-                )?;
-                let id = string(entry, "id");
-                let chapter_number = number(entry, "chapter");
-                let verses = asset["verses"]
-                    .as_array()
-                    .context("Missing chapter verses")?;
-                let mut ranges: Vec<&[Value]> = verses.chunks(3).collect();
-                // Match the web reader: merge a trailing one/two verses into the preceding paragraph.
-                if ranges.len() > 1 && ranges.last().is_some_and(|r| r.len() < 3) {
-                    let start = (ranges.len() - 2) * 3;
-                    ranges.truncate(ranges.len() - 2);
-                    ranges.push(&verses[start..]);
-                }
-                let mut chapter = Chapter {
-                    id: id.clone(),
-                    number: chapter_number,
-                    title: string(entry, "title"),
-                    passage_ids: vec![],
-                    original_audio: None,
+                let mut book = Book {
+                    id: string(work, "id"),
+                    title: string(work, "book"),
+                    author: work["author"].as_str().map(str::to_owned),
+                    corpus,
+                    chapters: vec![],
                 };
-                for range in ranges {
-                    let verse_start = number(&range[0], "verse");
-                    let verse_end = number(range.last().unwrap(), "verse");
-                    let text = range
-                        .iter()
-                        .map(|v| {
-                            v["modernizedText"]
-                                .as_str()
-                                .filter(|s| !s.trim().is_empty())
-                                .unwrap_or(v["text"].as_str().unwrap_or_default())
-                        })
-                        .collect::<Vec<_>>()
-                        .join(" ");
-                    let original_text = range
-                        .iter()
-                        .map(|v| string(v, "text"))
-                        .collect::<Vec<_>>()
-                        .join(" ");
-                    let passage_id = format!("{id}:{verse_start}-{verse_end}");
-                    chapter.passage_ids.push(passage_id.clone());
-                    library.passages.push(Passage {
-                        id: passage_id,
-                        corpus: Corpus::EarlyChristian,
-                        book_id: book.id.clone(),
-                        book: book.title.clone(),
-                        chapter_id: id.clone(),
-                        chapter: chapter_number,
-                        reference: format!(
-                            "{} {chapter_number}:{verse_start}-{verse_end}",
-                            book.title
-                        ),
-                        text,
-                        original_text,
-                        author: book.author.clone(),
-                        verse_start,
-                        verse_end,
-                        verses: range
+                for entry in work["chapters"]
+                    .as_array()
+                    .context("Missing work chapters")?
+                {
+                    let asset_path = string(entry, "assetPath");
+                    if !asset_path.starts_with(asset_prefix) || asset_path.contains("..") {
+                        bail!("Invalid chapter asset path");
+                    }
+                    let asset = read_json(
+                        &library
+                            .root
+                            .join("public")
+                            .join(asset_path.trim_start_matches('/')),
+                    )?;
+                    let id = string(entry, "id");
+                    let chapter_number = number(entry, "chapter");
+                    let verses = asset["verses"]
+                        .as_array()
+                        .context("Missing chapter verses")?;
+                    let mut ranges: Vec<&[Value]> = verses.chunks(3).collect();
+                    // Match the web reader: merge a trailing one/two verses into the preceding paragraph.
+                    if ranges.len() > 1 && ranges.last().is_some_and(|r| r.len() < 3) {
+                        let start = (ranges.len() - 2) * 3;
+                        ranges.truncate(ranges.len() - 2);
+                        ranges.push(&verses[start..]);
+                    }
+                    let mut chapter = Chapter {
+                        id: id.clone(),
+                        number: chapter_number,
+                        title: string(entry, "title"),
+                        passage_ids: vec![],
+                        original_audio: None,
+                    };
+                    for range in ranges {
+                        let verse_start = number(&range[0], "verse");
+                        let verse_end = number(range.last().unwrap(), "verse");
+                        let text = range
                             .iter()
-                            .map(|v| Verse {
-                                number: number(v, "verse"),
-                                text: v["modernizedText"]
+                            .map(|v| {
+                                v["modernizedText"]
                                     .as_str()
                                     .filter(|s| !s.trim().is_empty())
                                     .unwrap_or(v["text"].as_str().unwrap_or_default())
-                                    .to_owned(),
                             })
-                            .collect(),
-                    });
+                            .collect::<Vec<_>>()
+                            .join(" ");
+                        let original_text = range
+                            .iter()
+                            .map(|v| string(v, "text"))
+                            .collect::<Vec<_>>()
+                            .join(" ");
+                        let passage_id = format!("{id}:{verse_start}-{verse_end}");
+                        chapter.passage_ids.push(passage_id.clone());
+                        library.passages.push(Passage {
+                            id: passage_id,
+                            corpus,
+                            book_id: book.id.clone(),
+                            book: book.title.clone(),
+                            chapter_id: id.clone(),
+                            chapter: chapter_number,
+                            reference: format!(
+                                "{} {}:{verse_start}-{verse_end}",
+                                book.title,
+                                entry["reference"]
+                                    .as_str()
+                                    .map(str::to_owned)
+                                    .unwrap_or_else(|| chapter_number.to_string())
+                            ),
+                            text,
+                            original_text,
+                            author: book.author.clone(),
+                            verse_start,
+                            verse_end,
+                            verses: range
+                                .iter()
+                                .map(|v| Verse {
+                                    number: number(v, "verse"),
+                                    text: v["modernizedText"]
+                                        .as_str()
+                                        .filter(|s| !s.trim().is_empty())
+                                        .unwrap_or(v["text"].as_str().unwrap_or_default())
+                                        .to_owned(),
+                                })
+                                .collect(),
+                        });
+                    }
+                    book.chapters.push(chapter);
                 }
-                book.chapters.push(chapter);
+                library.books.push(book);
             }
-            library.books.push(book);
         }
         library.rebuild_indexes()?;
         library.load_audio()?;
@@ -1007,8 +1023,8 @@ mod tests {
         assert!(loaded.audio("Genesis:2").unwrap().start_seconds > 260.0);
         let mut compressed = fs::read(destination.join("native-library.bin")).unwrap();
         assert!(
-            compressed.len() < 45_000_000,
-            "Native text should compress losslessly below 45 MB"
+            compressed.len() < 60_000_000,
+            "Complete text including the four Classics should compress losslessly below 60 MB"
         );
         compressed.truncate(compressed.len() - 10);
         assert!(
@@ -1040,6 +1056,30 @@ mod tests {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let library = Library::load(root).unwrap();
         library.validate().unwrap();
+        let classics: Vec<_> = library
+            .books
+            .iter()
+            .filter(|book| book.corpus == Corpus::ChristianClassics)
+            .collect();
+        assert_eq!(classics.len(), 4);
+        assert_eq!(
+            classics
+                .iter()
+                .map(|book| book.chapters.len())
+                .sum::<usize>(),
+            2580
+        );
+        let classic_hits = library.search(
+            "humility",
+            Some(Corpus::ChristianClassics),
+            &[],
+            10,
+            Canon::Protestant,
+        );
+        assert_eq!(classic_hits.len(), 10);
+        assert!(classic_hits
+            .iter()
+            .all(|hit| library.passage(&hit.id).unwrap().corpus == Corpus::ChristianClassics));
         assert_eq!(
             library
                 .books
