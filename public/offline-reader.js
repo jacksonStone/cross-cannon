@@ -50,6 +50,7 @@ function renderPassage(passages, passageId) {
   const index = passages.findIndex((passage) => passage.id === passageId);
   const selectedIndex = index >= 0 ? index : 0;
   const passage = passages[selectedIndex];
+  rememberOfflineLocation(passage);
   const text = passage.text || passage.verses?.map((verse) => verse.text).join(" ") || "";
 
   document.title = `${passage.reference} | Cross Canon`;
@@ -64,6 +65,23 @@ function renderPassage(passages, passageId) {
     navigationButton("Next", selectedIndex < passages.length - 1 ? passages[selectedIndex + 1].id : "")
   );
   reader.append(heading, body, navigation);
+}
+
+function rememberOfflineLocation(passage) {
+  const match = /^(.*?)\s+(\d+):/.exec(passage.reference);
+  if (!match) return;
+  try {
+    const location = { version: 2, corpus: "scripture", chapterKey: `${match[1]}\t${match[2]}`, passageKey: passage.id };
+    const userId = localStorage.getItem("cross-cannon:active-account:v1");
+    const key = "cross-cannon:reader-position:v1";
+    localStorage.setItem(userId ? `${key}:account:${userId}` : key, JSON.stringify(location));
+    if (userId) {
+      const progressKey = `cross-cannon:account:${userId}:progress:scripture:v1`;
+      const previous = JSON.parse(localStorage.getItem(progressKey) ?? "null");
+      if (previous?.location?.passageKey === location.passageKey && previous?.location?.chapterKey === location.chapterKey) return;
+      localStorage.setItem(progressKey, JSON.stringify({ ...previous, location, revision: previous?.revision ?? 0, dirty: true }));
+    }
+  } catch { /* Reading remains available when browser storage is full or disabled. */ }
 }
 
 function navigationButton(label, passageId) {

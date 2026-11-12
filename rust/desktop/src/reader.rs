@@ -8,6 +8,11 @@ pub(super) struct ReaderLayout {
     chapters: std::collections::HashMap<String, f32>,
     passages: std::collections::HashMap<String, f32>,
     selected: Option<String>,
+    modernized_ranges: std::collections::HashMap<String, Vec<std::ops::Range<usize>>>,
+    // Never measure an entire Work to discover its scroll height. Henry has
+    // 1,189 chapters; keeping every first-frame galley exhausts phone memory.
+    window: std::ops::Range<usize>,
+    location_pending: bool,
 }
 
 #[derive(PartialEq)]
@@ -229,7 +234,8 @@ impl Desktop {
         let book = library.book(&self.current_passage().book_id).unwrap();
         let mut measured = std::mem::take(&mut self.reader_layout);
         let mut focused_visible = None;
-        let target = self.scroll_target.clone();
+        let mut target = self.scroll_target.clone();
+        let mut prepended_height = 0.0;
         let touch = self.reader_touch.frame(
             ui.ctx(),
             ui.available_rect_before_wrap(),
@@ -260,11 +266,28 @@ impl Desktop {
                 original: self.state.original,
                 theme: self.state.theme,
             };
-            if measured.key.as_ref() != Some(&key) {
+            let layout_changed = measured.key.as_ref() != Some(&key);
+            if layout_changed {
                 measured = ReaderLayout {
                     key: Some(key),
                     ..Default::default()
                 };
+                // Reflow restores the saved Passage, rather than interpreting
+                // an offset measured with a different font or orientation.
+                target.get_or_insert_with(|| self.state.location_passage_id.clone());
+            }
+            if target.is_some() || measured.window.is_empty() {
+                let chapter_id = target
+                    .as_deref()
+                    .and_then(|id| library.passage(id))
+                    .map(|p| p.chapter_id.as_str())
+                    .unwrap_or(&self.active_chapter_id);
+                let index = book
+                    .chapters
+                    .iter()
+                    .position(|c| c.id == chapter_id)
+                    .unwrap_or(0);
+                measured.window = index.saturating_sub(1)..(index + 2).min(book.chapters.len());
             }
             if measured.selected != self.selected {
                 for id in measured.selected.iter().chain(self.selected.iter()) {
@@ -280,7 +303,25 @@ impl Desktop {
                 .and_then(|id| library.passage(id))
                 .map(|p| &p.chapter_id);
             let near_viewport = ui.clip_rect().expand2(egui::vec2(0.0, viewport.height()));
-            for chapter in &book.chapters {
+            let previous_start = measured.window.start;
+            if target.is_none() {
+                if viewport.top() < viewport.height() && measured.window.start > 0 {
+                    measured.window.start -= 1;
+                }
+                if viewport.top() > self.reader_max_scroll - viewport.height()
+                    && measured.window.end < book.chapters.len()
+                {
+                    measured.window.end += 1;
+                    ui.ctx().request_repaint();
+                }
+            }
+            for (index, chapter) in book
+                .chapters
+                .iter()
+                .enumerate()
+                .take(measured.window.end)
+                .skip(measured.window.start)
+            {
                 let section_top = ui.cursor().top();
                 if target_chapter != Some(&chapter.id) {
                     if let Some(&height) = measured.chapters.get(&chapter.id) {
@@ -288,6 +329,9 @@ impl Desktop {
                             Rect::from_min_size(ui.cursor().min, egui::vec2(content_width, height));
                         if !rect.intersects(near_viewport) {
                             ui.advance_cursor_after_rect(rect);
+                            if index < previous_start {
+                                prepended_height += height;
+                            }
                             continue;
                         }
                     }
@@ -385,16 +429,42 @@ impl Desktop {
                     let mut text = egui::text::LayoutJob::default();
                     text.wrap.max_width = content_width - 20.0;
                     let size = 19.84 * self.state.font_scale;
-                    text.append(
-                        passage.reader_text(self.state.original),
-                        0.0,
-                        egui::TextFormat {
-                            font_id: serif(size),
-                            color: p.ink,
-                            line_height: Some(size * self.state.line_height),
-                            ..Default::default()
-                        },
-                    );
+                    let displayed = passage.reader_text(self.state.original);
+                    let format = egui::TextFormat {
+                        font_id: serif(size),
+                        color: p.ink,
+                        line_height: Some(size * self.state.line_height),
+                        ..Default::default()
+                    };
+                    // Off-screen paragraphs only need measurement. Compute differences
+                    // near the viewport and keep a bounded cache across frames.
+                    let near = start.y <= near_viewport.bottom()
+                        && start.y + 2000.0 >= near_viewport.top();
+                    let ranges = if show_modernization_marks(
+                        self.state.original,
+                        passage.corpus,
+                        &passage.original_text,
+                        displayed,
+                    ) && near
+                    {
+                        if measured.modernized_ranges.len() >= 256
+                            && !measured.modernized_ranges.contains_key(id)
+                        {
+                            measured.modernized_ranges.clear();
+                        }
+                        Some(
+                            measured
+                                .modernized_ranges
+                                .entry(id.clone())
+                                .or_insert_with(|| {
+                                    modernized_ranges(&passage.original_text, displayed)
+                                })
+                                .as_slice(),
+                        )
+                    } else {
+                        None
+                    };
+                    text.append(displayed, 0.0, format);
                     let galley = ui.fonts(|f| f.layout_job(text));
                     let height = galley.size().y + 8.0 + if selected { 25.0 } else { 0.0 };
                     let (rect, _) =
@@ -431,12 +501,23 @@ impl Desktop {
                         );
                     }
                     if ui.is_rect_visible(rect) {
-                        ui.painter().galley(
-                            rect.left_top()
-                                + egui::vec2(10.0, 4.0 + if selected { 25.0 } else { 0.0 }),
-                            galley,
-                            p.ink,
-                        );
+                        let origin = rect.left_top()
+                            + egui::vec2(10.0, 4.0 + if selected { 25.0 } else { 0.0 });
+                        if let Some(ranges) = ranges {
+                            let tint = modernization_tint(
+                                p.paper,
+                                p.accent,
+                                self.state.theme == Theme::Dark,
+                            );
+                            for mark in modernization_mark_rects(&galley, ranges) {
+                                ui.painter().rect_filled(
+                                    mark.translate(origin.to_vec2()),
+                                    size * 0.18,
+                                    tint,
+                                );
+                            }
+                        }
+                        ui.painter().galley(origin, galley, p.ink);
                     }
                     if response.clicked() && !touch.suppress_click {
                         self.selected = if selected { None } else { Some(id.clone()) };
@@ -486,17 +567,33 @@ impl Desktop {
                         .passages
                         .insert(id.clone(), ui.cursor().top() - start.y);
                 }
-                measured
-                    .chapters
-                    .insert(chapter.id.clone(), ui.cursor().top() - section_top);
+                let height = ui.cursor().top() - section_top;
+                measured.chapters.insert(chapter.id.clone(), height);
+                if index < previous_start {
+                    prepended_height += height;
+                }
             }
             ui.add_space(70.0);
         });
         self.reader_layout = measured;
         self.reader_max_scroll = (output.content_size.y - output.inner_rect.height()).max(0.0);
-        if self.scroll_target.is_some() {
+        if prepended_height > 0.0 {
+            // Retain the exact viewport when inserting an earlier chapter.
+            // Discard this layout pass so its temporary displaced text is never painted.
+            let mut state = output.state;
+            state.offset.y += prepended_height;
+            state.store(ui.ctx(), output.id);
+            self.last_scroll = state.offset.y;
+            self.reader_layout.location_pending = true;
+            ui.ctx()
+                .request_discard("Preserve reader viewport after prepending a chapter");
+            ui.ctx().request_repaint();
+        } else if target.is_some() {
             self.scroll_target = None;
-        } else if (output.state.offset.y - self.last_scroll).abs() > 1.0 {
+        } else if self.reader_layout.location_pending
+            || (output.state.offset.y - self.last_scroll).abs() > 1.0
+        {
+            self.reader_layout.location_pending = false;
             if let Some(id) = focused_visible {
                 let chapter_before = self.active_chapter_id.clone();
                 self.remember_location(id);
@@ -507,7 +604,9 @@ impl Desktop {
                 }
             }
         }
-        self.last_scroll = output.state.offset.y;
+        if prepended_height == 0.0 {
+            self.last_scroll = output.state.offset.y;
+        }
     }
     pub(super) fn book_heading(&self, ui: &mut egui::Ui, book: &Book) {
         let p = self.state.theme.palette();
@@ -590,5 +689,288 @@ impl Desktop {
         ui.add_space(46.0);
         ui.separator();
         ui.add_space(38.0);
+    }
+}
+
+#[cfg(test)]
+mod window_tests {
+    use super::*;
+
+    fn frame(app: &mut Desktop, ctx: &egui::Context, mut offset: Option<f32>) {
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(393.0, 852.0),
+                )),
+                ..Default::default()
+            },
+            |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    if let Some(offset) = offset.take() {
+                        let id = ui.make_persistent_id(Id::new((
+                            "reader",
+                            &app.current_passage().book_id,
+                        )));
+                        let mut state = egui::scroll_area::State::load(ctx, id).unwrap();
+                        state.offset.y = offset;
+                        state.store(ctx, id);
+                    }
+                    app.reader(ui);
+                });
+            },
+        );
+    }
+
+    #[test]
+    fn growing_henry_window_preserves_viewport_and_reading_location() {
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        let ctx = egui::Context::default();
+        let mut app = Desktop::initialize(&ctx, None, library.clone());
+        let book = library.book("classics:henry").unwrap();
+        app.open(book.chapters[5].passage_ids[0].clone());
+        for _ in 0..3 {
+            frame(&mut app, &ctx, None);
+        }
+        assert_eq!(app.reader_layout.window, 4..7);
+        frame(&mut app, &ctx, Some(100.0));
+        assert_eq!(app.reader_layout.window.start, 3);
+        let inserted = app.reader_layout.chapters[&book.chapters[3].id];
+        assert!(
+            (app.last_scroll - 100.0 - inserted).abs() < 1.0,
+            "Prepending must compensate by the exact chapter height"
+        );
+        assert_eq!(app.current_passage().chapter_id, book.chapters[4].id);
+        let offset = app.last_scroll;
+        frame(&mut app, &ctx, None);
+        assert!(
+            (app.last_scroll - offset).abs() < 1.0,
+            "The following frame must not jump"
+        );
+        let end = app.reader_layout.window.end;
+        let max_scroll = app.reader_max_scroll;
+        frame(&mut app, &ctx, Some(max_scroll - 100.0));
+        assert_eq!(app.reader_layout.window.end, end + 1);
+        assert!(
+            (app.last_scroll - (max_scroll - 100.0)).abs() < 1.0,
+            "Appending must retain the current viewport"
+        );
+    }
+}
+
+fn modernization_tint(paper: egui::Color32, accent: egui::Color32, dark: bool) -> egui::Color32 {
+    let weight = if dark { 0.10 } else { 0.07 };
+    let mix = |background: u8, foreground: u8| {
+        (background as f32 * (1.0 - weight) + foreground as f32 * weight).round() as u8
+    };
+    egui::Color32::from_rgb(
+        mix(paper.r(), accent.r()),
+        mix(paper.g(), accent.g()),
+        mix(paper.b(), accent.b()),
+    )
+}
+
+/// Word boxes use font height, not the reader's expanded line height.
+fn modernization_mark_rects(galley: &egui::Galley, ranges: &[std::ops::Range<usize>]) -> Vec<Rect> {
+    let mut result = Vec::new();
+    let mut byte = 0;
+    let mut range_index = 0;
+    for row in &galley.rows {
+        let mut current: Option<Rect> = None;
+        for glyph in &row.glyphs {
+            while range_index < ranges.len() && ranges[range_index].end <= byte {
+                range_index += 1;
+            }
+            let marked = range_index < ranges.len() && ranges[range_index].contains(&byte);
+            if marked {
+                let glyph_rect = Rect::from_min_size(
+                    glyph.pos - egui::vec2(0.0, glyph.font_ascent),
+                    egui::vec2(glyph.advance_width, glyph.font_height),
+                );
+                current = Some(current.map_or(glyph_rect, |rect| rect.union(glyph_rect)));
+            } else if let Some(rect) = current.take() {
+                result.push(rect);
+            }
+            byte += glyph.chr.len_utf8();
+        }
+        if let Some(rect) = current.take() {
+            result.push(rect);
+        }
+        if row.ends_with_newline {
+            byte += 1;
+        }
+    }
+    result
+}
+
+fn show_modernization_marks(original: bool, corpus: Corpus, source: &str, displayed: &str) -> bool {
+    !original && corpus != Corpus::Scripture && source != displayed
+}
+
+/// Byte ranges in the displayed text, using the web reader's LCS tie-breaking.
+fn modernized_ranges(original: &str, displayed: &str) -> Vec<std::ops::Range<usize>> {
+    fn tokens(text: &str) -> Vec<(std::ops::Range<usize>, String)> {
+        let mut result = Vec::new();
+        let mut start = None;
+        for (index, ch) in text
+            .char_indices()
+            .chain(std::iter::once((text.len(), ' ')))
+        {
+            if ch.is_whitespace() {
+                if let Some(begin) = start.take() {
+                    let token = &text[begin..index];
+                    let lowered = token.to_lowercase();
+                    let comparable = lowered.trim_matches(|c: char| !c.is_ascii_alphanumeric());
+                    // Punctuation alone is not a changed word.
+                    if !comparable.is_empty() {
+                        result.push((begin..index, comparable.to_owned()));
+                    }
+                }
+            } else if start.is_none() {
+                start = Some(index);
+            }
+        }
+        result
+    }
+    let old = tokens(original);
+    let new = tokens(displayed);
+    let columns = new.len() + 1;
+    let mut scores = vec![0usize; (old.len() + 1) * columns];
+    for i in 1..=old.len() {
+        for j in 1..=new.len() {
+            scores[i * columns + j] = if old[i - 1].1 == new[j - 1].1 {
+                scores[(i - 1) * columns + j - 1] + 1
+            } else {
+                scores[(i - 1) * columns + j].max(scores[i * columns + j - 1])
+            };
+        }
+    }
+    let mut matched = vec![false; new.len()];
+    let (mut i, mut j) = (old.len(), new.len());
+    while i > 0 && j > 0 {
+        if old[i - 1].1 == new[j - 1].1 {
+            matched[j - 1] = true;
+            i -= 1;
+            j -= 1;
+        } else if scores[(i - 1) * columns + j] >= scores[i * columns + j - 1] {
+            i -= 1;
+        } else {
+            j -= 1;
+        }
+    }
+    new.into_iter()
+        .zip(matched)
+        .filter_map(|((range, _), matched)| (!matched).then_some(range))
+        .collect()
+}
+
+#[cfg(test)]
+mod modernization_tests {
+    use super::{
+        modernization_mark_rects, modernization_tint, modernized_ranges, show_modernization_marks,
+    };
+    use cross_canon_core::Corpus;
+    use eframe::egui;
+
+    #[test]
+    fn tint_composites_accent_over_paper_in_srgb() {
+        let paper = super::Theme::Paper.palette();
+        let dark = super::Theme::Dark.palette();
+        assert_eq!(
+            modernization_tint(paper.paper, paper.accent, false),
+            egui::Color32::from_rgb(243, 236, 232)
+        );
+        assert_eq!(
+            modernization_tint(dark.paper, dark.accent, true),
+            egui::Color32::from_rgb(45, 39, 35)
+        );
+    }
+
+    #[test]
+    fn mark_boxes_follow_wrapped_words_and_exclude_extra_leading() {
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let mut job = egui::text::LayoutJob::default();
+            job.wrap.max_width = 75.0;
+            job.append(
+                "écho word\nsecond word",
+                0.0,
+                egui::TextFormat {
+                    font_id: egui::FontId::proportional(16.0),
+                    line_height: Some(32.0),
+                    ..Default::default()
+                },
+            );
+            let galley = ctx.fonts(|f| f.layout_job(job));
+            let first = modernization_mark_rects(&galley, &[0..5]);
+            let last_start = "écho word\nsecond ".len();
+            let last = modernization_mark_rects(&galley, &[last_start..last_start + 4]);
+            assert_eq!(first.len(), 1);
+            assert_eq!(last.len(), 1);
+            assert!(first[0].height() < 32.0);
+            assert!(last[0].top() > first[0].top());
+            assert!(last[0].width() > 0.0);
+        });
+    }
+
+    #[test]
+    fn original_and_plain_passages_have_no_marks() {
+        assert!(!show_modernization_marks(
+            true,
+            Corpus::EarlyChristian,
+            "old",
+            "new"
+        ));
+        assert!(!show_modernization_marks(
+            false,
+            Corpus::EarlyChristian,
+            "same",
+            "same"
+        ));
+        assert!(!show_modernization_marks(
+            false,
+            Corpus::Scripture,
+            "old",
+            "new"
+        ));
+    }
+
+    #[test]
+    fn marks_only_changed_words_and_preserves_exact_text() {
+        let displayed = "  The\tquick,  fox!\n";
+        let ranges = modernized_ranges("the slow fox.", displayed);
+        assert_eq!(
+            ranges
+                .iter()
+                .map(|r| &displayed[r.clone()])
+                .collect::<Vec<_>>(),
+            vec!["quick,"]
+        );
+        let mut rebuilt = String::new();
+        let mut cursor = 0;
+        for range in ranges {
+            rebuilt.push_str(&displayed[cursor..range.start]);
+            rebuilt.push_str(&displayed[range.clone()]);
+            cursor = range.end;
+        }
+        rebuilt.push_str(&displayed[cursor..]);
+        assert_eq!(rebuilt, displayed);
+        assert!(modernized_ranges("Hello, world!", "hello WORLD? ...").is_empty());
+    }
+
+    #[test]
+    fn repeated_words_follow_web_lcs_tie_breaking() {
+        let displayed = "one two one";
+        let ranges = modernized_ranges("one one", displayed);
+        assert_eq!(
+            ranges
+                .iter()
+                .map(|r| &displayed[r.clone()])
+                .collect::<Vec<_>>(),
+            vec!["two"]
+        );
+        assert!(modernized_ranges("same same", "same same").is_empty());
     }
 }

@@ -25,8 +25,9 @@ const shouldFailShellStage =
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    stageShellGeneration(candidateShellCache)
-      .then(() => writeMetaText(PENDING_SHELL_URL, candidateShellCache))
+    stageShellGeneration(candidateShellCache).then(() =>
+      writeMetaText(PENDING_SHELL_URL, candidateShellCache)
+    )
   );
 });
 
@@ -39,6 +40,18 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Account pages, sessions and OAuth callbacks must never enter the offline shell.
+  if (url.pathname === "/account" || url.pathname === "/api/account"
+    || url.pathname.startsWith("/api/auth/")) {
+    // An account-service failure must not mark the public reader/search offline.
+    event.respondWith(fetch(new Request(request, { cache: "no-store" })).catch(() =>
+      new Response("Accounts are unavailable offline.", {
+        status: 503, headers: { "Cache-Control": "private, no-store" },
+      })
+    ));
     return;
   }
 
@@ -81,7 +94,12 @@ async function stageShellGeneration(cacheName) {
   const cache = await caches.open(cacheName);
 
   try {
-    const documentUrls = ["/", "/church-fathers"];
+    const documentUrls = [
+      "/",
+      "/church-fathers",
+      "/christian-classics",
+      "/christian-classics/read",
+    ];
     const documents = await Promise.all(
       documentUrls.map(async (pathname) => {
         const response = await fetch(
@@ -106,6 +124,10 @@ async function stageShellGeneration(cacheName) {
     }
 
     await stageEarlyChristianNavigationResources(cache);
+    await stageEarlyChristianNavigationResources(
+      cache,
+      "/christian-classics-text/manifest.json"
+    );
 
     if (shouldFailShellStage) {
       throw new Error("Intentional local shell-staging failure.");
@@ -137,8 +159,10 @@ async function stageShellGeneration(cacheName) {
   }
 }
 
-async function stageEarlyChristianNavigationResources(cache) {
-  const manifestUrl = "/church-fathers-preview/manifest.json";
+async function stageEarlyChristianNavigationResources(
+  cache,
+  manifestUrl = "/church-fathers-preview/manifest.json"
+) {
   const manifestResponse = await fetch(
     new Request(manifestUrl, { cache: "no-store" })
   );
@@ -273,6 +297,13 @@ async function offlineNavigationResponse(request) {
 
   if (pathname.startsWith("/reader/")) {
     return (await cache.match(OFFLINE_READER_URL)) ?? offlineResponse();
+  }
+
+  if (
+    pathname === "/christian-classics" ||
+    pathname === "/christian-classics/read"
+  ) {
+    return (await cache.match(pathname)) ?? offlineResponse();
   }
 
   if (pathname === "/church-fathers") {
@@ -417,7 +448,10 @@ function isScriptureContent(url) {
 }
 
 function isEarlyChristianContent(url) {
-  return url.pathname.startsWith("/church-fathers-preview/");
+  return (
+    url.pathname.startsWith("/church-fathers-preview/") ||
+    url.pathname.startsWith("/christian-classics-text/")
+  );
 }
 
 function offlineResponse() {

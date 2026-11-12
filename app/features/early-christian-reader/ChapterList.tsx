@@ -15,6 +15,7 @@ import { EarlyChristianAuthorInputs } from "./SearchFields";
 import type { ChapterAsset, ChapterEntry } from "./types";
 
 export function ChapterList({
+  targetCorpus = "early-christian",
   chapterLoadErrors,
   chapters,
   isFindingSimilarFathers,
@@ -28,6 +29,7 @@ export function ChapterList({
   setChapterLoadErrors,
   onSelectPassage
 }: {
+  targetCorpus?: "early-christian" | "christian-classics";
   chapterLoadErrors: Map<string, string>;
   chapters: ChapterEntry[];
   isFindingSimilarFathers: boolean;
@@ -63,9 +65,9 @@ export function ChapterList({
           >
             <h2
               className="reader-chapter-heading"
-              style={chapterHeadingScaleStyle(`${entry.book.name} ${entry.chapter.chapter}`)}
+              style={chapterHeadingScaleStyle(`${entry.book.name} ${entry.chapter.reference ?? entry.chapter.chapter}`)}
             >
-              {entry.book.name} {entry.chapter.chapter}
+              {entry.book.name} · {entry.chapter.reference ?? entry.chapter.chapter}
               <span>{entry.book.author ?? entry.book.metadata.source.id.toUpperCase()}</span>
             </h2>
             {chapter ? (
@@ -86,7 +88,7 @@ export function ChapterList({
                           <>
                             <Form method="post">
                               <input type="hidden" name="intent" value="similar-passage" />
-                              <input type="hidden" name="targetCorpus" value="early-christian" />
+                              <input type="hidden" name="targetCorpus" value={targetCorpus} />
                               <input type="hidden" name="sourcePassageId" value={passage.key} />
                               <EarlyChristianAuthorInputs authors={selectedAuthorFilters} />
                               <button
@@ -133,6 +135,7 @@ export function ChapterList({
                     );
                   })}
                 </div>
+                {chapter.notes?.length ? <details className="work-chapter-notes"><summary>Notes for this chapter</summary>{chapter.notes.map((note) => <p key={note.id}>{note.text}</p>)}</details> : null}
               </>
             ) : chapterLoadError ? (
               <div className="reader-chapter-error" role="status">

@@ -1,0 +1,58 @@
+{
+  "sources": [
+    {
+      "file": "mhc1.xml",
+      "url": "https://www.ccel.org/ccel/h/henry/mhc1.xml",
+      "rights": "Public domain. May be copied and distributed freely.",
+      "sha256": "6eb946647f806f46129001f83013d65c51e40ac59b939ac1c51404aa50375971"
+    },
+    {
+      "file": "mhc2.xml",
+      "url": "https://www.ccel.org/ccel/h/henry/mhc2.xml",
+      "rights": "Public domain. May be copied and distributed freely.",
+      "sha256": "673fcb4168ad946ab1e6923c0e331cc61e4adca4498fc0ee34cf1507285aa2f7"
+    },
+    {
+      "file": "mhc3.xml",
+      "url": "https://www.ccel.org/ccel/h/henry/mhc3.xml",
+      "rights": "Public domain. May be copied and distributed freely.",
+      "sha256": "8ba9779eba5d326acbfc9acaccf2ea1fa2d6b5c48b03ab86fc5e80b0bfa5b17e"
+    },
+    {
+      "file": "mhc4.xml",
+      "url": "https://www.ccel.org/ccel/h/henry/mhc4.xml",
+      "rights": "Public domain. May be copied and distributed freely.",
+      "sha256": "7b6ea0800caa1daab6b0c807f5b95c7567fb5d880290bbe91d848048a80486b2"
+    },
+    {
+      "file": "mhc5.xml",
+      "url": "https://www.ccel.org/ccel/h/henry/mhc5.xml",
+      "rights": "Public domain. May be copied and distributed freely.",
+      "sha256": "8b0853b116e9a68215a594bafe29f45502d4c766e1f128cbf5fb050f45cf2518"
+    },
+    {
+      "file": "mhc6.xml",
+      "url": "https://www.ccel.org/ccel/h/henry/mhc6.xml",
+      "rights": "Public domain. May be copied and distributed freely.",
+      "sha256": "296195d09d4fbb1e7516ea77c100dbc87ce37542c3109f9f570c3cf155b594c1"
+    },
+    {
+      "file": "wesley.xml",
+      "url": "https://www.ccel.org/ccel/w/wesley/notes.xml",
+      "rights": "Public Domain",
+      "sha256": "c4534a8964bb8900256ade116209e2bb114caab6100b098b20bf68b682e3fdce"
+    },
+    {
+      "file": "catena.xml",
+      "url": "https://raw.githubusercontent.com/Isidore-Guild/catena/aebb0f6b2b313fd3732dab9b7f28714fbe967f40/catena.xml",
+      "rights": "Public-domain historic translation; repository contributions CC0-1.0",
+      "sha256": "b5de1fbb27455de1d016642db269dd03fd65b257b63859570ceea4ac0bb7c223"
+    },
+    {
+      "file": "imitation.txt",
+      "url": "https://www.gutenberg.org/cache/epub/1653/pg1653.txt",
+      "rights": "William Benham translation; public domain in the USA",
+      "sha256": "7e9f72139575c267b0e65dd1c9665cc8541a289538fda4cff370dedd0cc83a74"
+    }
+  ]
+}

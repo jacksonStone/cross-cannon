@@ -5,7 +5,7 @@ import {
   getSearchDialogFilterState,
   getSearchDialogIntent,
   type SearchReaderCorpus,
-  resolveSearchDialogTarget
+  resolveSearchDialogTarget,
 } from "./search-dialog-model";
 import type { CanonMode, SearchTargetCorpus } from "./types";
 import { useSearchFilters } from "./useSearchFilters";
@@ -23,45 +23,53 @@ export function useSearchDialogState({
   actionData,
   books,
   earlyChristianAuthors,
+  classicAuthors = [],
   focusedPassageId,
   persistFilters = true,
-  readerCorpus
+  readerCorpus,
 }: {
   actionData?: SearchDialogActionData;
   books: string[];
   earlyChristianAuthors: string[];
+  classicAuthors?: string[];
   focusedPassageId: string | null;
   persistFilters?: boolean;
   readerCorpus: SearchReaderCorpus;
 }) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [targetCorpus, setTargetCorpus] = useState<SearchTargetCorpus>(readerCorpus);
+  const [targetCorpus, setTargetCorpus] =
+    useState<SearchTargetCorpus>(readerCorpus);
   const filters = useSearchFilters({
     actionData,
     books,
-    earlyChristianAuthors,
-    persist: persistFilters
+    earlyChristianAuthors:
+      targetCorpus === "christian-classics"
+        ? classicAuthors
+        : earlyChristianAuthors,
+    persist: persistFilters,
   });
   const filterState = getSearchDialogFilterState({
     authorCount: filters.selectedEarlyChristianAuthors.length,
     bookCount: filters.selectedBooksForCanon.length,
     isDefaultMatchCount: filters.matchCount === DEFAULT_MATCH_COUNT,
-    targetCorpus
+    targetCorpus,
   });
   const intent = getSearchDialogIntent({
     hasFocusedPassage: Boolean(focusedPassageId),
     readerCorpus,
-    targetCorpus
+    targetCorpus,
   });
   const closeFilters = useCallback(() => setIsFilterOpen(false), []);
   const openFilters = useCallback(() => setIsFilterOpen(true), []);
 
   useEffect(() => {
-    setTargetCorpus(resolveSearchDialogTarget({
-      actionMode: actionData?.mode,
-      actionTargetCorpus: actionData?.targetCorpus,
-      readerCorpus
-    }));
+    setTargetCorpus(
+      resolveSearchDialogTarget({
+        actionMode: actionData?.mode,
+        actionTargetCorpus: actionData?.targetCorpus,
+        readerCorpus,
+      })
+    );
   }, [actionData?.mode, actionData?.targetCorpus, readerCorpus]);
 
   return {
@@ -71,8 +79,15 @@ export function useSearchDialogState({
     intent,
     isFilterOpen,
     openFilters,
-    setTargetCorpus,
-    targetCorpus
+    setTargetCorpus: (next: SearchTargetCorpus) => {
+      if (
+        next !== targetCorpus &&
+        (next === "christian-classics" || targetCorpus === "christian-classics")
+      )
+        filters.clearAuthorFilters();
+      setTargetCorpus(next);
+    },
+    targetCorpus,
   };
 }
 

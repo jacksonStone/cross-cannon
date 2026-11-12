@@ -10,7 +10,7 @@
   A00000000000000000000004 = {isa = PBXGroup; children = (A00000000000000000000006); name = Products; sourceTree = "<group>";};
   A00000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CrossCanon/main.m; sourceTree = "<group>";};
   A00000000000000000000006 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Cross Canon.app"; sourceTree = BUILT_PRODUCTS_DIR;};
-  A00000000000000000000007 = {isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Build Rust and bundle local library"; outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/bash; shellScript = "\"$SRCROOT/build-rust.sh\"";};
+  A00000000000000000000007 = {isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Build Rust and bundle local library"; outputPaths = ("$(SRCROOT)/../target/$(RUST_TARGET)/$(RUST_PROFILE)/libcross_canon_desktop.a", "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/library/native-library.bin", "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/library/scripture-cache/manifest.json"); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/bash; shellScript = "\"$SRCROOT/build-rust.sh\"";};
   A00000000000000000000008 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000009); runOnlyForDeploymentPostprocessing = 0;};
   A00000000000000000000009 = {isa = PBXBuildFile; fileRef = A00000000000000000000005;};
   A00000000000000000000016 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000018); runOnlyForDeploymentPostprocessing = 0;};

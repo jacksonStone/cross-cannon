@@ -1,13 +1,14 @@
 import type { MutableRefObject } from "react";
 
 import { isRecord, parseJson } from "~/lib/json";
+import { progressStorageReady, queueReaderProgress, readerStorageKey } from "../account/progress-storage";
 
 type ReaderPositionRefs = {
   lastReportedRef?: MutableRefObject<string>;
   savedRef?: MutableRefObject<string>;
 };
 
-export type ReaderCorpus = "fathers" | "scripture";
+export type ReaderCorpus = "fathers" | "scripture" | "classics";
 
 export type ReaderLocation = {
   chapterKey: string;
@@ -23,7 +24,7 @@ export function readReaderPosition(storageKey: string) {
   }
 
   try {
-    const storedValue = window.localStorage.getItem(storageKey) ?? "";
+    const storedValue = window.localStorage.getItem(readerStorageKey(storageKey)) ?? "";
     const parsedLocation = parseReaderLocation(storedValue);
 
     return parsedLocation?.chapterKey ?? storedValue;
@@ -41,7 +42,7 @@ export function readReaderLocation(
   }
 
   try {
-    return parseReaderLocation(window.localStorage.getItem(storageKey), corpus);
+    return parseReaderLocation(window.localStorage.getItem(readerStorageKey(storageKey)), corpus);
   } catch {
     return null;
   }
@@ -65,12 +66,12 @@ export function rememberReaderPosition(
     return false;
   }
 
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || !progressStorageReady()) {
     return false;
   }
 
   try {
-    window.localStorage.setItem(storageKey, position);
+    window.localStorage.setItem(readerStorageKey(storageKey), position);
   } catch {
     return false;
   }
@@ -105,12 +106,13 @@ export function rememberReaderLocation(
     return false;
   }
 
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || !progressStorageReady()) {
     return false;
   }
 
   try {
-    window.localStorage.setItem(storageKey, JSON.stringify(location));
+    window.localStorage.setItem(readerStorageKey(storageKey), JSON.stringify(location));
+    queueReaderProgress(location);
   } catch {
     return false;
   }
@@ -198,5 +200,5 @@ function parseReaderLocation(
 }
 
 function isReaderCorpus(value: unknown): value is ReaderCorpus {
-  return value === "fathers" || value === "scripture";
+  return value === "fathers" || value === "scripture" || value === "classics";
 }

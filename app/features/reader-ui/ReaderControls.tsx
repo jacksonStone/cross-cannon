@@ -6,6 +6,7 @@ import {
   useRef,
   useState
 } from "react";
+import { AccountLink } from "~/features/account/AccountProvider";
 
 import {
   DEFAULT_READER_SETTINGS,
@@ -102,6 +103,7 @@ export function ReaderTools({
         ×
       </button>
       {children}
+      <AccountLink />
     </div>
   );
 }

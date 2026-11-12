@@ -87,6 +87,10 @@ passive scrolling only persists Reader Location.
 
 ## Local Development
 
+Google sign-in and cross-device Reader Location sync are optional. See
+[Google login setup](docs/google-login.md) for OAuth credentials, the separate
+account database migration, and verification. No email service is required.
+
 Requirements:
 
 - Node.js `26.13.0` (run `nvm use` to select the checked-in `.nvmrc`)
@@ -589,6 +593,13 @@ Classics. Its named collection chooser, Work reader, chapter jump, search target
 author filters, favorites and saved Passage locations reuse the existing native
 UI. All text is bundled for offline reading; recordings remain optional downloads.
 
+The native library supports immediate title/author lookup, complete work lists,
+favorites, Classics genre filters, saved-place resume, and source edition details.
+Catalog lookup is separate from online passage search and works offline. Native
+bundles include a small `catalog.json` alongside the existing text library; its
+original paragraph boundaries and Scripture coverage keep commentary excerpts
+complete and prevent internal sentence positions from appearing as Bible verses.
+
 Run `scripts/run-ios.sh` for the simulator. A physical-device Release build uses
 `ios/CrossCanon.xcodeproj`, Apple development signing, and the `iphoneos` SDK.
 Install its signed `.app` with `xcrun devicectl device install app`; updating the
@@ -626,6 +637,26 @@ read-only when present (`CHRISTIAN_CLASSICS_DATABASE_PATH` can override its path
 Provision the indexed database separately before deploying the feature: normal
 deploys preserve production `storage/` and reject packages containing databases.
 Neither importing nor indexing runs as part of verify, build, or deploy.
+
+Reviewed Classics modernizations are stored separately under
+`data/public-domain/christian-classics/modernization/`. Assemble a complete
+chapter from batches and a review using the existing modernization validator:
+
+```bash
+npm run apply:church-fathers-modernization -- \
+  --book-index public/christian-classics-text/books.json \
+  --work classics:imitation --chapter classics:imitation:book-1.1 \
+  --input path/to/batch.json --review path/to/review.json \
+  --overlay data/public-domain/christian-classics/modernization/imitation-book-1-chapter-1.json \
+  --audit path/to/audit.md
+npm run publish:christian-classics-modernization
+```
+
+The chapter scope requires every passage and exact original text. Publication
+creates a new content-addressed Chapter and updates the library version without
+rewriting older Chapter assets or changing search vectors. Explicit source
+imports also reapply and validate all durable overlays. Use `--replace` when
+applying a reviewed correction to already-published modernization.
 
 `npm run e2e:christian-classics` checks the desktop/mobile library, collection
 chooser, reader details, Jump, original commentary selection, and a full Classic

@@ -63,16 +63,22 @@ if (!work) {
 }
 
 const chapters = new Map<string, LoadedChapter>(
-  work.chapters.map((chapter) => {
+  work.chapters.filter((chapter) => !options.chapterId || chapter.id === options.chapterId).map((chapter) => {
     const filePath = publicAssetPath(chapter.assetPath);
     return [chapter.id, { asset: readJson<ChapterAsset>(filePath), filePath }];
   })
 );
+if (chapters.size === 0) {
+  throw new Error(`Could not find chapter ${options.chapterId} in ${options.workId}.`);
+}
+if (options.overlayPath && !options.chapterId) {
+  throw new Error("--overlay requires --chapter for complete chapter coverage.");
+}
 const missingBefore = new Set<string>();
 
 for (const { asset } of chapters.values()) {
   for (const verse of asset.verses) {
-    if (!verse.modernizedText?.trim()) {
+    if (options.overlayPath || !verse.modernizedText?.trim()) {
       missingBefore.add(passageKey(asset.id, verse.verse));
     }
   }
@@ -218,7 +224,20 @@ for (const { asset } of chapters.values()) {
   }
 }
 
-for (const filePath of changedFiles) {
+if (options.overlayPath) {
+  const asset = [...chapters.values()][0].asset;
+  const overlay = {
+    workId: work.id,
+    chapterId: asset.id,
+    entries: asset.verses.map((verse) => ({
+      verse: verse.verse, originalText: verse.text, modernizedText: verse.modernizedText
+    }))
+  };
+  fs.mkdirSync(path.dirname(options.overlayPath), { recursive: true });
+  fs.writeFileSync(options.overlayPath, `${JSON.stringify(overlay, null, 2)}\n`, "utf8");
+}
+
+for (const filePath of options.overlayPath ? [] : changedFiles) {
   const chapter = [...chapters.values()].find((candidate) => candidate.filePath === filePath);
 
   if (!chapter) {
@@ -247,6 +266,8 @@ console.log(JSON.stringify({
 function parseArgs(args: string[]) {
   let auditPath = "";
   let bookIndexPath = DEFAULT_BOOK_INDEX_PATH;
+  let chapterId = "";
+  let overlayPath = "";
   const inputPaths: string[] = [];
   let replace = false;
   const reviewPaths: string[] = [];
@@ -263,6 +284,16 @@ function parseArgs(args: string[]) {
     }
     if (argument === "--book-index" && value) {
       bookIndexPath = value;
+      index += 1;
+      continue;
+    }
+    if (argument === "--chapter" && value) {
+      chapterId = value;
+      index += 1;
+      continue;
+    }
+    if (argument === "--overlay" && value) {
+      overlayPath = value;
       index += 1;
       continue;
     }
@@ -295,7 +326,7 @@ function parseArgs(args: string[]) {
     );
   }
 
-  return { auditPath, bookIndexPath, inputPaths, replace, reviewPaths, workId };
+  return { auditPath, bookIndexPath, chapterId, inputPaths, overlayPath, replace, reviewPaths, workId };
 }
 
 function validateBatch(

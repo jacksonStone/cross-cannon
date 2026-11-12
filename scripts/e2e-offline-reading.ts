@@ -33,7 +33,7 @@ if (manageServer) {
 }
 
 const browser = await puppeteer.launch({
-  headless: true,
+  headless: process.env.E2E_HEADLESS === "shell" ? "shell" : true,
   args: ["--no-sandbox", "--disable-setuid-sandbox"],
 });
 
@@ -56,6 +56,14 @@ try {
   page.on("response", (response) => {
     if (response.status() >= 400) {
       errorResponses.push(`${response.status()} ${response.url()}`);
+    }
+  });
+  await page.setRequestInterception(true);
+  page.on("request", (request) => {
+    if (/^https:\/\/fonts\.(googleapis|gstatic)\.com\//.test(request.url())) {
+      void request.abort();
+    } else {
+      void request.continue();
     }
   });
   page.setDefaultTimeout(timeoutMs);
@@ -471,7 +479,7 @@ try {
       .querySelector<HTMLElement>(".offline-indicator")
       ?.getBoundingClientRect();
     const corpusSwitch = document
-      .querySelector<HTMLElement>(".reader-corpus-switch")
+      .querySelector<HTMLElement>(".collection-menu")
       ?.getBoundingClientRect();
     const intersects = Boolean(
       indicator &&
@@ -953,9 +961,12 @@ try {
       await offlinePage.setViewport({ height: 844, width: 390 });
       await offlinePage.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
       await offlinePage.waitForSelector(".reader-page");
+      await offlinePage.waitForSelector('.collection-trigger');
+      await offlinePage.click('.collection-trigger');
+      await offlinePage.waitForSelector('.collection-popover');
       const switched = await offlinePage.evaluate(() => {
         const link = document.querySelector<HTMLAnchorElement>(
-          "a[aria-label='Switch to early Christian works']"
+          ".collection-popover a[href='/church-fathers']"
         );
         link?.click();
         return Boolean(link);

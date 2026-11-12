@@ -9,6 +9,11 @@ import {
 
 const intentCases = [
   ["scripture", false, "scripture", "theme"],
+  ["scripture", false, "christian-classics", "theme-classics"],
+  ["scripture", true, "christian-classics", "similar-classics"],
+  ["christian-classics", false, "christian-classics", "theme"],
+  ["christian-classics", true, "christian-classics", "similar-passage"],
+  ["christian-classics", true, "scripture", "similar-scripture"],
   ["scripture", false, "early-christian", "theme-early-christian"],
   ["scripture", true, "scripture", "similar-passage"],
   ["scripture", true, "early-christian", "similar-early-christian"],

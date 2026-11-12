@@ -1,0 +1,51 @@
+{
+  "workId": "classics:imitation",
+  "chapterId": "classics:imitation:book-1.8",
+  "entries": [
+    {
+      "verse": 1,
+      "originalText": "Open not thine heart to every man, but deal with one who is wise and feareth God.",
+      "modernizedText": "Do not open your heart to everyone, but deal with someone who is wise and fears God."
+    },
+    {
+      "verse": 2,
+      "originalText": "Be seldom with the young and with strangers.",
+      "modernizedText": "Spend little time with the young and with strangers."
+    },
+    {
+      "verse": 3,
+      "originalText": "Be not a flatterer of the rich; nor willingly seek the society of the great.",
+      "modernizedText": "Do not flatter the rich or willingly seek the company of the great."
+    },
+    {
+      "verse": 4,
+      "originalText": "Let thy company be the humble and the simple, the devout and the gentle, and let thy discourse be concerning things which edify.",
+      "modernizedText": "Let your company be the humble and the simple, the devout and the gentle, and let your conversation concern things that edify."
+    },
+    {
+      "verse": 5,
+      "originalText": "Be not familiar with any woman, but commend all good women alike unto God.",
+      "modernizedText": "Do not be familiar with any woman, but commend all good women alike to God."
+    },
+    {
+      "verse": 6,
+      "originalText": "Choose for thy companions God and His Angels only, and flee from the notice of men.",
+      "modernizedText": "Choose God and His Angels alone for your companions, and flee from the notice of others."
+    },
+    {
+      "verse": 7,
+      "originalText": "We must love all men, but not make close companions of all.",
+      "modernizedText": "We must love everyone, but not make close companions of everyone."
+    },
+    {
+      "verse": 8,
+      "originalText": "It sometimes falleth out that one who is unknown to us is highly regarded through good report of him, whose actual person is nevertheless unpleasing to those who behold it.",
+      "modernizedText": "It sometimes happens that someone unknown to us is highly regarded because of a good report, yet his actual person is displeasing to those who see him."
+    },
+    {
+      "verse": 9,
+      "originalText": "We sometimes think to please others by our intimacy, and forthwith displease them the more by the faultiness of character which they perceive in us.",
+      "modernizedText": "We sometimes think to please others by our intimacy and immediately displease them all the more by the faults of character they perceive in us."
+    }
+  ]
+}

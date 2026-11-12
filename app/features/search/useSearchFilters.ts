@@ -220,6 +220,7 @@ export function useSearchFilters({
     selectedEarlyChristianAuthors: selectedKnownEarlyChristianAuthors,
     selectedBooksForCanon,
     setMatchCount,
+    clearAuthorFilters: () => setSelectedEarlyChristianAuthors([]),
     toggleEarlyChristianAuthor,
     toggleSelectedBook,
     updateCanon,

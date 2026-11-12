@@ -1,0 +1,49 @@
+{
+  "workId": "classics:imitation",
+  "chapterStart": 81,
+  "chapterEnd": 81,
+  "entries": [
+    {
+      "chapterId": "classics:imitation:book-3.44",
+      "verse": 1,
+      "originalText": "“My Son, in many things it behoveth thee to be ignorant, and to esteem thyself as one dead upon the earth, and as one to whom the whole world is crucified.",
+      "modernizedText": "“My Son, in many things you must remain ignorant and regard yourself as one dead upon the earth, and as one to whom the whole world is crucified."
+    },
+    {
+      "chapterId": "classics:imitation:book-3.44",
+      "verse": 2,
+      "originalText": "Many things also thou must pass by with deaf ear, and must rather think upon those things which belong unto thy peace.",
+      "modernizedText": "You must also pass many things by with a deaf ear and think instead about the things that belong to your peace."
+    },
+    {
+      "chapterId": "classics:imitation:book-3.44",
+      "verse": 3,
+      "originalText": "It is more profitable to turn away thine eyes from those things that displease, and to leave each man to his own opinion, than to give thyself to discourses of strife.",
+      "modernizedText": "It is more profitable to turn your eyes away from things that displease you and leave each person to his own opinion than to give yourself to contentious discussions."
+    },
+    {
+      "chapterId": "classics:imitation:book-3.44",
+      "verse": 4,
+      "originalText": "If thou stand well with God and hast His judgment in thy mind, thou wilt verily easily bear to be as one conquered.”",
+      "modernizedText": "If you stand well with God and keep His judgment in mind, you will very easily bear being treated as one defeated.”"
+    },
+    {
+      "chapterId": "classics:imitation:book-3.44",
+      "verse": 5,
+      "originalText": "O Lord, to what have we come?",
+      "modernizedText": "O Lord, what have we come to?"
+    },
+    {
+      "chapterId": "classics:imitation:book-3.44",
+      "verse": 6,
+      "originalText": "Behold a temporal loss is mourned over; for a trifling gain we labour and hurry; and spiritual loss passeth away into forgetfulness, and we rarely recover it.",
+      "modernizedText": "See how a temporary loss is mourned; for a trifling gain we labor and hurry; yet spiritual loss passes into forgetfulness, and we rarely recover it."
+    },
+    {
+      "chapterId": "classics:imitation:book-3.44",
+      "verse": 7,
+      "originalText": "That which profiteth little or nothing is looked after, and that which is altogether necessary is negligently passed by; because the whole man slideth away to outward things, and unless he quickly recovereth himself in outward things he willingly lieth down.",
+      "modernizedText": "What profits little or nothing receives attention, and what is altogether necessary is carelessly passed by; because the whole person slips away to outward things, and unless he quickly recovers himself, he willingly lies down among outward things."
+    }
+  ]
+}

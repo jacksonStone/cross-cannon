@@ -1,21 +1,21 @@
+import type { WorkCorpus } from "~/features/work-reader/collections";
 import { json, type TypedResponse } from "@remix-run/node";
 
-import type { EarlyChristianSearchResult, EarlyChristianSimilarSource } from "~/lib/early-christian-search.server";
+import type {
+  EarlyChristianSearchResult,
+  EarlyChristianSimilarSource,
+} from "~/lib/early-christian-search.server";
 import type { ScriptureResult } from "~/lib/db.server";
 import { RustApiError, rustSearchAdapter } from "~/lib/r-cross-cannon.server";
 export { getIndexedBooks } from "~/lib/r-cross-cannon.server";
 
-import {
-  BOOKS_BY_CANON,
-  DEFAULT_MATCH_COUNT,
-  parseCanonMode
-} from "./canons";
+import { BOOKS_BY_CANON, DEFAULT_MATCH_COUNT, parseCanonMode } from "./canons";
 import { withCalibratedMatchStrength } from "./match-strength";
 import type {
   CanonMode,
   ChurchFathersActionData,
   SearchActionData,
-  SearchTargetCorpus
+  SearchTargetCorpus,
 } from "./types";
 
 const MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS = 3;
@@ -36,17 +36,19 @@ type EarlyChristianSimilarSearch = {
 };
 
 export type SearchRequestAdapter = {
-  getEarlyChristianAuthors: () => Promise<string[]>;
+  getEarlyChristianAuthors: (corpus?: WorkCorpus) => Promise<string[]>;
   getIndexedScriptureBooks: () => Promise<string[]>;
   searchEarlyChristianSimilarFromEarlyChristian: (
     sourcePassageId: string,
     limit: number,
-    authors: string[]
+    authors: string[],
+    corpus?: WorkCorpus
   ) => Promise<EarlyChristianSimilarSearch | null>;
   searchEarlyChristianSimilarFromScripture: (
     sourcePassageId: string,
     limit: number,
-    authors: string[]
+    authors: string[],
+    corpus?: WorkCorpus
   ) => Promise<{
     results: EarlyChristianSearchResult[];
     source: ScriptureSimilarSource;
@@ -54,7 +56,8 @@ export type SearchRequestAdapter = {
   searchEarlyChristianTheme: (
     question: string,
     limit: number,
-    authors: string[]
+    authors: string[],
+    corpus?: WorkCorpus
   ) => Promise<EarlyChristianSearchResult[]>;
   searchScriptureSimilarFromEarlyChristian: (
     sourcePassageId: string,
@@ -77,14 +80,12 @@ export type SearchRequestAdapter = {
 };
 
 export type SearchRequestHandler = {
-  (
-    formData: FormData,
-    readerCorpus: "fathers"
-  ): Promise<TypedResponse<ChurchFathersActionData>>;
-  (
-    formData: FormData,
-    readerCorpus?: "scripture"
-  ): Promise<TypedResponse<SearchActionData>>;
+  (formData: FormData, readerCorpus: "fathers" | "classics"): Promise<
+    TypedResponse<ChurchFathersActionData>
+  >;
+  (formData: FormData, readerCorpus?: "scripture"): Promise<
+    TypedResponse<SearchActionData>
+  >;
 };
 
 type PreparedSearchRequest = {
@@ -94,7 +95,7 @@ type PreparedSearchRequest = {
   matchCount: number;
   mode: "similar" | "theme";
   question: string;
-  readerCorpus: "fathers" | "scripture";
+  readerCorpus: "fathers" | "classics" | "scripture";
   searchBooks: string[];
   sourcePassageId: string;
   targetCorpus: SearchTargetCorpus;
@@ -115,12 +116,17 @@ export function createSearchRequestHandler(
 ): SearchRequestHandler {
   const handleSearchRequest = async (
     formData: FormData,
-    readerCorpus: "fathers" | "scripture" = "scripture"
+    readerCorpus: "fathers" | "classics" | "scripture" = "scripture"
   ) => {
     try {
-      const prepared = readerCorpus === "fathers"
-        ? await prepareEarlyChristianReaderSearchRequest(formData, adapter)
-        : await prepareScriptureReaderSearchRequest(formData, adapter);
+      const prepared =
+        readerCorpus !== "scripture"
+          ? await prepareEarlyChristianReaderSearchRequest(
+              formData,
+              adapter,
+              readerCorpus
+            )
+          : await prepareScriptureReaderSearchRequest(formData, adapter);
 
       if ("response" in prepared) {
         return prepared.response;
@@ -132,11 +138,20 @@ export function createSearchRequestHandler(
         return missingSimilaritySourceResponse(prepared.request);
       }
 
-      return readerCorpus === "fathers"
+      return readerCorpus !== "scripture"
         ? earlyChristianReaderSearchResponse(prepared.request, execution)
         : scriptureReaderSearchResponse(prepared.request, execution);
     } catch (error) {
-      if (error instanceof RustApiError) return json({ error: error.message, ...(error.retryAfterSeconds ? { retryAfterSeconds: error.retryAfterSeconds } : {}) }, { status: error.status });
+      if (error instanceof RustApiError)
+        return json(
+          {
+            error: error.message,
+            ...(error.retryAfterSeconds
+              ? { retryAfterSeconds: error.retryAfterSeconds }
+              : {}),
+          },
+          { status: error.status }
+        );
       throw error;
     }
   };
@@ -151,11 +166,20 @@ async function prepareScriptureReaderSearchRequest(
   const matchCountResult = parseSearchMatchCount(formData.get("matchCount"));
   const authorFilters = await parseEarlyChristianAuthorFilters(
     formData.getAll("earlyChristianAuthors"),
-    adapter
+    adapter,
+    formData.get("targetCorpus") === "christian-classics" ||
+      String(formData.get("intent") ?? "").includes("classics")
+      ? "christian-classics"
+      : "early-christian"
   );
 
   if ("error" in authorFilters) {
-    return { response: json<SearchActionData>({ error: authorFilters.error }, { status: 400 }) };
+    return {
+      response: json<SearchActionData>(
+        { error: authorFilters.error },
+        { status: 400 }
+      ),
+    };
   }
 
   if ("error" in matchCountResult) {
@@ -163,7 +187,7 @@ async function prepareScriptureReaderSearchRequest(
       response: json<SearchActionData>(
         { error: matchCountResult.error },
         { status: matchCountResult.status }
-      )
+      ),
     };
   }
 
@@ -180,7 +204,7 @@ async function prepareScriptureReaderSearchRequest(
       response: json<SearchActionData>(
         { error: "Choose at least one indexed book in the selected canon." },
         { status: 400 }
-      )
+      ),
     };
   }
 
@@ -188,33 +212,49 @@ async function prepareScriptureReaderSearchRequest(
   const content = prepareSearchContent(formData, intent.mode, true);
 
   if ("error" in content) {
-    return { response: json<SearchActionData>({ error: content.error }, { status: 400 }) };
+    return {
+      response: json<SearchActionData>(
+        { error: content.error },
+        { status: 400 }
+      ),
+    };
   }
 
-  return { request: {
-    authors: authorFilters.authors,
-    books,
-    canon,
-    matchCount: matchCountResult.matchCount,
-    mode: intent.mode,
-    question: content.question,
-    readerCorpus: "scripture",
-    searchBooks: books.length > 0
-      ? books
-      : Array.from(canonBooks).filter((book) => indexedBooks.has(book)),
-    sourcePassageId: content.sourcePassageId,
-    targetCorpus: intent.targetCorpus
-  } };
+  return {
+    request: {
+      authors: authorFilters.authors,
+      books,
+      canon,
+      matchCount: matchCountResult.matchCount,
+      mode: intent.mode,
+      question: content.question,
+      readerCorpus: "scripture",
+      searchBooks:
+        books.length > 0
+          ? books
+          : Array.from(canonBooks).filter((book) => indexedBooks.has(book)),
+      sourcePassageId: content.sourcePassageId,
+      targetCorpus: intent.targetCorpus,
+    },
+  };
 }
 
 async function prepareEarlyChristianReaderSearchRequest(
   formData: FormData,
-  adapter: SearchRequestAdapter
+  adapter: SearchRequestAdapter,
+  readerCorpus: "fathers" | "classics" = "fathers"
 ): Promise<PreparedSearchRequestResult<ChurchFathersActionData>> {
+  const workCorpus: WorkCorpus =
+    formData.get("targetCorpus") === "christian-classics" ||
+    (readerCorpus === "classics" &&
+      formData.get("targetCorpus") !== "early-christian")
+      ? "christian-classics"
+      : "early-christian";
   const matchCountResult = parseSearchMatchCount(formData.get("matchCount"));
   const authorFilters = await parseEarlyChristianAuthorFilters(
     formData.getAll("authors"),
-    adapter
+    adapter,
+    workCorpus
   );
 
   if ("error" in matchCountResult) {
@@ -222,7 +262,7 @@ async function prepareEarlyChristianReaderSearchRequest(
       response: json<ChurchFathersActionData>(
         { error: matchCountResult.error },
         { status: matchCountResult.status }
-      )
+      ),
     };
   }
 
@@ -231,25 +271,29 @@ async function prepareEarlyChristianReaderSearchRequest(
       response: json<ChurchFathersActionData>(
         { error: authorFilters.error },
         { status: 400 }
-      )
+      ),
     };
   }
 
-  const intent = parseEarlyChristianReaderSearchIntent(formData.get("intent"));
-  const scriptureFilters = intent.targetCorpus === "scripture"
-    ? parseEarlyChristianReaderScriptureFilters(formData)
-    : {
-      books: [],
-      canon: parseCanonMode(String(formData.get("canon") ?? "")),
-      searchBooks: []
-    };
+  const intent = parseEarlyChristianReaderSearchIntent(
+    formData.get("intent"),
+    workCorpus
+  );
+  const scriptureFilters =
+    intent.targetCorpus === "scripture"
+      ? parseEarlyChristianReaderScriptureFilters(formData)
+      : {
+          books: [],
+          canon: parseCanonMode(String(formData.get("canon") ?? "")),
+          searchBooks: [],
+        };
 
   if ("error" in scriptureFilters) {
     return {
       response: json<ChurchFathersActionData>(
         { error: scriptureFilters.error },
         { status: 400 }
-      )
+      ),
     };
   }
 
@@ -260,22 +304,24 @@ async function prepareEarlyChristianReaderSearchRequest(
       response: json<ChurchFathersActionData>(
         { error: content.error },
         { status: 400 }
-      )
+      ),
     };
   }
 
-  return { request: {
-    authors: authorFilters.authors,
-    books: scriptureFilters.books,
-    canon: scriptureFilters.canon,
-    matchCount: matchCountResult.matchCount,
-    mode: intent.mode,
-    question: content.question,
-    readerCorpus: "fathers",
-    searchBooks: scriptureFilters.searchBooks,
-    sourcePassageId: content.sourcePassageId,
-    targetCorpus: intent.targetCorpus
-  } };
+  return {
+    request: {
+      authors: authorFilters.authors,
+      books: scriptureFilters.books,
+      canon: scriptureFilters.canon,
+      matchCount: matchCountResult.matchCount,
+      mode: intent.mode,
+      question: content.question,
+      readerCorpus,
+      searchBooks: scriptureFilters.searchBooks,
+      sourcePassageId: content.sourcePassageId,
+      targetCorpus: intent.targetCorpus,
+    },
+  };
 }
 
 function parseScriptureReaderSearchIntent(value: FormDataEntryValue | null): {
@@ -285,6 +331,10 @@ function parseScriptureReaderSearchIntent(value: FormDataEntryValue | null): {
   switch (String(value ?? "theme")) {
     case "similar-passage":
       return { mode: "similar", targetCorpus: "scripture" };
+    case "similar-classics":
+      return { mode: "similar", targetCorpus: "christian-classics" };
+    case "theme-classics":
+      return { mode: "theme", targetCorpus: "christian-classics" };
     case "similar-early-christian":
       return { mode: "similar", targetCorpus: "early-christian" };
     case "theme-early-christian":
@@ -294,19 +344,22 @@ function parseScriptureReaderSearchIntent(value: FormDataEntryValue | null): {
   }
 }
 
-function parseEarlyChristianReaderSearchIntent(value: FormDataEntryValue | null): {
+function parseEarlyChristianReaderSearchIntent(
+  value: FormDataEntryValue | null,
+  workCorpus: WorkCorpus
+): {
   mode: "similar" | "theme";
   targetCorpus: SearchTargetCorpus;
 } {
   switch (String(value ?? "theme")) {
     case "similar-passage":
-      return { mode: "similar", targetCorpus: "early-christian" };
+      return { mode: "similar", targetCorpus: workCorpus };
     case "similar-scripture":
       return { mode: "similar", targetCorpus: "scripture" };
     case "theme-scripture":
       return { mode: "theme", targetCorpus: "scripture" };
     default:
-      return { mode: "theme", targetCorpus: "early-christian" };
+      return { mode: "theme", targetCorpus: workCorpus };
   }
 }
 
@@ -316,7 +369,9 @@ function prepareSearchContent(
   validateScriptureSource: boolean
 ) {
   if (mode === "similar") {
-    const sourcePassageId = String(formData.get("sourcePassageId") ?? "").trim();
+    const sourcePassageId = String(
+      formData.get("sourcePassageId") ?? ""
+    ).trim();
 
     if (validateScriptureSource && !isSearchSourcePassageId(sourcePassageId)) {
       return { error: "Choose a passage to search from." } as const;
@@ -328,9 +383,7 @@ function prepareSearchContent(
   const question = String(formData.get("question") ?? "").trim();
   const validation = validateSearchQuestion(question);
 
-  return "error" in validation
-    ? validation
-    : { question, sourcePassageId: "" };
+  return "error" in validation ? validation : { question, sourcePassageId: "" };
 }
 
 async function executeSearchRequest(
@@ -340,50 +393,61 @@ async function executeSearchRequest(
   if (request.mode === "theme") {
     return request.targetCorpus === "scripture"
       ? {
-        scriptureResults: await adapter.searchScriptureTheme(
-          request.question,
-          request.matchCount,
-          request.searchBooks
-        )
-      }
+          scriptureResults: await adapter.searchScriptureTheme(
+            request.question,
+            request.matchCount,
+            request.searchBooks
+          ),
+        }
       : {
-        earlyChristianResults: await adapter.searchEarlyChristianTheme(
-          request.question,
-          request.matchCount,
-          request.authors
-        )
-      };
+          earlyChristianResults: await adapter.searchEarlyChristianTheme(
+            request.question,
+            request.matchCount,
+            request.authors,
+            ...(request.targetCorpus === "christian-classics"
+              ? ["christian-classics" as const]
+              : [])
+          ),
+        };
   }
 
   if (request.targetCorpus === "scripture") {
-    const similar = request.readerCorpus === "scripture"
-      ? await adapter.searchScriptureSimilarFromScripture(
-        request.sourcePassageId,
-        request.matchCount,
-        request.searchBooks
-      )
-      : await adapter.searchScriptureSimilarFromEarlyChristian(
-        request.sourcePassageId,
-        request.matchCount,
-        request.searchBooks
-      );
+    const similar =
+      request.readerCorpus === "scripture"
+        ? await adapter.searchScriptureSimilarFromScripture(
+            request.sourcePassageId,
+            request.matchCount,
+            request.searchBooks
+          )
+        : await adapter.searchScriptureSimilarFromEarlyChristian(
+            request.sourcePassageId,
+            request.matchCount,
+            request.searchBooks
+          );
 
     return similar
       ? { scriptureResults: similar.results, source: similar.source }
       : null;
   }
 
-  const similar = request.readerCorpus === "scripture"
-    ? await adapter.searchEarlyChristianSimilarFromScripture(
-      request.sourcePassageId,
-      request.matchCount,
-      request.authors
-    )
-    : await adapter.searchEarlyChristianSimilarFromEarlyChristian(
-      request.sourcePassageId,
-      request.matchCount,
-      request.authors
-    );
+  const similar =
+    request.readerCorpus === "scripture"
+      ? await adapter.searchEarlyChristianSimilarFromScripture(
+          request.sourcePassageId,
+          request.matchCount,
+          request.authors,
+          ...(request.targetCorpus === "christian-classics"
+            ? ["christian-classics" as const]
+            : [])
+        )
+      : await adapter.searchEarlyChristianSimilarFromEarlyChristian(
+          request.sourcePassageId,
+          request.matchCount,
+          request.authors,
+          ...(request.targetCorpus === "christian-classics"
+            ? ["christian-classics" as const]
+            : [])
+        );
 
   return similar
     ? { earlyChristianResults: similar.results, source: similar.source }
@@ -391,7 +455,7 @@ async function executeSearchRequest(
 }
 
 function missingSimilaritySourceResponse(request: PreparedSearchRequest) {
-  if (request.readerCorpus === "fathers") {
+  if (request.readerCorpus !== "scripture") {
     return json<ChurchFathersActionData>(
       { error: "Choose an indexed passage to search from." },
       { status: 400 }
@@ -400,9 +464,10 @@ function missingSimilaritySourceResponse(request: PreparedSearchRequest) {
 
   return json<SearchActionData>(
     {
-      error: request.targetCorpus === "scripture"
-        ? "That passage is not available for similarity search."
-        : "That passage is not available for early Christian similarity search."
+      error:
+        request.targetCorpus === "scripture"
+          ? "That passage is not available for similarity search."
+          : "That passage is not available for similarity search in this collection.",
     },
     { status: 400 }
   );
@@ -412,27 +477,33 @@ function scriptureReaderSearchResponse(
   request: PreparedSearchRequest,
   execution: SearchRequestExecution
 ) {
-  if (request.mode === "theme" && request.targetCorpus === "early-christian") {
+  if (request.mode === "theme" && request.targetCorpus !== "scripture") {
     return json<SearchActionData>({
       earlyChristianAuthors: request.authors,
       earlyChristianResults: execution.earlyChristianResults,
       matchCount: request.matchCount,
-      mode: "theme-early-christian",
+      mode:
+        request.targetCorpus === "christian-classics"
+          ? "theme-classics"
+          : "theme-early-christian",
       question: request.question,
-      targetCorpus: "early-christian"
+      targetCorpus: request.targetCorpus,
     });
   }
 
-  if (request.mode === "similar" && request.targetCorpus === "early-christian") {
+  if (request.mode === "similar" && request.targetCorpus !== "scripture") {
     return json<SearchActionData>({
       books: request.books,
       canon: request.canon,
       earlyChristianAuthors: request.authors,
       earlyChristianResults: execution.earlyChristianResults,
       matchCount: request.matchCount,
-      mode: "similar-early-christian",
+      mode:
+        request.targetCorpus === "christian-classics"
+          ? "similar-classics"
+          : "similar-early-christian",
       similarSource: execution.source,
-      targetCorpus: "early-christian"
+      targetCorpus: request.targetCorpus,
     });
   }
 
@@ -445,7 +516,7 @@ function scriptureReaderSearchResponse(
     question: request.mode === "theme" ? request.question : undefined,
     results: withCalibratedMatchStrength(execution.scriptureResults ?? []),
     similarSource: request.mode === "similar" ? execution.source : undefined,
-    targetCorpus: "scripture"
+    targetCorpus: "scripture",
   });
 }
 
@@ -458,13 +529,17 @@ function earlyChristianReaderSearchResponse(
       books: request.books,
       canon: request.canon,
       matchCount: request.matchCount,
-      mode: request.mode === "similar" ? "similar-scripture" : "theme-scripture",
+      mode:
+        request.mode === "similar" ? "similar-scripture" : "theme-scripture",
       question: request.mode === "theme" ? request.question : undefined,
-      scriptureResults: withCalibratedMatchStrength(execution.scriptureResults ?? []),
-      similarScriptureSource: request.mode === "similar"
-        ? execution.source as EarlyChristianSimilarSource
-        : undefined,
-      targetCorpus: "scripture"
+      scriptureResults: withCalibratedMatchStrength(
+        execution.scriptureResults ?? []
+      ),
+      similarScriptureSource:
+        request.mode === "similar"
+          ? (execution.source as EarlyChristianSimilarSource)
+          : undefined,
+      targetCorpus: "scripture",
     });
   }
 
@@ -474,10 +549,11 @@ function earlyChristianReaderSearchResponse(
     mode: request.mode,
     question: request.mode === "theme" ? request.question : undefined,
     results: execution.earlyChristianResults,
-    similarSource: request.mode === "similar"
-      ? execution.source as EarlyChristianSimilarSource
-      : undefined,
-    targetCorpus: "early-christian"
+    similarSource:
+      request.mode === "similar"
+        ? (execution.source as EarlyChristianSimilarSource)
+        : undefined,
+    targetCorpus: request.targetCorpus,
   });
 }
 
@@ -492,35 +568,35 @@ function parseEarlyChristianReaderScriptureFilters(formData: FormData) {
   const canon = parseCanonMode(String(formData.get("canon") ?? ""));
   const canonBooks = BOOKS_BY_CANON[canon];
   const selectedBooks = readSelectedBooks(formData);
-  const books = Array.from(new Set(selectedBooks))
-    .filter((book) => canonBooks.has(book));
+  const books = Array.from(new Set(selectedBooks)).filter((book) =>
+    canonBooks.has(book)
+  );
 
   if (selectedBooks.length > 0 && books.length === 0) {
     return {
-      error: "Choose at least one book in the selected canon."
+      error: "Choose at least one book in the selected canon.",
     };
   }
 
   return {
     books,
     canon,
-    searchBooks: books.length > 0 ? books : Array.from(canonBooks)
+    searchBooks: books.length > 0 ? books : Array.from(canonBooks),
   };
 }
 
 async function parseEarlyChristianAuthorFilters(
   values: FormDataEntryValue[],
-  adapter: SearchRequestAdapter
+  adapter: SearchRequestAdapter,
+  corpus: WorkCorpus = "early-christian"
 ) {
-  const requestedAuthors = Array.from(new Set(
-    values
-      .map((value) => String(value).trim())
-      .filter(Boolean)
-  ));
+  const requestedAuthors = Array.from(
+    new Set(values.map((value) => String(value).trim()).filter(Boolean))
+  );
 
   if (requestedAuthors.length > MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS) {
     return {
-      error: `Choose up to ${MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS} early Christian authors.`
+      error: `Choose up to ${MAX_EARLY_CHRISTIAN_AUTHOR_FILTERS} authors.`,
     };
   }
 
@@ -528,12 +604,16 @@ async function parseEarlyChristianAuthorFilters(
     return { authors: [] };
   }
 
-  const knownAuthors = new Set(await adapter.getEarlyChristianAuthors());
+  const knownAuthors = new Set(
+    await adapter.getEarlyChristianAuthors(
+      ...(corpus === "christian-classics" ? [corpus] : [])
+    )
+  );
   const authors = requestedAuthors.filter((author) => knownAuthors.has(author));
 
   if (authors.length === 0) {
     return {
-      error: "Choose at least one indexed early Christian author."
+      error: "Choose at least one indexed author in this collection.",
     };
   }
 
@@ -554,27 +634,27 @@ export function parseSearchMatchCount(
   if (!Number.isInteger(matchCount) || matchCount < 5 || matchCount > 40) {
     return {
       error: "Choose between 5 and 40 matches.",
-      status: 400
+      status: 400,
     };
   }
 
   return { matchCount };
 }
 
-export function validateSearchQuestion(question: string):
-  | { question: string }
-  | SearchRequestValidationError {
+export function validateSearchQuestion(
+  question: string
+): { question: string } | SearchRequestValidationError {
   if (question.length < 3) {
     return {
       error: "Enter a longer question.",
-      status: 400
+      status: 400,
     };
   }
 
   if (question.length > 500) {
     return {
       error: "Keep the question under 500 characters.",
-      status: 400
+      status: 400,
     };
   }
 
@@ -587,8 +667,14 @@ export function isSearchSourcePassageId(value: string) {
 
 const rustHandler = createSearchRequestHandler(rustSearchAdapter);
 
-export const handleSearchRequest: SearchRequestHandler = (async (formData: FormData, readerCorpus: "fathers" | "scripture" = "scripture") => {
-  const response = readerCorpus === "fathers" ? await rustHandler(formData, "fathers") : await rustHandler(formData, "scripture");
+export const handleSearchRequest: SearchRequestHandler = (async (
+  formData: FormData,
+  readerCorpus: "fathers" | "classics" | "scripture" = "scripture"
+) => {
+  const response =
+    readerCorpus !== "scripture"
+      ? await rustHandler(formData, readerCorpus)
+      : await rustHandler(formData, "scripture");
   if (response.ok) response.headers.set("X-Cross-Canon-Search", "rust");
   return response;
 }) as SearchRequestHandler;

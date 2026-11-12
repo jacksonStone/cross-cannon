@@ -1,42 +1,44 @@
 import type { SearchTargetCorpus } from "./types";
-
-type SearchTargetControlProps = {
-  disabled: boolean;
-  value: SearchTargetCorpus;
-  onChange: (value: SearchTargetCorpus) => void;
-};
-
+export const SEARCH_TARGET_LABELS = {
+  scripture: "Bible",
+  "early-christian": "Fathers",
+  "christian-classics": "Classics",
+} as const;
 export function SearchTargetControl({
   disabled,
   value,
-  onChange
-}: SearchTargetControlProps) {
+  onChange,
+}: {
+  disabled: boolean;
+  value: SearchTargetCorpus;
+  onChange: (value: SearchTargetCorpus) => void;
+}) {
   return (
     <fieldset className="search-target-control" disabled={disabled}>
       <legend>Search</legend>
-      <div className="search-target-dial" role="radiogroup" aria-label="Search target">
-        <label className={value === "scripture" ? "is-active" : undefined}>
-          <input
-            checked={value === "scripture"}
-            disabled={disabled}
-            name="targetCorpus"
-            onChange={() => onChange("scripture")}
-            type="radio"
-            value="scripture"
-          />
-          <span>Bible</span>
-        </label>
-        <label className={value === "early-christian" ? "is-active" : undefined}>
-          <input
-            checked={value === "early-christian"}
-            disabled={disabled}
-            name="targetCorpus"
-            onChange={() => onChange("early-christian")}
-            type="radio"
-            value="early-christian"
-          />
-          <span>Fathers</span>
-        </label>
+      <div
+        className="search-target-dial"
+        role="radiogroup"
+        aria-label="Search target"
+      >
+        {(
+          Object.entries(SEARCH_TARGET_LABELS) as [SearchTargetCorpus, string][]
+        ).map(([target, label]) => (
+          <label
+            key={target}
+            className={value === target ? "is-active" : undefined}
+          >
+            <input
+              type="radio"
+              name="targetCorpus"
+              value={target}
+              checked={value === target}
+              disabled={disabled}
+              onChange={() => onChange(target)}
+            />
+            <span>{label}</span>
+          </label>
+        ))}
       </div>
     </fieldset>
   );

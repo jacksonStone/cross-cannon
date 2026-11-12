@@ -7,10 +7,13 @@ import {
 } from "@remix-run/react";
 
 import { OfflineProvider } from "./features/offline/OfflineProvider";
+import { AccountProvider } from "./features/account/AccountProvider";
 import stylesheet from "./styles.css?url";
+import accountStylesheet from "./features/account/account.css?url";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
+  { rel: "stylesheet", href: accountStylesheet },
   { rel: "manifest", href: "/manifest-closed-book-v2.webmanifest" },
   { rel: "icon", href: "/favicon-c26c421629d8.svg", type: "image/svg+xml" },
   { rel: "apple-touch-icon", href: "/favicon-512-fd59821d9d5b.png", sizes: "512x512" },
@@ -68,5 +71,5 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  return <AccountProvider><Outlet /></AccountProvider>;
 }

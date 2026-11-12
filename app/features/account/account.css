@@ -1,0 +1,35 @@
+.account-reader-shell { min-height: 100dvh; }
+.account-trigger { position: relative; }
+.account-conflict-dot { position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: #9c392e; }
+.account-page { max-width: 650px; margin: 0 auto; padding: 40px 24px 80px; color: #302b25; }
+.account-back { color: #71695e; text-decoration: none; font-size: .9rem; }
+.account-brand { margin: 64px 0 18px; color: #86745c; font-size: .72rem; letter-spacing: .2em; font-weight: 600; }
+.account-page h1 { font: 400 clamp(2.2rem, 6vw, 3.25rem)/1.12 "Source Serif 4", Georgia, serif; letter-spacing: -.035em; margin: 0 0 18px; }
+.account-intro { max-width: 460px; color: #71695e; font-size: 1rem; line-height: 1.7; margin: 0 0 34px; }
+.account-card { padding: 30px; border: 1px solid #e4ddd1; border-radius: 18px; background: #fffdf8; box-shadow: 0 8px 36px #493b2410; }
+.account-card h2 { font: 400 1.55rem/1.2 "Source Serif 4", Georgia, serif; margin: 0 0 12px; }
+.account-card p { line-height: 1.65; }
+.account-card button { cursor: pointer; }
+.account-card button:disabled { opacity: .55; cursor: default; }
+.account-card .google-sign-in { background: #fff; color: #1f1f1f; border: 1px solid #747775; border-radius: 6px; min-height: 44px; padding: 10px 22px; margin: 12px 0; font: 500 .95rem/1.4 Inter, sans-serif; width: 100%; }
+.account-card .google-sign-in:hover:enabled { background: #f5f5f5; }
+.account-card .account-fine-print { color: #857c70; font-size: .8rem; margin-bottom: 0; }
+.account-kicker { color: #86745c; font-size: .67rem; letter-spacing: .12em; margin: 0 0 14px; }
+.account-email { margin: -4px 0 22px; color: #71695e; overflow-wrap: anywhere; font-size: .9rem; }
+.account-status { padding: 12px 15px; border-radius: 8px; background: #eeefe7; color: #4c6247; font-size: .86rem; }
+.account-progress { border-bottom: 1px solid #e9e3d9; padding: 20px 0; }
+.account-progress h3 { margin: 0; font-size: .9rem; font-weight: 600; }
+.account-progress p { color: #71695e; margin: 10px 0; font-size: .85rem; }
+.account-progress a { color: #735d3d; font-size: .86rem; }
+.account-location { overflow-wrap: anywhere; }
+.account-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+.account-card button:not(.google-sign-in) { padding: 9px 13px; border: 1px solid #d8cfc0; border-radius: 7px; color: #594b38; background: transparent; font: inherit; font-size: .83rem; }
+.account-import { margin-top: 25px; color: #71695e; font-size: .83rem; }
+.account-import summary { cursor: pointer; line-height: 1.6; }
+.account-conflict { margin-top: 15px; padding: 12px; background: #f6eddd; border-radius: 8px; }
+.account-card [role="alert"] { color: #9c392e; font-size: .86rem; }
+@media (max-width: 600px) {
+  .account-page { padding: 28px 20px 60px; }
+  .account-brand { margin-top: 46px; }
+  .account-card { padding: 24px 20px; }
+}

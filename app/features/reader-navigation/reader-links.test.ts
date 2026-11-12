@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   buildEarlyChristianReaderUrl,
-  buildScriptureReaderUrl
+  buildScriptureReaderUrl,
 } from "./reader-links";
 
 test("Scripture Reader Links preserve passage and filter scope", () => {
@@ -11,7 +11,7 @@ test("Scripture Reader Links preserve passage and filter scope", () => {
     buildScriptureReaderUrl("web:John:3:16", {
       books: ["John", "Romans"],
       canon: "catholic",
-      matchCount: 20
+      matchCount: 20,
     }),
     "/reader/web:John:3:16?canon=catholic&matchCount=20&books=John&books=Romans"
   );
@@ -25,5 +25,12 @@ test("Early Christian Reader Links encode chapter and optional passage range", (
   assert.equal(
     buildEarlyChristianReaderUrl("npnf101:vi.I_1.XIV"),
     "/church-fathers?chapter=npnf101%3Avi.I_1.XIV"
+  );
+});
+
+test("Classics Reader Links retain original chapter identities and selection", () => {
+  assert.equal(
+    buildEarlyChristianReaderUrl("classics:imitation:book-2.4", "7-9"),
+    "/christian-classics/read?chapter=classics%3Aimitation%3Abook-2.4&passage=7-9"
   );
 });

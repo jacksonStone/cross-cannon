@@ -4,7 +4,7 @@ import type {
 } from "~/lib/early-christian-search.server";
 
 export type CanonMode = "protestant" | "catholic" | "orthodox";
-export type SearchTargetCorpus = "scripture" | "early-christian";
+export type SearchTargetCorpus = "scripture" | "early-christian" | "christian-classics";
 
 export type SearchResult = {
   id: string;
@@ -18,7 +18,7 @@ export type SearchResult = {
 export type SearchActionData = {
   error?: string;
   earlyChristianAuthors?: string[];
-  mode?: "theme" | "theme-early-christian" | "similar" | "similar-early-christian";
+  mode?: "theme" | "theme-early-christian" | "theme-classics" | "similar-classics" | "similar" | "similar-early-christian";
   question?: string;
   canon?: CanonMode;
   books?: string[];

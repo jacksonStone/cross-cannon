@@ -7,7 +7,10 @@ import type { PassageLookup } from "~/features/scripture/useScriptureLibrary";
 import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
 import { FilterModal } from "./FilterModal";
-import { SearchTargetControl } from "./SearchTargetControl";
+import {
+  SearchTargetControl,
+  SEARCH_TARGET_LABELS,
+} from "./SearchTargetControl";
 import type { SearchActionData } from "./types";
 import { useSearchDialogState } from "./useSearchDialogState";
 
@@ -17,13 +20,14 @@ const SEARCH_EXAMPLES = [
   "anxiety",
   "laughing when times are hard",
   "always learning",
-  "the beauty of nature"
+  "the beauty of nature",
 ];
 
 type SearchFormProps = {
   actionData?: SearchActionData;
   books: string[];
   earlyChristianAuthors?: string[];
+  classicAuthors?: string[];
   focusedPassageId: string | null;
   isScriptureReady: boolean;
   jumpInitialPassageId?: string;
@@ -37,13 +41,14 @@ export function SearchForm({
   actionData,
   books,
   earlyChristianAuthors = [],
+  classicAuthors = [],
   focusedPassageId,
   isScriptureReady,
   jumpInitialPassageId,
   onFocusedPassageChange,
   passageLookup,
   passages,
-  showJump = true
+  showJump = true,
 }: SearchFormProps) {
   const navigation = useNavigation();
   const submittingRef = useRef(false);
@@ -51,24 +56,35 @@ export function SearchForm({
   const isSearching = navigation.state === "submitting";
   const isSubmittingSimilar =
     isSearching && navigation.formData?.get("intent") === "similar-passage";
+  const submittingIntent = navigation.formData?.get("intent");
+  const submittingWorkLabel =
+    submittingIntent === "theme-classics" ||
+    submittingIntent === "similar-classics"
+      ? "Classics"
+      : "Fathers";
   const isSubmittingEarlyChristian =
-    isSearching && (
-      navigation.formData?.get("intent") === "similar-early-christian"
-      || navigation.formData?.get("intent") === "theme-early-christian"
-    );
+    isSearching &&
+    (navigation.formData?.get("intent") === "similar-early-christian" ||
+      navigation.formData?.get("intent") === "theme-early-christian" ||
+      submittingIntent === "theme-classics" ||
+      submittingIntent === "similar-classics");
   const isSearchingAllBooks =
     isSearching && (navigation.formData?.getAll("books").length ?? 0) === 0;
-  const focusedPassage = focusedPassageId ? passageLookup.get(focusedPassageId) : null;
-  const focusedReference = focusedPassage?.reference
-    ?? (focusedPassageId === actionData?.similarSource?.id
+  const focusedPassage = focusedPassageId
+    ? passageLookup.get(focusedPassageId)
+    : null;
+  const focusedReference =
+    focusedPassage?.reference ??
+    (focusedPassageId === actionData?.similarSource?.id
       ? actionData.similarSource.reference
       : null);
   const searchDialog = useSearchDialogState({
     actionData,
     books,
     earlyChristianAuthors,
+    classicAuthors,
     focusedPassageId,
-    readerCorpus: "scripture"
+    readerCorpus: "scripture",
   });
   const {
     activeFilterCount,
@@ -89,7 +105,7 @@ export function SearchForm({
     toggleEarlyChristianAuthor,
     toggleSelectedBook,
     updateCanon,
-    visibleBooks
+    visibleBooks,
   } = searchDialog;
 
   useEffect(() => {
@@ -127,24 +143,32 @@ export function SearchForm({
         <input type="hidden" name="intent" value={searchIntent} />
         {focusedPassageId ? (
           <>
-            <input type="hidden" name="sourcePassageId" value={focusedPassageId} />
+            <input
+              type="hidden"
+              name="sourcePassageId"
+              value={focusedPassageId}
+            />
           </>
         ) : null}
         {showScriptureFilters ? (
           <input type="hidden" name="canon" value={canon} />
         ) : null}
         <input type="hidden" name="matchCount" value={matchCount} />
-        {showScriptureFilters ? selectedBooksForCanon.map((book) => (
-          <input key={book} type="hidden" name="books" value={book} />
-        )) : null}
-        {showEarlyChristianAuthorFilters ? selectedEarlyChristianAuthors.map((author) => (
-            <input
-              key={author}
-              type="hidden"
-              name="earlyChristianAuthors"
-              value={author}
-            />
-          )) : null}
+        {showScriptureFilters
+          ? selectedBooksForCanon.map((book) => (
+              <input key={book} type="hidden" name="books" value={book} />
+            ))
+          : null}
+        {showEarlyChristianAuthorFilters
+          ? selectedEarlyChristianAuthors.map((author) => (
+              <input
+                key={author}
+                type="hidden"
+                name="earlyChristianAuthors"
+                value={author}
+              />
+            ))
+          : null}
         {showJump ? (
           <PassageJump
             className="search-form-jump"
@@ -152,7 +176,7 @@ export function SearchForm({
               books: selectedBooksForCanon,
               canon,
               earlyChristianAuthors: selectedEarlyChristianAuthors,
-              matchCount
+              matchCount,
             }}
             initialPassageId={jumpInitialPassageId}
             isScriptureReady={isScriptureReady}
@@ -168,7 +192,7 @@ export function SearchForm({
         />
         {!focusedPassageId ? (
           <label htmlFor="question">
-            Search {themeCorpus === "scripture" ? "Bible" : "early Christian works"} for...
+            Search {SEARCH_TARGET_LABELS[themeCorpus]} for...
           </label>
         ) : null}
         <div className="search-row">
@@ -205,7 +229,9 @@ export function SearchForm({
             <button
               aria-expanded={isFilterModalOpen}
               aria-controls="filter-modal"
-              className={`filter-toggle${activeFilterCount > 0 ? " is-active" : ""}`}
+              className={`filter-toggle${
+                activeFilterCount > 0 ? " is-active" : ""
+              }`}
               disabled={isSearching}
               onClick={openFilters}
               type="button"
@@ -221,17 +247,19 @@ export function SearchForm({
                 <>
                   <span className="button-spinner" aria-hidden="true" />
                   {isSubmittingEarlyChristian
-                    ? focusedPassageId ? "Finding Fathers" : "Searching Fathers"
-                    : isSubmittingSimilar ? "Finding" : "Searching"}
+                    ? `${
+                        focusedPassageId ? "Finding" : "Searching"
+                      } ${submittingWorkLabel}`
+                    : isSubmittingSimilar
+                    ? "Finding"
+                    : "Searching"}
                 </>
               ) : !isScriptureReady ? (
                 "Loading text"
               ) : focusedPassageId ? (
-                themeCorpus === "early-christian" ? "Find Fathers" : "Find Bible"
-              ) : themeCorpus === "early-christian" ? (
-                "Search Fathers"
+                `Find ${SEARCH_TARGET_LABELS[themeCorpus]}`
               ) : (
-                "Search Bible"
+                `Search ${SEARCH_TARGET_LABELS[themeCorpus]}`
               )}
             </button>
             {isSearching ? (
@@ -239,7 +267,7 @@ export function SearchForm({
                 {isSubmittingSimilar
                   ? "Finding similar passages..."
                   : isSubmittingEarlyChristian
-                  ? "Finding early Christian passages..."
+                  ? `Finding passages in ${submittingWorkLabel}...`
                   : isSearchingAllBooks
                   ? "Searching the selected canon..."
                   : "Searching selected books..."}
@@ -253,7 +281,11 @@ export function SearchForm({
         </div>
         <FilterModal
           canon={canon}
-          earlyChristianAuthors={earlyChristianAuthors}
+          earlyChristianAuthors={
+            themeCorpus === "christian-classics"
+              ? classicAuthors
+              : earlyChristianAuthors
+          }
           isOpen={isFilterModalOpen}
           isSearching={isSearching}
           matchCount={matchCount}

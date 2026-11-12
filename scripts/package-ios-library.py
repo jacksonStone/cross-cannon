@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from lib.native_catalog import build_native_catalog
 
 repo = Path(__file__).resolve().parent.parent
 destination = Path(sys.argv[1]).resolve()
@@ -36,6 +37,8 @@ with tempfile.TemporaryDirectory(prefix="native-library-", dir=destination.paren
     subprocess.run([str(repo / "scripts/rust.sh"), "run", "--release", "--locked",
                     "-p", "cross-canon-core", "--example", "package_native", "--",
                     str(repo), str(staged / "native-library.bin"), "--original-bible-audio"], cwd=repo, env=env, check=True)
+    (staged / 'catalog.json').write_text(json.dumps(build_native_catalog(repo), ensure_ascii=False,
+                                                  separators=(',', ':')))
     for source in sources:
         output = staged / source
         output.parent.mkdir(parents=True, exist_ok=True)

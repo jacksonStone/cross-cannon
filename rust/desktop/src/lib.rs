@@ -1,4 +1,5 @@
 mod audio;
+mod catalog;
 mod dialogs;
 mod downloads;
 mod icons;
@@ -100,6 +101,8 @@ struct SearchOutput {
 }
 struct Desktop {
     library: Arc<Library>,
+    catalog: Arc<catalog::Catalog>,
+    catalog_browser: catalog::Browser,
     state: ReaderState,
     selected: Option<String>,
     active_chapter_id: String,
@@ -199,8 +202,11 @@ impl Desktop {
         let search_corpus = Some(location.corpus);
         let (search_tx, search_rx) = mpsc::channel();
         let (audio_tx, audio_rx) = audio::start(library.root.clone(), ctx.clone());
+        let catalog = catalog::Catalog::load(&library.root);
         let mut desktop = Self {
             library,
+            catalog,
+            catalog_browser: catalog::Browser::new(jump_corpus),
             state: state.clone(),
             selected: None,
             active_chapter_id,
@@ -254,7 +260,11 @@ impl Desktop {
         };
         if fresh {
             match std::env::var("CROSS_CANON_PREVIEW").as_deref() {
-                Ok("collections") => desktop.dialog = Some(Dialog::Collections),
+                Ok("collections") => {
+                    desktop.show_catalog();
+                    desktop.catalog_browser.query =
+                        std::env::var("CROSS_CANON_CATALOG_QUERY").unwrap_or_default();
+                }
                 Ok("settings") => desktop.dialog = Some(Dialog::Settings),
                 Ok("offline-audio") => desktop.dialog = Some(Dialog::Downloads),
                 Ok("jump") => desktop.dialog = Some(Dialog::Jump),
@@ -309,6 +319,23 @@ impl Desktop {
             .passage(&self.state.location_passage_id)
             .unwrap()
     }
+    fn has_text_version_control(&self) -> bool {
+        match self.current_passage().corpus {
+            Corpus::EarlyChristian => true,
+            Corpus::ChristianClassics => {
+                self.library
+                    .chapter(&self.active_chapter_id)
+                    .is_some_and(|(_, chapter)| {
+                        chapter.passage_ids.iter().any(|id| {
+                            self.library
+                                .passage(id)
+                                .is_some_and(|passage| passage.text != passage.original_text)
+                        })
+                    })
+            }
+            Corpus::Scripture => false,
+        }
+    }
     fn search(&mut self, ctx: &egui::Context, source_id: Option<String>) {
         if self.busy {
             return;
@@ -338,6 +365,7 @@ impl Desktop {
         self.search_generation += 1;
         let generation = self.search_generation;
         let library = self.library.clone();
+        let catalog = self.catalog.clone();
         let tx = self.search_tx.clone();
         let ctx = ctx.clone();
         let api = self.state.api_url.trim_end_matches('/').to_owned();
@@ -379,6 +407,12 @@ impl Desktop {
             } else {
                 search::remote_search(&library, &api, &request).map_err(|e| e.to_string())
             };
+            let result = result.map(|mut hits: Vec<ResultPassage>| {
+                for hit in &mut hits {
+                    catalog.decorate(&library, hit);
+                }
+                hits
+            });
             let _ = tx.send(SearchOutput { generation, result });
             ctx.request_repaint();
         });
@@ -527,10 +561,10 @@ impl Desktop {
                     ui.painter().circle_filled(center + delta, 1.7, p.accent);
                 }
                 if response.on_hover_text("Choose collection").clicked() {
-                    self.dialog = Some(Dialog::Collections);
+                    self.show_catalog();
                 }
             });
-        if self.current_passage().corpus == Corpus::EarlyChristian {
+        if self.has_text_version_control() {
             egui::Area::new(Id::new("text-version"))
                 .anchor(
                     Align2::LEFT_BOTTOM,
@@ -714,6 +748,20 @@ mod tests {
         );
         let app = Desktop::initialize(&egui::Context::default(), None, library);
         assert!(app.semantic, "A theme such as More money More Problems must use the web semantic search, not offline all-word matching");
+    }
+    #[test]
+    fn classics_version_control_tracks_chapter_availability() {
+        let library = Arc::new(
+            Library::load_artifacts(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
+                .unwrap(),
+        );
+        let mut app = Desktop::initialize(&egui::Context::default(), None, library.clone());
+        let book = library.book("classics:imitation").unwrap();
+        app.open(book.chapters[0].passage_ids[0].clone());
+        assert!(app.has_text_version_control());
+        let unmodernized = library.book("classics:henry").unwrap();
+        app.open(unmodernized.chapters[0].passage_ids[0].clone());
+        assert!(!app.has_text_version_control());
     }
     #[derive(Default)]
     pub(super) struct MemoryStorage(std::collections::HashMap<String, String>);

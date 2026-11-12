@@ -8,6 +8,9 @@ import { useOfflineStatus } from "~/features/offline/OfflineProvider";
 import type { WorkDownloadState } from "~/features/offline/early-christian-work-downloads";
 
 import type { BookSummary, EarlyChristianAudio } from "./types";
+import { ReaderCorpusSwitch } from "~/features/reader-switch/ReaderCorpusSwitch";
+import type { WorkCollectionId } from "~/features/work-reader/collections";
+import { WorkAbout } from "~/features/work-reader/WorkAbout";
 
 type ReaderSettingsControlProps = ComponentProps<typeof ReaderSettingsControl>;
 
@@ -54,6 +57,8 @@ function DownloadProgressIcon({
 }
 
 export function EarlyChristianReaderHeader({
+  collectionId = "fathers",
+  works,
   activeAudio,
   activeAudioUrl,
   activeHeaderTitle,
@@ -80,6 +85,8 @@ export function EarlyChristianReaderHeader({
   downloadState,
   isWorkDownloaded,
 }: {
+  collectionId?: WorkCollectionId;
+  works?: BookSummary[];
   activeAudio: EarlyChristianAudio | null;
   activeAudioUrl: string | null;
   activeHeaderTitle: string;
@@ -128,7 +135,7 @@ export function EarlyChristianReaderHeader({
         preload="none"
       />
       <div className="reader-header-title" ref={headerTitleRef}>
-        <p className="eyebrow">Early Christian Works</p>
+        <ReaderCorpusSwitch current={collectionId} inline works={works} />
         <h1 className="ec-reader-title" id="reader-title" ref={readerTitleRef}>
           {activeHeaderTitle}
         </h1>
@@ -251,6 +258,7 @@ export function EarlyChristianReaderHeader({
           settings={readerSettings}
         />
       </ReaderTools>
+      {collectionId === "classics" && <WorkAbout work={activeWork} />}
     </header>
   );
 }

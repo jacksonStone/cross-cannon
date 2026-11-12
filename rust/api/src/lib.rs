@@ -1,3 +1,4 @@
+mod classics;
 pub mod engine;
 mod resources;
 mod web;

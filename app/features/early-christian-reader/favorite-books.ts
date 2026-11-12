@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 const FAVORITE_BOOKS_STORAGE_KEY = "cross-cannon:church-fathers-favorite-books:v1";
 
-export function useFavoriteEarlyChristianBooks(knownBookIds: string[]) {
+export function useFavoriteEarlyChristianBooks(knownBookIds: string[], storageKey = FAVORITE_BOOKS_STORAGE_KEY) {
   const knownBookIdSet = useMemo(() => new Set(knownBookIds), [knownBookIds]);
   const [favoriteBookIds, setFavoriteBookIds] = useState<string[]>([]);
 
@@ -13,7 +13,7 @@ export function useFavoriteEarlyChristianBooks(knownBookIds: string[]) {
 
     try {
       const parsed: unknown = JSON.parse(
-        window.localStorage.getItem(FAVORITE_BOOKS_STORAGE_KEY) ?? "[]"
+        window.localStorage.getItem(storageKey) ?? "[]"
       );
 
       if (!Array.isArray(parsed)) {
@@ -27,9 +27,9 @@ export function useFavoriteEarlyChristianBooks(knownBookIds: string[]) {
           ))
       );
     } catch {
-      window.localStorage.removeItem(FAVORITE_BOOKS_STORAGE_KEY);
+      window.localStorage.removeItem(storageKey);
     }
-  }, [knownBookIdSet]);
+  }, [knownBookIdSet, storageKey]);
 
   const rememberFavoriteBookIds = useCallback((bookIds: string[]) => {
     setFavoriteBookIds(bookIds);
@@ -38,8 +38,8 @@ export function useFavoriteEarlyChristianBooks(knownBookIds: string[]) {
       return;
     }
 
-    window.localStorage.setItem(FAVORITE_BOOKS_STORAGE_KEY, JSON.stringify(bookIds));
-  }, []);
+    window.localStorage.setItem(storageKey, JSON.stringify(bookIds));
+  }, [storageKey]);
 
   const toggleFavoriteBook = useCallback((bookId: string) => {
     if (!knownBookIdSet.has(bookId)) {

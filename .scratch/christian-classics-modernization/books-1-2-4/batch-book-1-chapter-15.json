@@ -1,0 +1,67 @@
+{
+  "workId": "classics:imitation",
+  "chapterStart": 15,
+  "chapterEnd": 15,
+  "entries": [
+    {
+      "chapterId": "classics:imitation:book-1.15",
+      "verse": 1,
+      "originalText": "For no worldly good whatsoever, and for the love of no man, must anything be done which is evil, but for the help of the suffering a good work must sometimes be postponed, or be changed for a better; for herein a good work is not destroyed, but improved.",
+      "modernizedText": "For no worldly good whatsoever and for the love of no person must anything evil be done, but to help someone who suffers, a good work must sometimes be postponed or changed for a better one; for in this a good work is not destroyed, but improved."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.15",
+      "verse": 2,
+      "originalText": "Without charity no work profiteth, but whatsoever is done in charity, however small and of no reputation it be, bringeth forth good fruit; for God verily considereth what a man is able to do, more than the greatness of what he doth.",
+      "modernizedText": "Without charity no work profits, but whatever is done in charity, however small and without reputation it may be, brings forth good fruit; for God truly considers what a person is able to do more than the greatness of what he does."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.15",
+      "verse": 3,
+      "originalText": "He doth much who loveth much.",
+      "modernizedText": "The person who loves much does much."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.15",
+      "verse": 4,
+      "originalText": "He doth much who doth well.",
+      "modernizedText": "The person who does well does much."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.15",
+      "verse": 5,
+      "originalText": "He doth well who ministereth to the public good rather than to his own.",
+      "modernizedText": "The person who serves the public good rather than his own does well."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.15",
+      "verse": 6,
+      "originalText": "Oftentimes that seemeth to be charity which is rather carnality, because it springeth from natural inclination, self-will, hope of repayment, desire of gain.",
+      "modernizedText": "What seems to be charity is often instead carnality, because it springs from natural inclination, self-will, hope of repayment, or desire for gain."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.15",
+      "verse": 7,
+      "originalText": "He who hath true and perfect charity, in no wise seeketh his own good, but desireth that God alone be altogether glorified.",
+      "modernizedText": "The person who has true and perfect charity in no way seeks his own good, but desires that God alone be altogether glorified."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.15",
+      "verse": 8,
+      "originalText": "He envieth none, because he longeth for no selfish joy; nor doth he desire to rejoice in himself, but longeth to be blessed in God as the highest good.",
+      "modernizedText": "He envies no one, because he longs for no selfish joy; nor does he desire to rejoice in himself, but longs to be blessed in God as the highest good."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.15",
+      "verse": 9,
+      "originalText": "He ascribeth good to none save to God only, the Fountain whence all good proceedeth, and the End, the Peace, the joy of all Saints.",
+      "modernizedText": "He ascribes good to no one except God alone, the Fountain from which all good proceeds, and the End, the Peace, the joy of all Saints."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.15",
+      "verse": 10,
+      "originalText": "Oh, he who hath but a spark of true charity, hath verily learned that all worldly things are full of vanity.",
+      "modernizedText": "Oh, the person who has even a spark of true charity has truly learned that all worldly things are full of vanity."
+    }
+  ]
+}

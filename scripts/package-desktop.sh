@@ -14,6 +14,7 @@ mkdir -p "$bundle/Contents/Resources/library/scripture-cache"
 scripts/rust.sh run --release --locked -p cross-canon-core --example package_native -- \
   "$PWD" "$bundle/Contents/Resources/library/native-library.bin" --original-bible-audio
 cp scripture-cache/manifest.json "$bundle/Contents/Resources/library/scripture-cache/"
+python3 scripts/lib/native_catalog.py "$PWD" "$bundle/Contents/Resources/library/catalog.json"
 cp rust/desktop/fonts/*LICENSE* "$bundle/Contents/Resources/"
 # Reuse the existing web artwork for the native application icon.
 iconset="$staging/CrossCanon.iconset"

@@ -15,7 +15,7 @@ const remix = createRequestHandler({ build, mode: process.env.NODE_ENV });
 const app = express();
 app.disable('x-powered-by');
 app.use((req, res, next) => {
-  const resource = ['/r/api', '/scripture-cache/', '/church-fathers-preview/', '/audio/WEBD_AT/', '/audio/continuous/'].some(prefix => req.path === prefix || req.path.startsWith(prefix.endsWith('/') ? prefix : prefix+'/'))
+  const resource = ['/r/api', '/scripture-cache/', '/church-fathers-preview/', '/christian-classics-text/', '/audio/WEBD_AT/', '/audio/continuous/'].some(prefix => req.path === prefix || req.path.startsWith(prefix.endsWith('/') ? prefix : prefix+'/'))
     || req.path === '/cross-canon-sw-release-test.js';
   return resource ? remix(req, res, next) : next();
 });

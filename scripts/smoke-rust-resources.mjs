@@ -47,3 +47,12 @@ if (['localhost','127.0.0.1'].includes(base.hostname)) {
   assert.equal(sw.status,200);new Script(sw.body.toString());assert(sw.body.includes('release=rust-resource-check&failStage=1'));
 }
 console.log('Rust resources verified: unchanged JSON/gzip bytes, metadata/alignment, chapter text, range audio, HEAD, invalid ranges, and local-only test worker.');
+
+const classics = JSON.parse(await readFile('public/christian-classics-text/books.json','utf8'));
+for (const path of ['/christian-classics-text/books.json','/christian-classics-text/manifest.json',classics.books[0].chapters[0].assetPath]) {
+  const response=await get(path);assert.equal(response.status,200,path);
+  assert.equal(response.headers['x-cross-canon-resource'],'rust',path);
+  assert.deepEqual(response.body,await readFile('public'+path));
+}
+assert.equal((await get('/christian-classics-text/chapters/%2e%2e%2fbooks.json')).status,404);
+console.log('Classics resource metadata and immutable chapter bytes verified through Rust.');

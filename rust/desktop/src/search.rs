@@ -89,13 +89,20 @@ pub(super) fn decode_results(
                         .as_str()
                         .context("Missing reference")?
                         .into(),
-                    text: passages
-                        .iter()
-                        .flat_map(|p| &p.verses)
-                        .filter(|v| (start..=end).contains(&v.number))
-                        .map(|v| v.text.as_str())
-                        .collect::<Vec<_>>()
-                        .join(" "),
+                    text: if corpus == Corpus::ChristianClassics {
+                        highlight["text"]
+                            .as_str()
+                            .context("Missing Classics source paragraph")?
+                            .to_owned()
+                    } else {
+                        passages
+                            .iter()
+                            .flat_map(|p| &p.verses)
+                            .filter(|v| (start..=end).contains(&v.number))
+                            .map(|v| v.text.as_str())
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    },
                     corpus,
                     score: hit["score"].as_f64().context("Missing score")? as f32,
                     highlight_verse: None,
@@ -335,14 +342,21 @@ mod tests {
             let start = p.verses[1].number;
             let end = p.verses[2].number;
             let payload = serde_json::json!({"results":[{"chapterId":p.chapter_id,"score":0.65,
-            "highlightPassage":{"id":"ecw:exact-indexed-paragraph","reference":"Selected paragraph","verseStart":start,"verseEnd":end}}]});
+            "highlightPassage":{"id":"ecw:exact-indexed-paragraph","reference":"Selected paragraph","text":"A complete authoritative source paragraph.","verseStart":start,"verseEnd":end}}]});
             let hits = decode_results(&library, corpus, &payload).unwrap();
             assert_eq!(hits[0].corpus, corpus);
             assert_eq!(hits[0].id, p.id);
             assert_eq!(hits[0].source_id, "ecw:exact-indexed-paragraph");
             assert_eq!(
                 hits[0].text,
-                format!("{} {}", p.verses[1].text, p.verses[2].text)
+                if corpus == Corpus::ChristianClassics {
+                    payload["results"][0]["highlightPassage"]["text"]
+                        .as_str()
+                        .unwrap()
+                        .to_owned()
+                } else {
+                    format!("{} {}", p.verses[1].text, p.verses[2].text)
+                }
             );
             assert_eq!(hits[0].reference, "Selected paragraph");
             assert_eq!(hits[0].strength(), 3);

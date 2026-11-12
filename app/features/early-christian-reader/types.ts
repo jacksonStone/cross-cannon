@@ -20,12 +20,17 @@ export type SourceMetadata = {
 export type WorkMetadata = {
   author: string | null;
   authorshipDateRange: string | null;
-  ccel: {
+  ccel?: {
     id: string;
     sourceUrl: string;
     title: string;
   };
   source: SourceMetadata;
+  genre?: "Commentaries" | "Theology" | "Spiritual Reading";
+  tradition?: string;
+  translator?: string;
+  edition?: string;
+  rights?: string;
 };
 
 export type EarlyChristianAudio = {
@@ -43,6 +48,8 @@ export type ChapterSummary = {
   id: string;
   title: string;
   verseCount: number;
+  reference?: string;
+  scriptureReference?: { book: string; chapter: number };
 };
 
 export type BookSummary = {
@@ -56,6 +63,7 @@ export type BookSummary = {
 };
 
 export type BookIndex = {
+  defaultWorkId?: string;
   books: BookSummary[];
   generatedAt: string;
   source: string;
@@ -80,6 +88,9 @@ export type ChapterAsset = {
   originalBook: string | null;
   sourceVolumeId: string;
   title: string;
+  reference?: string;
+  scriptureReference?: { book: string; chapter: number };
+  notes?: Array<{ id: string; text: string }>;
   source: {
     id: string;
     sourceUrl: string;
@@ -91,6 +102,9 @@ export type ChapterAsset = {
     modernizedText?: string;
     verse: number;
     text: string;
+    scriptureVerseStart?: number;
+    scriptureVerseEnd?: number;
+    sourceParagraph?: number;
   }>;
 };
 

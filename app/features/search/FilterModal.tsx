@@ -124,8 +124,8 @@ export function FilterModal({
             && onToggleEarlyChristianAuthor ? (
             <CheckboxPicker
               disabled={isSearching}
-              hint="Choose up to 3 authors for early Christian similarity results. Leave blank to search every author."
-              legend="Fathers authors"
+              hint="Choose up to 3 authors. Leave blank to search every author in this collection."
+              legend="Authors"
               maxVisibleOptions={18}
               maxSelected={3}
               onToggle={onToggleEarlyChristianAuthor}

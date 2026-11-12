@@ -13,12 +13,14 @@ import { useFavoriteEarlyChristianBooks } from "./favorite-books";
 import type { BookSummary, ChapterEntry } from "./types";
 
 export function ChapterJump({
+  collectionId = "fathers",
   activeChapterId,
   chapters,
   downloadedWorkIds,
   onClose,
   onJump
 }: {
+  collectionId?: "fathers" | "classics";
   activeChapterId: string;
   chapters: ChapterEntry[];
   downloadedWorkIds: ReadonlySet<string>;
@@ -34,10 +36,11 @@ export function ChapterJump({
     favoriteBookIds,
     isFavoriteBook,
     toggleFavoriteBook
-  } = useFavoriteEarlyChristianBooks(bookIds);
+  } = useFavoriteEarlyChristianBooks(bookIds, collectionId === "classics" ? "cross-cannon:christian-classics-favorite-books:v1" : undefined);
   const [selectedBookId, setSelectedBookId] = useState(activeEntry?.book.id ?? "");
   const [selectedAuthor, setSelectedAuthor] = useState("");
   const [workQuery, setWorkQuery] = useState("");
+  const [chapterQuery, setChapterQuery] = useState("");
   const selectedBook = books.find((book) => book.id === selectedBookId)
     ?? activeEntry?.book;
   const bookChapters = selectedBook
@@ -115,7 +118,7 @@ export function ChapterJump({
               autoComplete="off"
               className="passage-jump-search"
               onChange={(event) => setWorkQuery(event.currentTarget.value)}
-              placeholder="City of God"
+              placeholder={collectionId === "classics" ? "The Imitation of Christ" : "City of God"}
               type="search"
               value={workQuery}
             />
@@ -182,8 +185,9 @@ export function ChapterJump({
 
           <div className="passage-jump-group" aria-label="Chapter">
             <span>Chapter</span>
-            <div className="passage-jump-options">
-              {bookChapters.map((entry) => (
+            {collectionId === "classics" && <input type="search" aria-label="Find chapter or Bible reference" placeholder="Matthew 5, Book 2…" value={chapterQuery} onChange={(event) => setChapterQuery(event.target.value)} />}
+            <div className={`passage-jump-options${collectionId === "classics" ? " classics-chapter-options" : ""}`}>
+              {bookChapters.filter((entry) => !chapterQuery || keywordMatches(chapterQuery, `${entry.chapter.reference ?? entry.chapter.chapter} ${entry.chapter.title}`)).map((entry) => (
                 <button
                   className={entry.chapter.id === activeChapterId ? "is-selected" : undefined}
                   key={entry.chapter.id}
@@ -191,7 +195,7 @@ export function ChapterJump({
                   title={entry.chapter.title}
                   type="button"
                 >
-                  {entry.chapter.chapter}
+                  {entry.chapter.reference ?? entry.chapter.chapter}
                 </button>
               ))}
             </div>

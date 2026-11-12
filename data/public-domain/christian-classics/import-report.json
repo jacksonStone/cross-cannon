@@ -1,0 +1,35 @@
+{
+  "version": "41cb84fa1258fd14",
+  "works": [
+    {
+      "id": "classics:imitation",
+      "chapterCount": 114,
+      "source": "https://www.gutenberg.org/ebooks/1653",
+      "rights": "Public domain in the USA",
+      "knownSourceGaps": []
+    },
+    {
+      "id": "classics:catena",
+      "chapterCount": 89,
+      "source": "https://github.com/Isidore-Guild/catena",
+      "rights": "Public-domain historic translation; repository contributions CC0-1.0",
+      "knownSourceGaps": []
+    },
+    {
+      "id": "classics:henry",
+      "chapterCount": 1189,
+      "source": "https://www.ccel.org/ccel/henry/mhc.html",
+      "rights": "Public domain. May be copied and distributed freely.",
+      "knownSourceGaps": []
+    },
+    {
+      "id": "classics:wesley",
+      "chapterCount": 1188,
+      "source": "https://www.ccel.org/ccel/wesley/notes.html",
+      "rights": "Public Domain",
+      "knownSourceGaps": [
+        "2 Samuel 24"
+      ]
+    }
+  ]
+}

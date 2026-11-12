@@ -3,13 +3,14 @@ import { Form } from "@remix-run/react";
 
 import { FilterModal } from "~/features/search/FilterModal";
 import { SearchResults } from "~/features/search/SearchResults";
-import { SearchTargetControl } from "~/features/search/SearchTargetControl";
+import {
+  SearchTargetControl,
+  SEARCH_TARGET_LABELS,
+} from "~/features/search/SearchTargetControl";
 import type { PassageLookup } from "~/features/scripture/useScriptureLibrary";
 import { isBackdropClick } from "~/lib/use-dialog-dismiss";
 import type { EarlyChristianSearchResult } from "~/lib/early-christian-search.server";
-import type {
-  SearchActionData
-} from "~/features/search/types";
+import type { SearchActionData } from "~/features/search/types";
 import type { SearchDialogState } from "~/features/search/useSearchDialogState";
 
 import { EarlyChristianSearchResults } from "./EarlyChristianSearchResults";
@@ -22,6 +23,7 @@ type FocusedPassageSummary = {
 } | null;
 
 export function SearchDialog({
+  workCorpus = "early-christian",
   actionData,
   authorOptions,
   closeSearch,
@@ -36,8 +38,9 @@ export function SearchDialog({
   passageLookup,
   readerTheme,
   searchBodyRef,
-  onSearchScroll
+  onSearchScroll,
 }: {
+  workCorpus?: "early-christian" | "christian-classics";
   actionData?: ChurchFathersActionData;
   authorOptions: string[];
   closeSearch: () => void;
@@ -73,7 +76,7 @@ export function SearchDialog({
     toggleEarlyChristianAuthor,
     toggleSelectedBook,
     updateCanon,
-    visibleBooks: visibleScriptureBooks
+    visibleBooks: visibleScriptureBooks,
   } = dialogState;
   return (
     <div
@@ -108,24 +111,34 @@ export function SearchDialog({
           </button>
         </header>
 
-        <div className="search-modal-body" onScroll={onSearchScroll} ref={searchBodyRef}>
+        <div
+          className="search-modal-body"
+          onScroll={onSearchScroll}
+          ref={searchBodyRef}
+        >
           <section
             aria-busy={isSearching}
-            aria-label="Early Christian search"
+            aria-label={`${SEARCH_TARGET_LABELS[themeCorpus]} search`}
             className={`search-band${isSearching ? " is-searching" : ""}`}
           >
             <Form method="post" className="search-form">
               <input type="hidden" name="intent" value={searchIntent} />
               {focusedPassageKey ? (
-                <input type="hidden" name="sourcePassageId" value={focusedPassageKey} />
+                <input
+                  type="hidden"
+                  name="sourcePassageId"
+                  value={focusedPassageKey}
+                />
               ) : null}
               {showScriptureFilters ? (
                 <input type="hidden" name="canon" value={canon} />
               ) : null}
               <input type="hidden" name="matchCount" value={matchCount} />
-              {showScriptureFilters ? selectedBooksForCanon.map((book) => (
-                <input key={book} type="hidden" name="books" value={book} />
-              )) : null}
+              {showScriptureFilters
+                ? selectedBooksForCanon.map((book) => (
+                    <input key={book} type="hidden" name="books" value={book} />
+                  ))
+                : null}
               {showAuthorFilters ? (
                 <EarlyChristianAuthorInputs authors={selectedAuthorFilters} />
               ) : null}
@@ -136,7 +149,7 @@ export function SearchDialog({
               />
               {!focusedPassageKey ? (
                 <label htmlFor="question">
-                  Search {themeCorpus === "scripture" ? "Bible" : "early Christian works"} for...
+                  Search {SEARCH_TARGET_LABELS[themeCorpus]} for...
                 </label>
               ) : null}
               <div className="search-row">
@@ -153,16 +166,16 @@ export function SearchDialog({
                         &times;
                       </button>
                       <h2>
-                        {actionData?.similarSource?.reference
-                          ?? actionData?.similarScriptureSource?.reference
-                          ?? focusedPassage?.reference
-                          ?? "Selected passage"}
+                        {actionData?.similarSource?.reference ??
+                          actionData?.similarScriptureSource?.reference ??
+                          focusedPassage?.reference ??
+                          "Selected passage"}
                       </h2>
                       <p>
-                        {actionData?.similarSource?.text
-                          ?? actionData?.similarScriptureSource?.text
-                          ?? focusedPassage?.text
-                          ?? "Passage text is loading."}
+                        {actionData?.similarSource?.text ??
+                          actionData?.similarScriptureSource?.text ??
+                          focusedPassage?.text ??
+                          "Passage text is loading."}
                       </p>
                     </div>
                   ) : (
@@ -183,23 +196,31 @@ export function SearchDialog({
                   <button
                     aria-controls="filter-modal"
                     aria-expanded={isFilterOpen}
-                    className={`filter-toggle${activeFilterCount > 0 ? " is-active" : ""}`}
+                    className={`filter-toggle${
+                      activeFilterCount > 0 ? " is-active" : ""
+                    }`}
                     disabled={isSearching}
                     onClick={openFilters}
                     type="button"
                   >
-                    Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+                    Filters
+                    {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
                   </button>
                   <button
                     className="search-button"
                     disabled={isSearching || !isReady}
                     type="submit"
                   >
-                    {searchButtonLabel(searchIntent, focusedPassageKey, isSearching)}
+                    {searchButtonLabel(
+                      searchIntent,
+                      focusedPassageKey,
+                      isSearching,
+                      SEARCH_TARGET_LABELS[themeCorpus]
+                    )}
                   </button>
                   {isSearching ? (
                     <p className="search-status" role="status">
-                      {searchStatusText(searchIntent)}
+                      {`Searching ${SEARCH_TARGET_LABELS[themeCorpus]} passages…`}
                     </p>
                   ) : null}
                 </div>
@@ -235,6 +256,9 @@ export function SearchDialog({
           ) : null}
 
           <EarlyChristianSearchResults
+            targetCorpus={
+              themeCorpus === "scripture" ? workCorpus : themeCorpus
+            }
             authors={selectedAuthorFilters}
             canon={canon}
             isSearching={isSearching}
@@ -264,7 +288,8 @@ export function SearchDialog({
 function searchButtonLabel(
   searchIntent: string,
   focusedPassageKey: string | null,
-  isSearching: boolean
+  isSearching: boolean,
+  targetLabel: string
 ) {
   if (isSearching) {
     return (
@@ -273,7 +298,7 @@ function searchButtonLabel(
         {searchIntent === "theme-scripture"
           ? "Searching Bible"
           : searchIntent === "theme"
-          ? "Searching Fathers"
+          ? `Searching ${targetLabel}`
           : searchIntent === "similar-scripture"
           ? "Finding Bible"
           : "Finding similar"}
@@ -286,14 +311,14 @@ function searchButtonLabel(
   }
 
   if (searchIntent === "theme") {
-    return "Search Fathers";
+    return `Search ${targetLabel}`;
   }
 
   if (searchIntent === "similar-scripture") {
     return "Find Bible";
   }
 
-  return focusedPassageKey ? "Find similar" : "Search Fathers";
+  return focusedPassageKey ? "Find similar" : `Search ${targetLabel}`;
 }
 
 function searchStatusText(searchIntent: string) {
@@ -324,10 +349,10 @@ function churchFathersScriptureActionData(
     results: actionData.scriptureResults,
     similarSource: actionData.similarScriptureSource
       ? {
-        id: actionData.similarScriptureSource.id,
-        reference: actionData.similarScriptureSource.reference
-      }
+          id: actionData.similarScriptureSource.id,
+          reference: actionData.similarScriptureSource.reference,
+        }
       : undefined,
-    targetCorpus: "scripture"
+    targetCorpus: "scripture",
   };
 }

@@ -90,7 +90,7 @@ export function sortBookIndex(bookIndex: BookIndex): BookIndex {
     ...bookIndex,
     books: bookIndex.books
       .map((book, index) => ({ book, index }))
-      .sort((left, right) => compareBooks(left.book, right.book, left.index, right.index))
+      .sort((left, right) => left.book.id === bookIndex.defaultWorkId ? -1 : right.book.id === bookIndex.defaultWorkId ? 1 : compareBooks(left.book, right.book, left.index, right.index))
       .map(({ book }) => ({
         ...book,
         chapters: [...book.chapters].sort((left, right) => left.chapter - right.chapter)

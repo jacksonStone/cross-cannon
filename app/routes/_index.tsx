@@ -56,16 +56,18 @@ const READER_POSITION_STORAGE_KEY = "cross-cannon:reader-position:v1";
 
 export async function loader({}: LoaderFunctionArgs) {
   const earlyChristianAuthorsPromise: Promise<string[]> =
-    getEarlyChristianAuthors().catch(() => []);
-  const [books, earlyChristianAuthors, scriptureCache] = await Promise.all([
+    getEarlyChristianAuthors().catch((): string[] => []);
+  const [books, earlyChristianAuthors, scriptureCache, classicAuthors] = await Promise.all([
     getIndexedBooks(),
     earlyChristianAuthorsPromise,
     getScriptureCacheInfo(),
+    getEarlyChristianAuthors("christian-classics").catch((): string[] => []),
   ]);
 
   return json({
     books,
     earlyChristianAuthors,
+    classicAuthors,
     scriptureCacheKey: scriptureCache.version,
     scriptureCacheUrl: scriptureCache.url,
   });
@@ -94,7 +96,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Index() {
-  const { books, earlyChristianAuthors, scriptureCacheKey, scriptureCacheUrl } =
+  const { books, earlyChristianAuthors, classicAuthors, scriptureCacheKey, scriptureCacheUrl } =
     useLoaderData<typeof loader>();
   const incomingActionData = useActionData<typeof action>();
   const navigation = useNavigation();
@@ -258,7 +260,7 @@ export default function Index() {
     }
 
     if (
-      actionData?.mode === "similar-early-christian" &&
+      (actionData?.mode === "similar-early-christian" || actionData?.mode === "similar-classics") &&
       actionData.similarSource
     ) {
       dispatchSearchFlow({
@@ -273,7 +275,7 @@ export default function Index() {
       return;
     }
 
-    if (actionData?.mode === "theme-early-christian") {
+    if (actionData?.mode === "theme-early-christian" || actionData?.mode === "theme-classics") {
       dispatchSearchFlow({ type: "theme-results" });
     }
   }, [incomingActionData, actionData?.mode, actionData?.similarSource?.id]);
@@ -361,6 +363,7 @@ export default function Index() {
                 actionData={actionData}
                 books={books}
                 earlyChristianAuthors={earlyChristianAuthors}
+                classicAuthors={classicAuthors}
                 focusedPassageId={focusedPassageId}
                 isScriptureReady={scriptureLibrary.isReady}
                 jumpInitialPassageId={readerPassageId}
@@ -391,13 +394,13 @@ export default function Index() {
                 results={actionData?.results}
                 showEmptyState={
                   actionData?.mode !== "similar-early-christian" &&
-                  actionData?.mode !== "theme-early-christian"
+                  actionData?.mode !== "theme-early-christian" && actionData?.mode !== "theme-classics" && actionData?.mode !== "similar-classics"
                 }
               />
 
               <EarlyChristianCrossResults
                 heading={
-                  actionData?.mode === "theme-early-christian"
+                  actionData?.targetCorpus === "christian-classics" ? "Christian Classics results" : actionData?.mode === "theme-early-christian"
                     ? "Early Christian results"
                     : "Similar early Christian passages"
                 }
@@ -479,7 +482,7 @@ function EarlyChristianCrossResults({
                 </span>
               </span>
               <span className="scripture-result-text">
-                {result.highlightPassage.rangeLabel ? (
+                {!result.chapterId.startsWith("classics:") && result.highlightPassage.rangeLabel ? (
                   <>
                     <span className="result-range-label">
                       {result.highlightPassage.rangeLabel}.

@@ -1,8 +1,13 @@
 import type { SearchTargetCorpus } from "./types";
 
-export type SearchReaderCorpus = "scripture" | "early-christian";
+export type SearchReaderCorpus =
+  | "scripture"
+  | "early-christian"
+  | "christian-classics";
 
 export type SearchDialogIntent =
+  | "theme-classics"
+  | "similar-classics"
   | "theme"
   | "theme-early-christian"
   | "theme-scripture"
@@ -13,13 +18,15 @@ export type SearchDialogIntent =
 export function getSearchDialogIntent({
   hasFocusedPassage,
   readerCorpus,
-  targetCorpus
+  targetCorpus,
 }: {
   hasFocusedPassage: boolean;
   readerCorpus: SearchReaderCorpus;
   targetCorpus: SearchTargetCorpus;
 }): SearchDialogIntent {
   if (readerCorpus === "scripture") {
+    if (targetCorpus === "christian-classics")
+      return hasFocusedPassage ? "similar-classics" : "theme-classics";
     if (hasFocusedPassage) {
       return targetCorpus === "scripture"
         ? "similar-passage"
@@ -30,7 +37,9 @@ export function getSearchDialogIntent({
   }
 
   if (hasFocusedPassage) {
-    return targetCorpus === "scripture" ? "similar-scripture" : "similar-passage";
+    return targetCorpus === "scripture"
+      ? "similar-scripture"
+      : "similar-passage";
   }
 
   return targetCorpus === "scripture" ? "theme-scripture" : "theme";
@@ -40,7 +49,7 @@ export function getSearchDialogFilterState({
   authorCount,
   bookCount,
   isDefaultMatchCount,
-  targetCorpus
+  targetCorpus,
 }: {
   authorCount: number;
   bookCount: number;
@@ -48,20 +57,21 @@ export function getSearchDialogFilterState({
   targetCorpus: SearchTargetCorpus;
 }) {
   const showScriptureFilters = targetCorpus === "scripture";
-  const showAuthorFilters = targetCorpus === "early-christian";
+  const showAuthorFilters = targetCorpus !== "scripture";
 
   return {
-    activeFilterCount: (isDefaultMatchCount ? 0 : 1)
-      + (showScriptureFilters ? bookCount : authorCount),
+    activeFilterCount:
+      (isDefaultMatchCount ? 0 : 1) +
+      (showScriptureFilters ? bookCount : authorCount),
     showAuthorFilters,
-    showScriptureFilters
+    showScriptureFilters,
   };
 }
 
 export function resolveSearchDialogTarget({
   actionMode,
   actionTargetCorpus,
-  readerCorpus
+  readerCorpus,
 }: {
   actionMode?: string;
   actionTargetCorpus?: SearchTargetCorpus;
@@ -71,13 +81,16 @@ export function resolveSearchDialogTarget({
     return actionTargetCorpus;
   }
 
+  if (actionMode === "theme-classics" || actionMode === "similar-classics")
+    return "christian-classics";
+
   if (actionMode === "theme-scripture" || actionMode === "similar-scripture") {
     return "scripture";
   }
 
   if (
-    actionMode === "theme-early-christian"
-    || actionMode === "similar-early-christian"
+    actionMode === "theme-early-christian" ||
+    actionMode === "similar-early-christian"
   ) {
     return "early-christian";
   }

@@ -1,0 +1,55 @@
+{
+  "workId": "classics:imitation",
+  "chapterStart": 4,
+  "chapterEnd": 4,
+  "entries": [
+    {
+      "chapterId": "classics:imitation:book-1.4",
+      "verse": 1,
+      "originalText": "We must not trust every word of others or feeling within ourselves, but cautiously and patiently try the matter, whether it be of God.",
+      "modernizedText": "We must not trust every word of others or feeling within ourselves, but cautiously and patiently test the matter, to see whether it is of God."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.4",
+      "verse": 2,
+      "originalText": "Unhappily we are so weak that we find it easier to believe and speak evil of others, rather than good.",
+      "modernizedText": "Unhappily, we are so weak that we find it easier to believe and speak evil of others than good."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.4",
+      "verse": 3,
+      "originalText": "But they that are perfect, do not give ready heed to every news-bearer, for they know man’s weakness that it is prone to evil and unstable in words.",
+      "modernizedText": "But those who are perfect do not readily listen to every bearer of news, for they know human weakness: it is prone to evil and unstable in words."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.4",
+      "verse": 4,
+      "originalText": "This is great wisdom, not to be hasty in action, or stubborn in our own opinions.",
+      "modernizedText": "This is great wisdom: not to be hasty in action or stubborn in our own opinions."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.4",
+      "verse": 5,
+      "originalText": "A part of this wisdom also is not to believe every word we hear, nor to tell others all that we hear, even though we believe it.",
+      "modernizedText": "Part of this wisdom is also not to believe every word we hear, nor to tell others all that we hear, even though we believe it."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.4",
+      "verse": 6,
+      "originalText": "Take counsel with a man who is wise and of a good conscience; and seek to be instructed by one better than thyself, rather than to follow thine own inventions.",
+      "modernizedText": "Take counsel with a person who is wise and has a good conscience, and seek instruction from someone better than yourself rather than following your own inventions."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.4",
+      "verse": 7,
+      "originalText": "A good life maketh a man wise toward God, and giveth him experience in many things.",
+      "modernizedText": "A good life makes a person wise toward God and gives him experience in many things."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.4",
+      "verse": 8,
+      "originalText": "The more humble a man is in himself, and the more obedient towards God, the wiser will he be in all things, and the more shall his soul be at peace.",
+      "modernizedText": "The more humble a person is in himself and the more obedient toward God, the wiser he will be in all things, and the more his soul will be at peace."
+    }
+  ]
+}

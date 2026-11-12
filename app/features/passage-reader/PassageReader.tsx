@@ -8,7 +8,7 @@ import { Form, Link, useNavigation } from "@remix-run/react";
 
 import { useContinuousAudio } from "~/features/audio/useContinuousAudio";
 import { useChapterAudioPlayback } from "~/features/audio/useChapterAudioPlayback";
-import { buildChapterIndex, chapterKey } from "./chapter-index";
+import { buildChapterIndex, chapterKey, type ChapterPassage } from "./chapter-index";
 
 import { PassageJump } from "~/features/passage-jump/PassageJump";
 import { useOfflineStatus } from "~/features/offline/OfflineProvider";
@@ -28,6 +28,7 @@ import type { StoredFilters } from "~/features/search/types";
 import type { BrowserPassage } from "~/lib/scripture-cache-contract";
 
 import { ReaderBookHeader, type ReaderBookHeaderDetail } from "./BookHeader";
+import { PassageCommentary } from "~/features/christian-classics/PassageCommentary";
 
 const TRANSLATION_ABBREVIATION = "WEB";
 const TRANSLATION_NAME = "World English Bible";
@@ -65,6 +66,7 @@ export function PassageReader({
     onThemeChange
   });
   const [isReaderToolsOpen, setIsReaderToolsOpen] = useState(false);
+  const [commentaryPassage, setCommentaryPassage] = useState<ChapterPassage | null>(null);
   const {
     activeChapter,
     openAudioChapter,
@@ -311,6 +313,7 @@ export function PassageReader({
                               )}
                             </button>
                           </Form>
+                          <button className="context-button" type="button" onClick={() => setCommentaryPassage(passage)}>Read with Classics</button>
                           {isSearchingSimilar ? (
                             <p className="reader-action-status" role="status">
                               Searching similar passages...
@@ -338,6 +341,7 @@ export function PassageReader({
         })}
       </div>
       <ReaderCorpusSwitch current="scripture" />
+      {commentaryPassage && <PassageCommentary passage={commentaryPassage} onClose={() => setCommentaryPassage(null)} />}
     </section>
   );
 }

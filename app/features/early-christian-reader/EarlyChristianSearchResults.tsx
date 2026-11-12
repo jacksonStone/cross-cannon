@@ -11,6 +11,7 @@ import {
 } from "./SearchFields";
 
 export function EarlyChristianSearchResults({
+  targetCorpus = "early-christian",
   authors,
   canon,
   isSearching,
@@ -19,6 +20,7 @@ export function EarlyChristianSearchResults({
   scriptureBooks,
   showEmptyState = true
 }: {
+  targetCorpus?: "early-christian" | "christian-classics";
   authors: string[];
   canon: CanonMode;
   isSearching: boolean;
@@ -78,7 +80,7 @@ export function EarlyChristianSearchResults({
                   </span>
                 </span>
                 <span className="scripture-result-text">
-                  {result.highlightPassage.rangeLabel ? (
+                  {targetCorpus !== "christian-classics" && result.highlightPassage.rangeLabel ? (
                     <>
                       <span className="result-range-label">
                         {result.highlightPassage.rangeLabel}.
@@ -99,7 +101,7 @@ export function EarlyChristianSearchResults({
                   </button>
                   <Form method="post">
                     <input type="hidden" name="intent" value="similar-passage" />
-                    <input type="hidden" name="targetCorpus" value="early-christian" />
+                    <input type="hidden" name="targetCorpus" value={targetCorpus} />
                     <input
                       type="hidden"
                       name="sourcePassageId"

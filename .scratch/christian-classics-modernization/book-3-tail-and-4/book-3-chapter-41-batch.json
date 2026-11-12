@@ -1,0 +1,49 @@
+{
+  "workId": "classics:imitation",
+  "chapterStart": 78,
+  "chapterEnd": 78,
+  "entries": [
+    {
+      "chapterId": "classics:imitation:book-3.41",
+      "verse": 1,
+      "originalText": "“My Son, make it no matter of thine, if thou see others honoured and exalted, and thyself despised and humbled.",
+      "modernizedText": "“My Son, do not be troubled if you see others honored and exalted, and yourself despised and humbled."
+    },
+    {
+      "chapterId": "classics:imitation:book-3.41",
+      "verse": 2,
+      "originalText": "Lift up thine heart to Me in heaven, and then the contempt of men upon earth will not make thee sad.”",
+      "modernizedText": "Lift up your heart to Me in heaven, and then the contempt of people on earth will not make you sad.”"
+    },
+    {
+      "chapterId": "classics:imitation:book-3.41",
+      "verse": 3,
+      "originalText": "O Lord, we are in blindness, and are quickly seduced by vanity.",
+      "modernizedText": "O Lord, we are blind and are quickly led astray by vanity."
+    },
+    {
+      "chapterId": "classics:imitation:book-3.41",
+      "verse": 4,
+      "originalText": "If I look rightly within myself, never was injury done unto me by any creature, and therefore I have nought whereof to complain before Thee.",
+      "modernizedText": "If I look honestly within myself, no creature has ever done me an injury, and therefore I have nothing to complain of before You."
+    },
+    {
+      "chapterId": "classics:imitation:book-3.41",
+      "verse": 5,
+      "originalText": "But because I have many times and grievously sinned against Thee, all creatures do justly take arms against me.",
+      "modernizedText": "But because I have sinned against You many times and grievously, all creatures justly take up arms against me."
+    },
+    {
+      "chapterId": "classics:imitation:book-3.41",
+      "verse": 6,
+      "originalText": "Therefore to me confusion and contempt are justly due, but to Thee praise and honour and glory.",
+      "modernizedText": "Therefore confusion and contempt are justly due to me, but to You, praise and honor and glory."
+    },
+    {
+      "chapterId": "classics:imitation:book-3.41",
+      "verse": 7,
+      "originalText": "And except I dispose myself for this, namely, to be willing that every creature should despise and desert me, and that I should be esteemed altogether as nothing, I cannot be inwardly filled with peace and strength, nor spiritually enlightened, nor fully united to Thee.",
+      "modernizedText": "Unless I prepare myself for this—that is, to be willing that every creature should despise and desert me, and that I should be regarded as nothing at all—I cannot be inwardly filled with peace and strength, nor spiritually enlightened, nor fully united to You."
+    }
+  ]
+}

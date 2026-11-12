@@ -1,19 +1,19 @@
 # Cross Cannon
 
-Cross Cannon is a reader and search context for Scripture and early Christian
-texts. Its language distinguishes reader intent, restorable reading state, and
+Cross Cannon is a reader and search context for Scripture, early Christian
+texts, and Christian Classics. Its language distinguishes reader intent, restorable reading state, and
 search source material from lower-level browser or storage mechanics.
 
 ## Language
 
 **Book**:
 A named text within a reader corpus, containing ordered chapters. In Scripture,
-a Book belongs to a Canon; for non-scriptural texts, prefer Early Christian Work
-when referring to the work as a whole.
+a Book belongs to a Canon; for non-scriptural texts, prefer Work when referring to
+the text as a whole.
 _Avoid_: File, asset, source row
 
 **Chapter**:
-An ordered division of a Book or Early Christian Work. A Chapter is the stable
+An ordered division of a Book or Work. A Chapter is the stable
 reader unit used to group passages and describe a reader location.
 _Avoid_: Page, section file, scroll region
 
@@ -29,8 +29,8 @@ _Avoid_: Result text, paragraph row, Bible snippet
 
 **Canon**:
 A tradition-specific set and order of Scripture Books available for Scripture
-reading and search. Canon describes Scripture scope; it does not include Early
-Christian Works.
+reading and search. Canon describes Scripture scope; it does not include non-scriptural
+Works.
 _Avoid_: Corpus, filter preset, denomination
 
 **Focused Passage**:
@@ -39,8 +39,7 @@ search. It is not the same thing as the passage currently visible in the reader.
 _Avoid_: Current passage, scroll target, selected verse
 
 **Search Request**:
-A user's intent to find Passages by theme or similarity within Scripture or
-Early Christian Works, optionally scoped by a Canon, Books, or authors.
+A user's intent to find Passages by theme or similarity within a Collection, optionally scoped by a Canon, Books, or authors.
 _Avoid_: Form submission, query payload, search action
 
 **Reader Location**:
@@ -65,6 +64,28 @@ The versioned collection of Scripture passages used as the browser's complete
 text source for reading, result display, passage lookup, and similar-passage
 source text.
 _Avoid_: Database cache, search index, static JSON
+
+**Collection**:
+A named grouping of texts available for reading and search: Scripture, Early
+Christian Works, or Christian Classics. A Collection is distinct from a Canon,
+which describes the scope of Scripture within a tradition.
+_Avoid_: Canon, bookshelf tab, database
+
+**Work**:
+A non-scriptural text with an author, source edition, and ordered Chapters. Works
+belong to a Collection and can be read, searched, and downloaded.
+_Avoid_: Asset, preview book, file
+
+**Christian Classic**:
+A Work in Christian Classics: a historically influential Christian commentary,
+theological text, or spiritual writing. Its source edition and tradition provide
+context; inclusion does not imply agreement across Christian traditions.
+_Avoid_: Scripture, Church Father
+
+**Commentary Coverage**:
+The Scripture book, chapter, and verse range discussed by a commentary Passage.
+Coverage links the original commentary to a selected Scripture Passage.
+_Avoid_: Similarity score, generated explanation, commentary verse
 
 **Early Christian Work**:
 A non-scriptural early Christian text presented for reading and search alongside

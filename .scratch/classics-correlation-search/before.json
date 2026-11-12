@@ -1,0 +1,671 @@
+[
+  {
+    "corpus": "scripture",
+    "authors": [],
+    "medianMs": 6.5282919999999915,
+    "samplesMs": [
+      36.482375000000005,
+      6.5282919999999915,
+      6.0364580000000085
+    ],
+    "resultIds": [
+      "c38ac8a3c6b795d94958b03f",
+      "a4c40b71786354e46eed4b73",
+      "0444f28e6b4acc2a8391cd27",
+      "581cfb24f9d4bb361143f11d",
+      "6cbbcf90f0daaae208a7ecb6",
+      "e6891e5315088295ac3642ec",
+      "c941eb25c1289500fb0581f6",
+      "516492ab83debf6ec33e560e",
+      "af1d89b928ce6bdd7eafe891",
+      "e5649ee4fef26021ab2b034d"
+    ],
+    "results": [
+      {
+        "id": "c38ac8a3c6b795d94958b03f",
+        "reference": "Genesis 1:7-11",
+        "score": 0.8069919943809509,
+        "type": "paragraph"
+      },
+      {
+        "id": "a4c40b71786354e46eed4b73",
+        "reference": "Genesis 1:17-21",
+        "score": 0.737855851650238,
+        "type": "paragraph"
+      },
+      {
+        "id": "0444f28e6b4acc2a8391cd27",
+        "reference": "Genesis 1:12-16",
+        "score": 0.7064134478569031,
+        "type": "paragraph"
+      },
+      {
+        "id": "581cfb24f9d4bb361143f11d",
+        "reference": "2 Esdras 6:40-43",
+        "score": 0.6405717730522156,
+        "type": "paragraph"
+      },
+      {
+        "id": "6cbbcf90f0daaae208a7ecb6",
+        "reference": "Genesis 2:1-5",
+        "score": 0.6258821487426758,
+        "type": "paragraph"
+      },
+      {
+        "highlightVerse": 31,
+        "id": "e6891e5315088295ac3642ec",
+        "reference": "Genesis 1:31",
+        "score": 0.6150571703910828,
+        "type": "paragraph"
+      },
+      {
+        "id": "c941eb25c1289500fb0581f6",
+        "reference": "Genesis 1:22-26",
+        "score": 0.6139968037605286,
+        "type": "paragraph"
+      },
+      {
+        "id": "516492ab83debf6ec33e560e",
+        "reference": "John 1:1-8",
+        "score": 0.6120685338973999,
+        "type": "paragraph"
+      },
+      {
+        "id": "af1d89b928ce6bdd7eafe891",
+        "reference": "2 Esdras 6:1-4",
+        "score": 0.5663480162620544,
+        "type": "paragraph"
+      },
+      {
+        "id": "e5649ee4fef26021ab2b034d",
+        "reference": "Genesis 1:27-30",
+        "score": 0.5478862524032593,
+        "type": "paragraph"
+      }
+    ]
+  },
+  {
+    "corpus": "early-christian",
+    "authors": [],
+    "medianMs": 39.21691700000002,
+    "samplesMs": [
+      305.09725000000003,
+      38.91429099999999,
+      39.21691700000002
+    ],
+    "resultIds": [
+      "anf02:iv.ii.ii.xi",
+      "npnf208:viii.vii",
+      "npnf208:viii.iii",
+      "anf02:iv.ii.ii.xiii",
+      "anf02:iv.ii.ii.x",
+      "npnf209:iii.iv.ii.ix",
+      "npnf208:viii.iv",
+      "anf03:v.v.xxvi",
+      "anf03:vi.iii.iii",
+      "npnf208:viii.v"
+    ],
+    "results": [
+      {
+        "author": "Theophilus of Antioch",
+        "chapterId": "anf02:iv.ii.ii.xi",
+        "chapterReference": "Theophilus to Autolycus 25",
+        "date": "second century",
+        "highlightPassage": {
+          "id": "ecw:28d4462057fec3cd7e2e7165",
+          "rangeLabel": "4-6",
+          "reference": "Theophilus to Autolycus 25:4-6",
+          "text": "And the evening and the morning were the first day. And God said, Let there be a firmament in the midst of the waters, and let it divide the waters from the waters: and it was so. And God made the firmament, and divided the waters which were under the firmament from the waters which were above the firmament.",
+          "verseEnd": 6,
+          "verseStart": 4
+        },
+        "score": 0.8077033758163452,
+        "source": "anf02",
+        "title": "Theophilus to Autolycus"
+      },
+      {
+        "author": "Basil of Caesarea",
+        "chapterId": "npnf208:viii.vii",
+        "chapterReference": "The Hex\u00e6meron. 7",
+        "date": null,
+        "highlightPassage": {
+          "id": "ecw:b4e2b4ee8bd5ad0fbbdfd558",
+          "rangeLabel": "19-21",
+          "reference": "The Hex\u00e6meron. 7:19-21",
+          "text": "\u201cAnd God said, Let there be lights in the firmament of the heaven to give light upon the earth, and to divide the day from the night.\u201d Heaven and earth were the first; after them was created light; the day had been distinguished from the night, then had appeared the firmament and the dry element. The water had been gathered into the reservoir assigned to it, the earth displayed its productions, it had caused many kinds of herbs to germinate and it was adorned with all kinds of plants.",
+          "verseEnd": 21,
+          "verseStart": 19
+        },
+        "score": 0.7860943078994751,
+        "source": "npnf208",
+        "title": "The Hex\u00e6meron."
+      },
+      {
+        "author": "Basil of Caesarea",
+        "chapterId": "npnf208:viii.iii",
+        "chapterReference": "The Hex\u00e6meron. 3",
+        "date": null,
+        "highlightPassage": {
+          "id": "ecw:e1f7253b17d6cc12b2b83a53",
+          "rangeLabel": "136-138",
+          "reference": "The Hex\u00e6meron. 3:136-138",
+          "text": "And God said, Let there be light. The first word of God created the nature of light; it made darkness vanish, dispelled gloom, illuminated the world, and gave to all beings at the same time a sweet and gracious aspect. The heavens, until then enveloped in darkness, appeared with that beauty which they still present to our eyes.",
+          "verseEnd": 138,
+          "verseStart": 136
+        },
+        "score": 0.742892324924469,
+        "source": "npnf208",
+        "title": "The Hex\u00e6meron."
+      },
+      {
+        "author": "Theophilus of Antioch",
+        "chapterId": "anf02:iv.ii.ii.xiii",
+        "chapterReference": "Theophilus to Autolycus 27",
+        "date": "second century",
+        "highlightPassage": {
+          "id": "ecw:3308d77d1e7e67efb043984f",
+          "rangeLabel": "13-15",
+          "reference": "Theophilus to Autolycus 27:13-15",
+          "text": "And the light God called Day, and the darkness Night. Since man would not have been able to call the light Day, or the darkness Night, nor, indeed, to have given names to the other things, had not he received the nomenclature from God, who made the things themselves. In the very beginning, therefore, of the history and genesis of the world, the holy Scripture spoke not concerning this firmament [which we see], but concerning another heaven, which is to us invisible, after which this heaven which we see has been called \u201cfirmament,\u201d and to which half the water was taken up that it might serve for rains, and showers, and dews to mankind.",
+          "verseEnd": 15,
+          "verseStart": 13
+        },
+        "score": 0.735586404800415,
+        "source": "anf02",
+        "title": "Theophilus to Autolycus"
+      },
+      {
+        "author": "Theophilus of Antioch",
+        "chapterId": "anf02:iv.ii.ii.x",
+        "chapterReference": "Theophilus to Autolycus 24",
+        "date": "second century",
+        "highlightPassage": {
+          "id": "ecw:475902d3076de985858372a0",
+          "rangeLabel": "10-14",
+          "reference": "Theophilus to Autolycus 24:10-14",
+          "text": "First he named the \u201cbeginning,\u201d and \u201ccreation,\u201d then he thus introduced God; for not lightly and on slight occasion is it right to name God. For the divine wisdom foreknew that some would trifle and name a multitude of gods that do not exist. In order, therefore, that the living God might be known by His works, and that [it might be known that] by His Word God created the heavens and the earth, and all that is therein, he said, \u201cIn the beginning God created the heavens and the earth.\u201d Then having spoken of their creation, he explains to us: \u201cAnd the earth was without form, and void, and darkness was upon the face of the deep; and the Spirit of God moved upon the water.\u201d This, sacred Scripture teaches at the outset, to show that matter, from which God made and fashioned the world, was in some manner created, being produced by God.",
+          "verseEnd": 14,
+          "verseStart": 10
+        },
+        "score": 0.7233490943908691,
+        "source": "anf02",
+        "title": "Theophilus to Autolycus"
+      },
+      {
+        "author": "John of Damascus",
+        "chapterId": "npnf209:iii.iv.ii.ix",
+        "chapterReference": "An Exact Exposition of the Orthodox Faith. 23",
+        "date": null,
+        "highlightPassage": {
+          "id": "ecw:37b3228054ac18e73ce253d6",
+          "rangeLabel": "7-9",
+          "reference": "An Exact Exposition of the Orthodox Faith. 23:7-9",
+          "text": "And first God created the firmament to divide the water above the firmament from the water below the firmament. For in the midst of the sea of waters the firmament was established at the Master\u2019s decree. And out of it God bade the firmament arise, and it arose.",
+          "verseEnd": 9,
+          "verseStart": 7
+        },
+        "score": 0.688236653804779,
+        "source": "npnf209",
+        "title": "An Exact Exposition of the Orthodox Faith."
+      },
+      {
+        "author": "Basil of Caesarea",
+        "chapterId": "npnf208:viii.iv",
+        "chapterReference": "The Hex\u00e6meron. 4",
+        "date": null,
+        "highlightPassage": {
+          "id": "ecw:d33500425a35bab0f0862c69",
+          "rangeLabel": "31-33",
+          "reference": "The Hex\u00e6meron. 4:31-33",
+          "text": "Scripture might continue the history as it is begun: In the beginning God created the heaven and the earth; afterwards He created light, then He created the firmament. But, by making God command and speak, the Scripture tacitly shows us Him to Whom this order and these words are addressed. It is not that it grudges us the knowledge of the truth, but that it may kindle our desire by showing us some trace and indication of the mystery.",
+          "verseEnd": 33,
+          "verseStart": 31
+        },
+        "score": 0.6870643496513367,
+        "source": "npnf208",
+        "title": "The Hex\u00e6meron."
+      },
+      {
+        "author": "Tertullian",
+        "chapterId": "anf03:v.v.xxvi",
+        "chapterReference": "Against Hermogenes. 26",
+        "date": null,
+        "highlightPassage": {
+          "id": "ecw:71f2150f1ff91b3c881bd527",
+          "rangeLabel": "1-3",
+          "reference": "Against Hermogenes. 26:1-3",
+          "text": "We, however, have but one God, and but one earth too, which in the beginning God made. The Scripture, which at its very outset proposes to run through the order thereof tells us as its first information that it was created; it next proceeds to set forth what sort of earth it was. In like manner with respect to the heaven, it informs us first of its creation\u2014\u201cIn the beginning God made the heaven:\u201d it then goes on to introduce its arrangement; how that God both separated \u201cthe water which was below the firmament from that which was above the firmament,\u201d and called the firmament heaven,\u2014the very thing He had created in the beginning.",
+          "verseEnd": 3,
+          "verseStart": 1
+        },
+        "score": 0.6755772829055786,
+        "source": "anf03",
+        "title": "Against Hermogenes."
+      },
+      {
+        "author": "Tertullian",
+        "chapterId": "anf03:vi.iii.iii",
+        "chapterReference": "On Baptism. 3",
+        "date": null,
+        "highlightPassage": {
+          "id": "ecw:59e8dfa70e60f4f6be067144",
+          "rangeLabel": "7-9",
+          "reference": "On Baptism. 3:7-9",
+          "text": "But the earth was invisible, and unorganized, and darkness was over the abyss; and the Spirit of the Lord was hovering over the waters.\u201d The first thing, O man, which you have to venerate, is the age of the waters in that their substance is ancient; the second, their dignity, in that they were the seat of the Divine Spirit, more pleasing to Him, no doubt, than all the other then existing elements. For the darkness was total thus far, shapeless, without the ornament of stars; and the abyss gloomy; and the earth unfurnished; and the heaven unwrought: water alone\u2014always a perfect, gladsome, simple material substance, pure in itself\u2014supplied a worthy vehicle to God.",
+          "verseEnd": 9,
+          "verseStart": 7
+        },
+        "score": 0.6752025485038757,
+        "source": "anf03",
+        "title": "On Baptism."
+      },
+      {
+        "author": "Basil of Caesarea",
+        "chapterId": "npnf208:viii.v",
+        "chapterReference": "The Hex\u00e6meron. 5",
+        "date": null,
+        "highlightPassage": {
+          "id": "ecw:937dba26b069b06dff770c72",
+          "rangeLabel": "28-30",
+          "reference": "The Hex\u00e6meron. 5:28-30",
+          "text": "Think, in reality, that a word of God makes the nature, and that this order is for the creature a direction for its future course. There was only one creation of day and night, and since that moment they have incessantly succeeded each other and divided time into equal parts. \u201cLet the waters be gathered together.\u201d",
+          "verseEnd": 30,
+          "verseStart": 28
+        },
+        "score": 0.6640638709068298,
+        "source": "npnf208",
+        "title": "The Hex\u00e6meron."
+      }
+    ]
+  },
+  {
+    "corpus": "christian-classics",
+    "authors": [],
+    "medianMs": 201.42495799999983,
+    "samplesMs": [
+      1478.0404170000002,
+      201.42495799999983,
+      197.54304199999996
+    ],
+    "resultIds": [
+      "classics:henry:Gen.1",
+      "classics:wesley:Gen.1",
+      "classics:henry:Job.38",
+      "classics:wesley:Ps.104",
+      "classics:henry:Gen.2",
+      "classics:catena:John.1",
+      "classics:henry:Ps.33",
+      "classics:henry:Prov.8",
+      "classics:henry:Ps.104",
+      "classics:wesley:Heb.11"
+    ],
+    "results": [
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Gen.1",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Genesis 1",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:32b5b50db5fdc70af1114c2f",
+          "rangeLabel": "28-30",
+          "reference": "Commentary on the Whole Bible \u00b7 Genesis 1:28-30",
+          "text": "1 In the beginning God created the heaven and the earth. 2 And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.",
+          "verseEnd": 30,
+          "verseStart": 28
+        },
+        "score": 0.8064847588539124,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "John Wesley",
+        "chapterId": "classics:wesley:Gen.1",
+        "chapterReference": "Notes on the Bible \u00b7 Genesis 1",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:7815243a852dd3da1aa91a3f",
+          "rangeLabel": "64-66",
+          "reference": "Notes on the Bible \u00b7 Genesis 1:64-66",
+          "text": "And darkness was upon the face of the deep-God did not create this darkness, (as he is said to create the darkness of affliction, Isaiah xlv, 7.) for it was only the want of light. 2. The Spirit of God was the first Mover; He moved upon the face of the waters - He moved upon the face of the deep, as the hen gathereth her chicken under her wings, and hovers over them, to warm and cherish them, Matt. xxiii, 37 as the eagle stirs up her nest, and fluttereth over her young, ('tis the same word that is here used) Deut. xxxii, 11.",
+          "verseEnd": 66,
+          "verseStart": 64
+        },
+        "score": 0.6923505067825317,
+        "source": "wesley",
+        "title": "Notes on the Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Job.38",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Job 38",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:9456415cd80612f7d9fc4d7e",
+          "rangeLabel": "304-306",
+          "reference": "Commentary on the Whole Bible \u00b7 Job 38:304-306",
+          "text": "How the light and darkness were at first made. When God, in the beginning, first spread darkness upon the face of the deep, and afterwards commanded the light to shine out of darkness, by that mighty word, Let there be light, was Job a witness to the order, to the operation? can he tell where the fountains of light and darkness are, and where those mighty princes keep their courts distance, while in one world they rule alternately? Though we long ever so much either for the shining forth of the morning or the shadows of the evening, we know not whither to send, or go, to fetch them, nor can tell the paths to the house thereof, v.",
+          "verseEnd": 306,
+          "verseStart": 304
+        },
+        "score": 0.6511171460151672,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "John Wesley",
+        "chapterId": "classics:wesley:Ps.104",
+        "chapterReference": "Notes on the Bible \u00b7 Psalms 104",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:ab48b34968c0c83b020bbe06",
+          "rangeLabel": "16-18",
+          "reference": "Notes on the Bible \u00b7 Psalms 104:16-18",
+          "text": "2. Light - With that first created light, which the psalmist fitly puts in the first place, as being the first of God's visible works. 3.",
+          "verseEnd": 18,
+          "verseStart": 16
+        },
+        "score": 0.6332380771636963,
+        "source": "wesley",
+        "title": "Notes on the Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Gen.2",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Genesis 2",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:00448b3f091dc4af8b84ba50",
+          "rangeLabel": "58-60",
+          "reference": "Commentary on the Whole Bible \u00b7 Genesis 2:58-60",
+          "text": "4 These are the generations of the heavens and of the earth when they were created, in the day that the Lord God made the earth and the heavens, 5 And every plant of the field before it was in the earth, and every herb of the field before it grew: for the Lord God had not caused it to rain upon the earth, and there was not a man to till the ground. 6 But there went up a mist from the earth, and watered the whole face of the ground. 7 And the Lord God formed man of the dust of the ground, and breathed into his nostrils the breath of life; and man became a living soul.",
+          "verseEnd": 60,
+          "verseStart": 58
+        },
+        "score": 0.6207437515258789,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Thomas Aquinas",
+        "chapterId": "classics:catena:John.1",
+        "chapterReference": "Catena Aurea \u00b7 John 1",
+        "date": "13th century",
+        "highlightPassage": {
+          "id": "ccw:90dbfd32da8e2fa1518ae785",
+          "rangeLabel": "178-180",
+          "reference": "Catena Aurea \u00b7 John 1:178-180",
+          "text": "Chrysostom: Moses indeed, in the beginning of the Old Testament, speaks to us in much detail of the natural world, saying, In the beginning God made the heaven and the earth; and then relates how that the light, and the firmament, and the stars, and the various kinds of animals were created. But the Evangelist sums up the whole of this in a word, as familiar to his hearers; and hastens to loftier matter, making the whole of his book to bear not on the works, but on the Maker. Augustine: Since all things were made by him, it is evident that light was as also, when God said, Let there be light.",
+          "verseEnd": 180,
+          "verseStart": 178
+        },
+        "score": 0.6199377179145813,
+        "source": "catena",
+        "title": "Catena Aurea"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Ps.33",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Psalms 33",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:a67edca875fbe21581e5fc0a",
+          "rangeLabel": "106-108",
+          "reference": "Commentary on the Whole Bible \u00b7 Psalms 33:106-108",
+          "text": "7. The earth was at first covered with the water, and, being heavier, must of course subside and sink under it; but, to show from the very first that the God of nature is not tied to the ordinary method of nature, and the usual operations of his powers, with a word's speaking he gathered the waters together on a heap, that the dry land might appear, yet left them not to continue on a heap, but laid up the depth in store-houses, not only in the flats where the seas make their beds, and in which they are locked up by the sand on the shore as in storehouses, but in secret subterraneous caverns, where they are hidden from the eyes of all living, but were reserved as in a store-house for that day when those fountains of the great deep were to be broken up; and they are still laid up there in store, for which use the great Master of the house knows best. 3.",
+          "verseEnd": 108,
+          "verseStart": 106
+        },
+        "score": 0.6127381920814514,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Prov.8",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Proverbs 8",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:c57c635bfb900b7d5d8de940",
+          "rangeLabel": "292-294",
+          "reference": "Commentary on the Whole Bible \u00b7 Proverbs 8:292-294",
+          "text": "16. 1. When, on the first day of the creation, in the very beginning of time, God said, Let there be light, and with a word produced it, this eternal Wisdom was that almighty Word: Then I was there, when he prepared the heavens, the fountain of that light, which, whatever it is here, is there substantial.",
+          "verseEnd": 294,
+          "verseStart": 292
+        },
+        "score": 0.6072272658348083,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Ps.104",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Psalms 104",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:f26c3da053a1ffa9f1f77ce1",
+          "rangeLabel": "64-66",
+          "reference": "Commentary on the Whole Bible \u00b7 Psalms 104:64-66",
+          "text": "2. So he did at first, when he made the firmament, which in the Hebrew has its name from its being expanded, or stretched out, Gen. i. 7.",
+          "verseEnd": 66,
+          "verseStart": 64
+        },
+        "score": 0.6059422492980957,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "John Wesley",
+        "chapterId": "classics:wesley:Heb.11",
+        "chapterReference": "Notes on the Bible \u00b7 Hebrews 11",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:d15abc46bb4020bc8cd2df7c",
+          "rangeLabel": "22-24",
+          "reference": "Notes on the Bible \u00b7 Hebrews 11:22-24",
+          "text": "So that things which are seen - As the sun, earth, stars. Were made of things which do not appear - Out of the dark, unapparent chaos, Gen. i, 2. And this very chaos was created by the divine power; for before it was thus created it had no existence in nature.",
+          "verseEnd": 24,
+          "verseStart": 22
+        },
+        "score": 0.5974335670471191,
+        "source": "wesley",
+        "title": "Notes on the Bible"
+      }
+    ]
+  },
+  {
+    "corpus": "christian-classics",
+    "authors": [
+      "Matthew Henry and continuators"
+    ],
+    "medianMs": 3620.3141250000003,
+    "samplesMs": [
+      4849.029957999999,
+      3620.3141250000003,
+      3515.8194169999992
+    ],
+    "resultIds": [
+      "classics:henry:Gen.1",
+      "classics:henry:Job.38",
+      "classics:henry:Gen.2",
+      "classics:henry:Ps.33",
+      "classics:henry:Prov.8",
+      "classics:henry:Ps.104",
+      "classics:henry:Josh.3",
+      "classics:henry:John.1",
+      "classics:henry:2Pet.3",
+      "classics:henry:Jas.1"
+    ],
+    "results": [
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Gen.1",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Genesis 1",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:32b5b50db5fdc70af1114c2f",
+          "rangeLabel": "28-30",
+          "reference": "Commentary on the Whole Bible \u00b7 Genesis 1:28-30",
+          "text": "1 In the beginning God created the heaven and the earth. 2 And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.",
+          "verseEnd": 30,
+          "verseStart": 28
+        },
+        "score": 0.8064847588539124,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Job.38",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Job 38",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:9456415cd80612f7d9fc4d7e",
+          "rangeLabel": "304-306",
+          "reference": "Commentary on the Whole Bible \u00b7 Job 38:304-306",
+          "text": "How the light and darkness were at first made. When God, in the beginning, first spread darkness upon the face of the deep, and afterwards commanded the light to shine out of darkness, by that mighty word, Let there be light, was Job a witness to the order, to the operation? can he tell where the fountains of light and darkness are, and where those mighty princes keep their courts distance, while in one world they rule alternately? Though we long ever so much either for the shining forth of the morning or the shadows of the evening, we know not whither to send, or go, to fetch them, nor can tell the paths to the house thereof, v.",
+          "verseEnd": 306,
+          "verseStart": 304
+        },
+        "score": 0.6511171460151672,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Gen.2",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Genesis 2",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:00448b3f091dc4af8b84ba50",
+          "rangeLabel": "58-60",
+          "reference": "Commentary on the Whole Bible \u00b7 Genesis 2:58-60",
+          "text": "4 These are the generations of the heavens and of the earth when they were created, in the day that the Lord God made the earth and the heavens, 5 And every plant of the field before it was in the earth, and every herb of the field before it grew: for the Lord God had not caused it to rain upon the earth, and there was not a man to till the ground. 6 But there went up a mist from the earth, and watered the whole face of the ground. 7 And the Lord God formed man of the dust of the ground, and breathed into his nostrils the breath of life; and man became a living soul.",
+          "verseEnd": 60,
+          "verseStart": 58
+        },
+        "score": 0.6207437515258789,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Ps.33",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Psalms 33",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:a67edca875fbe21581e5fc0a",
+          "rangeLabel": "106-108",
+          "reference": "Commentary on the Whole Bible \u00b7 Psalms 33:106-108",
+          "text": "7. The earth was at first covered with the water, and, being heavier, must of course subside and sink under it; but, to show from the very first that the God of nature is not tied to the ordinary method of nature, and the usual operations of his powers, with a word's speaking he gathered the waters together on a heap, that the dry land might appear, yet left them not to continue on a heap, but laid up the depth in store-houses, not only in the flats where the seas make their beds, and in which they are locked up by the sand on the shore as in storehouses, but in secret subterraneous caverns, where they are hidden from the eyes of all living, but were reserved as in a store-house for that day when those fountains of the great deep were to be broken up; and they are still laid up there in store, for which use the great Master of the house knows best. 3.",
+          "verseEnd": 108,
+          "verseStart": 106
+        },
+        "score": 0.6127381920814514,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Prov.8",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Proverbs 8",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:c57c635bfb900b7d5d8de940",
+          "rangeLabel": "292-294",
+          "reference": "Commentary on the Whole Bible \u00b7 Proverbs 8:292-294",
+          "text": "16. 1. When, on the first day of the creation, in the very beginning of time, God said, Let there be light, and with a word produced it, this eternal Wisdom was that almighty Word: Then I was there, when he prepared the heavens, the fountain of that light, which, whatever it is here, is there substantial.",
+          "verseEnd": 294,
+          "verseStart": 292
+        },
+        "score": 0.6072272658348083,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Ps.104",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Psalms 104",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:f26c3da053a1ffa9f1f77ce1",
+          "rangeLabel": "64-66",
+          "reference": "Commentary on the Whole Bible \u00b7 Psalms 104:64-66",
+          "text": "2. So he did at first, when he made the firmament, which in the Hebrew has its name from its being expanded, or stretched out, Gen. i. 7.",
+          "verseEnd": 66,
+          "verseStart": 64
+        },
+        "score": 0.6059422492980957,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Josh.3",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 Joshua 3",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:24634824a0e523dd62b94855",
+          "rangeLabel": "166-168",
+          "reference": "Commentary on the Whole Bible \u00b7 Joshua 3:166-168",
+          "text": "And by the dividing of the waters from the waters, and the making of the dry land to appear which had been covered, God would remind them of that in which Moses by revelation had instructed them concerning the work of creation (Gen. i. 6, 9), that by what they now saw their belief of that which they there read might be assisted, and they might know that the God whom they worshipped was the same God that made the world and that it was the same power that was engaged and employed for them. 3.",
+          "verseEnd": 168,
+          "verseStart": 166
+        },
+        "score": 0.5941996574401855,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:John.1",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 John 1",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:2024dab69f3825410d510669",
+          "rangeLabel": "16-18",
+          "reference": "Commentary on the Whole Bible \u00b7 John 1:16-18",
+          "text": "1 In the beginning was the Word, and the Word was with God, and the Word was God. 2 The same was in the beginning with God. 3 All things were made by him; and without him was not any thing made that was made.",
+          "verseEnd": 18,
+          "verseStart": 16
+        },
+        "score": 0.58348548412323,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:2Pet.3",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 2 Peter 3",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:058810e51e912e995db6d1f3",
+          "rangeLabel": "97-99",
+          "reference": "Commentary on the Whole Bible \u00b7 2 Peter 3:97-99",
+          "text": "9. Thus, says our apostle, by the word of the Lord the heavens were, as they were of old (that is, at first creation) and the earth (as it was at first a terraqueous globe) standing out of the water and in the water. Not is it only the first frame and order of the world that is here said to be by the word of God, but the after-confusion and ruin of the world, as well as the utter destruction of its inhabitants, were also by the same word; none but that God who stretched out the heavens and laid the foundation of the earth could destroy and overthrow such a vast fabric at once.",
+          "verseEnd": 99,
+          "verseStart": 97
+        },
+        "score": 0.5802512168884277,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      },
+      {
+        "author": "Matthew Henry and continuators",
+        "chapterId": "classics:henry:Jas.1",
+        "chapterReference": "Commentary on the Whole Bible \u00b7 James 1",
+        "date": "18th century",
+        "highlightPassage": {
+          "id": "ccw:4fd286830b63a84e0977ba69",
+          "rangeLabel": "307-309",
+          "reference": "Commentary on the Whole Bible \u00b7 James 1:307-309",
+          "text": "The visible light of the sun and the heavenly bodies is from him. He said, Let there be light, and there was light. Thus God is at once represented as the Creator of the sun and in some respects compared to it.",
+          "verseEnd": 309,
+          "verseStart": 307
+        },
+        "score": 0.5746535658836365,
+        "source": "henry",
+        "title": "Commentary on the Whole Bible"
+      }
+    ]
+  }
+]

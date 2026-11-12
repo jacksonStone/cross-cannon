@@ -183,15 +183,17 @@ export function useEarlyChristianReaderNavigation({
   initialChapterId,
   initialPassageRange,
   loadedChapters,
-  positionStorageKey
+  positionStorageKey,
+  readerCorpus = "fathers"
 }: {
   bookIndex: BookIndex | null;
   initialChapterId: string;
   initialPassageRange: string;
   loadedChapters: Map<string, ChapterAsset>;
   positionStorageKey: string;
+  readerCorpus?: "fathers" | "classics";
 }) {
-  const savedReaderLocation = readReaderLocation(positionStorageKey, "fathers");
+  const savedReaderLocation = readReaderLocation(positionStorageKey, readerCorpus);
   const initialStoredChapterId =
     savedReaderLocation?.chapterKey ?? readReaderPosition(positionStorageKey);
   const savedReaderPositionRef = useRef(readerLocationKey(savedReaderLocation));
@@ -224,13 +226,13 @@ export function useEarlyChristianReaderNavigation({
   const rememberReaderChapter = useCallback((chapterId: string, passageRange = "") => {
     rememberReaderLocation(positionStorageKey, createReaderLocation({
       chapterKey: chapterId,
-      corpus: "fathers",
+      corpus: readerCorpus,
       passageRange: passageRange || undefined
     }), {
       lastReportedRef: lastReportedChapterIdRef,
       savedRef: savedReaderPositionRef
     });
-  }, [positionStorageKey]);
+  }, [positionStorageKey, readerCorpus]);
   const updateActiveChapterFromScroll = useCallback((chapterId: string) => {
     rememberReaderChapter(chapterId);
     setNavigationState((current) => ({
@@ -299,8 +301,9 @@ export function useEarlyChristianReaderNavigation({
       selectedPassage: passageRange,
       selectedPassageChapterId: passageRange ? chapterId : ""
     }));
+    rememberReaderChapter(chapterId, passageRange);
     updateEarlyChristianReaderUrl(chapterId, passageRange, "replace");
-  }, []);
+  }, [rememberReaderChapter]);
 
   useBrowserLayoutEffect(() => {
     if (!bookIndex) {

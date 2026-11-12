@@ -1,4 +1,5 @@
 import type { StoredFilters } from "~/features/search/types";
+import { workCollectionForChapter } from "~/features/work-reader/collections";
 
 export type ReaderHistoryMode = "push" | "replace";
 
@@ -39,7 +40,7 @@ export function buildEarlyChristianReaderUrl(
   }
 
   const query = searchParams.toString();
-  return `/church-fathers${query ? `?${query}` : ""}`;
+  return `${workCollectionForChapter(chapterId).readerPath}${query ? `?${query}` : ""}`;
 }
 
 export function updateReaderUrl(url: string, mode: ReaderHistoryMode) {

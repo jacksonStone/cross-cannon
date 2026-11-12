@@ -1,0 +1,36 @@
+{
+  "workId": "classics:imitation",
+  "chapterId": "classics:imitation:book-4.6",
+  "entries": [
+    {
+      "verse": 1,
+      "originalText": "The Voice of the Disciple",
+      "modernizedText": "The Voice of the Disciple"
+    },
+    {
+      "verse": 2,
+      "originalText": "When I consider Thy dignity, O Lord, and mine own vileness, I tremble very exceedingly, and am confounded within myself.",
+      "modernizedText": "When I consider Your dignity, O Lord, and my own vileness, I tremble exceedingly and am confounded within myself."
+    },
+    {
+      "verse": 3,
+      "originalText": "For if I approach not, I fly from life; and if I intrude myself unworthily, I run into Thy displeasure.",
+      "modernizedText": "For if I do not approach, I flee from life; and if I intrude unworthily, I incur Your displeasure."
+    },
+    {
+      "verse": 4,
+      "originalText": "What then shall I do, O my God, Thou helper and Counsellor in necessities.",
+      "modernizedText": "What then shall I do, O my God, my helper and Counselor in need?"
+    },
+    {
+      "verse": 5,
+      "originalText": "Teach Thou me the right way; propound unto me some short exercise befitting Holy Communion.",
+      "modernizedText": "Teach me the right way; set before me some short exercise fitting for Holy Communion."
+    },
+    {
+      "verse": 6,
+      "originalText": "For it is profitable to know how I ought to prepare my heart devoutly and reverently for Thee, to the intent that I may receive Thy Sacrament to my soul’s health [or it may be also for the celebrating this so great and divine mystery].",
+      "modernizedText": "For it is profitable to know how I ought to prepare my heart devoutly and reverently for You, so that I may receive Your Sacrament for the health of my soul [or also for celebrating this great and divine mystery]."
+    }
+  ]
+}

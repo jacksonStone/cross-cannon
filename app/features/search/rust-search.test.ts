@@ -9,37 +9,42 @@ const scriptureResult = { id: "b".repeat(24), reference: "John 1:1-5", type: "pa
 const fathersResult = { author: "Clement of Rome", chapterId: "anf09:xii.iv.iii", chapterReference: "First Clement 2", date: "AD 96", title: "First Clement", source: "anf09", score: 0.7,
   highlightPassage: { id: "ecw:" + "c".repeat(24), reference: "First Clement 2:4-6", text: "The indexed passage text.", rangeLabel: "4-6", verseStart: 4, verseEnd: 6 } };
 
-for (const reader of ["scripture", "fathers"] as const) {
-  for (const target of ["scripture", "early-christian"] as const) {
+for (const reader of ["scripture", "fathers", "classics"] as const) {
+  for (const target of ["scripture", "early-christian", "christian-classics"] as const) {
     for (const similar of [false, true]) {
       test(`Rust web adapter preserves ${reader} → ${target} ${similar ? "similar" : "theme"}`, async () => {
+        const selectedSource = reader === "scripture" ? bibleSource : reader === "classics" ? "classics:imitation:book-1.1:1-3" : fathersSource;
+        const author = target === "christian-classics" ? "Matthew Henry and continuators" : "Clement of Rome";
+        const result = target === "christian-classics" ? {...fathersResult,author,chapterId:"classics:henry:Matt.5"} : fathersResult;
         const requests: Array<Record<string, unknown>> = [];
         const fetcher: typeof fetch = async (input, options) => {
           assert.ok(String(input).startsWith("http://127.0.0.1:3006/r/api/"));
           if (String(input).endsWith("/books")) return Response.json({ books: [
             { id: "John", title: "John", corpus: "scripture", author: null },
-            { id: "anf09:xii.iv", title: "First Clement", corpus: "early-christian", author: "Clement of Rome" }
+            { id: "anf09:xii.iv", title: "First Clement", corpus: "early-christian", author: "Clement of Rome" },
+            { id: "classics:henry", title: "Commentary on the Whole Bible", corpus: "christian-classics", author: "Matthew Henry and continuators" }
           ] });
           const body = JSON.parse(String(options?.body)); requests.push(body);
-          return Response.json({ results: [target === "scripture" ? scriptureResult : fathersResult], source: similar ? {
-            id: reader === "scripture" ? bibleSource : "ecw:" + "d".repeat(24), reference: "Selected passage", ...(reader === "fathers" ? { text: "Selected original text" } : {})
+          return Response.json({ results: [target === "scripture" ? scriptureResult : result], source: similar ? {
+            id: reader === "scripture" ? bibleSource : "ecw:" + "d".repeat(24), reference: "Selected passage", ...(reader !== "scripture" ? { text: "Selected original text" } : {})
           } : null });
         };
         const handler = createSearchRequestHandler(createRustSearchAdapter(fetcher, () => "http://127.0.0.1:3006/r/api"));
         const form = new FormData();
         const mode = similar ? "similar" : "theme";
-        form.set("intent", reader === "scripture" ? (target === "scripture" ? (similar ? "similar-passage" : "theme") : `${mode}-early-christian`) : (target === "early-christian" ? (similar ? "similar-passage" : "theme") : `${mode}-scripture`));
+        form.set("intent", reader === "scripture" ? (target === "scripture" ? (similar ? "similar-passage" : "theme") : `${mode}-${target === "christian-classics" ? "classics" : "early-christian"}`) : (target !== "scripture" ? (similar ? "similar-passage" : "theme") : `${mode}-scripture`));
+        form.set("targetCorpus", target);
         form.set("matchCount", "10"); form.set("canon", "catholic");
-        if (similar) form.set("sourcePassageId", reader === "scripture" ? bibleSource : fathersSource);
+        if (similar) form.set("sourcePassageId", selectedSource);
         else form.set("question", "  hope and comfort  ");
         if (target === "scripture") form.append("books", "John");
-        if (target === "early-christian") form.append(reader === "scripture" ? "earlyChristianAuthors" : "authors", "Clement of Rome");
-        const response = reader === "scripture" ? await handler(form, "scripture") : await handler(form, "fathers");
+        if (target !== "scripture") form.append(reader === "scripture" ? "earlyChristianAuthors" : "authors", author);
+        const response = reader === "scripture" ? await handler(form, "scripture") : await handler(form, reader);
         assert.equal(response.status, 200);
         const payload = await response.json();
         assert.equal(payload.targetCorpus, target);
-        assert.deepEqual(requests, [{ ...(similar ? { sourceId: reader === "scripture" ? bibleSource : fathersSource } : { query: "hope and comfort" }), limit: 10,
-          ...(target === "scripture" ? { books: ["John"] } : { authors: ["Clement of Rome"] }), corpus: target, mode: "semantic", canon: "orthodox", web: true }]);
+        assert.deepEqual(requests, [{ ...(similar ? { sourceId: selectedSource } : { query: "hope and comfort" }), limit: 10,
+          ...(target === "scripture" ? { books: ["John"] } : { authors: [author] }), corpus: target, mode: "semantic", canon: "orthodox", web: true }]);
         const results = target === "scripture"
           ? (reader === "scripture" ? payload.results : "scriptureResults" in payload ? payload.scriptureResults : undefined)
           : (reader === "scripture" ? "earlyChristianResults" in payload ? payload.earlyChristianResults : undefined : payload.results);

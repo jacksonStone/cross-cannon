@@ -5,14 +5,14 @@ COPY Cargo.toml Cargo.lock ./
 COPY rust ./rust
 ARG SOURCE_REVISION=working-tree
 
-# The integration test uses the private local indexes and runs in npm run verify.
+# Integration tests use private local indexes and run in npm run verify.
 # These Linux tests need no production data or credentials.
 RUN --mount=type=cache,id=cross-canon-api-registry,target=/usr/local/cargo/registry \
     --mount=type=cache,id=cross-canon-api-git,target=/usr/local/cargo/git \
     --mount=type=cache,id=cross-canon-api-linux-amd64,target=/src/target \
     test "$(uname -m)" = x86_64 && \
     cargo test --locked --release -p r-cross-cannon -j 2 -- \
-      --skip actual_readonly_indexes_search_and_api_contract && \
+      --skip actual_readonly_indexes && \
     cargo build --locked --release -p r-cross-cannon -j 2 && \
     mkdir -p /out/target/release /out/rust/deploy && \
     install -m 755 target/release/r-cross-cannon /out/target/release/r-cross-cannon && \

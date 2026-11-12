@@ -1,0 +1,73 @@
+{
+  "workId": "classics:imitation",
+  "chapterStart": 5,
+  "chapterEnd": 5,
+  "entries": [
+    {
+      "chapterId": "classics:imitation:book-1.5",
+      "verse": 1,
+      "originalText": "It is Truth which we must look for in Holy Writ, not cunning of words.",
+      "modernizedText": "It is Truth we must look for in Holy Scripture, not cleverness of words."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.5",
+      "verse": 2,
+      "originalText": "All Scripture ought to be read in the spirit in which it was written.",
+      "modernizedText": "All Scripture ought to be read in the spirit in which it was written."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.5",
+      "verse": 3,
+      "originalText": "We must rather seek for what is profitable in Scripture, than for what ministereth to subtlety in discourse.",
+      "modernizedText": "We must seek what is profitable in Scripture rather than what serves subtlety in discussion."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.5",
+      "verse": 4,
+      "originalText": "Therefore we ought to read books which are devotional and simple, as well as those which are deep and difficult.",
+      "modernizedText": "Therefore, we ought to read devotional and simple books as well as those that are deep and difficult."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.5",
+      "verse": 5,
+      "originalText": "And let not the weight of the writer be a stumbling-block to thee, whether he be of little or much learning, but let the love of the pure Truth draw thee to read.",
+      "modernizedText": "And do not let the standing of the writer be a stumbling block to you, whether he has little or much learning, but let love of the pure Truth draw you to read."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.5",
+      "verse": 6,
+      "originalText": "Ask not, who hath said this or that, but look to what he says.",
+      "modernizedText": "Do not ask who has said this or that, but look to what he says."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.5",
+      "verse": 7,
+      "originalText": "Men pass away, but the truth of the Lord endureth for ever.",
+      "modernizedText": "People pass away, but the truth of the Lord endures forever."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.5",
+      "verse": 8,
+      "originalText": "Without respect of persons God speaketh to us in divers manners.",
+      "modernizedText": "Without respect of persons, God speaks to us in various ways."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.5",
+      "verse": 9,
+      "originalText": "Our own curiosity often hindereth us in the reading of holy writings, when we seek to understand and discuss, where we should pass simply on.",
+      "modernizedText": "Our own curiosity often hinders us in reading holy writings, when we seek to understand and discuss where we should simply pass on."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.5",
+      "verse": 10,
+      "originalText": "If thou wouldst profit by thy reading, read humbly, simply, honestly, and not desiring to win a character for learning.",
+      "modernizedText": "If you want to benefit from your reading, read humbly, simply, and honestly, without desiring to gain a reputation for learning."
+    },
+    {
+      "chapterId": "classics:imitation:book-1.5",
+      "verse": 11,
+      "originalText": "Ask freely, and hear in silence the words of holy men; nor be displeased at the hard sayings of older men than thou, for they are not uttered without cause.",
+      "modernizedText": "Ask freely, and listen in silence to the words of holy men; do not be displeased at the hard sayings of those older than you, for they are not spoken without cause."
+    }
+  ]
+}
