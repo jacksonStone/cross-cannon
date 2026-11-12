@@ -33,3 +33,11 @@
   .account-brand { margin-top: 46px; }
   .account-card { padding: 24px 20px; }
 }
+.native-sign-in-page { max-width: 460px; min-height: 100svh; padding: 24px 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; }
+.native-sign-in-page .account-brand { margin: 0 0 14px; }
+.native-sign-in-page h1 { font-size: 1.8rem; margin-bottom: 18px; }
+.native-sign-in-page .account-card { padding: 22px; }
+.native-sign-in-page h2 { font-size: 1.15rem; }
+.native-sign-in-page p { font-size: .9rem; line-height: 1.5; margin: 10px 0; overflow-wrap: anywhere; }
+.native-sign-in-page .google-sign-in { box-sizing: border-box; display: block; text-align: center; text-decoration: none; }
+.native-sign-in-page a:not(.google-sign-in) { font-size: .85rem; }

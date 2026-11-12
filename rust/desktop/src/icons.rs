@@ -10,6 +10,7 @@ pub(super) enum Icon {
     Pause,
     Close,
     Star,
+    Account,
 }
 
 pub(super) fn button(
@@ -46,6 +47,7 @@ pub(super) fn button(
                     Icon::Pause => "Pause chapter audio",
                     Icon::Close => "Close tools",
                     Icon::Star => "Favorite work",
+                    Icon::Account => "Account and reading progress",
                 }
             } else {
                 label
@@ -96,6 +98,20 @@ pub(super) fn paint(painter: &egui::Painter, icon: Icon, center: Pos2, color: Co
         painter.line_segment([at(a.0, a.1), at(b.0, b.1)], stroke);
     };
     match icon {
+        Icon::Account => {
+            painter.circle_stroke(at(0.0, -4.0), 3.5, stroke);
+            painter.add(egui::Shape::line(
+                vec![
+                    at(-7.0, 8.0),
+                    at(-6.0, 3.5),
+                    at(-3.0, 1.5),
+                    at(3.0, 1.5),
+                    at(6.0, 3.5),
+                    at(7.0, 8.0),
+                ],
+                stroke,
+            ));
+        }
         Icon::Search => {
             painter.circle_stroke(at(-2.0, -2.0), 5.5, stroke);
             line((2.0, 2.0), (7.0, 7.0));

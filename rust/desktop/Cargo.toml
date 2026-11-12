@@ -19,6 +19,7 @@ rodio = { version = "0.21.1", default-features = false, features = ["playback", 
 
 [target.'cfg(not(target_os = "ios"))'.dependencies]
 eframe = { version = "0.31", default-features = false, features = ["glow", "x11", "wayland", "accesskit"] }
+webbrowser = "1.2"
 
 [target.'cfg(target_os = "ios")'.dependencies]
 eframe = { version = "0.31", default-features = false, features = ["wgpu"] }

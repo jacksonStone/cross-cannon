@@ -2,11 +2,18 @@ import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-r
 import { authConfigured, getAuth, getAccountsDatabase, PRIVATE_HEADERS, requireSameOrigin } from "~/features/account/auth.server";
 import { parseLocation } from "~/features/account/progress";
 import { readProgress, saveProgress } from "~/features/account/progress.server";
+import { nativeSession } from "~/features/account/native-session.server";
+import { accountJson } from "~/features/account/json-body.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   if (!authConfigured()) return json({ configured: false, user: null, progress: {} }, { headers: PRIVATE_HEADERS });
   try {
-    const { response: session, headers } = await getAuth().api.getSession({ headers: request.headers, returnHeaders: true });
+    const native = request.headers.has("Authorization");
+    const appUser = native ? nativeSession(request) : null;
+    const { response: session, headers } = native
+      ? { response: appUser ? { user: appUser } : null, headers: new Headers() }
+      : await getAuth().api.getSession({ headers: request.headers, returnHeaders: true });
+    if (native && !session) return json({ error: "Sign in again." }, { status: 401, headers: PRIVATE_HEADERS });
     for (const [key, value] of Object.entries(PRIVATE_HEADERS)) headers.set(key, value);
     return json({
       configured: true,
@@ -21,34 +28,19 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export async function action({ request }: ActionFunctionArgs) {
   if (!authConfigured()) return json({ error: "Sign-in is unavailable." }, { status: 503, headers: PRIVATE_HEADERS });
-  requireSameOrigin(request);
+  if (!request.headers.has("Authorization") || request.headers.has("Origin")) requireSameOrigin(request);
   if (request.method !== "POST") return new Response(null, { status: 405, headers: PRIVATE_HEADERS });
-  const session = await getAuth().api.getSession({ headers: request.headers });
+  const appUser = request.headers.has("Authorization") ? nativeSession(request) : null;
+  const session = request.headers.has("Authorization") ? (appUser ? { user: appUser } : null)
+    : await getAuth().api.getSession({ headers: request.headers });
   if (!session) return json({ error: "Sign in to sync progress." }, { status: 401, headers: PRIVATE_HEADERS });
-  if (!request.headers.get("Content-Type")?.startsWith("application/json")) {
-    return new Response(null, { status: 415, headers: PRIVATE_HEADERS });
-  }
-  const reader = request.body?.getReader();
-  const decoder = new TextDecoder();
-  let body = "";
-  let size = 0;
-  if (reader) {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > 4096) {
-        void reader.cancel();
-        return new Response(null, { status: 413, headers: PRIVATE_HEADERS });
-      }
-      body += decoder.decode(value, { stream: true });
-    }
-    body += decoder.decode();
-  }
   let value;
-  try { value = JSON.parse(body); } catch { return new Response(null, { status: 400, headers: PRIVATE_HEADERS }); }
+  try { value = await accountJson(request); } catch (error) {
+    if (error instanceof Response) return error;
+    throw error;
+  }
   const location = parseLocation(value?.location);
-  if (!location || !Number.isSafeInteger(value?.revision) || value.revision < 0) {
+  if (!location || typeof value.revision !== "number" || !Number.isSafeInteger(value.revision) || value.revision < 0) {
     return json({ error: "Invalid reader location." }, { status: 400, headers: PRIVATE_HEADERS });
   }
   const result = saveProgress(getAccountsDatabase(), session.user.id, location, value.revision);

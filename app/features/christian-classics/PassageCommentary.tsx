@@ -24,6 +24,8 @@ export function PassageCommentary({
   const [error, setError] = useState("");
   const [selected, setSelected] = useState("");
   const location = parsePassageLocation(passage.reference);
+  const verseStart = passage.verses[0]?.number ?? 1;
+  const verseEnd = passage.verses.at(-1)?.number ?? verseStart;
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
@@ -32,9 +34,9 @@ export function PassageCommentary({
       fetcher.load(
         `/api/classic-commentary?book=${encodeURIComponent(
           location.book
-        )}&chapter=${location.chapter}`
+        )}&chapter=${location.chapter}&verseStart=${verseStart}&verseEnd=${verseEnd}`
       );
-  }, [location?.book, location?.chapter]);
+  }, [location?.book, location?.chapter, verseStart, verseEnd]);
   const works = (fetcher.data?.works ?? []).filter(
     (work): work is NonNullable<typeof work> => Boolean(work)
   );
@@ -81,7 +83,7 @@ export function PassageCommentary({
       <header className="classic-commentary-header">
         <div>
           <p className="collection-kicker">Christian Classics</p>
-          <h2 id="classic-commentary-title">Read with commentary</h2>
+          <h2 id="classic-commentary-title">Commentaries on {passage.reference}</h2>
         </div>
         <button type="button" className="context-button" onClick={onClose}>
           Close
@@ -105,7 +107,7 @@ export function PassageCommentary({
           )}
           {fetcher.data && fetcher.state === "idle" && !works.length && (
             <p>
-              No commentary on this chapter is included in the collection yet.
+              No commentary indexed to these verses is included in the collection yet.
             </p>
           )}
           {!!works.length && (

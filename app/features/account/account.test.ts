@@ -13,6 +13,8 @@ import { parseLocation, type Progress } from "./progress";
 import { readProgress, saveProgress } from "./progress.server";
 import { loader, action } from "../../routes/api.account";
 import { action as authAction, loader as authLoader } from "../../routes/api.auth.$";
+import { action as nativeAction } from "../../routes/api.native-login";
+import { approveNativeLogin, pollNativeLogin, startNativeLogin } from "./native-session.server";
 import type { ReaderLocation } from "../reader-position/reader-position";
 
 const origin = "http://127.0.0.1:3005";
@@ -58,14 +60,19 @@ test("the explicit database migration works without a TypeScript runner and can 
   }
   const database = new DatabaseSync(path);
   const tables = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name);
-  for (const table of ["user", "account", "session", "verification", "reader_progress"]) assert.ok(tables.includes(table));
+  for (const table of ["user", "account", "session", "verification", "reader_progress", "native_login", "native_session"]) assert.ok(tables.includes(table));
+  database.exec("ALTER TABLE native_login DROP COLUMN ticket_hash");
   database.close();
+  execFileSync(process.execPath, ["scripts/update-accounts-db.mjs"], { env, stdio: "pipe" });
+  const upgraded = new DatabaseSync(path);
+  assert.ok(upgraded.prepare("PRAGMA table_info(native_login)").all().some((column) => column.name === "ticket_hash"));
+  upgraded.close();
 });
 
 test("the service worker never serves account data from cache or mistakes account failures for reader outages", async () => {
   const source = readFileSync("public/cross-canon-sw.js", "utf8");
   type WorkerFetchEvent = { request: Request; respondWith: (response: Promise<Response>) => void };
-  for (const pathname of ["/account", "/api/account", "/api/auth/callback/google"]) {
+  for (const pathname of ["/account", "/account/native?id=public-request-id", "/api/native-login", "/api/account", "/api/auth/callback/google"]) {
     for (const offline of [false, true]) {
       const listeners = new Map<string, (event: WorkerFetchEvent) => void>();
       let notifications = 0;
@@ -191,6 +198,85 @@ test("browser progress is isolated between accounts and stale offline progress r
     assert.equal(readerStorageKey(guestKey), guestKey);
     assert.equal(values.get(guestKey), JSON.stringify(location));
   } finally { Reflect.deleteProperty(globalThis, "window"); }
+});
+
+test("native login requires browser consent and device proof, redeems once, syncs and revokes independently", async () => {
+  const call = (body: unknown, headers: HeadersInit = {}) => nativeAction({ request: request("/api/native-login", {
+    method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body),
+  }), params: {}, context: {} });
+  const start = await call({ operation: "start", platform: "ios" });
+  assert.equal(start.status, 200);
+  const login = await start.json();
+  assert.ok(!("code" in login), "Sign-in must not require manual pairing codes");
+  assert.equal(new URL(login.url).pathname, "/account/native");
+  assert.equal(new URL(login.url).searchParams.get("secret"), null);
+  assert.ok(!JSON.stringify(getAccountsDatabase().prepare("SELECT * FROM native_login WHERE id = ?").get(login.id)).includes(login.secret));
+  assert.equal((await (await call({ operation: "poll", id: login.id, secret: login.secret })).json()).status, "pending");
+  assert.equal((await call({ operation: "approve", id: login.id }, { Origin: origin })).status, 401);
+  await assert.rejects(call({ operation: "approve", id: login.id }, { Cookie: cookie, Origin: "https://attacker.example" }),
+    (error: unknown) => error instanceof Response && error.status === 403);
+  const approval = await call({ operation: "approve", id: login.id }, { Cookie: cookie, Origin: origin });
+  assert.equal(approval.status, 200);
+  const { ticket } = await approval.json();
+  assert.match(ticket, /^[a-f0-9]{64}$/);
+  assert.ok(!JSON.stringify(getAccountsDatabase().prepare("SELECT * FROM native_login WHERE id = ?").get(login.id)).includes(ticket));
+  assert.equal((await call({ operation: "approve", id: login.id }, { Cookie: cookie, Origin: origin })).status, 410);
+  assert.equal(pollNativeLogin(getAccountsDatabase(), login.id, "0".repeat(64)).status, "expired");
+  assert.equal(pollNativeLogin(getAccountsDatabase(), login.id, login.secret).status, "pending",
+    "A remote initiator cannot obtain a session just by getting someone to approve a link");
+  assert.equal(pollNativeLogin(getAccountsDatabase(), login.id, login.secret, "0".repeat(64)).status, "expired");
+  assert.equal(pollNativeLogin(getAccountsDatabase(), login.id, "0".repeat(64), ticket).status, "expired");
+  const result = pollNativeLogin(getAccountsDatabase(), login.id, login.secret, ticket, Date.now() + 2000);
+  assert.equal(result.status, "complete");
+  if (result.status !== "complete") throw new Error("No token");
+  const token = result.token;
+  assert.ok(!JSON.stringify(getAccountsDatabase().prepare("SELECT * FROM native_session").all()).includes(token));
+  assert.equal(pollNativeLogin(getAccountsDatabase(), login.id, login.secret, ticket, Date.now() + 4000).status, "expired");
+  const args = (options: RequestInit) => ({ request: request("/api/account", options), params: {}, context: {} });
+  const headers = { Authorization: `Bearer ${token}` };
+  const account = await (await loader(args({ headers }))).json();
+  assert.ok("user" in account && account.user);
+  assert.equal(account.user.id, userId);
+  const appLocation = { version: 2, corpus: "fathers", chapterKey: "anf09:xii.iv.i", passageRange: "1-3" };
+  const saved = await action(args({ method: "POST", headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ location: appLocation, revision: 0 }) }));
+  assert.equal(saved.status, 200);
+  assert.deepEqual(readProgress(getAccountsDatabase(), userId).fathers?.location, parseLocation(appLocation));
+  assert.equal((await loader(args({ headers: { Cookie: cookie, Authorization: "Bearer invalid" } }))).status, 401,
+    "An invalid native token must never fall back to browser cookies");
+  await assert.rejects(action(args({ method: "POST", headers: { ...headers, Origin: "https://attacker.example", "Content-Type": "application/json" },
+    body: JSON.stringify({ location: appLocation, revision: 1 }) })), (error: unknown) => error instanceof Response && error.status === 403);
+  assert.equal((await call({ operation: "revoke" }, headers)).status, 200);
+  assert.equal((await loader(args({ headers }))).status, 401);
+  const browserAccount = await (await loader(args({ headers: { Cookie: cookie } }))).json();
+  assert.ok("user" in browserAccount && browserAccount.user);
+  assert.equal(browserAccount.user.id, userId,
+    "Revoking an app must not revoke the browser");
+});
+
+test("native handoffs expire, throttle polling, and issue sessions for only the approving user", async () => {
+  const db = getAccountsDatabase();
+  const now = Date.now();
+  const login = startNativeLogin(db, "desktop", now);
+  assert.equal(pollNativeLogin(db, login.id, login.secret, undefined, now).status, "pending");
+  assert.equal(pollNativeLogin(db, login.id, login.secret, undefined, now + 100).status, "slow_down");
+  assert.equal(approveNativeLogin(db, login.id, userId, now + 11 * 60_000), null);
+  assert.equal(pollNativeLogin(db, login.id, login.secret, undefined, now + 11 * 60_000).status, "expired");
+  const context = await getAuth().$context;
+  const second = await context.internalAdapter.createUser({ name: "Other reader", email: "other@example.com", emailVerified: true }, { method: "oauth" });
+  const other = startNativeLogin(db, "desktop");
+  const ticket = approveNativeLogin(db, other.id, second.id);
+  assert.ok(ticket);
+  const result = pollNativeLogin(db, other.id, other.secret, ticket);
+  assert.equal(result.status, "complete");
+  if (result.status !== "complete") throw new Error("No token");
+  const response = await loader({ request: request("/api/account", { headers: { Authorization: `Bearer ${result.token}` } }), params: {}, context: {} });
+  const body = await response.json();
+  assert.ok("user" in body && body.user);
+  assert.equal(body.user.id, second.id);
+  assert.deepEqual(body.progress, {});
+  db.prepare("UPDATE native_session SET expires_at = 0").run();
+  assert.equal((await loader({ request: request("/api/account", { headers: { Authorization: `Bearer ${result.token}` } }), params: {}, context: {} })).status, 401);
 });
 
 test("signing out invalidates the server session", async () => {

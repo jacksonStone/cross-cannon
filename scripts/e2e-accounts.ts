@@ -154,6 +154,53 @@ try {
     return account.progress.scripture?.location.chapterKey === chapter;
   }, {}, offlineChapter);
   console.log("Offline fallback navigation synced after reconnecting.");
+
+  // A native device has its own private proof. The browser only approves its
+  // public request; it never receives the native session token.
+  const login = await (await fetch(origin + "/api/native-login", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ operation: "start", platform: "ios" }) })).json();
+  const connect = await deviceA.newPage();
+  await prepare(connect);
+  await connect.setViewport({ width: 390, height: 844, isMobile: true });
+  await connect.goto(login.url, { waitUntil: "networkidle0" });
+  await connect.waitForFunction((email) => document.body.textContent?.includes(email), {}, user.email);
+  assert.equal(await connect.$(".native-login-code"), null);
+  assert.equal(await connect.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  await connect.screenshot({ path: path.join(screenshots, "native-login-approve-mobile.png"), fullPage: true });
+  // A small phone must show the entire confirmation without scrolling.
+  await connect.setViewport({ width: 320, height: 480, isMobile: true });
+  assert.equal(await connect.evaluate(() => document.documentElement.scrollHeight <= innerHeight), true);
+  const confirmBounds = await connect.$eval(".google-sign-in", (button) => ({ top: button.getBoundingClientRect().top, bottom: button.getBoundingClientRect().bottom }));
+  assert.ok(confirmBounds.top >= 0 && confirmBounds.bottom <= 480);
+  await connect.screenshot({ path: path.join(screenshots, "native-login-approve-small-phone.png"), fullPage: true });
+  await connect.setViewport({ width: 1200, height: 900, isMobile: false });
+  await connect.screenshot({ path: path.join(screenshots, "native-login-approve-desktop.png"), fullPage: true });
+  await connect.locator("::-p-text(Continue as Alex Reader)").click();
+  await connect.waitForFunction(() => document.body.textContent?.includes("You’re ready to read."));
+  const callback = new URL(await connect.$eval(".google-sign-in", (link) => link.getAttribute("href")!));
+  assert.equal(callback.protocol, "crosscanon:");
+  assert.equal(callback.searchParams.get("request"), login.id);
+  const ticket = callback.searchParams.get("ticket");
+  assert.ok(ticket);
+  assert.equal((await (await fetch(origin + "/api/native-login", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ operation: "poll", id: login.id, secret: login.secret }) })).json()).status, "pending");
+  const redemption = await (await fetch(origin + "/api/native-login", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ operation: "poll", id: login.id, secret: login.secret, ticket }) })).json();
+  assert.equal(redemption.status, "complete");
+  const nativeHeaders = { Authorization: `Bearer ${redemption.token}` };
+  const nativeAccount = await (await fetch(origin + "/api/account", { headers: nativeHeaders })).json();
+  assert.equal(nativeAccount.user.id, user.id);
+  assert.equal(nativeAccount.progress.scripture.location.chapterKey, offlineChapter);
+  const nativeLocation = { version: 2, corpus: "classics", chapterKey: "classics:imitation:book-1.2", passageRange: "1-1" };
+  const nativeSave = await fetch(origin + "/api/account", { method: "POST", headers: { ...nativeHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify({ location: nativeLocation, revision: 0 }) });
+  assert.equal(nativeSave.status, 200);
+  assert.deepEqual((await pageA.evaluate(async () => (await (await fetch("/api/account")).json()).progress.classics.location)), nativeLocation);
+  assert.equal((await fetch(origin + "/api/native-login", { method: "POST", headers: { ...nativeHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify({ operation: "revoke" }) })).status, 200);
+  assert.equal((await fetch(origin + "/api/account", { headers: nativeHeaders })).status, 401);
+  console.log("Native browser approval, proof redemption, app-to-web progress and independent revocation passed.");
+
   await pageB.locator("::-p-text(Sign out)").click();
   await pageB.waitForSelector(".google-sign-in");
   assert.equal(await pageB.evaluate(() => localStorage.getItem("cross-cannon:active-account:v1")), null);

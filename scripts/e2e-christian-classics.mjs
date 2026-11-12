@@ -207,7 +207,7 @@ try {
     await page.click(
       `[data-passage-id="${beatitudes.id}"] .reader-passage-button`
     );
-    await clickText("Read with Classics");
+    await clickText("View commentaries");
     await page.waitForSelector(
       ".classic-commentary-notes .reader-passage-button"
     );

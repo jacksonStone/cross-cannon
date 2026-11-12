@@ -13,6 +13,10 @@ impl Desktop {
         if dialog != Dialog::Search {
             self.search_touch.cancel();
         }
+        if dialog == Dialog::Account {
+            self.account_sheet(ctx, insets);
+            return;
+        }
         let p = self.state.theme.palette();
         let compact = Self::compact(ctx);
         let phone_dialog = compact && dialog != Dialog::Settings;
@@ -33,6 +37,8 @@ impl Desktop {
                     220.0,
                     if dialog == Dialog::Settings {
                         280.0
+                    } else if dialog == Dialog::Account {
+                        560.0
                     } else {
                         912.0
                     },
@@ -97,6 +103,8 @@ impl Desktop {
                                     Dialog::Collections => "LIBRARY",
                                     Dialog::Jump => "JUMP",
                                     Dialog::Downloads => "LISTEN",
+                                    Dialog::Account => "ACCOUNT",
+                                    Dialog::Commentary => "COMMENTARIES",
                                     _ => "SEARCH",
                                 })
                                 .size(10.0)
@@ -112,6 +120,10 @@ impl Desktop {
                                     } else {
                                         "Choose a work"
                                     }
+                                } else if dialog == Dialog::Account {
+                                    "Your reading, together"
+                                } else if dialog == Dialog::Commentary {
+                                    "Commentaries"
                                 } else {
                                     if dialog == Dialog::Downloads {
                                         "Offline audio"
@@ -135,6 +147,8 @@ impl Desktop {
                                 Dialog::Search => "Search",
                                 Dialog::Settings => "Reader settings",
                                 Dialog::Downloads => "Offline audio",
+                                Dialog::Account => "Your account",
+                                Dialog::Commentary => "Commentaries",
                             })
                             .font(heading(
                                 if dialog == Dialog::Settings {
@@ -210,16 +224,20 @@ impl Desktop {
                             Dialog::Collections => "collections-body",
                             Dialog::Jump => "jump-body",
                             Dialog::Downloads => "audio-downloads-body",
+                            Dialog::Account => "account-body",
+                            Dialog::Commentary => "commentary-body",
                             _ => "settings-body",
                         },
                         body_height,
-                        true,
+                        dialog != Dialog::Account,
                         |ui, suppress_click| match dialog {
                             Dialog::Collections => self.collections_dialog(ui, suppress_click),
                             Dialog::Jump => self.jump_dialog(ui, suppress_click),
                             Dialog::Settings => self.settings_dialog(ui),
                             Dialog::Search => self.search_dialog(ui, ctx, suppress_click),
                             Dialog::Downloads => self.audio_downloads(ui, suppress_click),
+                            Dialog::Account => self.account_dialog(ui),
+                            Dialog::Commentary => self.commentary_dialog(ui, suppress_click),
                         },
                     );
                 }
@@ -1109,6 +1127,10 @@ impl Desktop {
             });
     }
     pub(super) fn settings_dialog(&mut self, ui: &mut egui::Ui) {
+        if control(ui, "Account & sync…").clicked() {
+            self.dialog = Some(Dialog::Account);
+        }
+        ui.add_space(6.0);
         let p = self.state.theme.palette();
         let presets = [
             ("Default", 1.0, 1.72, 820.0),

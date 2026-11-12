@@ -300,7 +300,7 @@ export function PassageReader({
                             <SearchFilterInputs filters={filters} />
                             <button
                               className="context-button"
-                              disabled={isSearchingSimilar}
+                              disabled={navigation.state !== "idle"}
                               type="submit"
                             >
                               {isSearchingSimilar ? (
@@ -313,7 +313,7 @@ export function PassageReader({
                               )}
                             </button>
                           </Form>
-                          <button className="context-button" type="button" onClick={() => setCommentaryPassage(passage)}>Read with Classics</button>
+                          <button className="context-button" type="button" onClick={() => setCommentaryPassage(passage)}>View commentaries</button>
                           {isSearchingSimilar ? (
                             <p className="reader-action-status" role="status">
                               Searching similar passages...

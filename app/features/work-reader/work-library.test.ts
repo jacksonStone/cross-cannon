@@ -7,12 +7,50 @@ import type {
   ChapterAsset,
 } from "~/features/early-christian-reader/types";
 import { relatedCommentaryPassages } from "~/features/christian-classics/commentary-passages";
+import { loader as commentaryLookup } from "~/routes/api.classic-commentary";
 
 const index: BookIndex = JSON.parse(
   await readFile("public/christian-classics-text/books.json", "utf8")
 );
 const readChapter = async (assetPath: string): Promise<ChapterAsset> =>
   JSON.parse(await readFile(path.join("public", assetPath), "utf8"));
+
+test("commentary lookup uses exact Scripture coverage and excludes unindexed or non-overlapping works", async () => {
+  const lookup = async (query: string) =>
+    commentaryLookup({
+      request: new Request(`http://localhost/api/classic-commentary?${query}`),
+      params: {},
+      context: {},
+    });
+  for (const [query, expected] of [
+    [
+      "book=Matthew&chapter=5&verseStart=3&verseEnd=3",
+      ["classics:catena", "classics:henry", "classics:wesley"],
+    ],
+    [
+      "book=Psalms&chapter=117&verseStart=1&verseEnd=2",
+      ["classics:henry"],
+    ],
+    ["book=2%20Samuel&chapter=24&verseStart=1&verseEnd=1", ["classics:henry"]],
+    ["book=Matthew&chapter=5&verseStart=1000&verseEnd=1000", []],
+    ["book=Tobit&chapter=1&verseStart=1&verseEnd=1", []],
+  ] as const) {
+    const response = await lookup(query);
+    assert.equal(response.status, 200);
+    assert.deepEqual(
+      (await response.json()).works.map((work) => work.id).sort(),
+      expected
+    );
+  }
+  for (const range of [
+    "verseStart=0&verseEnd=1",
+    "verseStart=5&verseEnd=3",
+    "verseStart=3.5&verseEnd=5",
+    "verseStart=1&verseEnd=1001",
+  ]) {
+    assert.equal((await lookup(`book=Matthew&chapter=5&${range}`)).status, 400);
+  }
+});
 
 test("the imported collection preserves full source structure and declares the Wesley source gap", () => {
   const counts = Object.fromEntries(

@@ -91,6 +91,10 @@ Google sign-in and cross-device Reader Location sync are optional. See
 [Google login setup](docs/google-login.md) for OAuth credentials, the separate
 account database migration, and verification. No email service is required.
 
+For an off-server Linux web build and deploy, use `npm run ship:docker`. It runs
+tests and builds locally in Docker, uploads a pruned production artifact, then
+uses the existing deployment checks and rollback. It never updates databases.
+
 Requirements:
 
 - Node.js `26.13.0` (run `nvm use` to select the checked-in `.nvmrc`)
@@ -588,6 +592,12 @@ playback still requires device testing; desktop emulation cannot certify it.
 
 ## Native iPhone app
 
+Native iPhone and macOS apps support Google login and the same Reader Location
+sync as the website. Open Reader tools (⋮) → Account to connect. Google opens
+in the system browser, then the app stores its revocable session in Keychain.
+The existing Google web client is reused; no new GCP credentials are needed.
+See [Google login setup](docs/google-login.md) for the flow and release migration.
+
 The shared Rust reader includes Scripture, Early Christian Works, and Christian
 Classics. Its named collection chooser, Work reader, chapter jump, search target,
 author filters, favorites and saved Passage locations reuse the existing native
@@ -615,9 +625,14 @@ Catena Aurea, Matthew Henry’s complete commentary, and Wesley’s Notes on the
 Bible. Source editions, translators, and rights are available through “About this
 edition.” Wesley’s CCEL source omits 2 Samuel 24; that gap is explicitly recorded.
 
-Selected Scripture Passages offer “Read with Classics.” This shows original
+Selected Scripture Passages offer “View commentaries” beside “Similar passages.” This shows original
 commentary whose source verse coverage overlaps the selection, with a choice of
 commentator. It uses the same imported Chapter text as the full reader.
+The web and native readers match the selected book, chapter, and verse range
+against source verse indexes, without semantic search. Only commentaries with
+overlapping verse coverage are shown.
+Run `node scripts/e2e-verse-commentaries.mjs` after building to check the web
+action on desktop and mobile and capture previews from the existing local indexes.
 
 Text importing and paid semantic indexing are explicit operations:
 

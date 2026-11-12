@@ -1,6 +1,7 @@
 fn main() {
     println!("cargo:rerun-if-changed=src/apple_audio.m");
     println!("cargo:rerun-if-changed=src/apple_links.m");
+    println!("cargo:rerun-if-changed=src/apple_account.m");
     let target = std::env::var("TARGET").unwrap();
     if !target.contains("apple") {
         return;
@@ -26,12 +27,20 @@ fn main() {
     cc::Build::new()
         .file("src/apple_audio.m")
         .file("src/apple_links.m")
+        .file("src/apple_account.m")
         .flag("-fobjc-arc")
         .flag("-fblocks")
         .flag("-isysroot")
         .flag(sdk_path.trim())
         .compile("cross_canon_apple_audio");
-    for framework in ["Foundation", "AVFoundation", "CoreMedia", "MediaPlayer"] {
+    for framework in [
+        "Foundation",
+        "AVFoundation",
+        "CoreMedia",
+        "MediaPlayer",
+        "Security",
+        "AuthenticationServices",
+    ] {
         println!("cargo:rustc-link-lib=framework={framework}");
     }
 }

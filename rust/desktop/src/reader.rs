@@ -166,9 +166,9 @@ impl Desktop {
     }
     fn toolbar_controls(&mut self, ui: &mut egui::Ui, focused: &Passage) {
         let order = if Self::compact(ui.ctx()) {
-            [0, 4, 3, 2, 1]
+            [0, 4, 3, 2, 1, 5]
         } else {
-            [0, 1, 2, 3, 4]
+            [0, 1, 2, 3, 4, 5]
         };
         for action in order {
             match action {
@@ -198,6 +198,14 @@ impl Desktop {
                         .clicked()
                     {
                         self.dialog = Some(Dialog::Search);
+                    }
+                }
+                5 => {
+                    if icons::button(ui, icons::Icon::Account, "", egui::vec2(44.0, 44.0), false)
+                        .on_hover_text("Account and reading progress")
+                        .clicked()
+                    {
+                        self.dialog = Some(Dialog::Account);
                     }
                 }
                 _ => {
@@ -543,17 +551,36 @@ impl Desktop {
                     }
                     ui.add_space(2.0);
                     if selected {
-                        ui.horizontal(|ui| {
-                            if control(ui, "Similar passages").clicked() {
+                        ui.horizontal_wrapped(|ui| {
+                            if ui
+                                .add_enabled_ui(!self.busy, |ui| control(ui, "Similar passages"))
+                                .inner
+                                .clicked()
+                                && !touch.suppress_click
+                            {
                                 self.dialog = Some(Dialog::Search);
                                 self.query.clear();
+                                if self.search_corpus != Some(passage.corpus) {
+                                    self.search_books.clear();
+                                    self.search_authors.clear();
+                                    self.author_filter.clear();
+                                }
                                 self.search_corpus = Some(passage.corpus);
                                 self.search(ui.ctx(), Some(id.clone()));
                             }
-                            if control(ui, "Copy link").clicked() {
+                            if passage.corpus == Corpus::Scripture
+                                && control(ui, "View commentaries").clicked()
+                                && !touch.suppress_click
+                            {
+                                self.show_commentaries(&passage);
+                            }
+                            if passage.corpus != Corpus::Scripture
+                                && control(ui, "Copy link").clicked()
+                            {
                                 ui.ctx().copy_text(navigation::reader_link(passage));
                             }
-                            if control(ui, "Copy").clicked() {
+                            if passage.corpus != Corpus::Scripture && control(ui, "Copy").clicked()
+                            {
                                 ui.ctx().copy_text(format!(
                                     "{}\n{}",
                                     passage.reference,

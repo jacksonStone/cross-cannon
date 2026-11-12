@@ -1,5 +1,7 @@
+mod account;
 mod audio;
 mod catalog;
+mod commentary;
 mod dialogs;
 mod downloads;
 mod icons;
@@ -94,15 +96,19 @@ enum Dialog {
     Search,
     Settings,
     Downloads,
+    Account,
+    Commentary,
 }
 struct SearchOutput {
     generation: u64,
     result: std::result::Result<Vec<ResultPassage>, String>,
 }
 struct Desktop {
+    account: account::Account,
     library: Arc<Library>,
     catalog: Arc<catalog::Catalog>,
     catalog_browser: catalog::Browser,
+    commentary: Option<commentary::Selection>,
     state: ReaderState,
     selected: Option<String>,
     active_chapter_id: String,
@@ -204,9 +210,17 @@ impl Desktop {
         let (audio_tx, audio_rx) = audio::start(library.root.clone(), ctx.clone());
         let catalog = catalog::Catalog::load(&library.root);
         let mut desktop = Self {
+            account: account::Account::new(if fresh {
+                Default::default()
+            } else {
+                storage
+                    .and_then(|s| eframe::get_value(s, "accounts"))
+                    .unwrap_or_default()
+            }),
             library,
             catalog,
             catalog_browser: catalog::Browser::new(jump_corpus),
+            commentary: None,
             state: state.clone(),
             selected: None,
             active_chapter_id,
@@ -266,6 +280,14 @@ impl Desktop {
                         std::env::var("CROSS_CANON_CATALOG_QUERY").unwrap_or_default();
                 }
                 Ok("settings") => desktop.dialog = Some(Dialog::Settings),
+                Ok("account") => desktop.dialog = Some(Dialog::Account),
+                Ok("passage-actions") => {
+                    desktop.selected = Some(desktop.current_passage().id.clone());
+                }
+                Ok("commentaries") => {
+                    let passage = desktop.current_passage().clone();
+                    desktop.show_commentaries(&passage);
+                }
                 Ok("offline-audio") => desktop.dialog = Some(Dialog::Downloads),
                 Ok("jump") => desktop.dialog = Some(Dialog::Jump),
                 Ok("tools") => desktop.tools = true,
@@ -431,11 +453,14 @@ fn control(ui: &mut egui::Ui, label: &str) -> egui::Response {
 }
 impl Desktop {
     fn render(&mut self, ctx: &egui::Context) {
+        self.account_tick(ctx);
         if let Some(downloads) = &mut self.downloads {
             downloads.poll();
         }
         if let Some(link) = navigation::take_reader_link() {
-            if let Some(id) = navigation::passage_from_link(&self.library, &link) {
+            if self.account.receive_callback(&link) {
+                ctx.request_repaint();
+            } else if let Some(id) = navigation::passage_from_link(&self.library, &link) {
                 self.open(id);
             }
         }
@@ -647,8 +672,15 @@ impl Desktop {
     }
 }
 impl eframe::App for Desktop {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         self.render(ctx);
+        if self.account.persist_now {
+            self.account.persist_now = false;
+            if let Some(storage) = frame.storage_mut() {
+                self.save(storage);
+                storage.flush();
+            }
+        }
         if !self.startup_reported && std::env::var_os("CROSS_CANON_STARTUP_TIMING").is_some() {
             eprintln!(
                 "Cross Canon startup: first reader frame prepared in {:.3}s",
@@ -659,7 +691,8 @@ impl eframe::App for Desktop {
     }
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         if std::env::var_os("CROSS_CANON_FRESH").is_none() {
-            eframe::set_value(storage, "reader", &self.state)
+            eframe::set_value(storage, "reader", &self.state);
+            eframe::set_value(storage, "accounts", &self.account.saved);
         }
     }
     fn auto_save_interval(&self) -> Duration {

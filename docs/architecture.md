@@ -271,7 +271,9 @@ opens the reader. Collections retain independent Reader Locations and favorites.
 `scripts/import-christian-classics.py` verifies pinned raw sources and emits the
 same book index, manifest, and immutable Chapter assets as Early Christian Works.
 Commentaries additionally retain Scripture chapter/verse coverage. The Scripture
-reader’s “Read with Classics” action uses that coverage to show original notes.
+reader’s “View commentaries” action matches the selected book, chapter, and
+overlapping verse ranges to show indexed notes. The native reader uses the same
+coverage from its bundled catalog without an online search.
 
 `npm run index:christian-classics` explicitly indexes these artifacts with the
 shared indexer into `storage/christian-classics.db`. Rust loads this optional
