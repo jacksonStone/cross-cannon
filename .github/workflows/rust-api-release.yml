@@ -2,15 +2,9 @@ name: Build Rust API release
 
 on:
   push:
-    branches: [main, ops/rust-api-ci-release]
-    paths:
-      - Cargo.toml
-      - Cargo.lock
-      - rust/**
-      - scripts/build-rust-api-container.sh
-      - scripts/validate-rust-api-artifact.py
-      - scripts/publish-rust-api-build.sh
-      - .github/workflows/rust-api-release.yml
+    # Every source snapshot needs its own artifact, even when only release
+    # tooling or the snapshot's base tree changed.
+    branches: [ops/rust-api-ci-release]
   workflow_dispatch:
 
 permissions:

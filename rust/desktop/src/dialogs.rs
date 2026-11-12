@@ -2,6 +2,10 @@ use super::*;
 
 impl Desktop {
     pub(super) fn dialogs(&mut self, ctx: &egui::Context) {
+        self.dialogs_with_insets(ctx, mobile::insets());
+    }
+
+    fn dialogs_with_insets(&mut self, ctx: &egui::Context, insets: mobile::Insets) {
         let Some(dialog) = self.dialog else {
             self.search_touch.cancel();
             return;
@@ -12,33 +16,27 @@ impl Desktop {
         let p = self.state.theme.palette();
         let compact = Self::compact(ctx);
         let phone_dialog = compact && dialog != Dialog::Settings;
-        let insets = mobile::insets();
-        let width = (ctx.screen_rect().width()
-            - if phone_dialog {
-                40.0
-            } else if compact {
-                64.0
-            } else {
-                104.0
-            }
-            - insets.left
-            - insets.right)
-            .clamp(
-                220.0,
-                if dialog == Dialog::Settings {
-                    280.0
-                } else {
-                    912.0
-                },
-            );
-        let height = if dialog == Dialog::Settings {
-            (ctx.screen_rect().bottom()
-                - insets.bottom
-                - (self.toolbar_rect.bottom() + 8.0)
-                - 100.0)
-                .clamp(80.0, 420.0)
+        let width = if dialog == Dialog::Settings {
+            (ctx.screen_rect().width() - insets.left - insets.right - 24.0).min(320.0) - 28.0
         } else {
-            (ctx.screen_rect().height() - insets.top - insets.bottom - 180.0).max(120.0)
+            (ctx.screen_rect().width()
+                - if phone_dialog {
+                    40.0
+                } else if compact {
+                    64.0
+                } else {
+                    104.0
+                }
+                - insets.left
+                - insets.right)
+                .clamp(
+                    220.0,
+                    if dialog == Dialog::Settings {
+                        280.0
+                    } else {
+                        912.0
+                    },
+                )
         };
         let mut modal = egui::Modal::new(Id::new("reader-dialog"));
         if phone_dialog {
@@ -70,17 +68,33 @@ impl Desktop {
                     } else {
                         p.paper
                     })
-                    .inner_margin(if phone_dialog { 12.0 } else { 20.0 })
+                    .inner_margin(if dialog == Dialog::Settings {
+                        14.0
+                    } else if phone_dialog {
+                        12.0
+                    } else {
+                        20.0
+                    })
                     .corner_radius(8.0)
                     .stroke(Stroke::new(1.0_f32, p.line)),
             )
             .show(ctx, |ui| {
                 ui.set_width(width);
+                if dialog == Dialog::Settings {
+                    let height =
+                        (ctx.screen_rect().bottom() - insets.bottom - ui.cursor().top() - 16.0)
+                            .clamp(48.0, 470.0);
+                    touch_scroll::vertical(ui, "settings-body", height, true, |ui, _| {
+                        self.settings_dialog(ui)
+                    });
+                    return;
+                }
                 ui.horizontal(|ui| {
                     if dialog != Dialog::Settings {
                         ui.vertical(|ui| {
                             ui.label(
                                 RichText::new(match dialog {
+                                    Dialog::Collections => "LIBRARY",
                                     Dialog::Jump => "JUMP",
                                     Dialog::Downloads => "LISTEN",
                                     _ => "SEARCH",
@@ -90,7 +104,9 @@ impl Desktop {
                                 .color(p.accent),
                             );
                             ui.label(
-                                RichText::new(if dialog == Dialog::Jump {
+                                RichText::new(if dialog == Dialog::Collections {
+                                    "Choose collection"
+                                } else if dialog == Dialog::Jump {
                                     if self.jump_corpus == Corpus::Scripture {
                                         "Choose a passage"
                                     } else {
@@ -114,6 +130,7 @@ impl Desktop {
                     } else {
                         ui.label(
                             RichText::new(match dialog {
+                                Dialog::Collections => "Choose collection",
                                 Dialog::Jump => "Jump to a passage",
                                 Dialog::Search => "Search",
                                 Dialog::Settings => "Reader settings",
@@ -177,25 +194,33 @@ impl Desktop {
                     self.search_max_scroll =
                         (output.content_size.y - output.inner_rect.height()).max(0.0);
                 } else {
-                    let body_height = if dialog != Dialog::Settings {
+                    let body_height = if dialog == Dialog::Collections {
+                        182.0_f32.min(
+                            (ctx.screen_rect().bottom() - insets.bottom - ui.cursor().top() - 22.0)
+                                .max(48.0),
+                        )
+                    } else if dialog != Dialog::Settings {
                         (ctx.screen_rect().bottom()
                             - insets.bottom
                             - if compact { 22.0 } else { 40.0 }
                             - ui.cursor().top())
                         .max(48.0)
                     } else {
-                        height
+                        (ctx.screen_rect().bottom() - insets.bottom - ui.cursor().top() - 16.0)
+                            .clamp(48.0, 420.0)
                     };
                     touch_scroll::vertical(
                         ui,
                         match dialog {
+                            Dialog::Collections => "collections-body",
                             Dialog::Jump => "jump-body",
                             Dialog::Downloads => "audio-downloads-body",
                             _ => "settings-body",
                         },
                         body_height,
-                        dialog == Dialog::Jump || dialog == Dialog::Downloads,
+                        true,
                         |ui, suppress_click| match dialog {
+                            Dialog::Collections => self.collections_dialog(ui, suppress_click),
                             Dialog::Jump => self.jump_dialog(ui, suppress_click),
                             Dialog::Settings => self.settings_dialog(ui),
                             Dialog::Search => self.search_dialog(ui, ctx, suppress_click),
@@ -211,6 +236,33 @@ impl Desktop {
             self.search_filter_modal(ctx);
         }
     }
+    fn collections_dialog(&mut self, ui: &mut egui::Ui, suppress_click: bool) {
+        let current = self.current_passage().corpus;
+        for (corpus, name, _) in COLLECTIONS {
+            let count = self
+                .library
+                .books
+                .iter()
+                .filter(|book| book.corpus == corpus)
+                .count();
+            if count == 0 {
+                continue;
+            }
+            if ui
+                .add_sized(
+                    [ui.available_width(), 52.0],
+                    egui::Button::new(RichText::new(name).strong()).selected(current == corpus),
+                )
+                .clicked()
+                && !suppress_click
+            {
+                self.switch_corpus(corpus);
+                self.dialog = None;
+            }
+            ui.add_space(6.0);
+        }
+    }
+
     pub(super) fn jump_dialog(&mut self, ui: &mut egui::Ui, suppress_click: bool) {
         let library = self.library.clone();
         let p = self.state.theme.palette();
@@ -220,12 +272,9 @@ impl Desktop {
         if !compact {
             ui.horizontal_wrapped(|ui| {
                 let previous = self.jump_corpus;
-                ui.selectable_value(&mut self.jump_corpus, Corpus::Scripture, "Bible");
-                ui.selectable_value(
-                    &mut self.jump_corpus,
-                    Corpus::EarlyChristian,
-                    "Early Christian works",
-                );
+                for (corpus, name, _) in COLLECTIONS {
+                    ui.selectable_value(&mut self.jump_corpus, corpus, name);
+                }
                 if previous != self.jump_corpus {
                     self.jump_filter.clear();
                     self.jump_author.clear();
@@ -276,7 +325,7 @@ impl Desktop {
                 .library
                 .books
                 .iter()
-                .filter(|b| b.corpus == Corpus::EarlyChristian)
+                .filter(|b| b.corpus == self.jump_corpus)
                 .filter_map(|b| b.author.clone())
                 .collect::<Vec<_>>();
             authors.sort();
@@ -303,7 +352,7 @@ impl Desktop {
                             .contains(&query))
             })
             .collect::<Vec<_>>();
-        if self.jump_corpus == Corpus::EarlyChristian {
+        if self.jump_corpus != Corpus::Scripture {
             books.sort_by_key(|b| {
                 (
                     !self.state.favorite_books.contains(&b.id),
@@ -446,7 +495,7 @@ impl Desktop {
                         && !suppress_click
                     {
                         self.jump_chapter = chapter.number;
-                        if book.corpus == Corpus::EarlyChristian {
+                        if book.corpus != Corpus::Scripture {
                             if let Some(id) = chapter.passage_ids.first() {
                                 self.open(id.clone());
                             }
@@ -553,17 +602,14 @@ impl Desktop {
                 .inner_margin(4.0)
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        let width = ((ui.available_width().min(252.0) - 8.0) / 2.0).max(60.0);
-                        for (corpus, label) in [
-                            (Corpus::Scripture, "BIBLE"),
-                            (Corpus::EarlyChristian, "FATHERS"),
-                        ] {
+                        let width = ((ui.available_width() - 16.0) / 3.0).max(60.0);
+                        for (corpus, _, label) in COLLECTIONS {
                             if ui
                                 .add_sized(
                                     [width, 40.0],
                                     egui::RadioButton::new(
                                         self.search_corpus == Some(corpus),
-                                        RichText::new(label).strong(),
+                                        RichText::new(label.to_uppercase()).strong(),
                                     ),
                                 )
                                 .clicked()
@@ -577,6 +623,9 @@ impl Desktop {
             if self.search_corpus != previous_target {
                 self.results.clear();
                 self.message.clear();
+                self.search_books.clear();
+                self.search_authors.clear();
+                self.author_filter.clear();
             }
             ui.add_space(if compact { 4.0 } else { 12.0 });
             if let Some(source) = self.search_source.clone() {
@@ -608,6 +657,8 @@ impl Desktop {
                 ui.label(
                     RichText::new(if self.search_corpus == Some(Corpus::Scripture) {
                         "SEARCH BIBLE FOR…"
+                    } else if self.search_corpus == Some(Corpus::ChristianClassics) {
+                        "SEARCH CHRISTIAN CLASSICS FOR…"
                     } else {
                         "SEARCH EARLY CHRISTIAN WORKS FOR…"
                     })
@@ -675,11 +726,7 @@ impl Desktop {
                     }
                     let ready =
                         self.search_source.is_some() || self.query.trim().chars().count() >= 3;
-                    let target = if self.search_corpus == Some(Corpus::Scripture) {
-                        "Bible"
-                    } else {
-                        "Fathers"
-                    };
+                    let target = collection_short_name(self.search_corpus.unwrap_or_default());
                     let button_width = if compact { ui.available_width() } else { 132.0 };
                     if ui
                         .add_enabled_ui(ready, |ui| {
@@ -875,24 +922,16 @@ impl Desktop {
                                         self.search_corpus = Some(hit.corpus);
                                         self.search(ctx, Some(hit.source_id.clone()));
                                     }
-                                    if control(
-                                        ui,
-                                        if hit.corpus == Corpus::Scripture {
-                                            "Find Fathers"
-                                        } else {
-                                            "Find Bible"
-                                        },
-                                    )
-                                    .clicked()
-                                        && !suppress_click
-                                    {
-                                        self.search_corpus =
-                                            Some(if hit.corpus == Corpus::Scripture {
-                                                Corpus::EarlyChristian
-                                            } else {
-                                                Corpus::Scripture
-                                            });
-                                        self.search(ctx, Some(hit.source_id.clone()));
+                                    for (target, _, label) in COLLECTIONS {
+                                        if target != hit.corpus
+                                            && control(ui, &format!("Find {label}")).clicked()
+                                            && !suppress_click
+                                        {
+                                            self.search_corpus = Some(target);
+                                            self.search_books.clear();
+                                            self.search_authors.clear();
+                                            self.search(ctx, Some(hit.source_id.clone()));
+                                        }
                                     }
                                 });
                                 if control(ui, "Copy").clicked() && !suppress_click {
@@ -1051,7 +1090,10 @@ impl Desktop {
                         },
                     );
                 } else {
-                    ui.label("Fathers authors · choose up to 3, or leave blank for all");
+                    ui.label(format!(
+                        "{} authors · choose up to 3, or leave blank for all",
+                        collection_short_name(self.search_corpus.unwrap_or_default())
+                    ));
                     ui.add(
                         egui::TextEdit::singleline(&mut self.author_filter)
                             .hint_text("Find author…")
@@ -1061,6 +1103,7 @@ impl Desktop {
                         .library
                         .books
                         .iter()
+                        .filter(|b| Some(b.corpus) == self.search_corpus)
                         .filter_map(|b| b.author.clone())
                         .collect();
                     touch_scroll::vertical(
@@ -1099,73 +1142,199 @@ impl Desktop {
             });
     }
     pub(super) fn settings_dialog(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal_wrapped(|ui| {
+        let p = self.state.theme.palette();
+        let presets = [
+            ("Default", 1.0, 1.72, 820.0),
+            ("Compact", 0.94, 1.54, 880.0),
+            ("Open", 1.07, 1.86, 760.0),
+            ("Relaxed", 1.14, 1.96, 700.0),
+        ];
+        let group_label = |ui: &mut egui::Ui, label: &str| {
+            ui.label(RichText::new(label).size(11.52).strong().color(p.muted));
+        };
+        ui.spacing_mut().item_spacing.y = 8.0;
+        group_label(ui, "PRESET");
+        ui.scope(|ui| {
+            ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
+            let width = (ui.available_width() - 6.0) / 2.0;
+            for row in presets.chunks(2) {
+                ui.horizontal(|ui| {
+                    for &(label, scale, height, width_value) in row {
+                        let selected = (self.state.font_scale - scale).abs() < 0.001
+                            && (self.state.line_height - height).abs() < 0.001
+                            && (self.state.width - width_value).abs() < 0.1;
+                        let fill = if selected {
+                            mix_colors(p.panel, p.ink, 0.06)
+                        } else {
+                            p.panel
+                        };
+                        if ui
+                            .add_sized(
+                                [width, 36.0],
+                                egui::Button::new(RichText::new(label).size(12.16))
+                                    .fill(fill)
+                                    .stroke(Stroke::new(1.0_f32, p.line))
+                                    .corner_radius(0.0),
+                            )
+                            .clicked()
+                        {
+                            self.state.font_scale = scale;
+                            self.state.line_height = height;
+                            self.state.width = width_value;
+                            self.scroll_target = Some(self.state.location_passage_id.clone());
+                        }
+                    }
+                });
+            }
+        });
+        ui.add_space(6.0);
+        group_label(ui, "THEME");
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 10.0;
+            let width = (ui.available_width() - 30.0) / 4.0;
             for theme in [Theme::Paper, Theme::Sepia, Theme::Dark, Theme::Contrast] {
+                ui.vertical(|ui| {
+                    ui.set_width(width);
+                    let (rect, response) =
+                        ui.allocate_exact_size(egui::vec2(width, 34.0), egui::Sense::click());
+                    let colors = theme.palette();
+                    let left =
+                        Rect::from_min_max(rect.min, egui::pos2(rect.center().x, rect.max.y));
+                    let right =
+                        Rect::from_min_max(egui::pos2(rect.center().x, rect.min.y), rect.max);
+                    ui.painter().rect_filled(
+                        left,
+                        egui::CornerRadius {
+                            nw: 8,
+                            sw: 8,
+                            ne: 0,
+                            se: 0,
+                        },
+                        colors.paper,
+                    );
+                    ui.painter().rect_filled(
+                        right,
+                        egui::CornerRadius {
+                            ne: 8,
+                            se: 8,
+                            nw: 0,
+                            sw: 0,
+                        },
+                        colors.ink,
+                    );
+                    ui.painter().rect_stroke(
+                        rect,
+                        8.0,
+                        Stroke::new(
+                            if self.state.theme == theme {
+                                2.0
+                            } else {
+                                1.0_f32
+                            },
+                            p.line,
+                        ),
+                        egui::StrokeKind::Inside,
+                    );
+                    if response.clicked() {
+                        self.state.theme = theme;
+                        theme.apply(ui.ctx());
+                    }
+                    ui.add_space(-3.0);
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(width, 13.0),
+                        Layout::top_down(Align::Center),
+                        |ui| {
+                            ui.label(
+                                RichText::new(format!("{theme:?}"))
+                                    .size(10.56)
+                                    .strong()
+                                    .color(p.muted),
+                            );
+                        },
+                    );
+                });
+            }
+        });
+        ui.add_space(6.0);
+        let text_value = format!("{:.0}%", self.state.font_scale * 100.0);
+        let spacing_value = format!("{:.2}", self.state.line_height);
+        let width_value = format!("{:.0}px", self.state.width);
+        for (label, value, range, step, value_label) in [
+            (
+                "TEXT",
+                &mut self.state.font_scale,
+                0.86..=1.35,
+                0.01,
+                text_value,
+            ),
+            (
+                "SPACING",
+                &mut self.state.line_height,
+                1.42..=2.08,
+                0.01,
+                spacing_value,
+            ),
+            (
+                "WIDTH",
+                &mut self.state.width,
+                620.0..=880.0,
+                10.0,
+                width_value,
+            ),
+        ] {
+            ui.horizontal(|ui| {
+                group_label(ui, label);
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.label(RichText::new(value_label).size(11.52).strong().color(p.ink));
+                });
+            });
+            ui.scope(|ui| {
+                ui.visuals_mut().widgets.inactive.bg_fill = p.muted;
+                ui.spacing_mut().slider_width = ui.available_width();
+                ui.spacing_mut().slider_rail_height = 4.0;
                 if ui
-                    .selectable_value(&mut self.state.theme, theme, format!("{theme:?}"))
+                    .add_sized(
+                        [ui.available_width(), 36.0],
+                        egui::Slider::new(value, range)
+                            .step_by(step)
+                            .show_value(false),
+                    )
                     .changed()
                 {
-                    self.state.theme.apply(ui.ctx());
-                }
-            }
-        });
-        ui.add_space(16.0);
-        ui.horizontal_wrapped(|ui| {
-            for (label, scale, height, width) in [
-                ("Default", 1.0, 1.72, 820.0),
-                ("Compact", 0.94, 1.54, 880.0),
-                ("Open", 1.07, 1.86, 760.0),
-                ("Relaxed", 1.14, 1.96, 700.0),
-            ] {
-                if control(ui, label).clicked() {
-                    self.state.font_scale = scale;
-                    self.state.line_height = height;
-                    self.state.width = width;
                     self.scroll_target = Some(self.state.location_passage_id.clone());
                 }
-            }
-        });
-        for (label, value, range) in [
-            ("Text size", &mut self.state.font_scale, 0.86..=1.35),
-            ("Line spacing", &mut self.state.line_height, 1.42..=2.08),
-            ("Column width", &mut self.state.width, 620.0..=880.0),
-        ] {
-            if ui
-                .add(egui::Slider::new(value, range).text(label))
-                .changed()
-            {
-                self.scroll_target = Some(self.state.location_passage_id.clone());
-            }
+            });
+            ui.add_space(6.0);
         }
-        ui.add_space(12.0);
-        ui.label("Scripture canon");
-        let mut canon = self.state.canon;
-        ui.horizontal_wrapped(|ui| {
-            for choice in [Canon::Protestant, Canon::Catholic, Canon::Orthodox] {
-                ui.selectable_value(&mut canon, choice, format!("{choice:?}"));
+        ui.collapsing("More", |ui| {
+            ui.label("Scripture canon");
+            let mut canon = self.state.canon;
+            ui.horizontal_wrapped(|ui| {
+                for choice in [Canon::Protestant, Canon::Catholic, Canon::Orthodox] {
+                    ui.selectable_value(&mut canon, choice, format!("{choice:?}"));
+                }
+            });
+            self.update_canon(canon);
+            ui.checkbox(&mut self.state.original, "Original Early Christian text");
+            if control(ui, "Offline audio…").clicked() {
+                self.dialog = Some(Dialog::Downloads);
             }
-        });
-        self.update_canon(canon);
-        ui.checkbox(&mut self.state.original, "Original Early Christian text");
-        ui.add_space(12.0);
-        if control(ui, "Offline audio…").clicked() {
-            self.dialog = Some(Dialog::Downloads);
-        }
-        ui.add_space(18.0);
-        ui.collapsing("Connection", |ui| {
-            ui.label("Search service");
-            ui.add(
-                egui::TextEdit::singleline(&mut self.state.api_url).desired_width(f32::INFINITY),
+            ui.collapsing("Connection", |ui| {
+                ui.label("Search service");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.state.api_url)
+                        .desired_width(f32::INFINITY),
+                );
+            });
+            ui.label(
+                RichText::new(format!(
+                    "{} books · {} passages · all texts stored locally",
+                    self.library.books.len(),
+                    self.library.passages.len()
+                ))
+                .size(11.0),
             );
         });
-        ui.label(
-            RichText::new(format!(
-                "{} books · {} passages · all texts stored locally",
-                self.library.books.len(),
-                self.library.passages.len()
-            ))
-            .size(11.0),
-        );
     }
 
     fn audio_downloads(&mut self, ui: &mut egui::Ui, suppress_click: bool) {
@@ -1334,12 +1503,167 @@ mod tests {
     use super::*;
 
     #[test]
-    fn phone_jump_keeps_picker_visible_and_navigates_both_corpora() {
+    fn phone_settings_content_fits_viewport() {
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        for width in [320.0, 393.0] {
+            let ctx = egui::Context::default();
+            let mut app = Desktop::initialize(&ctx, None, library.clone());
+            app.dialog = Some(Dialog::Settings);
+            let render = |app: &mut Desktop| {
+                ctx.run(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(width, 700.0),
+                        )),
+                        ..Default::default()
+                    },
+                    |ctx| app.render(ctx),
+                )
+            };
+            for _ in 0..3 {
+                render(&mut app);
+            }
+            let output = render(&mut app);
+            let label_pos = |label: &str| {
+                output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::Shape::Text(text) if text.galley.job.text == label => Some(text.pos),
+                        _ => None,
+                    })
+                    .unwrap_or_else(|| panic!("missing {label} at {width}"))
+            };
+            let groups: Vec<_> = ["PRESET", "THEME", "TEXT", "SPACING", "WIDTH"]
+                .iter()
+                .map(|label| label_pos(label).y)
+                .collect();
+            assert!(
+                groups.windows(2).all(|pair| pair[0] < pair[1]),
+                "settings groups must follow web order: {groups:?}"
+            );
+            let swatches: Vec<_> = ["Paper", "Sepia", "Dark", "Contrast"]
+                .iter()
+                .map(|label| label_pos(label))
+                .collect();
+            assert!(
+                swatches
+                    .windows(2)
+                    .all(|pair| pair[0].x < pair[1].x && (pair[0].y - pair[1].y).abs() < 1.0),
+                "themes should occupy one swatch row: {swatches:?}"
+            );
+            let default = label_pos("Default");
+            let compact = label_pos("Compact");
+            let open = label_pos("Open");
+            let relaxed = label_pos("Relaxed");
+            assert!(default.y == compact.y && open.y == relaxed.y && open.y > default.y,
+                "presets should form two balanced rows at {width}: {default:?} {compact:?} {open:?} {relaxed:?}");
+            let rails = output.shapes.iter().filter(|shape| matches!(&shape.shape,
+                egui::Shape::Rect(rect) if rect.rect.width() >= 80.0 && (rect.rect.height() - 4.0).abs() < 0.1
+                    && rect.fill.r() < 180 && rect.fill.g() < 180 && rect.fill.b() < 180)).count();
+            assert!(
+                rails >= 1,
+                "a contrasting slider rail must be visible at {width}"
+            );
+            for shape in &output.shapes {
+                if let egui::Shape::Text(text) = &shape.shape {
+                    let label = text.galley.job.text.as_str();
+                    if [
+                        "PRESET", "Paper", "Sepia", "Dark", "Contrast", "Default", "Compact",
+                        "Open", "Relaxed",
+                    ]
+                    .contains(&label)
+                    {
+                        let rect = Rect::from_min_size(text.pos, text.galley.size());
+                        assert!(
+                            shape.clip_rect.contains_rect(rect)
+                                && rect.left() >= 0.0
+                                && rect.right() <= width,
+                            "{label:?} clipped at {width}: {rect:?}, clip {:?}",
+                            shape.clip_rect
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn phone_settings_shows_all_styling_sliders_with_safe_area() {
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        let ctx = egui::Context::default();
+        let mut app = Desktop::initialize(&ctx, None, library);
+        let insets = mobile::Insets {
+            top: 59.0,
+            bottom: 34.0,
+            left: 0.0,
+            right: 0.0,
+        };
+        let render = |app: &mut Desktop| {
+            ctx.run(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(393.0, 852.0),
+                    )),
+                    ..Default::default()
+                },
+                |ctx| {
+                    app.dialog = None;
+                    app.render(ctx);
+                    app.toolbar_rect = app.toolbar_rect.translate(egui::vec2(0.0, insets.top));
+                    app.dialog = Some(Dialog::Settings);
+                    app.dialogs_with_insets(ctx, insets);
+                },
+            )
+        };
+        for _ in 0..3 {
+            render(&mut app);
+        }
+        let output = render(&mut app);
+        let visible_rails = output.shapes.iter().filter(|shape| matches!(&shape.shape,
+            egui::Shape::Rect(rect) if rect.rect.width() >= 80.0 && (rect.rect.height() - 4.0).abs() < 0.1
+                && rect.fill.r() < 180 && rect.fill.g() < 180 && rect.fill.b() < 180
+                && shape.clip_rect.contains_rect(rect.rect) && rect.rect.bottom() <= 852.0 - insets.bottom)).count();
+        assert_eq!(
+            visible_rails, 3,
+            "all styling slider tracks must fit above the safe area"
+        );
+        for label in ["TEXT", "SPACING", "WIDTH"] {
+            let (text, clip) = output
+                .shapes
+                .iter()
+                .find_map(|shape| match &shape.shape {
+                    egui::Shape::Text(text) if text.galley.job.text == label => {
+                        Some((text, shape.clip_rect))
+                    }
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("missing {label}"));
+            let rect = Rect::from_min_size(text.pos, text.galley.size());
+            assert!(
+                clip.contains_rect(rect) && rect.bottom() <= 852.0 - insets.bottom,
+                "{label} clipped: {rect:?}, clip {clip:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn phone_jump_keeps_picker_visible_and_navigates_all_collections() {
         let library = Arc::new(
             Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
         );
         for width in [320.0, 393.0, 1000.0] {
-            for corpus in [Corpus::Scripture, Corpus::EarlyChristian] {
+            for corpus in [
+                Corpus::Scripture,
+                Corpus::EarlyChristian,
+                Corpus::ChristianClassics,
+            ] {
                 let ctx = egui::Context::default();
                 let mut app = Desktop::initialize(&ctx, None, library.clone());
                 let passage = library
@@ -1362,6 +1686,52 @@ mod tests {
                         |ctx| app.render(ctx),
                     )
                 };
+                if corpus == Corpus::ChristianClassics {
+                    app.dialog = Some(Dialog::Collections);
+                    for _ in 0..3 {
+                        render(&mut app, vec![]);
+                    }
+                    let output = render(&mut app, vec![]);
+                    let mut classics = None;
+                    for (_, name, _) in COLLECTIONS {
+                        let text = output
+                            .shapes
+                            .iter()
+                            .find_map(|shape| match &shape.shape {
+                                egui::Shape::Text(text) if text.galley.job.text == name => {
+                                    Some(text)
+                                }
+                                _ => None,
+                            })
+                            .unwrap_or_else(|| {
+                                panic!("Collection {name} must be visible at {width}")
+                            });
+                        assert!(
+                            text.pos.x >= 8.0 && text.pos.x + text.galley.size().x <= width - 8.0
+                        );
+                        if name == "Christian Classics" {
+                            classics = Some(text.pos + text.galley.size() / 2.0);
+                        }
+                    }
+                    let pos = classics.unwrap();
+                    for pressed in [true, false] {
+                        render(
+                            &mut app,
+                            vec![
+                                egui::Event::PointerMoved(pos),
+                                egui::Event::PointerButton {
+                                    pos,
+                                    button: egui::PointerButton::Primary,
+                                    pressed,
+                                    modifiers: egui::Modifiers::NONE,
+                                },
+                            ],
+                        );
+                    }
+                    assert!(app.dialog.is_none());
+                    assert_eq!(app.current_passage().corpus, corpus);
+                    app.show_jump();
+                }
                 for _ in 0..3 {
                     render(&mut app, vec![]);
                 }
@@ -1420,7 +1790,7 @@ mod tests {
                     );
                 }
                 assert_eq!(app.jump_chapter, 2);
-                if corpus == Corpus::EarlyChristian {
+                if corpus != Corpus::Scripture {
                     assert!(
                         app.dialog.is_none(),
                         "Choosing a work chapter opens it immediately"
@@ -1435,4 +1805,13 @@ mod tests {
             }
         }
     }
+}
+
+fn mix_colors(background: egui::Color32, foreground: egui::Color32, amount: f32) -> egui::Color32 {
+    let mix = |a: u8, b: u8| ((a as f32 * (1.0 - amount) + b as f32 * amount).round()) as u8;
+    egui::Color32::from_rgb(
+        mix(background.r(), foreground.r()),
+        mix(background.g(), foreground.g()),
+        mix(background.b(), foreground.b()),
+    )
 }

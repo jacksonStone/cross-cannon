@@ -29,6 +29,28 @@ use std::{
 };
 use theme::{heading, serif, Theme};
 
+const COLLECTIONS: [(Corpus, &str, &str); 3] = [
+    (Corpus::Scripture, "Scripture", "Bible"),
+    (Corpus::EarlyChristian, "Early Christian Works", "Fathers"),
+    (Corpus::ChristianClassics, "Christian Classics", "Classics"),
+];
+
+fn collection_name(corpus: Corpus) -> &'static str {
+    COLLECTIONS
+        .iter()
+        .find(|entry| entry.0 == corpus)
+        .unwrap()
+        .1
+}
+
+fn collection_short_name(corpus: Corpus) -> &'static str {
+    COLLECTIONS
+        .iter()
+        .find(|entry| entry.0 == corpus)
+        .unwrap()
+        .2
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 struct ReaderState {
@@ -66,6 +88,7 @@ impl Default for ReaderState {
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Dialog {
+    Collections,
     Jump,
     Search,
     Settings,
@@ -231,6 +254,7 @@ impl Desktop {
         };
         if fresh {
             match std::env::var("CROSS_CANON_PREVIEW").as_deref() {
+                Ok("collections") => desktop.dialog = Some(Dialog::Collections),
                 Ok("settings") => desktop.dialog = Some(Dialog::Settings),
                 Ok("offline-audio") => desktop.dialog = Some(Dialog::Downloads),
                 Ok("jump") => desktop.dialog = Some(Dialog::Jump),
@@ -285,6 +309,23 @@ impl Desktop {
             .passage(&self.state.location_passage_id)
             .unwrap()
     }
+    fn has_text_version_control(&self) -> bool {
+        match self.current_passage().corpus {
+            Corpus::EarlyChristian => true,
+            Corpus::ChristianClassics => {
+                self.library
+                    .chapter(&self.active_chapter_id)
+                    .is_some_and(|(_, chapter)| {
+                        chapter.passage_ids.iter().any(|id| {
+                            self.library
+                                .passage(id)
+                                .is_some_and(|passage| passage.text != passage.original_text)
+                        })
+                    })
+            }
+            Corpus::Scripture => false,
+        }
+    }
     fn search(&mut self, ctx: &egui::Context, source_id: Option<String>) {
         if self.busy {
             return;
@@ -318,42 +359,43 @@ impl Desktop {
         let ctx = ctx.clone();
         let api = self.state.api_url.trim_end_matches('/').to_owned();
         std::thread::spawn(move || {
-            let result =
-                if request.source_id.is_none() && matches!(request.mode, SearchMode::Keyword) {
-                    let books = if request.corpus == Some(Corpus::EarlyChristian)
-                        && !request.authors.is_empty()
-                    {
+            let result = if request.source_id.is_none()
+                && matches!(request.mode, SearchMode::Keyword)
+            {
+                let books =
+                    if request.corpus != Some(Corpus::Scripture) && !request.authors.is_empty() {
                         library
                             .books
                             .iter()
                             .filter(|b| {
-                                b.author
-                                    .as_ref()
-                                    .is_some_and(|a| request.authors.contains(a))
+                                request.corpus.is_none_or(|corpus| b.corpus == corpus)
+                                    && b.author
+                                        .as_ref()
+                                        .is_some_and(|a| request.authors.contains(a))
                             })
                             .map(|b| b.id.clone())
                             .collect()
                     } else {
                         request.books.clone()
                     };
-                    Ok(library
-                        .search(
-                            &request.query,
-                            request.corpus,
-                            &books,
-                            request.limit,
-                            request.canon,
-                        )
-                        .into_iter()
-                        .filter_map(|h| {
-                            library
-                                .passage(&h.id)
-                                .map(|p| ResultPassage::local(p, h.score))
-                        })
-                        .collect())
-                } else {
-                    search::remote_search(&library, &api, &request).map_err(|e| e.to_string())
-                };
+                Ok(library
+                    .search(
+                        &request.query,
+                        request.corpus,
+                        &books,
+                        request.limit,
+                        request.canon,
+                    )
+                    .into_iter()
+                    .filter_map(|h| {
+                        library
+                            .passage(&h.id)
+                            .map(|p| ResultPassage::local(p, h.score))
+                    })
+                    .collect())
+            } else {
+                search::remote_search(&library, &api, &request).map_err(|e| e.to_string())
+            };
             let _ = tx.send(SearchOutput { generation, result });
             ctx.request_repaint();
         });
@@ -451,7 +493,7 @@ impl Desktop {
         }
         let p = self.state.theme.palette();
         let insets = mobile::insets();
-        let fathers = self.current_passage().corpus == Corpus::EarlyChristian;
+        let fathers = self.current_passage().corpus != Corpus::Scripture;
         let side = if Self::compact(ctx) {
             if fathers {
                 12.0
@@ -501,18 +543,11 @@ impl Desktop {
                         .line_segment([center, center + delta], Stroke::new(1.2_f32, p.accent));
                     ui.painter().circle_filled(center + delta, 1.7, p.accent);
                 }
-                if response
-                    .on_hover_text(if self.current_passage().corpus == Corpus::Scripture {
-                        "Early Christian works"
-                    } else {
-                        "Scripture"
-                    })
-                    .clicked()
-                {
-                    self.switch_corpus();
+                if response.on_hover_text("Choose collection").clicked() {
+                    self.dialog = Some(Dialog::Collections);
                 }
             });
-        if self.current_passage().corpus == Corpus::EarlyChristian {
+        if self.has_text_version_control() {
             egui::Area::new(Id::new("text-version"))
                 .anchor(
                     Align2::LEFT_BOTTOM,
@@ -696,6 +731,20 @@ mod tests {
         );
         let app = Desktop::initialize(&egui::Context::default(), None, library);
         assert!(app.semantic, "A theme such as More money More Problems must use the web semantic search, not offline all-word matching");
+    }
+    #[test]
+    fn classics_version_control_tracks_chapter_availability() {
+        let library = Arc::new(
+            Library::load_artifacts(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
+                .unwrap(),
+        );
+        let mut app = Desktop::initialize(&egui::Context::default(), None, library.clone());
+        let book = library.book("classics:imitation").unwrap();
+        app.open(book.chapters[0].passage_ids[0].clone());
+        assert!(app.has_text_version_control());
+        let unmodernized = library.book("classics:henry").unwrap();
+        app.open(unmodernized.chapters[0].passage_ids[0].clone());
+        assert!(!app.has_text_version_control());
     }
     #[derive(Default)]
     pub(super) struct MemoryStorage(std::collections::HashMap<String, String>);
@@ -1021,6 +1070,7 @@ mod tests {
             assert_eq!(restored.state.theme, Theme::Dark);
             assert_eq!(restored.state.font_scale, 1.14);
             for dialog in [
+                Dialog::Collections,
                 Dialog::Jump,
                 Dialog::Settings,
                 Dialog::Search,

@@ -1,7 +1,8 @@
 //! Web reader compatibility: refine existing vectors and preserve the web contracts.
 use crate::engine::Engine;
 use anyhow::{Context, Result};
-use cross_canon_core::{Corpus, SearchRequest};
+use cross_canon_core::{Corpus, SearchHit, SearchRequest};
+use rayon::prelude::*;
 use rusqlite::{params_from_iter, Connection, OpenFlags};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -35,6 +36,7 @@ impl Engine {
             anyhow::bail!("Source and target embedding configurations differ");
         }
         let db = self.connection(corpus)?;
+        let mut classic_location: Option<(String, Option<u32>, Option<u32>)> = None;
         let (database_id, reference, text, bytes) = if corpus == Corpus::Scripture {
             db.query_row("SELECT id, reference, text, embedding FROM passages WHERE id=? AND embedding IS NOT NULL", [id], |r| Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,Vec<u8>>(3)?)))?
         } else {
@@ -50,18 +52,29 @@ impl Engine {
             } else {
                 ("p.id=?", vec![rusqlite::types::Value::Text(id.into())])
             };
-            db.query_row(&format!("SELECT p.id,p.reference,p.text,p.embedding,pm.chapter_id FROM passages p JOIN early_christian_passage_metadata pm ON pm.passage_id=p.id WHERE {clause} AND p.embedding IS NOT NULL LIMIT 1"), params_from_iter(arguments), |r| {
+            db.query_row(&format!("SELECT p.id,p.reference,p.text,p.embedding,pm.chapter_id,p.verse_start,p.verse_end FROM passages p JOIN early_christian_passage_metadata pm ON pm.passage_id=p.id WHERE {clause} AND p.embedding IS NOT NULL LIMIT 1"), params_from_iter(arguments), |r| {
                 let chapter:String=r.get(4)?;
                 if self.library.chapter(&chapter).is_none() { return Err(rusqlite::Error::QueryReturnedNoRows); }
+                if corpus == Corpus::ChristianClassics { classic_location = Some((chapter, r.get(5)?, r.get(6)?)); }
                 Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,Vec<u8>>(3)?))
             })?
         };
         let embedding = crate::engine::decode_embedding(&bytes, self.config(target)?.dimensions)?;
-        let metadata = if corpus == Corpus::Scripture {
+        let mut metadata = if corpus == Corpus::Scripture {
             json!({"id":database_id,"reference":reference})
         } else {
             json!({"id":database_id,"reference":reference,"text":text})
         };
+        if let Some((chapter, start, end)) = classic_location {
+            let mut display =
+                json!({"chapterId":chapter,"highlightPassage":{"verseStart":start,"verseEnd":end}});
+            crate::classics::display_results(
+                &self.library.root,
+                std::slice::from_mut(&mut display),
+            )?;
+            metadata["reference"] = display["highlightPassage"]["reference"].take();
+            metadata["text"] = display["highlightPassage"]["text"].take();
+        }
         Ok(Source {
             embedding,
             metadata,
@@ -124,44 +137,142 @@ impl Engine {
         if chapters.is_empty() {
             return Ok(vec![]);
         }
-        let db = self.connection(request.corpus.context("Missing Work collection")?)?;
-        let marks = vec!["?"; chapters.len()].join(",");
-        let sql=format!("SELECT p.id,p.reference,p.text,p.embedding,p.verse_start,p.verse_end,c.id,c.reference,w.title,w.author,w.authorship_date_range,w.ccel_id FROM passages p JOIN early_christian_passage_metadata pm ON pm.passage_id=p.id JOIN early_christian_chapters c ON c.id=pm.chapter_id LEFT JOIN early_christian_works w ON w.id=pm.work_id WHERE p.embedding IS NOT NULL AND pm.chapter_id IN ({marks})");
+        let corpus = request.corpus.context("Missing Work collection")?;
         let excluded = source.map(|s| s.database_id.as_str());
-        let mut statement = db.prepare(&sql)?;
-        let mut rows = statement.query(params_from_iter(chapters.iter().map(|h| &h.chapter_id)))?;
-        let mut best: HashMap<String, (f32, Value)> = HashMap::new();
-        while let Some(row) = rows.next()? {
-            let id: String = row.get(0)?;
-            if excluded == Some(id.as_str()) {
-                continue;
-            }
-            let bytes: Vec<u8> = row.get(3)?;
-            let vector = crate::engine::decode_embedding(&bytes, query.len())?;
-            let score = dot(query, &vector);
-            let chapter: String = row.get(6)?;
-            if best.get(&chapter).is_some_and(|(s, _)| *s >= score) {
-                continue;
-            }
-            let start: Option<u32> = row.get(4)?;
-            let end: Option<u32> = row.get(5)?;
+        // Independent chapter batches share Rayon's bounded worker pool. Keep
+        // exact scoring across the entire author scope without loading all of a
+        // large commentary's paragraph vectors into permanent process memory.
+        let batch_size = if chapters.len() > 512 {
+            32
+        } else {
+            chapters.len()
+        };
+        let batches = chapters
+            .par_chunks(batch_size)
+            .map(|chapters| self.best_work_passages(query, corpus, chapters, excluded))
+            .collect::<Result<Vec<_>>>()?;
+        let mut results: Vec<_> = batches.into_iter().flatten().collect();
+        results.sort_unstable_by(|(a_chapter, (a_score, _)), (b_chapter, (b_score, _))| {
+            b_score
+                .total_cmp(a_score)
+                .then_with(|| a_chapter.cmp(b_chapter))
+        });
+        results.truncate(request.limit);
+        let db = self.connection(corpus)?;
+        let mut details = db.prepare("SELECT p.reference,p.text,p.verse_start,p.verse_end,c.reference,w.title,w.author,w.authorship_date_range,w.ccel_id FROM passages p JOIN early_christian_passage_metadata pm ON pm.passage_id=p.id JOIN early_christian_chapters c ON c.id=pm.chapter_id LEFT JOIN early_christian_works w ON w.id=pm.work_id WHERE p.id=?")?;
+        let mut results = results.into_iter().map(|(chapter, (score, id))| details.query_row([&id], |row| {
+            let start: Option<u32> = row.get(2)?;
+            let end: Option<u32> = row.get(3)?;
             let range = match (start, end) {
                 (Some(a), Some(b)) if a != b => format!("{a}-{b}"),
                 (Some(a), _) => a.to_string(),
                 _ => String::new(),
             };
-            let result = json!({"author":row.get::<_,Option<String>>(9)?,"chapterId":chapter,"chapterReference":row.get::<_,String>(7)?,"date":row.get::<_,Option<String>>(10)?,"highlightPassage":{"id":id,"rangeLabel":range,"reference":row.get::<_,String>(1)?,"text":row.get::<_,String>(2)?,"verseStart":start,"verseEnd":end},"score":score,"source":row.get::<_,Option<String>>(11)?.unwrap_or_default(),"title":row.get::<_,Option<String>>(8)?.unwrap_or_default()});
-            best.insert(chapter, (score, result));
+            Ok(json!({"author":row.get::<_,Option<String>>(6)?,"chapterId":chapter,"chapterReference":row.get::<_,String>(4)?,"date":row.get::<_,Option<String>>(7)?,"highlightPassage":{"id":id,"rangeLabel":range,"reference":row.get::<_,String>(0)?,"text":row.get::<_,String>(1)?,"verseStart":start,"verseEnd":end},"score":score,"source":row.get::<_,Option<String>>(8)?.unwrap_or_default(),"title":row.get::<_,Option<String>>(5)?.unwrap_or_default()}))
+        })).collect::<rusqlite::Result<Vec<_>>>()?;
+        if request.corpus == Some(Corpus::ChristianClassics) {
+            crate::classics::display_results(&self.library.root, &mut results)?;
         }
-        let mut results: Vec<_> = best.into_values().collect();
-        results.sort_unstable_by(|a, b| {
-            b.0.total_cmp(&a.0)
-                .then_with(|| a.1["chapterId"].as_str().cmp(&b.1["chapterId"].as_str()))
-        });
-        results.truncate(request.limit);
-        Ok(results.into_iter().map(|(_, v)| v).collect())
+        Ok(results)
+    }
+
+    fn best_work_passages(
+        &self,
+        query: &[f32],
+        corpus: Corpus,
+        chapters: &[SearchHit],
+        excluded: Option<&str>,
+    ) -> Result<HashMap<String, (f32, String)>> {
+        let db = self.connection(corpus)?;
+        let marks = vec!["?"; chapters.len()].join(",");
+        // Fetch text and descriptive metadata only for the final hits. Author
+        // scopes can include over 100,000 stored paragraph embeddings.
+        let sql = format!(
+            "SELECT p.id,p.embedding,pm.chapter_id FROM passages p \
+            JOIN early_christian_passage_metadata pm ON pm.passage_id=p.id \
+            WHERE p.embedding IS NOT NULL AND pm.chapter_id IN ({marks})"
+        );
+        let mut statement = db.prepare(&sql)?;
+        let mut rows = statement.query(params_from_iter(chapters.iter().map(|h| &h.chapter_id)))?;
+        let mut best: HashMap<String, (f32, String)> = HashMap::new();
+        while let Some(row) = rows.next()? {
+            let id: String = row.get(0)?;
+            if excluded == Some(id.as_str()) {
+                continue;
+            }
+            let bytes = row.get_ref(1)?.as_blob()?;
+            let vector = crate::engine::decode_embedding(bytes, query.len())?;
+            let score = dot(query, &vector);
+            let chapter: String = row.get(2)?;
+            if best.get(&chapter).is_some_and(|(s, _)| *s >= score) {
+                continue;
+            }
+            best.insert(chapter, (score, id));
+        }
+        Ok(best)
     }
 }
 fn dot(left: &[f32], right: &[f32]) -> f32 {
     left.iter().zip(right).map(|(a, b)| a * b).sum()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cross_canon_core::Library;
+    use std::{path::Path, sync::Arc};
+
+    #[test]
+    fn actual_readonly_indexes_chapter_batches_and_source_display() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let engine = Engine::load(
+            Arc::new(Library::load(&root).unwrap()),
+            &root.join("storage/crosscannon.db"),
+            &root.join("storage/early-christian-works.db"),
+        )
+        .unwrap();
+        let source_id = &engine.library.book("Genesis").unwrap().chapters[0].passage_ids[0];
+        let query = engine
+            .source_embedding(source_id, Some(Corpus::ChristianClassics))
+            .unwrap();
+        let request = SearchRequest {
+            corpus: Some(Corpus::ChristianClassics),
+            authors: vec!["John Wesley".into()],
+            limit: 2000,
+            web: true,
+            ..Default::default()
+        };
+        let chapters = engine.semantic(&query, &request).unwrap();
+        assert!(chapters.len() > 512, "Exercise the large-author path");
+        let first = engine
+            .best_work_passages(&query, Corpus::ChristianClassics, &chapters[..1], None)
+            .unwrap();
+        let excluded = &first.values().next().unwrap().1;
+        let serial = engine
+            .best_work_passages(&query, Corpus::ChristianClassics, &chapters, Some(excluded))
+            .unwrap();
+        let parallel: HashMap<_, _> = chapters
+            .par_chunks(32)
+            .map(|batch| {
+                engine
+                    .best_work_passages(&query, Corpus::ChristianClassics, batch, Some(excluded))
+                    .unwrap()
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flatten()
+            .collect();
+        assert_eq!(serial, parallel);
+        assert!(parallel.values().all(|(_, id)| id != excluded));
+        let screenshot = engine
+            .source("ccw:dc669b7be67d792c4a6b5211", Some(Corpus::Scripture))
+            .unwrap();
+        assert_eq!(
+            screenshot.metadata["reference"],
+            "Commentary on the Whole Bible · Proverbs 16:1"
+        );
+        let text = screenshot.metadata["text"].as_str().unwrap();
+        assert!(text.starts_with("As we read this"));
+        assert!(text.ends_with("a blessing."));
+    }
 }

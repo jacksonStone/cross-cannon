@@ -3,6 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 build_branch=ops/rust-api-ci-release
+mkdir -p .tmp
 git fetch --quiet origin main
 parent="$(git rev-parse origin/main)"
 existing="$(git ls-remote origin "refs/heads/$build_branch" | awk '{print $1}')"

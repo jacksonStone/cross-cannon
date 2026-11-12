@@ -8,6 +8,7 @@ pub(super) struct ReaderLayout {
     chapters: std::collections::HashMap<String, f32>,
     passages: std::collections::HashMap<String, f32>,
     selected: Option<String>,
+    modernized_ranges: std::collections::HashMap<String, Vec<std::ops::Range<usize>>>,
 }
 
 #[derive(PartialEq)]
@@ -35,7 +36,7 @@ impl Desktop {
         // Reserve the same title width in both states. Tools float above the reader,
         // so toggling them cannot change title fitting or the reader's origin.
         let title_width = (ui.available_width() - 56.0).max(20.0);
-        let fathers = focused.corpus == Corpus::EarlyChristian;
+        let fathers = focused.corpus != Corpus::Scripture;
         let base = if fathers {
             if compact {
                 28.48
@@ -69,7 +70,7 @@ impl Desktop {
             ui.painter().text(
                 title_origin,
                 Align2::LEFT_TOP,
-                "EARLY CHRISTIAN WORKS",
+                collection_name(focused.corpus).to_uppercase(),
                 FontId::proportional(10.5),
                 p.accent,
             );
@@ -317,7 +318,7 @@ impl Desktop {
                 let title = ui.fonts(|f| {
                     f.layout(
                         format!("{} {}", book.title, chapter.number),
-                        heading(if book.corpus == Corpus::EarlyChristian {
+                        heading(if book.corpus != Corpus::Scripture {
                             13.12
                         } else {
                             15.2
@@ -352,7 +353,7 @@ impl Desktop {
                     p.muted.gamma_multiply(0.58),
                 );
                 ui.add_space(12.0);
-                if book.corpus == Corpus::EarlyChristian {
+                if book.corpus != Corpus::Scripture {
                     let title = ui.fonts(|f| {
                         f.layout(
                             chapter.title.clone(),
@@ -385,16 +386,42 @@ impl Desktop {
                     let mut text = egui::text::LayoutJob::default();
                     text.wrap.max_width = content_width - 20.0;
                     let size = 19.84 * self.state.font_scale;
-                    text.append(
-                        passage.reader_text(self.state.original),
-                        0.0,
-                        egui::TextFormat {
-                            font_id: serif(size),
-                            color: p.ink,
-                            line_height: Some(size * self.state.line_height),
-                            ..Default::default()
-                        },
-                    );
+                    let displayed = passage.reader_text(self.state.original);
+                    let format = egui::TextFormat {
+                        font_id: serif(size),
+                        color: p.ink,
+                        line_height: Some(size * self.state.line_height),
+                        ..Default::default()
+                    };
+                    // Off-screen paragraphs only need measurement. Compute differences
+                    // near the viewport and keep a bounded cache across frames.
+                    let near = start.y <= near_viewport.bottom()
+                        && start.y + 2000.0 >= near_viewport.top();
+                    let ranges = if show_modernization_marks(
+                        self.state.original,
+                        passage.corpus,
+                        &passage.original_text,
+                        displayed,
+                    ) && near
+                    {
+                        if measured.modernized_ranges.len() >= 256
+                            && !measured.modernized_ranges.contains_key(id)
+                        {
+                            measured.modernized_ranges.clear();
+                        }
+                        Some(
+                            measured
+                                .modernized_ranges
+                                .entry(id.clone())
+                                .or_insert_with(|| {
+                                    modernized_ranges(&passage.original_text, displayed)
+                                })
+                                .as_slice(),
+                        )
+                    } else {
+                        None
+                    };
+                    text.append(displayed, 0.0, format);
                     let galley = ui.fonts(|f| f.layout_job(text));
                     let height = galley.size().y + 8.0 + if selected { 25.0 } else { 0.0 };
                     let (rect, _) =
@@ -431,12 +458,23 @@ impl Desktop {
                         );
                     }
                     if ui.is_rect_visible(rect) {
-                        ui.painter().galley(
-                            rect.left_top()
-                                + egui::vec2(10.0, 4.0 + if selected { 25.0 } else { 0.0 }),
-                            galley,
-                            p.ink,
-                        );
+                        let origin = rect.left_top()
+                            + egui::vec2(10.0, 4.0 + if selected { 25.0 } else { 0.0 });
+                        if let Some(ranges) = ranges {
+                            let tint = modernization_tint(
+                                p.paper,
+                                p.accent,
+                                self.state.theme == Theme::Dark,
+                            );
+                            for mark in modernization_mark_rects(&galley, ranges) {
+                                ui.painter().rect_filled(
+                                    mark.translate(origin.to_vec2()),
+                                    size * 0.18,
+                                    tint,
+                                );
+                            }
+                        }
+                        ui.painter().galley(origin, galley, p.ink);
                     }
                     if response.clicked() && !touch.suppress_click {
                         self.selected = if selected { None } else { Some(id.clone()) };
@@ -590,5 +628,220 @@ impl Desktop {
         ui.add_space(46.0);
         ui.separator();
         ui.add_space(38.0);
+    }
+}
+
+fn modernization_tint(paper: egui::Color32, accent: egui::Color32, dark: bool) -> egui::Color32 {
+    let weight = if dark { 0.10 } else { 0.07 };
+    let mix = |background: u8, foreground: u8| {
+        (background as f32 * (1.0 - weight) + foreground as f32 * weight).round() as u8
+    };
+    egui::Color32::from_rgb(
+        mix(paper.r(), accent.r()),
+        mix(paper.g(), accent.g()),
+        mix(paper.b(), accent.b()),
+    )
+}
+
+/// Word boxes use font height, not the reader's expanded line height.
+fn modernization_mark_rects(galley: &egui::Galley, ranges: &[std::ops::Range<usize>]) -> Vec<Rect> {
+    let mut result = Vec::new();
+    let mut byte = 0;
+    let mut range_index = 0;
+    for row in &galley.rows {
+        let mut current: Option<Rect> = None;
+        for glyph in &row.glyphs {
+            while range_index < ranges.len() && ranges[range_index].end <= byte {
+                range_index += 1;
+            }
+            let marked = range_index < ranges.len() && ranges[range_index].contains(&byte);
+            if marked {
+                let glyph_rect = Rect::from_min_size(
+                    glyph.pos - egui::vec2(0.0, glyph.font_ascent),
+                    egui::vec2(glyph.advance_width, glyph.font_height),
+                );
+                current = Some(current.map_or(glyph_rect, |rect| rect.union(glyph_rect)));
+            } else if let Some(rect) = current.take() {
+                result.push(rect);
+            }
+            byte += glyph.chr.len_utf8();
+        }
+        if let Some(rect) = current.take() {
+            result.push(rect);
+        }
+        if row.ends_with_newline {
+            byte += 1;
+        }
+    }
+    result
+}
+
+fn show_modernization_marks(original: bool, corpus: Corpus, source: &str, displayed: &str) -> bool {
+    !original && corpus != Corpus::Scripture && source != displayed
+}
+
+/// Byte ranges in the displayed text, using the web reader's LCS tie-breaking.
+fn modernized_ranges(original: &str, displayed: &str) -> Vec<std::ops::Range<usize>> {
+    fn tokens(text: &str) -> Vec<(std::ops::Range<usize>, String)> {
+        let mut result = Vec::new();
+        let mut start = None;
+        for (index, ch) in text
+            .char_indices()
+            .chain(std::iter::once((text.len(), ' ')))
+        {
+            if ch.is_whitespace() {
+                if let Some(begin) = start.take() {
+                    let token = &text[begin..index];
+                    let lowered = token.to_lowercase();
+                    let comparable = lowered.trim_matches(|c: char| !c.is_ascii_alphanumeric());
+                    // Punctuation alone is not a changed word.
+                    if !comparable.is_empty() {
+                        result.push((begin..index, comparable.to_owned()));
+                    }
+                }
+            } else if start.is_none() {
+                start = Some(index);
+            }
+        }
+        result
+    }
+    let old = tokens(original);
+    let new = tokens(displayed);
+    let columns = new.len() + 1;
+    let mut scores = vec![0usize; (old.len() + 1) * columns];
+    for i in 1..=old.len() {
+        for j in 1..=new.len() {
+            scores[i * columns + j] = if old[i - 1].1 == new[j - 1].1 {
+                scores[(i - 1) * columns + j - 1] + 1
+            } else {
+                scores[(i - 1) * columns + j].max(scores[i * columns + j - 1])
+            };
+        }
+    }
+    let mut matched = vec![false; new.len()];
+    let (mut i, mut j) = (old.len(), new.len());
+    while i > 0 && j > 0 {
+        if old[i - 1].1 == new[j - 1].1 {
+            matched[j - 1] = true;
+            i -= 1;
+            j -= 1;
+        } else if scores[(i - 1) * columns + j] >= scores[i * columns + j - 1] {
+            i -= 1;
+        } else {
+            j -= 1;
+        }
+    }
+    new.into_iter()
+        .zip(matched)
+        .filter_map(|((range, _), matched)| (!matched).then_some(range))
+        .collect()
+}
+
+#[cfg(test)]
+mod modernization_tests {
+    use super::{
+        modernization_mark_rects, modernization_tint, modernized_ranges, show_modernization_marks,
+    };
+    use cross_canon_core::Corpus;
+    use eframe::egui;
+
+    #[test]
+    fn tint_composites_accent_over_paper_in_srgb() {
+        let paper = super::Theme::Paper.palette();
+        let dark = super::Theme::Dark.palette();
+        assert_eq!(
+            modernization_tint(paper.paper, paper.accent, false),
+            egui::Color32::from_rgb(243, 236, 232)
+        );
+        assert_eq!(
+            modernization_tint(dark.paper, dark.accent, true),
+            egui::Color32::from_rgb(45, 39, 35)
+        );
+    }
+
+    #[test]
+    fn mark_boxes_follow_wrapped_words_and_exclude_extra_leading() {
+        let ctx = egui::Context::default();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| {
+            let mut job = egui::text::LayoutJob::default();
+            job.wrap.max_width = 75.0;
+            job.append(
+                "écho word\nsecond word",
+                0.0,
+                egui::TextFormat {
+                    font_id: egui::FontId::proportional(16.0),
+                    line_height: Some(32.0),
+                    ..Default::default()
+                },
+            );
+            let galley = ctx.fonts(|f| f.layout_job(job));
+            let first = modernization_mark_rects(&galley, &[0..5]);
+            let last_start = "écho word\nsecond ".len();
+            let last = modernization_mark_rects(&galley, &[last_start..last_start + 4]);
+            assert_eq!(first.len(), 1);
+            assert_eq!(last.len(), 1);
+            assert!(first[0].height() < 32.0);
+            assert!(last[0].top() > first[0].top());
+            assert!(last[0].width() > 0.0);
+        });
+    }
+
+    #[test]
+    fn original_and_plain_passages_have_no_marks() {
+        assert!(!show_modernization_marks(
+            true,
+            Corpus::EarlyChristian,
+            "old",
+            "new"
+        ));
+        assert!(!show_modernization_marks(
+            false,
+            Corpus::EarlyChristian,
+            "same",
+            "same"
+        ));
+        assert!(!show_modernization_marks(
+            false,
+            Corpus::Scripture,
+            "old",
+            "new"
+        ));
+    }
+
+    #[test]
+    fn marks_only_changed_words_and_preserves_exact_text() {
+        let displayed = "  The\tquick,  fox!\n";
+        let ranges = modernized_ranges("the slow fox.", displayed);
+        assert_eq!(
+            ranges
+                .iter()
+                .map(|r| &displayed[r.clone()])
+                .collect::<Vec<_>>(),
+            vec!["quick,"]
+        );
+        let mut rebuilt = String::new();
+        let mut cursor = 0;
+        for range in ranges {
+            rebuilt.push_str(&displayed[cursor..range.start]);
+            rebuilt.push_str(&displayed[range.clone()]);
+            cursor = range.end;
+        }
+        rebuilt.push_str(&displayed[cursor..]);
+        assert_eq!(rebuilt, displayed);
+        assert!(modernized_ranges("Hello, world!", "hello WORLD? ...").is_empty());
+    }
+
+    #[test]
+    fn repeated_words_follow_web_lcs_tie_breaking() {
+        let displayed = "one two one";
+        let ranges = modernized_ranges("one one", displayed);
+        assert_eq!(
+            ranges
+                .iter()
+                .map(|r| &displayed[r.clone()])
+                .collect::<Vec<_>>(),
+            vec!["two"]
+        );
+        assert!(modernized_ranges("same same", "same same").is_empty());
     }
 }
