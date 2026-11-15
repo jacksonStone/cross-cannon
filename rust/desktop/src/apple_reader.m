@@ -886,6 +886,11 @@ float cross_canon_keyboard_height(void) {
     if (![model[@"visible"] boolValue]) {
         [self reportLocation];
         [self.text resignFirstResponder];
+        // UIKit promotes the text view's responder to its UIKeyInput ancestor
+        // (winit's rendering view). That opens a keyboard even for read-only
+        // dialogs. Release this inherited focus; egui will request the host
+        // again when an actual search or notes field needs text input.
+        if (self.superview.isFirstResponder) [self.superview resignFirstResponder];
         self.hidden = YES;
         self.accessibilityElementsHidden = YES;
         return;

@@ -9,6 +9,17 @@ void cross_canon_reader_event(const char *json) {
 }
 #import "../src/apple_reader.m"
 
+// Match the rendering host: winit's UIView implements UIKeyInput and can become
+// first responder even when the current egui dialog has no editable field.
+@interface CCInputHost : UIView <UIKeyInput>
+@end
+@implementation CCInputHost
+- (BOOL)canBecomeFirstResponder { return YES; }
+- (BOOL)hasText { return YES; }
+- (void)insertText:(NSString *)text {}
+- (void)deleteBackward {}
+@end
+
 #define CHECK(condition, message) do { if (!(condition)) { fprintf(stderr, "FAIL: %s\n", message); exit(1); } } while (0)
 
 static NSMutableDictionary *model(void) {
@@ -250,7 +261,11 @@ static void runChecks(UIWindow *window) {
     m[@"accent"] = @"#f1b38c"; m[@"chapters"] = NSNull.null; update(m);
     snapshot(@"native-dark-largest.png", reader);
 
+    [reader.text becomeFirstResponder];
+    CHECK(reader.text.isFirstResponder, "Native text selection must own the responder before opening commentary");
     cross_canon_reader_update("{\"visible\":false}");
+    CHECK(!window.rootViewController.view.isFirstResponder,
+        "Opening a read-only dialog must not transfer the selection responder to the keyboard-capable rendering host");
     CHECK(reader.hidden && reader.accessibilityElementsHidden, "Dialogs must hide the reading accessibility surface");
     const char *tree = "{\"modal\":true,\"scale\":1,\"nodes\":[{\"id\":\"42\",\"label\":\"Close search\",\"value\":null,\"number\":null,\"selected\":false,\"role\":\"button\",\"rect\":[20,70,44,44]}]}";
     cross_canon_accessibility_update(tree);
@@ -264,6 +279,11 @@ static void runChecks(UIWindow *window) {
     CHECK(![element accessibilityScroll:UIAccessibilityScrollDirectionLeft], "Unsupported accessibility scroll directions must not scroll vertically");
     cross_canon_accessibility_update(tree);
     CHECK(elements[@"42"] == element, "Ordinary redraws must preserve VoiceOver element identity");
+    [window.rootViewController.view becomeFirstResponder];
+    cross_canon_accessibility_update(tree);
+    CHECK(window.rootViewController.view.isFirstResponder,
+        "Dialog accessibility updates must preserve an intentional search or notes keyboard responder");
+    [window.rootViewController.view resignFirstResponder];
     cross_canon_accessibility_update("{\"modal\":false,\"nodes\":[]}");
     CHECK(!window.rootViewController.view.accessibilityViewIsModal, "Closing a dialog must release the accessibility focus trap");
     update(m);
@@ -368,6 +388,7 @@ static void runChecks(UIWindow *window) {
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
     self.window = [[UIWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];
     self.window.rootViewController = [UIViewController new];
+    self.window.rootViewController.view = [CCInputHost new];
     [self.window makeKeyAndVisible];
     dispatch_async(dispatch_get_main_queue(), ^{ runChecks(self.window); });
     return YES;

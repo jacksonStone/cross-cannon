@@ -606,6 +606,10 @@ mod tests {
                 },
                 |ctx| app.render(ctx),
             ));
+            assert!(
+                output.as_ref().unwrap().platform_output.ime.is_none(),
+                "The real read-only commentary dialog must not request a keyboard"
+            );
         }
         let nodes = modal_nodes(
             &ctx,

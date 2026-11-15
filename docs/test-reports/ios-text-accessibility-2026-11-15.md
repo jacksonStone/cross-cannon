@@ -1,5 +1,34 @@
 # iOS text accessibility and UI review — November 15, 2026
 
+## Follow-up: commentary unexpectedly opens the keyboard
+
+Reproduced with the simulator software keyboard enabled after selecting native
+reader text and opening commentaries. The commentary dialog requests no IME.
+When its UITextView resigned first responder, UIKit promoted the enclosing
+winit UIKeyInput rendering view to first responder and opened the keyboard.
+egui's IME state was already disabled, so its normal transition-based keyboard
+handling did not undo this native promotion.
+
+The reader-to-dialog handoff now releases that inherited host responder.
+An actual editor can still request the host through the normal IME path.
+The UIKit probe now uses a UIKeyInput-capable host matching winit, rather than
+a plain UIView. Its new regression failed before the fix and passes afterward;
+intentional editor responder focus survives accessibility updates.
+
+Verification: the full UIKit probe and all six focused Rust reader tests passed.
+The real commentary render also asserts that it requests no IME. Logs:
+`.tmp/ios-accessibility/commentary-keyboard-before.log`,
+`commentary-keyboard-final.log`, and `commentary-reader-tests.log`.
+
+The Release simulator app was replayed with the software keyboard enabled:
+native word selection → View commentaries has no keyboard; Passage notes still
+opens its keyboard; closing notes and reopening commentaries has no keyboard.
+Screenshot: `docs/screenshots/ios-text-accessibility/commentary-no-keyboard.png`.
+Both simulator and signed device Release builds passed their repaint gates;
+the device app also passed strict deep signature verification. Build logs:
+`commentary-simulator-build.log` and `commentary-device-build.log` in the same
+local log directory.
+
 The iPhone reading flow now uses native selectable UIKit text, preserving the
 existing Source Serif typography and shared canonical Passage state. System
 text selection supplies Copy, Look Up, Translate and Share; speech actions
