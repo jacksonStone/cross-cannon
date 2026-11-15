@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 const ORIGIN: &str = "https://www.crosscanon.com";
 pub(super) const CORPORA: [&str; 3] = ["scripture", "fathers", "classics"];
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct Location {
     version: u8,
@@ -83,24 +83,24 @@ pub(super) fn corpus_key(corpus: Corpus) -> &'static str {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(super) struct User {
     pub id: String,
     pub name: String,
     pub email: String,
 }
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub(super) struct Progress {
     pub location: Location,
     pub revision: u64,
 }
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub(super) struct LocalProgress {
     pub saved: Option<Progress>,
     pub dirty: bool,
     pub conflict: Option<Progress>,
 }
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub(super) struct Saved {
     pub user: Option<User>,
@@ -131,7 +131,7 @@ enum Event {
     Restored(Result<Option<String>>),
     Started(Result<Login>),
     Polled(Result<Option<String>>),
-    Synced(Result<SyncOutput>),
+    Synced(u64, Result<SyncOutput>),
     Revoked(Result<()>),
 }
 
@@ -151,6 +151,12 @@ pub(super) struct Account {
     pub persist_now: bool,
     persistent: bool,
     restore_started: bool,
+    reader_active: bool,
+    foreground_generation: u64,
+    refresh_generation: u64,
+    received_refresh: Option<u64>,
+    resume: Option<(u64, String)>,
+    sync_origin: Option<String>,
 }
 impl Account {
     pub fn new(saved: Saved) -> Self {
@@ -171,6 +177,13 @@ impl Account {
             persist_now: false,
             restore_started: false,
             persistent: false,
+            reader_active: false,
+            foreground_generation: 0,
+            refresh_generation: 0,
+            received_refresh: None,
+            resume: None,
+            // Background sync tests opt into a loopback server explicitly.
+            sync_origin: (!cfg!(test)).then(|| ORIGIN.to_owned()),
         }
     }
     fn run(&mut self, ctx: &egui::Context, job: impl FnOnce() -> Event + Send + 'static) {
@@ -236,6 +249,18 @@ impl Account {
     pub fn force_sync(&mut self) {
         self.last_request = Instant::now() - Duration::from_secs(60);
     }
+    fn observe_activity(&mut self, activity: mobile::Activity, passage: &str) {
+        let active = activity.active != 0;
+        if active && (!self.reader_active || activity.generation != self.foreground_generation) {
+            self.refresh_generation += 1;
+            self.resume = Some((self.refresh_generation, passage.to_owned()));
+            self.force_sync();
+        } else if !active {
+            self.resume = None;
+        }
+        self.reader_active = active;
+        self.foreground_generation = activity.generation;
+    }
     pub fn profile(&self) -> Option<&BTreeMap<String, LocalProgress>> {
         self.saved.profiles.get(&self.saved.user.as_ref()?.id)
     }
@@ -247,13 +272,17 @@ impl Account {
                 .or_default(),
         )
     }
-    pub fn remember(&mut self, passage: &Passage) {
+    pub fn remember(&mut self, passage: &Passage, library: &Library) {
         let Some(profile) = self.profile_mut() else {
             return;
         };
         let location = Location::from_passage(passage);
         let entry = profile.entry(location.corpus.clone()).or_default();
-        if entry.saved.as_ref().is_some_and(|p| p.location == location) {
+        if entry
+            .saved
+            .as_ref()
+            .is_some_and(|p| p.location.passage(library).as_deref() == Some(passage.id.as_str()))
+        {
             return;
         }
         let revision = entry.saved.as_ref().map_or(0, |p| p.revision);
@@ -280,6 +309,7 @@ impl Account {
         self.force_sync();
     }
     pub fn tick(&mut self, ctx: &egui::Context) {
+        self.received_refresh = None;
         while let Ok((generation, event)) = self.rx.try_recv() {
             if generation != self.generation {
                 continue;
@@ -325,7 +355,7 @@ impl Account {
                         self.status = error.to_string();
                     }
                 },
-                Event::Synced(result) => match result {
+                Event::Synced(refresh, result) => match result {
                     Ok(output) => {
                         if let Some(user) = output.account.user {
                             if self.saved.user.as_ref().map(|u| &u.id) != Some(&user.id) {
@@ -337,6 +367,8 @@ impl Account {
                                 output.account.progress,
                                 output.uploaded,
                             );
+                            self.persist_now = true;
+                            self.received_refresh = Some(refresh);
                             self.status = if self
                                 .profile()
                                 .unwrap()
@@ -383,7 +415,7 @@ impl Account {
             }
         }
         if self.busy {
-            ctx.request_repaint_after(Duration::from_millis(250));
+            // run() wakes the UI when its worker delivers a response.
             return;
         }
         if !self.restore_started {
@@ -436,21 +468,61 @@ impl Account {
                     }
                 })()));
             }
-        } else if let Some(token) = self.token.clone() {
-            let dirty = self
-                .profile()
-                .is_some_and(|p| p.values().any(|e| e.dirty && e.conflict.is_none()));
-            if self.last_request.elapsed() >= Duration::from_secs(if dirty { 2 } else { 20 }) {
+        } else if let (Some(token), Some(origin)) = (self.token.clone(), self.sync_origin.clone()) {
+            if self.last_request.elapsed() >= self.sync_interval() {
                 let profile = self.profile().cloned().unwrap_or_default();
                 let user_id = self.saved.user.as_ref().map(|u| u.id.clone());
+                let refresh = self.refresh_generation;
                 self.run(ctx, move || {
-                    Event::Synced(sync(ORIGIN, &token, user_id.as_deref(), profile))
+                    Event::Synced(refresh, sync(&origin, &token, user_id.as_deref(), profile))
                 });
             }
         }
-        if self.token.is_some() || self.login.is_some() || self.saved.revoke_pending {
-            ctx.request_repaint_after(Duration::from_millis(500));
+        self.schedule_tick(ctx);
+    }
+    pub(super) fn schedule_tick(&self, ctx: &egui::Context) {
+        // Sleep until work is due rather than checking it every half second.
+        // Local input and worker responses still request immediate repaints.
+        if !self.busy {
+            let delay = if self.saved.revoke_pending {
+                Some(Duration::from_secs(3).saturating_sub(self.last_request.elapsed()))
+            } else if let Some(login) = &self.login {
+                let expiry = Duration::from_millis(login.expires_at.saturating_sub(epoch_millis()));
+                Some(if login.ticket.is_some() {
+                    Duration::from_secs(2)
+                        .saturating_sub(self.last_request.elapsed())
+                        .min(expiry)
+                } else {
+                    expiry
+                })
+            } else if self.token.is_some() && self.sync_origin.is_some() {
+                Some(
+                    self.sync_interval()
+                        .saturating_sub(self.last_request.elapsed()),
+                )
+            } else {
+                None
+            };
+            if let Some(delay) = delay {
+                ctx.request_repaint_after(delay);
+            }
         }
+    }
+    fn sync_interval(&self) -> Duration {
+        let dirty = self
+            .profile()
+            .is_some_and(|p| p.values().any(|e| e.dirty && e.conflict.is_none()));
+        Duration::from_secs(if dirty { 2 } else { 30 })
+    }
+    pub fn study_credentials(&self) -> Option<(String, String, String)> {
+        if !self.signed_in() || self.received_refresh.is_none() {
+            return None;
+        }
+        Some((
+            self.saved.user.as_ref()?.id.clone(),
+            self.token.clone()?,
+            self.sync_origin.clone()?,
+        ))
     }
     pub fn signed_in(&self) -> bool {
         self.token.is_some() && !self.saved.revoke_pending && self.saved.user.is_some()
@@ -672,6 +744,11 @@ pub(super) fn close_browser() {
 
 impl Desktop {
     pub(super) fn account_tick(&mut self, ctx: &egui::Context) {
+        self.account_tick_with_activity(ctx, mobile::activity(ctx));
+    }
+    fn account_tick_with_activity(&mut self, ctx: &egui::Context, activity: mobile::Activity) {
+        self.account
+            .observe_activity(activity, &self.state.location_passage_id);
         if self.account.saved.user.is_none() && !self.account.identity_changed {
             self.account.saved.guest = vec![
                 self.state.location_passage_id.clone(),
@@ -719,7 +796,27 @@ impl Desktop {
                 }
             }
         }
-        if self.account.identity_changed {
+        let returned = self
+            .account
+            .resume
+            .as_ref()
+            .is_some_and(|(refresh, anchor)| {
+                self.account.reader_active
+                    && !self.playing
+                    && self.account.received_refresh == Some(*refresh)
+                    && anchor == &self.state.location_passage_id
+                    && self
+                        .account
+                        .profile()
+                        .and_then(|p| p.get(corpus_key(self.current_passage().corpus)))
+                        .is_some_and(|p| !p.dirty && p.conflict.is_none())
+            });
+        if self.account.received_refresh
+            == self.account.resume.as_ref().map(|(refresh, _)| *refresh)
+        {
+            self.account.resume = None;
+        }
+        if self.account.identity_changed || returned {
             self.account.persist_now = true;
             if self.account.saved.user.is_none() {
                 let guest = &self.account.saved.guest;
@@ -729,8 +826,9 @@ impl Desktop {
                 self.state.classics_location = guest.get(3).cloned().unwrap_or_default();
             }
             self.account.identity_changed = false;
-            // Identity changes can restore a saved place. A routine remote sync
-            // updates resume targets only; it never moves an open reading view.
+            // Restore after sign-in or a fresh return-to-app sync, provided the
+            // reader has not moved locally while the request was in flight.
+            // Routine polling during active reading updates resume targets only.
             if let Some(id) = resume.filter(|id| self.library.passage(id).is_some()) {
                 self.restore_location(id);
             }
@@ -898,7 +996,7 @@ impl Desktop {
             if control(ui, "Bring in my progress").clicked() {
                 let places = self.account.saved.guest.clone();
                 for id in places.iter().skip(1).chain(places.first()) {
-                    if let Some(p) = self.library.passage(id) { self.account.remember(p); }
+                    if let Some(p) = self.library.passage(id) { self.account.remember(p, &self.library); }
                 }
                 // Import is an explicit choice, but an existing cloud place
                 // still requires choosing which location wins.
@@ -922,6 +1020,78 @@ impl Desktop {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn idle_sync_sleeps_until_its_deadline_and_workers_wake_on_completion() {
+        let ctx = egui::Context::default();
+        let mut account = Account::new(Saved::default());
+        account.restore_started = true;
+        account.token = Some("test-session".into());
+        account.sync_origin = Some("http://127.0.0.1:9".into());
+        let delay = |account: &mut Account| {
+            // Settle egui's initial repaint requests before measuring tick's timer.
+            let mut output = egui::FullOutput::default();
+            for _ in 0..4 {
+                output = ctx.run(egui::RawInput::default(), |ctx| account.tick(ctx));
+            }
+            output.viewport_output[&egui::ViewportId::ROOT].repaint_delay
+        };
+        let clean = delay(&mut account);
+        assert!(
+            clean > Duration::from_secs(29) && clean <= Duration::from_secs(30),
+            "idle delay: {clean:?}"
+        );
+        account.saved.user = Some(User {
+            id: "user".into(),
+            name: "Reader".into(),
+            email: "reader@example.com".into(),
+        });
+        account
+            .saved
+            .profiles
+            .insert("user".into(), local("3", 1, true));
+        let dirty = delay(&mut account);
+        assert!(
+            dirty > Duration::from_secs(1) && dirty <= Duration::from_secs(2),
+            "dirty delay: {dirty:?}"
+        );
+        account.busy = true;
+        assert_eq!(
+            delay(&mut account),
+            Duration::MAX,
+            "worker completion already requests its own repaint"
+        );
+        account.busy = false;
+        account
+            .saved
+            .profiles
+            .insert("user".into(), local("3", 1, false));
+        let mut output = egui::FullOutput::default();
+        for _ in 0..4 {
+            output = ctx.run(egui::RawInput::default(), |ctx| {
+                account
+                    .saved
+                    .profiles
+                    .insert("user".into(), local("3", 1, false));
+                account.tick(ctx);
+                // Reading can change after tick(), during rendering.
+                account
+                    .saved
+                    .profiles
+                    .insert("user".into(), local("4", 1, true));
+                account.schedule_tick(ctx);
+            });
+        }
+        assert!(
+            output.viewport_output[&egui::ViewportId::ROOT].repaint_delay <= Duration::from_secs(2)
+        );
+        account.token = None;
+        account.login = Some(pending_login());
+        let expiry = delay(&mut account);
+        assert!(expiry > Duration::from_secs(59) && expiry <= Duration::from_secs(60));
+        account.login.as_mut().unwrap().ticket = Some("ticket".into());
+        let login_poll = delay(&mut account);
+        assert!(login_poll > Duration::from_secs(1) && login_poll <= Duration::from_secs(2));
+    }
     fn pending_login() -> Login {
         Login {
             id: "1".repeat(64),
@@ -1244,6 +1414,303 @@ mod tests {
         assert!(output.uploaded.is_empty());
         assert_eq!(output.account.progress["scripture"].location, location("5"));
         server.join().unwrap();
+    }
+    #[test]
+    fn returning_to_native_reader_restores_newer_web_chapter() {
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        let ctx = egui::Context::default();
+        let mut app = Desktop::initialize(&ctx, None, library.clone());
+        let chapter_two = location("2").passage(&library).unwrap();
+        app.open(chapter_two);
+        app.account.saved.user = Some(User {
+            id: "alice".into(),
+            name: "Alice".into(),
+            email: "alice@example.com".into(),
+        });
+        app.account
+            .saved
+            .profiles
+            .insert("alice".into(), local("2", 2, false));
+        // The phone's chapter two has already reached the web. Leave the app,
+        // advance the web reader to chapter three, then return to the phone.
+        for focused in [true, false, true] {
+            let _ = ctx.run(
+                egui::RawInput {
+                    focused,
+                    ..Default::default()
+                },
+                |ctx| app.account_tick(ctx),
+            );
+        }
+        app.account
+            .tx
+            .send((
+                app.account.generation,
+                Event::Synced(
+                    app.account.refresh_generation,
+                    Ok(SyncOutput {
+                        account: AccountResponse {
+                            user: app.account.saved.user.clone(),
+                            progress: BTreeMap::from([("scripture".into(), progress("3", 3))]),
+                        },
+                        uploaded: BTreeMap::new(),
+                    }),
+                ),
+            ))
+            .unwrap();
+        let _ = ctx.run(egui::RawInput::default(), |ctx| app.account_tick(ctx));
+        assert_eq!(
+            app.current_passage().chapter,
+            3,
+            "Returning to the phone must show the newer web chapter, not chapter two"
+        );
+        assert!(!app.account.profile().unwrap()["scripture"].dirty);
+    }
+    #[test]
+    fn ios_return_fetches_and_displays_web_progress_through_real_transport() {
+        use std::{
+            io::{BufRead, Write},
+            net::TcpListener,
+        };
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        let server = std::thread::spawn(move || {
+            let deadline = Instant::now() + Duration::from_secs(5);
+            let mut socket = loop {
+                match listener.accept() {
+                    Ok((socket, _)) => break socket,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        assert!(
+                            Instant::now() < deadline,
+                            "Returning to iOS never fetched web progress"
+                        );
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+                    Err(error) => panic!("{error}"),
+                }
+            };
+            socket
+                .set_read_timeout(Some(Duration::from_secs(5)))
+                .unwrap();
+            let mut reader = std::io::BufReader::new(&socket);
+            let mut request = String::new();
+            loop {
+                let mut line = String::new();
+                reader.read_line(&mut line).unwrap();
+                if line == "\r\n" {
+                    break;
+                }
+                request.push_str(&line);
+            }
+            assert!(request.starts_with("GET /api/account "));
+            assert!(request
+                .to_lowercase()
+                .contains("authorization: bearer ccn_"));
+            let body = serde_json::json!({
+                "user": {"id":"alice", "name":"Alice", "email":"alice@example.com"},
+                "progress": {"scripture":progress("3", 3)},
+            })
+            .to_string();
+            write!(socket, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+        });
+        let ctx = egui::Context::default();
+        let mut app = Desktop::initialize(&ctx, None, library.clone());
+        app.open(location("2").passage(&library).unwrap());
+        app.account.saved.user = Some(User {
+            id: "alice".into(),
+            name: "Alice".into(),
+            email: "alice@example.com".into(),
+        });
+        app.account
+            .saved
+            .profiles
+            .insert("alice".into(), local("2", 2, false));
+        app.account.token = Some(format!("ccn_{}", "a".repeat(64)));
+        app.account.sync_origin = Some(origin);
+        app.account.reader_active = true;
+        app.account.foreground_generation = 1;
+        // The last successful sync was recent. A new UIKit activation must
+        // bypass the normal twenty-second interval and fetch chapter three.
+        app.account.last_request = Instant::now();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while app.current_passage().chapter != 3 && Instant::now() < deadline {
+            let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                app.account_tick_with_activity(
+                    ctx,
+                    mobile::Activity {
+                        generation: 2,
+                        active: 1,
+                    },
+                );
+            });
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        server.join().unwrap();
+        assert_eq!(app.current_passage().chapter, 3);
+        assert!(!app.account.profile().unwrap()["scripture"].dirty);
+    }
+    #[test]
+    fn ios_activation_refreshes_each_collection_without_an_inactive_frame() {
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        for book in ["John", "anf09:xii.iv", "classics:imitation"] {
+            let ctx = egui::Context::default();
+            let mut app = Desktop::initialize(&ctx, None, library.clone());
+            let chapters = &library.book(book).unwrap().chapters;
+            let old = library.passage(&chapters[1].passage_ids[0]).unwrap();
+            let new = library.passage(&chapters[2].passage_ids[0]).unwrap();
+            let corpus = corpus_key(old.corpus);
+            app.open(old.id.clone());
+            app.account.saved.user = Some(User {
+                id: "alice".into(),
+                name: "Alice".into(),
+                email: "alice@example.com".into(),
+            });
+            app.account.saved.profiles.insert(
+                "alice".into(),
+                BTreeMap::from([(
+                    corpus.into(),
+                    LocalProgress {
+                        saved: Some(Progress {
+                            location: Location::from_passage(old),
+                            revision: 2,
+                        }),
+                        ..Default::default()
+                    },
+                )]),
+            );
+            let tick = |app: &mut Desktop, generation| {
+                let _ = ctx.run(egui::RawInput::default(), |ctx| {
+                    app.account_tick_with_activity(
+                        ctx,
+                        mobile::Activity {
+                            generation,
+                            active: 1,
+                        },
+                    );
+                });
+            };
+            tick(&mut app, 1);
+            let old_refresh = app.account.refresh_generation;
+            app.account.last_request = Instant::now();
+            // UIKit activates again; winit never delivered an unfocused frame.
+            tick(&mut app, 2);
+            assert!(
+                app.account.last_request.elapsed() >= Duration::from_secs(20),
+                "Returning must refresh immediately rather than wait for the polling interval"
+            );
+            let fresh = app.account.refresh_generation;
+            assert!(fresh > old_refresh);
+            let deliver = |app: &mut Desktop, refresh, passage: &Passage, revision| {
+                app.account
+                    .tx
+                    .send((
+                        app.account.generation,
+                        Event::Synced(
+                            refresh,
+                            Ok(SyncOutput {
+                                account: AccountResponse {
+                                    user: app.account.saved.user.clone(),
+                                    progress: BTreeMap::from([(
+                                        corpus.into(),
+                                        Progress {
+                                            location: Location::from_passage(passage),
+                                            revision,
+                                        },
+                                    )]),
+                                },
+                                uploaded: BTreeMap::new(),
+                            }),
+                        ),
+                    ))
+                    .unwrap();
+            };
+            // A request begun before the return cannot decide the resume target.
+            deliver(&mut app, old_refresh, new, 3);
+            tick(&mut app, 2);
+            assert_eq!(app.state.location_passage_id, old.id);
+            assert!(app.account.resume.is_some());
+            deliver(&mut app, fresh, new, 3);
+            tick(&mut app, 2);
+            assert_eq!(app.state.location_passage_id, new.id);
+            assert_eq!(app.scroll_target.as_deref(), Some(new.id.as_str()));
+            assert!(!app.account.profile().unwrap()[corpus].dirty);
+            // Once resumed, ordinary polling must not interrupt active reading.
+            deliver(&mut app, fresh, old, 4);
+            tick(&mut app, 2);
+            assert_eq!(app.state.location_passage_id, new.id);
+        }
+    }
+    #[test]
+    fn resume_sync_preserves_unsynced_reading_and_audio() {
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        for mode in ["offline", "moved-during-request", "audio"] {
+            let ctx = egui::Context::default();
+            let mut app = Desktop::initialize(&ctx, None, library.clone());
+            app.open(location("2").passage(&library).unwrap());
+            app.account.saved.user = Some(User {
+                id: "alice".into(),
+                name: "Alice".into(),
+                email: "alice@example.com".into(),
+            });
+            app.account
+                .saved
+                .profiles
+                .insert("alice".into(), local("2", 2, false));
+            let _ = ctx.run(egui::RawInput::default(), |ctx| app.account_tick(ctx));
+            let fresh = app.account.refresh_generation;
+            if mode == "audio" {
+                app.playing = true;
+            } else {
+                app.open(location("4").passage(&library).unwrap());
+                if mode == "offline" {
+                    // Local progress existed before the return as well.
+                    app.account.resume = None;
+                    app.account.reader_active = false;
+                    let _ = ctx.run(egui::RawInput::default(), |ctx| app.account_tick(ctx));
+                }
+            }
+            let refresh = if mode == "offline" {
+                app.account.refresh_generation
+            } else {
+                fresh
+            };
+            app.account
+                .tx
+                .send((
+                    app.account.generation,
+                    Event::Synced(
+                        refresh,
+                        Ok(SyncOutput {
+                            account: AccountResponse {
+                                user: app.account.saved.user.clone(),
+                                progress: BTreeMap::from([("scripture".into(), progress("3", 3))]),
+                            },
+                            uploaded: BTreeMap::new(),
+                        }),
+                    ),
+                ))
+                .unwrap();
+            let _ = ctx.run(egui::RawInput::default(), |ctx| app.account_tick(ctx));
+            assert_eq!(
+                app.current_passage().chapter,
+                if mode == "audio" { 2 } else { 4 }
+            );
+            let entry = &app.account.profile().unwrap()["scripture"];
+            if mode != "audio" {
+                assert!(entry.dirty);
+                assert_eq!(entry.conflict.as_ref().unwrap().location, location("3"));
+            }
+        }
     }
     #[test]
     fn account_dialog_fits_phone_and_desktop_and_sign_out_restores_guest() {

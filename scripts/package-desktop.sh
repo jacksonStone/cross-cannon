@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [[ "$(uname -s)" == Darwin ]] || { echo 'The .app packager requires macOS.' >&2; exit 1; }
+bash scripts/test-native-repaint.sh
 scripts/rust.sh build --release --locked -p cross-canon-desktop
 staging="$(mktemp -d /private/tmp/cross-canon-package.XXXXXX)"
 trap 'rm -rf "$staging"' EXIT

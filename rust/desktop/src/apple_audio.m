@@ -64,8 +64,8 @@ static void emit(NSDictionary *event) {
             if (s.wantsPlay && [end isKindOfClass:NSNumber.class] && position >= [end doubleValue] - 0.03) {
                 [s advance]; return;
             }
-            emit(@{@"type":@"position", @"seconds":@(position), @"chapter":track[@"id"]});
-            [s updateNowPlaying];
+            // Only chapter boundaries need periodic attention. The reader has no
+            // elapsed-time UI; Now Playing extrapolates time from time + rate.
         }];
         MPRemoteCommandCenter *commands = MPRemoteCommandCenter.sharedCommandCenter;
         [commands.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(__unused MPRemoteCommandEvent *event) { [weakSelf resume]; return MPRemoteCommandHandlerStatusSuccess; }];
@@ -113,7 +113,8 @@ static void emit(NSDictionary *event) {
     NSDictionary *track = self.chapters[self.index];
     double position = CMTimeGetSeconds(self.player.currentTime);
     double duration = CMTimeGetSeconds(self.player.currentItem.duration);
-    NSMutableDictionary *info = [@{MPMediaItemPropertyTitle:track[@"title"], MPMediaItemPropertyArtist:@"Cross Canon", MPNowPlayingInfoPropertyPlaybackRate:@(self.player.rate)} mutableCopy];
+    float rate = self.player.timeControlStatus == AVPlayerTimeControlStatusPlaying ? self.player.rate : 0;
+    NSMutableDictionary *info = [@{MPMediaItemPropertyTitle:track[@"title"], MPMediaItemPropertyArtist:@"Cross Canon", MPNowPlayingInfoPropertyPlaybackRate:@(rate)} mutableCopy];
     if (isfinite(position)) info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = @(position);
     if (isfinite(duration)) info[MPMediaItemPropertyPlaybackDuration] = @(duration);
     MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo = info;
@@ -129,7 +130,17 @@ static void emit(NSDictionary *event) {
 - (void)toggle { if (self.wantsPlay) [self pause]; else [self resume]; }
 - (void)seek:(double)seconds {
     if (!isfinite(seconds) || !self.chapters.count) return;
-    [self.player seekToTime:CMTimeMakeWithSeconds(MAX(0,seconds),600) toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+    self.seeking = YES;
+    NSUInteger generation = ++self.generation;
+    [self.player seekToTime:CMTimeMakeWithSeconds(MAX(0,seconds),600) toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(__unused BOOL finished) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (self.generation != generation) return;
+            self.seeking = NO;
+            // currentTime is reliable after the asynchronous seek completes,
+            // including while paused (when no playing timer can repair it).
+            [self updateNowPlaying];
+        });
+    }];
     if (!self.fallback) {
         for (NSUInteger index = 0; index < self.chapters.count; index++) {
             NSDictionary *audio = self.chapters[index][@"audio"];
@@ -142,7 +153,6 @@ static void emit(NSDictionary *event) {
             }
         }
     }
-    [self updateNowPlaying];
 }
 - (void)stop {
     self.wantsPlay = NO; self.generation++;
@@ -155,12 +165,16 @@ static void emit(NSDictionary *event) {
     emit(@{@"type":@"stopped"});
 }
 - (void)replaceItem:(AVPlayerItem *)item {
-    if (self.player.currentItem) [self.player.currentItem removeObserver:self forKeyPath:@"status"];
+    if (self.player.currentItem) {
+        [self.player.currentItem removeObserver:self forKeyPath:@"status"];
+        [self.player.currentItem removeObserver:self forKeyPath:@"duration"];
+    }
     if (self.endedObserver) [NSNotificationCenter.defaultCenter removeObserver:self.endedObserver];
     self.endedObserver = nil;
     [self.player replaceCurrentItemWithPlayerItem:item];
     if (!item) return;
     [item addObserver:self forKeyPath:@"status" options:NSKeyValueObservingOptionNew context:NULL];
+    [item addObserver:self forKeyPath:@"duration" options:NSKeyValueObservingOptionNew context:NULL];
     __weak CrossCanonAudio *weakSelf = self;
     self.endedObserver = [NSNotificationCenter.defaultCenter addObserverForName:AVPlayerItemDidPlayToEndTimeNotification object:item queue:NSOperationQueue.mainQueue usingBlock:^(__unused NSNotification *note) { [weakSelf advance]; }];
 }
@@ -182,9 +196,12 @@ static void emit(NSDictionary *event) {
     double start = [audio[@"startSeconds"] doubleValue];
     if (seek) {
         [self.player seekToTime:CMTimeMakeWithSeconds(MAX(0,start), 600) toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
-            if (self.generation != generation) return;
-            self.seeking = NO;
-            if (finished && self.wantsPlay) [self resume];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (self.generation != generation) return;
+                self.seeking = NO;
+                if (finished && self.wantsPlay) [self resume];
+                else [self updateNowPlaying];
+            });
         }];
     } else if (self.wantsPlay) { [self resume]; }
     [self updateNowPlaying];
@@ -216,9 +233,16 @@ static void emit(NSDictionary *event) {
     if ([keyPath isEqualToString:@"timeControlStatus"]) {
         if (self.player.timeControlStatus == AVPlayerTimeControlStatusPlaying) emit(@{@"type":@"playing"});
         else if (!self.wantsPlay) emit(@{@"type":@"paused"});
+        // Includes buffering/stalls and recovery, not just explicit commands.
+        [self updateNowPlaying];
         return;
     }
-    if (object != self.player.currentItem || self.player.currentItem.status != AVPlayerItemStatusFailed || !self.chapters.count) return;
+    if (object != self.player.currentItem || !self.chapters.count) return;
+    if ([keyPath isEqualToString:@"duration"] || self.player.currentItem.status == AVPlayerItemStatusReadyToPlay) {
+        [self updateNowPlaying];
+        return;
+    }
+    if (self.player.currentItem.status != AVPlayerItemStatusFailed) return;
     NSDictionary *fallback = self.chapters[self.index][@"fallback"];
     if (!self.fallback && [fallback isKindOfClass:NSDictionary.class]) {
         emit(@{@"type":@"fallback"});

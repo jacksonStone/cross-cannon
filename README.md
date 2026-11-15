@@ -592,6 +592,25 @@ playback still requires device testing; desktop emulation cannot certify it.
 
 ## Native iPhone app
 
+The iPhone reader uses native, selectable text. Long-press a word for the iOS
+Copy, Look Up, Translate and Share menu; Speak Selection and Speak Screen use
+the iPhone's Read & Speak accessibility settings. VoiceOver can read passages
+and access reader actions. Reader settings follow system Larger Text and Bold
+Text, with the app's size, spacing, width, theme and translation choices applied
+on top. Reflow, rotation and chapter loading retain the focused Passage.
+Reader controls retain the original custom icons. Copy through the standard
+text-selection menu; the iPhone reader and search results omit separate copy
+buttons.
+The compact header holds the books control and reader tools. Ordinary reading
+uses the space down to the bottom safe area; passage actions appear only when
+selected. Modernized/Original text choices are in Reader tools → Reading text.
+
+Run `bash scripts/test-ios-accessibility.sh` for the isolated UIKit regression
+app and normal/large-text previews under `docs/screenshots/ios-text-accessibility/`.
+It uses an available iPhone simulator and never reads account data or databases.
+See [the accessibility verification record](docs/test-reports/ios-text-accessibility-2026-11-15.md)
+for the full reader/menu checks and remaining physical-device checks.
+
 Native iPhone and macOS apps support Google login and the same Reader Location
 sync as the website. Open Reader tools (⋮) → Account to connect. Google opens
 in the system browser, then the app stores its revocable session in Keychain.
@@ -616,6 +635,18 @@ Install its signed `.app` with `xcrun devicectl device install app`; updating th
 same `com.crosscanon.mobile` bundle preserves app data. Launching requires an
 unlocked phone. See `.scratch/christian-classics-ui/mobile-release.md` for the
 latest build and installation receipt.
+
+The Mac packager and iPhone Release builds run the redraw-scheduler regression
+gate automatically, before building the app. Run it directly with
+`npm run test:native-repaint`. It fails if a required test fails or disappears,
+including when upgrading the pinned framework. See
+[the framework backport](rust/desktop/vendor/eframe/UPSTREAM.md) and
+[the physical-phone measurements](docs/test-reports/native-background-audio-profile-2026-11-13.md).
+For UI-framework or event-loop changes, also repeat an unplugged, ninety-second
+background-audio capture on a real phone, checking locked playback and return to
+the reader. Investigate sustained background CPU above 5% of one core; the fixed
+iPhone baseline was 0.175%. Phone energy/thermal checks require a reachable device
+and are separate from the automatic host-side regression gate.
 
 ## Christian Classics
 

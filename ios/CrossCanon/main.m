@@ -3,6 +3,20 @@
 
 extern int cross_canon_start(void);
 
+// A key window can remain key across suspension. Count actual UIKit activations
+// so Rust sees a return even when no inactive render frame was delivered.
+static uint64_t foregroundGeneration = 0;
+static id foregroundObserver;
+typedef struct {
+    uint64_t generation;
+    uint32_t active;
+} CrossCanonActivity;
+
+CrossCanonActivity cross_canon_activity(void) {
+    return (CrossCanonActivity){foregroundGeneration,
+        UIApplication.sharedApplication.applicationState == UIApplicationStateActive};
+}
+
 // Matches Rust mobile::Insets. Accessed only on UIKit's main thread.
 typedef struct {
     float top, left, bottom, right;
@@ -33,6 +47,11 @@ CrossCanonInsets cross_canon_safe_area(void) {
 
 int main(int argc, char *argv[]) {
     @autoreleasepool {
+        foregroundObserver = [NSNotificationCenter.defaultCenter
+            addObserverForName:UIApplicationDidBecomeActiveNotification
+            object:nil queue:nil usingBlock:^(__unused NSNotification *notification) {
+                foregroundGeneration++;
+            }];
         // Reading requires only the resources bundled with this application.
         NSString *library = [NSBundle.mainBundle.resourcePath stringByAppendingPathComponent:@"library"];
         setenv("CROSS_CANON_DATA_DIR", library.fileSystemRepresentation, 1);

@@ -447,7 +447,7 @@ impl Desktop {
         );
         ui.horizontal(|ui| {
             let width = (ui.available_width() - 52.0).max(100.0);
-            ui.add(
+            let field = ui.add(
                 egui::TextEdit::singleline(&mut self.catalog_browser.query)
                     .id(Id::new("catalog-query"))
                     .hint_text(if corpus == Corpus::Scripture {
@@ -457,8 +457,22 @@ impl Desktop {
                     })
                     .char_limit(200)
                     .margin(egui::vec2(10.0, 10.0))
-                    .desired_width(width),
+                    // TextEdit's desired width excludes its two inner margins.
+                    // Including them here pushes the clear button and modal
+                    // beyond the phone's right edge.
+                    .desired_width((width - 20.0).max(60.0)),
             );
+            field.widget_info(|| {
+                egui::WidgetInfo::labeled(
+                    egui::WidgetType::TextEdit,
+                    ui.is_enabled(),
+                    if corpus == Corpus::Scripture {
+                        "Find a book"
+                    } else {
+                        "Find a work or author"
+                    },
+                )
+            });
             let clear = icons::button(ui, icons::Icon::Close, "", egui::vec2(44.0, 44.0), false)
                 .on_hover_text("Clear catalog search");
             clear.widget_info(|| {
@@ -843,6 +857,7 @@ mod tests {
         let passage = library.book("Psalms").unwrap().chapters[116].passage_ids[0].clone();
         for width in [393.0, 1000.0] {
             let ctx = egui::Context::default();
+            ctx.enable_accesskit();
             let mut app = Desktop::initialize(&ctx, None, library.clone());
             app.state.api_url = "http://127.0.0.1:1/r/api".into();
             app.open(passage.clone());
@@ -856,7 +871,23 @@ mod tests {
                 render(&mut app, &ctx, width, vec![]);
             }
             let output = render(&mut app, &ctx, width, vec![]);
-            let button = label_position(&output, "View commentaries");
+            let node = &output
+                .platform_output
+                .accesskit_update
+                .as_ref()
+                .unwrap()
+                .nodes
+                .iter()
+                .find(|(_, node)| node.label() == Some("View commentaries"))
+                .expect("Accessible commentary action")
+                .1;
+            let bounds = node.bounds().unwrap();
+            assert_eq!(bounds.width(), 44.0);
+            assert_eq!(bounds.height(), 44.0);
+            let button = egui::pos2(
+                ((bounds.x0 + bounds.x1) / 2.0) as f32,
+                ((bounds.y0 + bounds.y1) / 2.0) as f32,
+            );
             assert!(button.x < width && button.y < 852.0);
             tap(&mut app, &ctx, width, button);
             assert!(matches!(app.dialog, Some(Dialog::Commentary)));

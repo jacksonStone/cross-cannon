@@ -92,7 +92,7 @@ impl Desktop {
         // navigation and passive reading. Pixel offsets are never Chapter IDs.
         self.active_chapter_id = passage.chapter_id.clone();
         if self.state.location_passage_id != id {
-            self.account.remember(passage);
+            self.account.remember(passage, &self.library);
         }
         match passage.corpus {
             Corpus::Scripture => self.state.scripture_location = id.clone(),

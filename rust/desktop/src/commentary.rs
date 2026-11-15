@@ -22,9 +22,12 @@ pub(super) struct Selection {
 
 impl Desktop {
     pub(super) fn show_commentaries(&mut self, passage: &Passage) {
+        let displayed = self
+            .reading_text
+            .passage(passage, self.state.scripture_translation);
         self.commentary = Some(Selection {
             reference: passage.reference.clone(),
-            text: passage.text.clone(),
+            text: displayed.text.clone(),
             works: self.catalog.commentaries(&self.library, passage),
             active_work: 0,
         });
@@ -45,13 +48,28 @@ impl Desktop {
             ui.label("No commentary indexed to these verses is included in the collection yet.");
             return;
         }
-        egui::ComboBox::from_id_salt("commentary-author")
+        let picker = egui::ComboBox::from_id_salt("commentary-author")
             .selected_text(&selection.works[selection.active_work].author)
             .show_ui(ui, |ui| {
                 for (index, work) in selection.works.iter().enumerate() {
-                    ui.selectable_value(&mut selection.active_work, index, &work.author);
+                    if ui
+                        .selectable_value(&mut selection.active_work, index, &work.author)
+                        .clicked()
+                    {
+                        ui.close_menu();
+                    }
                 }
             });
+        picker.response.widget_info(|| {
+            egui::WidgetInfo::labeled(
+                egui::WidgetType::ComboBox,
+                true,
+                format!(
+                    "Commentary author: {}",
+                    selection.works[selection.active_work].author
+                ),
+            )
+        });
         let work = &selection.works[selection.active_work];
         ui.add_space(12.0);
         ui.label(RichText::new(&work.title).strong());

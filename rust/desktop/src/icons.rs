@@ -11,6 +11,11 @@ pub(super) enum Icon {
     Close,
     Star,
     Account,
+    Highlight,
+    Note,
+    Similar,
+    Commentary,
+    More,
 }
 
 pub(super) fn button(
@@ -40,6 +45,11 @@ pub(super) fn button(
             ui.is_enabled(),
             if label.is_empty() {
                 match icon {
+                    Icon::Highlight => "Highlight passage",
+                    Icon::Note => "Write a note",
+                    Icon::Similar => "Similar passages",
+                    Icon::Commentary => "View commentaries",
+                    Icon::More => "More passage actions",
                     Icon::Search => "Search",
                     Icon::Filters => "Filters",
                     Icon::Jump => "Jump",
@@ -91,6 +101,31 @@ pub(super) fn button(
     response
 }
 
+/// Compact controls retain a 44-point target on both desktop and phone.
+pub(super) fn action_button(ui: &mut egui::Ui, icon: Icon, label: &str, active: bool) -> Response {
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(44.0, 44.0), Sense::click());
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), label)
+    });
+    if ui.is_rect_visible(rect) {
+        let accent = ui.visuals().selection.stroke.color;
+        if active || response.hovered() || response.has_focus() {
+            ui.painter().rect_filled(
+                rect,
+                7.0,
+                accent.gamma_multiply(if active { 0.14 } else { 0.08 }),
+            );
+        }
+        let color = if active {
+            accent
+        } else {
+            ui.style().interact(&response).text_color()
+        };
+        paint(ui.painter(), icon, rect.center(), color);
+    }
+    response.on_hover_text(label)
+}
+
 pub(super) fn paint(painter: &egui::Painter, icon: Icon, center: Pos2, color: Color32) {
     let stroke = Stroke::new(1.7_f32, color);
     let at = |x, y| center + egui::vec2(x, y);
@@ -98,6 +133,54 @@ pub(super) fn paint(painter: &egui::Painter, icon: Icon, center: Pos2, color: Co
         painter.line_segment([at(a.0, a.1), at(b.0, b.1)], stroke);
     };
     match icon {
+        Icon::Highlight => {
+            painter.add(egui::Shape::closed_line(
+                vec![at(-5.0, 1.0), at(3.0, -7.0), at(8.0, -2.0), at(0.0, 6.0)],
+                stroke,
+            ));
+            line((-5.0, 1.0), (0.0, 6.0));
+            line((-4.0, 4.0), (-7.0, 7.0));
+            line((-8.0, 9.0), (5.0, 9.0));
+        }
+        Icon::Note => {
+            line((-6.0, -7.0), (-8.0, -7.0));
+            line((-8.0, -7.0), (-8.0, 8.0));
+            line((-8.0, 8.0), (6.0, 8.0));
+            line((6.0, 8.0), (6.0, 4.0));
+            painter.add(egui::Shape::closed_line(
+                vec![
+                    at(-3.0, 3.0),
+                    at(-2.0, -1.0),
+                    at(5.0, -8.0),
+                    at(8.0, -5.0),
+                    at(1.0, 2.0),
+                ],
+                stroke,
+            ));
+        }
+        Icon::Commentary => {
+            painter.add(egui::Shape::closed_line(
+                vec![
+                    at(-9.0, -6.0),
+                    at(-4.0, -7.0),
+                    at(0.0, -5.0),
+                    at(4.0, -7.0),
+                    at(9.0, -6.0),
+                    at(9.0, 7.0),
+                    at(4.0, 6.0),
+                    at(0.0, 8.0),
+                    at(-4.0, 6.0),
+                    at(-9.0, 7.0),
+                ],
+                stroke,
+            ));
+            line((0.0, -5.0), (0.0, 8.0));
+        }
+        Icon::More => {
+            for x in [-6.0, 0.0, 6.0] {
+                painter.circle_filled(at(x, 0.0), 1.5, color);
+            }
+        }
         Icon::Account => {
             painter.circle_stroke(at(0.0, -4.0), 3.5, stroke);
             painter.add(egui::Shape::line(
@@ -112,7 +195,7 @@ pub(super) fn paint(painter: &egui::Painter, icon: Icon, center: Pos2, color: Co
                 stroke,
             ));
         }
-        Icon::Search => {
+        Icon::Search | Icon::Similar => {
             painter.circle_stroke(at(-2.0, -2.0), 5.5, stroke);
             line((2.0, 2.0), (7.0, 7.0));
         }

@@ -23,6 +23,7 @@
     "index:church-fathers": "node --import tsx scripts/index-church-fathers.ts",
     "query:church-fathers": "node --import tsx scripts/query-church-fathers.ts",
     "verify": "scripts/verify.sh",
+    "test:native-repaint": "bash scripts/test-native-repaint.sh",
     "verify-reader": "scripts/verify-reader.sh",
     "verify:offline": "npm run build && E2E_MANAGE_SERVER=1 npm run e2e:offline",
     "verify:fathers-passage-selection": "scripts/verify-fathers-passage-selection.sh",

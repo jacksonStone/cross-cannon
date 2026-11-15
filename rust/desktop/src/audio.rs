@@ -43,7 +43,6 @@ pub enum Command {
 pub enum Event {
     Loading,
     Chapter(String),
-    Position { chapter: String, seconds: f64 },
     Playing,
     Paused,
     Stopped,
@@ -235,10 +234,6 @@ pub fn start(
                 Some("paused") => Event::Paused,
                 Some("stopped") => Event::Stopped,
                 Some("chapter") => Event::Chapter(chapter()),
-                Some("position") => Event::Position {
-                    chapter: chapter(),
-                    seconds: value["seconds"].as_f64().unwrap_or(0.0),
-                },
                 Some("error") => Event::Error(
                     value["message"]
                         .as_str()

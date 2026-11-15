@@ -23,6 +23,7 @@ struct LayoutKey {
     line_height: f32,
     pixels_per_point: f32,
     original: bool,
+    translation: reading_translation::Translation,
     theme: Theme,
 }
 
@@ -132,30 +133,6 @@ impl Desktop {
                             ui.horizontal_wrapped(|ui| {
                                 self.toolbar_controls(ui, &focused);
                             });
-                            if !self.back.is_empty() || !self.forward.is_empty() {
-                                ui.horizontal(|ui| {
-                                    if ui
-                                        .add_enabled(
-                                            !self.back.is_empty(),
-                                            egui::Button::new("Back")
-                                                .min_size(egui::vec2(70.0, 44.0)),
-                                        )
-                                        .clicked()
-                                    {
-                                        self.go_back();
-                                    }
-                                    if ui
-                                        .add_enabled(
-                                            !self.forward.is_empty(),
-                                            egui::Button::new("Forward")
-                                                .min_size(egui::vec2(70.0, 44.0)),
-                                        )
-                                        .clicked()
-                                    {
-                                        self.go_forward();
-                                    }
-                                });
-                            }
                         });
                 });
             self.tools_rect = popup.response.rect;
@@ -227,7 +204,11 @@ impl Desktop {
                             )
                         })
                         .inner
-                        .on_hover_text("Play or pause chapter audio")
+                        .on_hover_text(if focused.corpus == Corpus::Scripture {
+                            "Play or pause WEB chapter audio"
+                        } else {
+                            "Play or pause chapter audio"
+                        })
                         .clicked()
                     {
                         self.play_audio(&focused.chapter_id);
@@ -239,6 +220,7 @@ impl Desktop {
     pub(super) fn reader(&mut self, ui: &mut egui::Ui) {
         let p = self.state.theme.palette();
         let library = self.library.clone();
+        let reading_text = self.reading_text.clone();
         let book = library.book(&self.current_passage().book_id).unwrap();
         let mut measured = std::mem::take(&mut self.reader_layout);
         let mut focused_visible = None;
@@ -272,6 +254,7 @@ impl Desktop {
                 line_height: self.state.line_height,
                 pixels_per_point: ui.ctx().pixels_per_point(),
                 original: self.state.original,
+                translation: self.state.scripture_translation,
                 theme: self.state.theme,
             };
             let layout_changed = measured.key.as_ref() != Some(&key);
@@ -381,7 +364,9 @@ impl Desktop {
                 let author = ui.fonts(|f| {
                     f.layout(
                         if book.corpus == Corpus::Scripture {
-                            "WEB · World English Bible".into()
+                            reading_text
+                                .label(&book.title, self.state.scripture_translation)
+                                .into()
                         } else {
                             book.author
                                 .clone()
@@ -404,6 +389,20 @@ impl Desktop {
                     p.muted.gamma_multiply(0.58),
                 );
                 ui.add_space(12.0);
+                if book.corpus == Corpus::Scripture
+                    && self.state.scripture_translation == reading_translation::Translation::Msb
+                    && reading_text
+                        .label(&book.title, self.state.scripture_translation)
+                        .starts_with("WEB")
+                {
+                    ui.label(
+                        RichText::new(
+                            "MSB does not include this book. Showing World English Bible.",
+                        )
+                        .small()
+                        .color(p.muted),
+                    );
+                }
                 if book.corpus != Corpus::Scripture {
                     let title = ui.fonts(|f| {
                         f.layout(
@@ -432,7 +431,10 @@ impl Desktop {
                             }
                         }
                     }
-                    let passage = library.passage(id).unwrap();
+                    let passage = reading_text.passage(
+                        library.passage(id).unwrap(),
+                        self.state.scripture_translation,
+                    );
                     let selected = self.selected.as_deref() == Some(id);
                     let mut text = egui::text::LayoutJob::default();
                     text.wrap.max_width = content_width - 20.0;
@@ -491,6 +493,14 @@ impl Desktop {
                                 ),
                             )
                         });
+                    }
+                    if let Some(color) = self.study.marks(passage) {
+                        let color = match color.as_str() {
+                            "green" => egui::Color32::from_rgba_unmultiplied(107, 167, 107, 45),
+                            "blue" => egui::Color32::from_rgba_unmultiplied(91, 158, 211, 45),
+                            _ => egui::Color32::from_rgba_unmultiplied(211, 184, 55, 45),
+                        };
+                        ui.painter().rect_filled(rect, 5.0, color);
                     }
                     if selected {
                         ui.painter()
@@ -551,9 +561,137 @@ impl Desktop {
                     }
                     ui.add_space(2.0);
                     if selected {
-                        ui.horizontal_wrapped(|ui| {
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing.x = 6.0;
+                            for (kind, icon, label, edit_label) in [
+                                (
+                                    "highlight",
+                                    icons::Icon::Highlight,
+                                    "Highlight passage",
+                                    "Edit highlight",
+                                ),
+                                (
+                                    "note",
+                                    icons::Icon::Note,
+                                    "Write a note",
+                                    "Open passage notes",
+                                ),
+                            ] {
+                                let active = self.study.item_at(kind, passage).is_some();
+                                if icons::action_button(
+                                    ui,
+                                    icon,
+                                    if active { edit_label } else { label },
+                                    active,
+                                )
+                                .clicked()
+                                    && !touch.suppress_click
+                                {
+                                    match self.study.direct_action(
+                                        kind,
+                                        passage,
+                                        self.state.original,
+                                    ) {
+                                        Ok(edit) => {
+                                            if edit {
+                                                self.dialog = Some(Dialog::Study);
+                                            }
+                                            self.account.persist_now = true;
+                                        }
+                                        Err(error) => {
+                                            self.study.status =
+                                                format!("Could not save study: {error}")
+                                        }
+                                    }
+                                }
+                            }
+                            if passage.corpus == Corpus::Scripture {
+                                if icons::action_button(
+                                    ui,
+                                    icons::Icon::Commentary,
+                                    "View commentaries",
+                                    false,
+                                )
+                                .clicked()
+                                    && !touch.suppress_click
+                                {
+                                    self.show_commentaries(&passage);
+                                }
+                            } else {
+                                let more = icons::action_button(
+                                    ui,
+                                    icons::Icon::More,
+                                    "More passage actions",
+                                    false,
+                                );
+                                let popup = ui.make_persistent_id(("passage-copy", id));
+                                if more.clicked() && !touch.suppress_click {
+                                    ui.memory_mut(|m| m.toggle_popup(popup));
+                                }
+                                if self.screenshot.is_some()
+                                    && !self.screenshot_sent
+                                    && std::env::var_os("CROSS_CANON_FRESH").is_some()
+                                    && std::env::var("CROSS_CANON_PREVIEW").as_deref()
+                                        == Ok("passage-copy-menu")
+                                {
+                                    ui.memory_mut(|memory| memory.open_popup(popup));
+                                }
+                                // A popup inherits the anchor's width by default. The
+                                // 44-point icon is a hit target, not a menu column.
+                                let below = ui.ctx().screen_rect().bottom() - more.rect.bottom();
+                                egui::popup_above_or_below_widget(
+                                    ui,
+                                    popup,
+                                    &more,
+                                    if below
+                                        < 128.0 + mobile::insets().bottom + READER_FOOTER_HEIGHT
+                                    {
+                                        egui::AboveOrBelow::Above
+                                    } else {
+                                        egui::AboveOrBelow::Below
+                                    },
+                                    egui::PopupCloseBehavior::CloseOnClickOutside,
+                                    |ui| {
+                                        ui.set_width(176.0);
+                                        ui.spacing_mut().item_spacing.y = 4.0;
+                                        for (label, text) in [
+                                            ("Copy link", navigation::reader_link(passage)),
+                                            (
+                                                "Copy text",
+                                                format!(
+                                                    "{}\n{}",
+                                                    passage.reference,
+                                                    passage.reader_text(self.state.original)
+                                                ),
+                                            ),
+                                        ] {
+                                            if ui
+                                                .add_sized(
+                                                    [176.0, 44.0],
+                                                    egui::Button::new(label)
+                                                        .wrap_mode(egui::TextWrapMode::Extend)
+                                                        .frame(false),
+                                                )
+                                                .clicked()
+                                                && !touch.suppress_click
+                                            {
+                                                ui.ctx().copy_text(text);
+                                                ui.memory_mut(|m| m.close_popup());
+                                            }
+                                        }
+                                    },
+                                );
+                            }
+                            ui.add_space((ui.available_width() - 44.0).max(0.0));
                             if ui
-                                .add_enabled_ui(!self.busy, |ui| control(ui, "Similar passages"))
+                                .add_enabled_ui(!self.busy, |ui| {
+                                    icons::action_button(
+                                        ui,
+                                        icons::Icon::Similar,
+                                        "Similar passages",
+                                        false,
+                                    )
+                                })
                                 .inner
                                 .clicked()
                                 && !touch.suppress_click
@@ -568,26 +706,13 @@ impl Desktop {
                                 self.search_corpus = Some(passage.corpus);
                                 self.search(ui.ctx(), Some(id.clone()));
                             }
-                            if passage.corpus == Corpus::Scripture
-                                && control(ui, "View commentaries").clicked()
-                                && !touch.suppress_click
-                            {
-                                self.show_commentaries(&passage);
-                            }
-                            if passage.corpus != Corpus::Scripture
-                                && control(ui, "Copy link").clicked()
-                            {
-                                ui.ctx().copy_text(navigation::reader_link(passage));
-                            }
-                            if passage.corpus != Corpus::Scripture && control(ui, "Copy").clicked()
-                            {
-                                ui.ctx().copy_text(format!(
-                                    "{}\n{}",
-                                    passage.reference,
-                                    passage.reader_text(self.state.original)
-                                ));
-                            }
                         });
+                        if let Some(error) = self.study.storage_error() {
+                            ui.colored_label(p.accent, error);
+                        }
+                        if self.study.status.starts_with("Could not save") {
+                            ui.colored_label(p.accent, &self.study.status);
+                        }
                         ui.add_space(10.0);
                     }
                     measured
@@ -666,7 +791,8 @@ impl Desktop {
         ui.add_space(10.0);
         ui.label(
             RichText::new(if book.corpus == Corpus::Scripture {
-                "WEB · World English Bible"
+                self.reading_text
+                    .label(&book.title, self.state.scripture_translation)
             } else {
                 book.author.as_deref().unwrap_or("Early Christian writings")
             })
@@ -696,7 +822,9 @@ impl Desktop {
                         "AUTHOR"
                     },
                     if book.corpus == Corpus::Scripture {
-                        "WEB · World English Bible".into()
+                        self.reading_text
+                            .label(&book.title, self.state.scripture_translation)
+                            .into()
                     } else {
                         book.author.clone().unwrap_or_default()
                     },
@@ -837,7 +965,7 @@ fn show_modernization_marks(original: bool, corpus: Corpus, source: &str, displa
 }
 
 /// Byte ranges in the displayed text, using the web reader's LCS tie-breaking.
-fn modernized_ranges(original: &str, displayed: &str) -> Vec<std::ops::Range<usize>> {
+pub(super) fn modernized_ranges(original: &str, displayed: &str) -> Vec<std::ops::Range<usize>> {
     fn tokens(text: &str) -> Vec<(std::ops::Range<usize>, String)> {
         let mut result = Vec::new();
         let mut start = None;
@@ -891,6 +1019,166 @@ fn modernized_ranges(original: &str, displayed: &str) -> Vec<std::ops::Range<usi
         .zip(matched)
         .filter_map(|((range, _), matched)| (!matched).then_some(range))
         .collect()
+}
+
+#[cfg(test)]
+mod passage_menu_tests {
+    use super::*;
+
+    fn frame(
+        app: &mut Desktop,
+        ctx: &egui::Context,
+        width: f32,
+        events: Vec<egui::Event>,
+    ) -> egui::FullOutput {
+        ctx.run(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(width, 852.0),
+                )),
+                events,
+                ..Default::default()
+            },
+            |ctx| app.render(ctx),
+        )
+    }
+
+    #[test]
+    fn copy_menu_labels_stay_on_one_line_and_actions_work() {
+        let library = Arc::new(
+            Library::load_artifacts(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
+                .unwrap(),
+        );
+        for width in [320.0, 393.0, 1000.0] {
+            let ctx = egui::Context::default();
+            ctx.enable_accesskit();
+            let mut app = Desktop::initialize(&ctx, None, library.clone());
+            let id = library.book("classics:imitation").unwrap().chapters[2].passage_ids[0].clone();
+            app.open(id.clone());
+            app.selected = Some(id.clone());
+            for _ in 0..3 {
+                frame(&mut app, &ctx, width, vec![]);
+            }
+            let output = frame(&mut app, &ctx, width, vec![]);
+            let footer = output
+                .platform_output
+                .accesskit_update
+                .as_ref()
+                .unwrap()
+                .nodes
+                .iter()
+                .find(|(_, node)| node.label() == Some("Choose collection"))
+                .unwrap()
+                .1
+                .bounds()
+                .unwrap();
+            assert!(
+                footer.x0 >= 0.0 && footer.x1 <= width as f64 - 15.0,
+                "Collection control must fit inside the screen at {width}px: {footer:?}"
+            );
+            for shape in &output.shapes {
+                if let egui::Shape::Text(text) = &shape.shape {
+                    if text.galley.job.text
+                        == library
+                            .passage(&id)
+                            .unwrap()
+                            .reader_text(app.state.original)
+                    {
+                        assert!(
+                            shape.clip_rect.bottom() <= footer.y0 as f32,
+                            "Reading text must be clipped above bottom controls"
+                        );
+                    }
+                }
+            }
+            let bounds = output
+                .platform_output
+                .accesskit_update
+                .unwrap()
+                .nodes
+                .into_iter()
+                .find(|(_, node)| node.label() == Some("More passage actions"))
+                .unwrap()
+                .1
+                .bounds()
+                .unwrap();
+            let pos = egui::pos2(
+                (bounds.x0 + bounds.x1) as f32 / 2.0,
+                (bounds.y0 + bounds.y1) as f32 / 2.0,
+            );
+            for pressed in [true, false] {
+                frame(
+                    &mut app,
+                    &ctx,
+                    width,
+                    vec![
+                        egui::Event::PointerMoved(pos),
+                        egui::Event::PointerButton {
+                            pos,
+                            button: egui::PointerButton::Primary,
+                            pressed,
+                            modifiers: egui::Modifiers::NONE,
+                        },
+                    ],
+                );
+            }
+            let output = frame(&mut app, &ctx, width, vec![]);
+            for label in ["Copy link", "Copy text"] {
+                let text = output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::Shape::Text(text) if text.galley.job.text == label => Some(text),
+                        _ => None,
+                    })
+                    .expect("Menu label must be visible");
+                assert_eq!(text.galley.rows.len(), 1, "{label} wraps at {width}px");
+                let rect = Rect::from_min_size(text.pos, text.galley.size());
+                assert!(
+                    ctx.screen_rect().contains_rect(rect),
+                    "{label} leaves the screen at {width}px"
+                );
+            }
+            let bounds = output
+                .platform_output
+                .accesskit_update
+                .unwrap()
+                .nodes
+                .into_iter()
+                .find(|(_, node)| node.label() == Some("Copy text"))
+                .unwrap()
+                .1
+                .bounds()
+                .unwrap();
+            assert!(bounds.width() >= 140.0 && bounds.height() >= 44.0);
+            let pos = egui::pos2(
+                (bounds.x0 + bounds.x1) as f32 / 2.0,
+                (bounds.y0 + bounds.y1) as f32 / 2.0,
+            );
+            let mut copied = false;
+            for pressed in [true, false] {
+                let output = frame(
+                    &mut app,
+                    &ctx,
+                    width,
+                    vec![
+                        egui::Event::PointerMoved(pos),
+                        egui::Event::PointerButton {
+                            pos,
+                            button: egui::PointerButton::Primary,
+                            pressed,
+                            modifiers: egui::Modifiers::NONE,
+                        },
+                    ],
+                );
+                copied |= output.platform_output.commands.iter().any(|command| matches!(command,
+                    egui::OutputCommand::CopyText(text) if text.contains(&library.passage(&id).unwrap().reference)));
+            }
+            assert!(copied, "Copy text must still work at {width}px");
+            assert!(!ctx.memory(|memory| memory.any_popup_open()));
+        }
+    }
 }
 
 #[cfg(test)]

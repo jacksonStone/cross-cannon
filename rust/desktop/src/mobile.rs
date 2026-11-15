@@ -2,6 +2,30 @@
 //! Desktop previews use the same compact layout without requiring UIKit.
 use super::*;
 
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub(crate) struct Activity {
+    pub generation: u64,
+    pub active: u32,
+}
+
+pub(crate) fn activity(ctx: &egui::Context) -> Activity {
+    #[cfg(target_os = "ios")]
+    {
+        let _ = ctx;
+        unsafe extern "C" {
+            fn cross_canon_activity() -> Activity;
+        }
+        // SAFETY: UIKit's main thread returns this matching repr(C) value.
+        unsafe { cross_canon_activity() }
+    }
+    #[cfg(not(target_os = "ios"))]
+    Activity {
+        generation: 0,
+        active: u32::from(ctx.input(|i| i.focused)),
+    }
+}
+
 #[derive(Clone, Copy, Default)]
 #[repr(C)]
 pub(crate) struct Insets {
@@ -16,10 +40,15 @@ pub(crate) fn insets() -> Insets {
     {
         unsafe extern "C" {
             fn cross_canon_safe_area() -> Insets;
+            fn cross_canon_keyboard_height() -> f32;
         }
         // SAFETY: render runs on UIKit's main thread; the host returns values,
         // not pointers, and matches this repr(C) structure exactly.
-        unsafe { cross_canon_safe_area() }
+        let mut insets = unsafe { cross_canon_safe_area() };
+        // Dialog viewports end above the software keyboard. UIKit handles the
+        // native reading surface and settings sheet independently.
+        insets.bottom = insets.bottom.max(unsafe { cross_canon_keyboard_height() });
+        insets
     }
     #[cfg(not(target_os = "ios"))]
     Insets::default()

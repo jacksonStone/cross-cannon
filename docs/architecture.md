@@ -84,6 +84,24 @@ flowchart TD
   CacheBuild --> StaticCache["scripture-cache manifest/json/gzip"]
 ```
 
+## Native iPhone Reading Surface
+
+The iPhone app hosts a selectable UIKit text view inside the existing Rust
+app's view controller. UIKit owns text layout, selection, Dynamic Type, system
+reading actions and scrolling. Rust retains canonical Passage identity, Reader
+Location, navigation, translations, study, account sync and audio. The adapter
+loads a bounded chapter window and retains the focused Passage and its local
+viewport position when typography changes or chapters enter and leave the
+window. Persisted state remains Passage based.
+
+Library, jump, search and study dialogs use the shared egui UI. A narrow
+platform-output hook exports the active dialog's AccessKit nodes to UIKit;
+stable element IDs, clipped interaction bounds and a separate nested-filter
+scope keep VoiceOver inside the visible dialog. Actions return through egui's
+own input events. Reader settings use a native sheet. The framework's sleeping
+redraw scheduler is unchanged; both native release builds retain its regression
+gate. See [the accessibility verification record](test-reports/ios-text-accessibility-2026-11-15.md).
+
 ## Scripture Readiness
 
 ```mermaid

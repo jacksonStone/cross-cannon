@@ -5,14 +5,20 @@ mod commentary;
 mod dialogs;
 mod downloads;
 mod icons;
+#[cfg(any(target_os = "ios", test))]
+mod ios_reader;
 mod mobile;
 mod navigation;
+mod note_markdown;
 #[cfg(test)]
 mod performance;
+mod persistence;
 mod reader;
+mod reading_translation;
 mod search;
 #[cfg(test)]
 mod search_regressions;
+mod study;
 mod theme;
 mod touch_scroll;
 use anyhow::{Context, Result};
@@ -38,6 +44,8 @@ const COLLECTIONS: [(Corpus, &str, &str); 3] = [
     (Corpus::ChristianClassics, "Christian Classics", "Classics"),
 ];
 
+const READER_FOOTER_HEIGHT: f32 = 76.0;
+
 fn collection_name(corpus: Corpus) -> &'static str {
     COLLECTIONS
         .iter()
@@ -54,7 +62,7 @@ fn collection_short_name(corpus: Corpus) -> &'static str {
         .2
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 struct ReaderState {
     location_passage_id: String,
@@ -69,6 +77,7 @@ struct ReaderState {
     line_height: f32,
     width: f32,
     original: bool,
+    scripture_translation: reading_translation::Translation,
     api_url: String,
 }
 impl Default for ReaderState {
@@ -85,11 +94,12 @@ impl Default for ReaderState {
             line_height: 1.72,
             width: 820.0,
             original: false,
+            scripture_translation: reading_translation::Translation::Web,
             api_url: "https://www.crosscanon.com/r/api".into(),
         }
     }
 }
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Dialog {
     Collections,
     Jump,
@@ -98,14 +108,20 @@ enum Dialog {
     Downloads,
     Account,
     Commentary,
+    Study,
 }
 struct SearchOutput {
     generation: u64,
     result: std::result::Result<Vec<ResultPassage>, String>,
 }
 struct Desktop {
+    #[cfg(target_os = "ios")]
+    ios_reader: ios_reader::Reader,
+    reader_storage: Option<persistence::ReaderStorage>,
     account: account::Account,
+    study: study::Study,
     library: Arc<Library>,
+    reading_text: Arc<reading_translation::ReadingText>,
     catalog: Arc<catalog::Catalog>,
     catalog_browser: catalog::Browser,
     commentary: Option<commentary::Selection>,
@@ -154,18 +170,37 @@ struct Desktop {
     audio_chapter: Option<String>,
     playing: bool,
     downloads: Option<downloads::Downloads>,
-    audio_seconds: f64,
     started: Instant,
     screenshot: Option<PathBuf>,
     screenshot_sent: bool,
     startup_reported: bool,
 }
 impl Desktop {
-    fn new(cc: &eframe::CreationContext<'_>, library: Arc<Library>, startup: Instant) -> Self {
+    fn new(
+        cc: &eframe::CreationContext<'_>,
+        library: Arc<Library>,
+        startup: Instant,
+        persistence_path: Option<PathBuf>,
+    ) -> Result<Self> {
         navigation::install_reader_links(&cc.egui_ctx);
-        let mut app = Self::initialize(&cc.egui_ctx, cc.storage, library);
+        let reader_storage = persistence_path
+            .map(persistence::ReaderStorage::open)
+            .transpose()?;
+        let storage = reader_storage
+            .as_ref()
+            .map(|s| s as &dyn eframe::Storage)
+            .or(cc.storage);
+        let mut app = Self::initialize(&cc.egui_ctx, storage, library);
+        app.reader_storage = reader_storage;
+        if std::env::var_os("CROSS_CANON_FRESH").is_none() {
+            let directory =
+                PathBuf::from(std::env::var_os("HOME").context("Missing app home directory")?)
+                    .join("Library/Application Support/CrossCanon");
+            app.study
+                .attach_storage(directory.join("personal-study.ron"))?;
+        }
         app.started = startup;
-        app
+        Ok(app)
     }
     fn initialize(
         ctx: &egui::Context,
@@ -209,7 +244,18 @@ impl Desktop {
         let (search_tx, search_rx) = mpsc::channel();
         let (audio_tx, audio_rx) = audio::start(library.root.clone(), ctx.clone());
         let catalog = catalog::Catalog::load(&library.root);
+        let reading_text = Arc::new(reading_translation::ReadingText::new(&library));
         let mut desktop = Self {
+            #[cfg(target_os = "ios")]
+            ios_reader: Default::default(),
+            reader_storage: None,
+            study: study::Study::new(if fresh {
+                Default::default()
+            } else {
+                storage
+                    .and_then(|s| eframe::get_value(s, "study"))
+                    .unwrap_or_default()
+            }),
             account: account::Account::new(if fresh {
                 Default::default()
             } else {
@@ -218,6 +264,7 @@ impl Desktop {
                     .unwrap_or_default()
             }),
             library,
+            reading_text,
             catalog,
             catalog_browser: catalog::Browser::new(jump_corpus),
             commentary: None,
@@ -266,7 +313,6 @@ impl Desktop {
             audio_chapter: None,
             playing: false,
             downloads: None,
-            audio_seconds: 0.0,
             started: Instant::now(),
             screenshot: std::env::var_os("CROSS_CANON_SCREENSHOT").map(Into::into),
             screenshot_sent: false,
@@ -281,8 +327,34 @@ impl Desktop {
                 }
                 Ok("settings") => desktop.dialog = Some(Dialog::Settings),
                 Ok("account") => desktop.dialog = Some(Dialog::Account),
-                Ok("passage-actions") => {
+                Ok("study") => desktop.dialog = Some(Dialog::Study),
+                Ok(mode @ ("study-passage" | "study-editor")) => {
+                    let passage = desktop.current_passage().clone();
+                    desktop.study.anchor = Some(account::Location::from_passage(&passage));
+                    let _ = desktop.study.create("highlight", Some(&passage), false);
+                    let _ = desktop.study.create("note", Some(&passage), false);
+                    if let Some(mut item) = desktop.study.editing.take() {
+                        item.body = "Love begins with **God’s gift**.\n\n- A gift to receive, before anything to achieve.\n- Read this alongside First Clement.".into();
+                        desktop.study.put(item);
+                    }
+                    let _ = desktop.study.create("note", Some(&passage), false);
+                    if let Some(mut item) = desktop.study.editing.take() {
+                        item.body =
+                            "What would change if I started with **God’s gift** each morning?"
+                                .into();
+                        desktop.study.put(item.clone());
+                        if mode == "study-editor" {
+                            desktop.study.editing = Some(item);
+                        }
+                    }
+                    desktop.dialog = Some(Dialog::Study);
+                }
+                Ok(mode @ ("passage-actions" | "passage-copy-menu")) => {
                     desktop.selected = Some(desktop.current_passage().id.clone());
+                    if mode == "passage-copy-menu" {
+                        desktop.state.theme = Theme::Dark;
+                        desktop.state.theme.apply(ctx);
+                    }
                 }
                 Ok("commentaries") => {
                     let passage = desktop.current_passage().clone();
@@ -441,7 +513,7 @@ impl Desktop {
     }
 }
 fn control(ui: &mut egui::Ui, label: &str) -> egui::Response {
-    ui.add(
+    let response = ui.add(
         egui::Button::new(label)
             .min_size(if Desktop::compact(ui.ctx()) {
                 egui::vec2(44.0, 44.0)
@@ -449,11 +521,34 @@ fn control(ui: &mut egui::Ui, label: &str) -> egui::Response {
                 egui::vec2(34.0, 36.0)
             })
             .corner_radius(6.0),
-    )
+    );
+    if label == "×" {
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), "Close")
+        });
+    }
+    response
 }
 impl Desktop {
     fn render(&mut self, ctx: &egui::Context) {
+        #[cfg(target_os = "ios")]
+        self.ios_reader_events(ctx);
         self.account_tick(ctx);
+        let owner = self
+            .account
+            .saved
+            .user
+            .as_ref()
+            .map(|u| format!("user:{}", u.id))
+            .unwrap_or_else(|| "guest".into());
+        if self
+            .study
+            .tick(ctx, owner, self.account.study_credentials())
+        {
+            self.account.persist_now = true;
+            #[cfg(target_os = "ios")]
+            self.ios_reader.invalidate();
+        }
         if let Some(downloads) = &mut self.downloads {
             downloads.poll();
         }
@@ -483,11 +578,6 @@ impl Desktop {
         while let Ok(event) = self.audio_rx.try_recv() {
             match event {
                 audio::Event::Loading => self.message = "Loading audio…".into(),
-                audio::Event::Position { chapter, seconds } => {
-                    if self.audio_chapter.as_deref() == Some(&chapter) {
-                        self.audio_seconds = seconds;
-                    }
-                }
                 audio::Event::Chapter(chapter) => {
                     let changed = self.audio_chapter.as_deref() != Some(&chapter);
                     let follow = self
@@ -535,6 +625,11 @@ impl Desktop {
         }
         let p = self.state.theme.palette();
         let insets = mobile::insets();
+        #[cfg(target_os = "ios")]
+        if self.show_ios_reader(ctx) {
+            self.account.schedule_tick(ctx);
+            return;
+        }
         let fathers = self.current_passage().corpus != Corpus::Scripture;
         let side = if Self::compact(ctx) {
             if fathers {
@@ -550,7 +645,9 @@ impl Desktop {
                 left: (side + insets.left).ceil() as i8,
                 right: (side + insets.right).ceil() as i8,
                 top: (insets.top + if Self::compact(ctx) { 12.0 } else { 0.0 }).ceil() as i8,
-                bottom: insets.bottom.ceil() as i8,
+                // Keep the reading viewport above the persistent bottom controls.
+                // Painting controls over the scroll area hides lines of the passage.
+                bottom: (insets.bottom + READER_FOOTER_HEIGHT).ceil() as i8,
             }))
             .show(ctx, |ui| {
                 let width =
@@ -572,8 +669,14 @@ impl Desktop {
                 [-16.0 - insets.right, -16.0 - insets.bottom],
             )
             .show(ctx, |ui| {
-                let response =
-                    ui.add_sized([44.0, 44.0], egui::Button::new("").corner_radius(13.0));
+                let response = ui.add(
+                    egui::Button::new("")
+                        .min_size(egui::vec2(44.0, 44.0))
+                        .corner_radius(13.0),
+                );
+                response.widget_info(|| {
+                    egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Choose collection")
+                });
                 let center = response.rect.center();
                 for delta in [
                     egui::vec2(-4.0, 0.0),
@@ -632,6 +735,13 @@ impl Desktop {
                     });
                 });
         }
+        #[cfg(any(target_os = "ios", test))]
+        {
+            let root = Id::new("ios-dialog-accessibility");
+            ctx.accesskit_node_builder(root, |node| node.set_role(egui::accesskit::Role::Dialog));
+            ctx.with_accessibility_parent(root, || self.dialogs(ctx));
+        }
+        #[cfg(not(any(target_os = "ios", test)))]
         self.dialogs(ctx);
         if self.screenshot.is_some()
             && !self.screenshot_sent
@@ -669,18 +779,50 @@ impl Desktop {
         if self.screenshot.is_some() || self.busy {
             ctx.request_repaint_after(Duration::from_millis(100));
         }
+        // Navigation during rendering can shorten the clean sync deadline.
+        self.account.schedule_tick(ctx);
     }
 }
 impl eframe::App for Desktop {
+    #[cfg(target_os = "ios")]
+    fn raw_input_hook(&mut self, ctx: &egui::Context, input: &mut egui::RawInput) {
+        ios_reader::input(ctx, input);
+    }
+    #[cfg(target_os = "ios")]
+    fn platform_output_hook(&mut self, ctx: &egui::Context, output: &egui::PlatformOutput) {
+        ios_reader::accessibility(
+            ctx,
+            output,
+            self.dialog.map(|d| format!("{d:?}:{}", self.filters_open)),
+        );
+    }
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         self.render(ctx);
-        if self.account.persist_now {
+        self.study.checkpoint();
+        if self.study.storage_error().is_some() {
+            ctx.request_repaint_after(Duration::from_secs(1));
+        }
+        let mut reader_storage = self.reader_storage.take();
+        if let Some(storage) = reader_storage.as_mut() {
+            // iOS may never render another frame or run on_exit. Saving here
+            // captures jumps, passive reading, settings and account progress.
+            storage.checkpoint(&self.state, &self.account.saved, &self.study);
+            eframe::Storage::flush(storage);
+            if storage.needs_retry() {
+                self.study.status =
+                    "Could not save on this device. Keep the app open and free some storage."
+                        .into();
+                ctx.request_repaint_after(Duration::from_secs(1));
+            }
+            self.account.persist_now = false;
+        } else if self.account.persist_now {
             self.account.persist_now = false;
             if let Some(storage) = frame.storage_mut() {
                 self.save(storage);
                 storage.flush();
             }
         }
+        self.reader_storage = reader_storage;
         if !self.startup_reported && std::env::var_os("CROSS_CANON_STARTUP_TIMING").is_some() {
             eprintln!(
                 "Cross Canon startup: first reader frame prepared in {:.3}s",
@@ -693,6 +835,7 @@ impl eframe::App for Desktop {
         if std::env::var_os("CROSS_CANON_FRESH").is_none() {
             eframe::set_value(storage, "reader", &self.state);
             eframe::set_value(storage, "accounts", &self.account.saved);
+            self.study.save(storage);
         }
     }
     fn auto_save_interval(&self) -> Duration {
@@ -759,6 +902,9 @@ pub fn run() -> Result<()> {
         std::fs::create_dir_all(&directory)?;
         options.persistence_path = Some(directory.join("reader.ron"));
     }
+    // eframe's normal storage flush is asynchronous. iOS owns the same file
+    // directly so each changed checkpoint is on disk before rendering stops.
+    let persistence_path = options.persistence_path.take();
     eframe::run_native(
         if cfg!(target_os = "ios") {
             "Cross Canon"
@@ -766,7 +912,14 @@ pub fn run() -> Result<()> {
             "Cross Canon Desktop"
         },
         options,
-        Box::new(move |cc| Ok(Box::new(Desktop::new(cc, library, startup)))),
+        Box::new(move |cc| {
+            Ok(Box::new(Desktop::new(
+                cc,
+                library,
+                startup,
+                persistence_path,
+            )?))
+        }),
     )
     .map_err(|e| anyhow::anyhow!("{e}"))
 }

@@ -56,6 +56,9 @@ int main(int argc, char **argv) {
         BOOL pauseSent = NO, resumeSent = NO;
         while (-start.timeIntervalSinceNow < 9 && !stopped) {
             [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
+            NSDictionary *nowPlaying = MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo;
+            if ([nowPlaying[MPMediaItemPropertyTitle] isEqual:@"Second chapter"] &&
+                [nowPlaying[MPNowPlayingInfoPropertyElapsedPlaybackTime] doubleValue] >= 1.5) advanced = YES;
             double elapsed = -start.timeIntervalSinceNow;
             if (!pauseSent && plays > 0 && elapsed > 0.9) { cross_canon_audio_command(0); pauseSent = YES; }
             if (pauseSent && !resumeSent && elapsed > 1.4) { cross_canon_audio_command(0); resumeSent = YES; }
@@ -68,7 +71,6 @@ int main(int argc, char **argv) {
                 if ([type isEqual:@"playing"]) plays++;
                 if ([type isEqual:@"paused"]) paused = YES;
                 if ([type isEqual:@"chapter"] && [event[@"chapter"] isEqual:@"second"]) second = YES;
-                if ([type isEqual:@"position"] && [event[@"chapter"] isEqual:@"second"] && [event[@"seconds"] doubleValue] >= 1.6) advanced = YES;
                 if ([type isEqual:@"stopped"]) stopped = YES;
                 if ([type isEqual:@"error"]) return 3;
             }

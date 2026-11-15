@@ -13,3 +13,8 @@ if (( $# )); then
 else
   "$probe_dir/audio-probe" "$PWD/rust/desktop/tests/fixtures/2-john.m4a"
 fi
+xcrun --sdk macosx clang -fobjc-arc -fblocks \
+  rust/desktop/tests/apple_audio_energy_probe.m \
+  -framework Foundation -framework AVFoundation -framework CoreMedia -framework MediaPlayer \
+  -o "$probe_dir/audio-energy-probe"
+"$probe_dir/audio-energy-probe" "$PWD/rust/desktop/tests/fixtures/2-john.m4a"
