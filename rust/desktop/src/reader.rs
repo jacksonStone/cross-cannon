@@ -474,7 +474,30 @@ impl Desktop {
                     } else {
                         None
                     };
-                    text.append(displayed, 0.0, format);
+                    let quotations = self.catalog.quotation_ranges(&library, passage, displayed);
+                    let quotation_label = if quotations.is_empty() {
+                        ""
+                    } else {
+                        "Scripture quotation\n"
+                    };
+                    text.append(
+                        quotation_label,
+                        0.0,
+                        egui::TextFormat {
+                            font_id: FontId::proportional(11.0),
+                            color: p.muted,
+                            ..Default::default()
+                        },
+                    );
+                    let mut cursor = 0;
+                    for quote in &quotations {
+                        text.append(&displayed[cursor..quote.start], 0.0, format.clone());
+                        let mut quoted = format.clone();
+                        quoted.italics = true;
+                        text.append(&displayed[quote.clone()], 0.0, quoted);
+                        cursor = quote.end;
+                    }
+                    text.append(&displayed[cursor..], 0.0, format);
                     let galley = ui.fonts(|f| f.layout_job(text));
                     let height = galley.size().y + 8.0 + if selected { 25.0 } else { 0.0 };
                     let (rect, _) =
@@ -527,13 +550,31 @@ impl Desktop {
                                 p.accent,
                                 self.state.theme == Theme::Dark,
                             );
-                            for mark in modernization_mark_rects(&galley, ranges) {
+                            let shifted: Vec<_> = ranges
+                                .iter()
+                                .map(|r| {
+                                    r.start + quotation_label.len()..r.end + quotation_label.len()
+                                })
+                                .collect();
+                            for mark in modernization_mark_rects(&galley, &shifted) {
                                 ui.painter().rect_filled(
                                     mark.translate(origin.to_vec2()),
                                     size * 0.18,
                                     tint,
                                 );
                             }
+                        }
+                        let quoted: Vec<_> = quotations
+                            .iter()
+                            .map(|r| r.start + quotation_label.len()..r.end + quotation_label.len())
+                            .collect();
+                        for mark in modernization_mark_rects(&galley, &quoted) {
+                            let mark = mark.translate(origin.to_vec2());
+                            ui.painter().vline(
+                                rect.left() + 3.0,
+                                mark.y_range(),
+                                Stroke::new(2.0_f32, p.muted),
+                            );
                         }
                         ui.painter().galley(origin, galley, p.ink);
                     }

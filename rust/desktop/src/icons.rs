@@ -244,3 +244,84 @@ pub(super) fn paint(painter: &egui::Painter, icon: Icon, center: Pos2, color: Co
         }
     }
 }
+
+/// Both DOM and egui controls consume the same vector artwork.
+#[cfg(target_arch = "wasm32")]
+pub(super) fn browser_icons() -> serde_json::Value {
+    let mut icons = serde_json::Map::new();
+    for (name, icon) in [
+        ("highlight", Icon::Highlight),
+        ("note", Icon::Note),
+        ("commentary", Icon::Commentary),
+        ("search", Icon::Search),
+        ("close", Icon::Close),
+        ("play", Icon::Play),
+        ("pause", Icon::Pause),
+        ("account", Icon::Account),
+        ("jump", Icon::Jump),
+        ("settings", Icon::Filters),
+    ] {
+        let ctx = egui::Context::default();
+        let output = ctx.run(Default::default(), |ctx| {
+            paint(
+                &ctx.layer_painter(egui::LayerId::background()),
+                icon,
+                egui::pos2(12.0, 12.0),
+                Color32::BLACK,
+            );
+        });
+        let mut svg = String::from("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>");
+        for clipped in output.shapes {
+            match clipped.shape {
+                egui::Shape::LineSegment { points, .. } => svg.push_str(&format!(
+                    "<path d='M{} {}L{} {}'/>",
+                    points[0].x, points[0].y, points[1].x, points[1].y
+                )),
+                egui::Shape::Path(path) => {
+                    let points = path
+                        .points
+                        .iter()
+                        .map(|p| format!("{},{}", p.x, p.y))
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    svg.push_str(&format!(
+                        "<{} points='{}' fill='{}'/>",
+                        if path.closed { "polygon" } else { "polyline" },
+                        points,
+                        if path.fill == Color32::TRANSPARENT {
+                            "none"
+                        } else {
+                            "currentColor"
+                        }
+                    ));
+                }
+                egui::Shape::Circle(circle) => svg.push_str(&format!(
+                    "<circle cx='{}' cy='{}' r='{}' fill='{}'/>",
+                    circle.center.x,
+                    circle.center.y,
+                    circle.radius,
+                    if circle.fill == Color32::TRANSPARENT {
+                        "none"
+                    } else {
+                        "currentColor"
+                    }
+                )),
+                egui::Shape::Rect(rect) => svg.push_str(&format!(
+                    "<rect x='{}' y='{}' width='{}' height='{}' fill='currentColor'/>",
+                    rect.rect.left(),
+                    rect.rect.top(),
+                    rect.rect.width(),
+                    rect.rect.height()
+                )),
+                _ => {}
+            }
+        }
+        svg.push_str("</svg>");
+        icons.insert(name.into(), svg.into());
+    }
+    // Host-native controls from the UIKit surface, expressed in browser SVG.
+    icons.insert("library".into(), "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.6' stroke-linejoin='round' aria-hidden='true'><rect x='2' y='4' width='4' height='16' rx='1'/><rect x='8' y='2' width='6' height='18' rx='1'/><path d='M9.5 7h3m-3 10h3M16 4l3-.5L22 20l-3 .5z'/></svg>".into());
+    icons.insert("tools".into(), "<svg viewBox='0 0 24 24' fill='currentColor' aria-hidden='true'><circle cx='12' cy='6' r='1.4'/><circle cx='12' cy='12' r='1.4'/><circle cx='12' cy='18' r='1.4'/></svg>".into());
+    icons.insert("download".into(), "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' aria-hidden='true'><circle cx='12' cy='12' r='9'/><path d='M12 6v12m-4-4 4 4 4-4'/></svg>".into());
+    icons.into()
+}

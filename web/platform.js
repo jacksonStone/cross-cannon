@@ -1,0 +1,310 @@
+// DOM is a rendering/effects adapter. Canonical state and decisions live in Rust.
+let dispatch;
+let model = {};
+let lastLink = location.pathname + location.search;
+let suppressLocation = false;
+let lastReported = '';
+let iconMarkup = {};
+const $ = (id) => document.getElementById(id);
+const emit = (action, id = '', book = model.book ?? '', value = 0) => dispatch?.(JSON.stringify({ action, id, book, value }));
+const button = (label, action, icon, className = 'icon') => {
+  const element = document.createElement('button');
+  element.type = 'button'; element.className = className;
+  element.setAttribute('aria-label', label); element.title = label;
+  element.innerHTML = iconMarkup[icon] ?? '';
+  element.addEventListener('click', () => emit(action));
+  return element;
+};
+const escapeCSS = (value) => CSS.escape(value);
+const passageElement = (id) => $('reader-text').querySelector(`[data-passage-id="${escapeCSS(id)}"]`);
+function captureAnchor() {
+  const scroller = $('reader-scroll');
+  const top = scroller.getBoundingClientRect().top;
+  const elements = [...$('reader-text').querySelectorAll('.passage')];
+  const element = elements.find((p) => p.getBoundingClientRect().bottom > top + 12);
+  return element ? { id: element.dataset.passageId, offset: element.getBoundingClientRect().top - top } : null;
+}
+function restoreAnchor(anchor) {
+  if (!anchor) return;
+  const element = passageElement(anchor.id);
+  if (element) $('reader-scroll').scrollTop += element.getBoundingClientRect().top - $('reader-scroll').getBoundingClientRect().top - anchor.offset;
+}
+function textWithRanges(p) {
+  const fragment = document.createDocumentFragment();
+  const boundaries = new Set([0, p.text.length]);
+  for (const [start, length] of [...p.modernization, ...p.quotations]) { boundaries.add(start); boundaries.add(start + length); }
+  const points = [...boundaries].sort((a,b) => a-b);
+  for (let i = 1; i < points.length; i++) {
+    const start = points[i-1], end = points[i];
+    const span = document.createElement('span'); span.textContent = p.text.slice(start,end);
+    if (p.modernization.some(([a,n]) => start >= a && end <= a+n)) span.classList.add('modernized');
+    if (p.quotations.some(([a,n]) => start >= a && end <= a+n)) span.classList.add('quotation');
+    fragment.append(span);
+  }
+  return fragment;
+}
+function renderChapters(chapters) {
+  const text = $('reader-text');
+  // Reuse unchanged chapter nodes: text selection survives window extension.
+  const old = new Map([...text.children].map((c) => [c.dataset.key, c]));
+  const desired = [];
+  for (const chapter of chapters) {
+    const key = chapter.paragraphs[0]?.id ?? chapter.title;
+    const fingerprint = JSON.stringify(chapter);
+    let section = old.get(key);
+    if (!section || section._fingerprint !== fingerprint) {
+      section = document.createElement('section'); section.className = 'chapter'; section.dataset.key = key;
+      section._fingerprint = fingerprint;
+      if (chapter.opening) {
+        const opening = document.createElement('div'); opening.className = 'book-opening';
+        const eyebrow = document.createElement('p'); eyebrow.className = 'eyebrow'; eyebrow.textContent = 'BOOK';
+        const title = document.createElement('h1'); title.textContent = chapter.opening.title;
+        const details = document.createElement('p'); details.className = 'details';
+        details.textContent = `${chapter.opening.author}\n${chapter.opening.collection} · ${chapter.opening.chapters} chapters`;
+        opening.append(eyebrow, title, details); section.append(opening);
+      }
+      const heading = document.createElement('h2'); heading.textContent = chapter.title; section.append(heading);
+      for (const key of ['subtitle','edition']) if (chapter[key]) { const p = document.createElement('p'); p.className = key; p.textContent = chapter[key]; section.append(p); }
+      for (const source of chapter.paragraphs) {
+        const p = document.createElement('p'); p.className = 'passage'; p.dataset.passageId = source.id;
+        p.dataset.link = source.link; p.dataset.reference = source.reference; p.tabIndex = 0;
+        p.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();emit('select',source.id);}});
+        if (source.highlight) { p.classList.add('highlight'); p.style.setProperty('--highlight', highlightColor(source.highlight)); }
+        p.append(textWithRanges(source)); section.append(p);
+      }
+    }
+    desired.push(section);
+  }
+  for (const node of [...text.children]) if (!desired.includes(node)) node.remove();
+  desired.forEach((node, index) => { if (text.children[index] !== node) text.insertBefore(node, text.children[index] ?? null); });
+}
+function highlightColor(mark) {
+  return ({yellow:'#f9eab3',green:'#d5ead2',blue:'#d3e4f5',pink:'#f4d6e1',purple:'#e3d8ef'})[mark] ?? '#f9eab3';
+}
+function updateReader(next) {
+  const previous = model;
+  const anchor = captureAnchor();
+  model = { ...model, ...next };
+  $('reader').hidden = !next.visible;
+  $('app-canvas').style.opacity = next.visible ? '0' : '1';
+  $('app-canvas').style.pointerEvents = next.visible ? 'none' : 'auto';
+  if (!next.visible) return;
+  document.title = `${next.title} · Cross Canon`;
+  const root = document.documentElement;
+  root.style.setProperty('--paper', next.paper); root.style.setProperty('--ink', next.ink);
+  root.style.setProperty('--muted', next.muted); root.style.setProperty('--accent', next.accent);
+  root.style.setProperty('--line', `color-mix(in srgb,${next.muted} 25%,${next.paper})`);
+  root.style.setProperty('--body-size', `${19.84 * next.fontScale}px`);
+  root.style.setProperty('--line-height', next.lineHeight);
+  root.style.setProperty('--column', `${next.width - 20}px`);
+  root.dataset.theme = next.theme === 2 ? 'dark' : 'light';
+  document.querySelector('meta[name=theme-color]').content = next.paper;
+  $('reader-jump').textContent = next.title;
+  $('reader-jump').setAttribute('aria-label', `${next.collection}, ${next.title}, jump to passage`);
+  $('reader-text').classList.toggle('work', !next.scripture);
+  if (next.chapters) renderChapters(next.chapters);
+  for (const p of $('reader-text').querySelectorAll('.passage')) {
+    p.classList.toggle('selected', p.dataset.passageId === next.selected);
+    p.setAttribute('aria-current', p.dataset.passageId === next.location ? 'location' : 'false');
+  }
+  $('reader-footer').hidden = !next.selected && !next.status;
+  $('reader-reference').hidden = !next.selected; $('reader-reference').textContent = next.reference ?? '';
+  $('passage-actions').hidden = !next.selected;
+  $('reader-status').hidden = Boolean(next.selected); $('reader-status').textContent = next.status ?? '';
+  $('action-commentary').hidden = !next.scripture;
+  // Layout changes retain a Passage and its local viewport position, never a saved scroll offset.
+  if (next.jump) {
+    suppressLocation = true;
+    requestAnimationFrame(() => {
+      const passage = passageElement(next.jump);
+      const section = passage?.closest(".chapter");
+      const target = section?.querySelector(".passage") === passage ? section : passage;
+      if (target) $('reader-scroll').scrollTop += target.getBoundingClientRect().top - $('reader-scroll').getBoundingClientRect().top - 8;
+      const link = next.link?.replace(/^https:\/\/www\.crosscanon\.com/, '');
+      if (link && link !== lastLink) { history.pushState(null, '', link); lastLink = link; }
+      requestAnimationFrame(() => { suppressLocation = false; reportLocation(); });
+    });
+  } else if (next.chapters || previous.fontScale !== next.fontScale || previous.lineHeight !== next.lineHeight || previous.width !== next.width) {
+    restoreAnchor(anchor);
+  }
+  if ($('reader-settings').open) renderSettings();
+}
+function reportLocation() {
+  if (suppressLocation || !model.visible || $('reader-settings').open) return;
+  const scroller = $('reader-scroll');
+  const anchor = captureAnchor();
+  if (anchor && anchor.id !== lastReported) { lastReported = anchor.id; emit('location', anchor.id); }
+  if (scroller.scrollTop < 500 && model.previous) emit('previous');
+  else if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 900 && model.next) emit('next');
+}
+let scrollFrame = 0;
+function scheduleLocation() {
+  if (!scrollFrame) scrollFrame = requestAnimationFrame(() => { scrollFrame = 0; reportLocation(); });
+}
+function renderAccessibility(tree) {
+  const root = $('dialog-accessibility');
+  root.hidden = !tree.modal;
+  if (!tree.modal) { root.replaceChildren(); return; }
+  root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal','true');
+  root.setAttribute('aria-label', tree.scope?.split(':')[0] ?? 'Reader dialog');
+  const old = new Map([...root.children].map((e) => [e.dataset.id,e]));
+  const retained = new Set();
+  for (const node of tree.nodes.sort((a,b)=>Math.abs(a.rect[1]-b.rect[1])>4?a.rect[1]-b.rect[1]:a.rect[0]-b.rect[0])) {
+    const tag = node.role === 'input' ? (node.multiline ? 'textarea' : 'input') : node.role === 'text' ? 'span' : 'button';
+    let element = old.get(node.id);
+    if (!element || element.localName !== tag) {
+      element?.remove(); element = document.createElement(tag); element.dataset.id = node.id;
+      if (tag === 'button') {
+        element.type = 'button';
+        element.addEventListener('pointerdown',(event)=>{if(document.activeElement?.localName==='textarea')event.preventDefault();});
+        let drag;
+        let suppressClick=false;
+        element.addEventListener('pointerdown',(event)=>{
+          drag={y:event.clientY,start:event.clientY};suppressClick=false;
+          element.setPointerCapture(event.pointerId);
+        });
+        element.addEventListener('pointermove',(event)=>{
+          if(!drag)return;
+          const delta=event.clientY-drag.y;drag.y=event.clientY;
+          if(Math.abs(event.clientY-drag.start)>8)suppressClick=true;
+          if(suppressClick)emit('scroll',node.id,'',delta);
+        });
+        element.addEventListener('pointerup',()=>{drag=null;});
+        element.addEventListener('pointercancel',()=>{drag=null;suppressClick=true;});
+        element.addEventListener('click', () => {if(!suppressClick)emit('accessibility',node.id,'click');});
+      }
+      if (tag === 'input' || tag === 'textarea') {
+        element.autocomplete = 'off';
+        element.addEventListener('focus', () => emit('accessibility',node.id,'focus'));
+        const selection=()=>JSON.stringify({text:element.value,start:element.selectionStart??0,end:element.selectionEnd??0});
+        element.addEventListener('input', () => emit('text',selection(),node.id));
+        element.addEventListener('select', () => emit('selection',selection(),node.id));
+        element.addEventListener('keyup', () => emit('selection',selection(),node.id));
+        element.addEventListener('pointerup', () => emit('selection',selection(),node.id));
+      }
+      root.append(element);
+    }
+    retained.add(element);
+    element.setAttribute('aria-label',node.label);
+    if (node.selected != null) element.setAttribute('aria-pressed',String(node.selected));
+    if (node.role === 'text') element.textContent = node.label;
+    if (node.role === 'input') {
+      if(element.value!==(node.value??''))element.value=node.value??'';
+      if(document.activeElement===element&&node.selection&&(element.selectionStart!==node.selection[0]||element.selectionEnd!==node.selection[1]))element.setSelectionRange(...node.selection);
+    }
+    const [left,top,width,height] = node.rect.map((n) => n * tree.scale);
+    Object.assign(element.style,{left:`${left}px`,top:`${top}px`,width:`${width}px`,height:`${height}px`});
+    if (node.role === 'adjustable') {
+      element.setAttribute('role','slider'); element.setAttribute('aria-valuenow', node.number ?? 0);
+      element.onkeydown = (e) => { if (e.key.startsWith('Arrow')) { e.preventDefault(); emit('accessibility',node.id, ['ArrowRight','ArrowUp'].includes(e.key) ? 'increment' : 'decrement'); } };
+    }
+  }
+  for (const element of [...root.children]) if (!retained.has(element)) element.remove();
+}
+export function updateSurface(json, accessibility) {
+  const value = JSON.parse(json);
+  if (accessibility) renderAccessibility(value); else updateReader(value);
+}
+function closeMenu() { $('tools-menu').close(); $('reader-tools').setAttribute('aria-expanded','false'); }
+function openTools() {
+  const menu = $('tools-menu'); menu.replaceChildren();
+  const items = [['Reader settings','settings','settings'],['Jump to passage','jump','jump'],['Search','search','search'],[model.playing?'Pause audio':'Play audio','audio',model.playing?'pause':'play'],['Audio downloads','downloads','download'],['Account and sync','account','account']];
+  if (model.versionControl) items.push([model.original?'Read modernized text':'Read original text','original','book']);
+  for (const [label,action,icon] of items) {
+    const item = button(label,action,icon,'menu-item');
+    const span = document.createElement('span'); span.textContent = label; item.prepend(span);
+    item.disabled = action === 'audio' && !model.audio;
+    item.onclick = (event) => { event.stopImmediatePropagation(); closeMenu(); if (action === 'settings') { renderSettings(); $('reader-settings').showModal(); } };
+    // Standard actions are sent by button's listener; settings stays in the adapter just as UIKit's sheet does.
+    if (action === 'settings') { const fresh = item.cloneNode(true); fresh.onclick = () => {closeMenu();renderSettings();$('reader-settings').showModal();}; menu.append(fresh); }
+    else { item.addEventListener('click',closeMenu); menu.append(item); }
+  }
+  menu.showModal(); $('reader-tools').setAttribute('aria-expanded','true');
+}
+function settingSection(title, footer = '') {
+  const section = document.createElement('section'); section.className = 'settings-section';
+  const h = document.createElement('h3'); h.textContent = title;
+  const group = document.createElement('div'); group.className='settings-group';
+  section.append(h,group);
+  if (footer) { const p = document.createElement('p');p.textContent=footer;section.append(p); }
+  $('settings-content').append(section); return group;
+}
+function preference(id,value) { emit('preference',id,'',value); }
+function renderSettings() {
+  const active = document.activeElement?.dataset.setting;
+  $('settings-content').replaceChildren();
+  const text = settingSection('Text', 'Your browser’s text selection, dictionary, translation, and accessibility tools remain available.');
+  for (const [label,id,key,step,min,max,detail] of [
+    ['Text size','font','fontScale',.05,.86,1.35,`${Math.round(model.fontScale*100)}% of default size`],
+    ['Line spacing','spacing','lineHeight',.1,1.42,2.08,Number(model.lineHeight).toFixed(2)],
+    ['Column width','width','width',20,620,880,`${model.width} points maximum`]]) {
+    const row = document.createElement('div');row.className='setting-row';
+    const title=document.createElement('span');title.textContent=label; const small=document.createElement('small');small.textContent=detail;title.append(small);
+    const controls=document.createElement('div');controls.className='stepper';
+    for(const [symbol,direction] of [['−',-1],['+',1]]) { const b=document.createElement('button');b.textContent=symbol;b.dataset.setting=id+direction;b.setAttribute('aria-label',`${direction<0?'Decrease':'Increase'} ${label.toLowerCase()}`);b.disabled=direction<0?model[key]<=min:model[key]>=max;b.onclick=()=>preference(id,Math.max(min,Math.min(max,model[key]+direction*step)));controls.append(b); }
+    row.append(title,controls);text.append(row);
+  }
+  for(const [label,values] of [['Default',[1,1.72,820]],['Compact',[.94,1.54,880]],['Open',[1.07,1.86,760]],['Relaxed',[1.14,1.96,700]]]) {
+    const b=document.createElement('button');b.className='setting-row';b.textContent=label;b.setAttribute('aria-pressed',String(values.every((n,i)=>Math.abs(n-[model.fontScale,model.lineHeight,model.width][i])<.002)));b.onclick=()=>['font','spacing','width'].forEach((id,i)=>preference(id,values[i]));text.append(b);
+  }
+  for(const [title,id,key,choices,footer] of [
+    ['Bible translation','translation','translation',['World English Bible','Majority Standard Bible'],'Search uses the World English Bible index. Recordings remain WEB audio.'],
+    ['Theme','theme','theme',['Paper','Sepia','Dark','High contrast'],''],
+    ['Scripture canon','canon','canon',['Protestant','Catholic','Orthodox'],'']]) {
+    const group=settingSection(title,footer);choices.forEach((label,value)=>{const b=document.createElement('button');b.className='setting-row';b.textContent=label;b.setAttribute('aria-pressed',String(model[key]===value));b.dataset.setting=id+value;b.onclick=()=>preference(id,value);group.append(b);});
+  }
+  const account=settingSection('Account and connection',model.info);
+  const b=document.createElement('button');b.className='setting-row';b.textContent='Account and reading progress';b.onclick=()=>{$('reader-settings').close();emit('account');};account.append(b);
+  if(active)$('settings-content').querySelector(`[data-setting="${escapeCSS(active)}"]`)?.focus({preventScroll:true});
+}
+export async function signIn() {
+  try {
+    const response=await fetch('/api/auth/sign-in/social',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:'google',callbackURL:location.pathname+location.search,errorCallbackURL:location.pathname+location.search})});
+    const result=await response.json();if(!response.ok||!result.url)throw Error(result.message??'Sign-in unavailable');location.assign(result.url);
+  }catch(error){emit('browser-status',String(error));}
+}
+export async function signOut() {
+  try { const response=await fetch('/api/auth/sign-out',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});if(!response.ok)throw Error('Could not sign out');location.reload(); }
+  catch(error){emit('browser-status',String(error));}
+}
+export function openURL(url) { if(/^https?:\/\//.test(url)) window.open(url,'_blank','noopener,noreferrer'); }
+export function connect(send, icons) {
+  dispatch=send;iconMarkup=icons;
+  $('reader-library').innerHTML=icons.library; $('reader-tools').innerHTML=icons.tools;
+  $('reader-jump').onclick=()=>emit('jump');$('reader-library').onclick=()=>emit('library');$('reader-tools').onclick=openTools;
+  for(const [label,action,icon] of [['Highlight passage','highlight','highlight'],['Passage notes','note','note'],['View commentaries','commentary','commentary'],['Similar passages','similar','search'],['Close passage actions','clear','close']]) {const b=button(label,action,icon);b.id='action-'+action;$('passage-actions').append(b);}
+  $('settings-done').onclick=()=>{$('reader-settings').close();$('reader-tools').focus();};
+  $('tools-menu').addEventListener('click',(e)=>{if(e.target===$('tools-menu'))closeMenu();});
+  $('tools-menu').addEventListener('cancel',()=>{$('reader-tools').setAttribute('aria-expanded','false');});
+  $('reader-settings').addEventListener('click',(e)=>{if(e.target===$('reader-settings'))$('reader-settings').close();});
+  document.addEventListener('keydown',(event)=>{
+    const root=$('dialog-accessibility');
+    if(event.key==='Tab'&&!root.hidden){
+      const elements=[...root.querySelectorAll('button,input,textarea')];if(!elements.length)return;
+      const index=elements.indexOf(document.activeElement);
+      if(index<0||(!event.shiftKey&&index===elements.length-1)||(event.shiftKey&&index===0)){
+        event.preventDefault();elements[event.shiftKey?elements.length-1:0].focus();
+      }
+    }
+  });
+  $('reader-scroll').addEventListener('scroll',scheduleLocation,{passive:true});
+  let down;
+  $('reader-text').addEventListener('pointerdown',(e)=>{down={x:e.clientX,y:e.clientY,id:e.target.closest('.passage')?.dataset.passageId};});
+  $('reader-text').addEventListener('pointerup',(e)=>{if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<8&&!getSelection()?.toString()&&down.id){emit('select',down.id);}});
+  window.addEventListener('popstate',()=>{lastLink=location.pathname+location.search;emit('link','https://www.crosscanon.com'+lastLink);});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')reportLocation();else emit('resume');});
+  let resizeAnchor=captureAnchor();
+  new ResizeObserver(()=>{restoreAnchor(resizeAnchor);resizeAnchor=captureAnchor();}).observe($('reader-scroll'));
+  $('reader-scroll').addEventListener('scroll',()=>{resizeAnchor=captureAnchor();},{passive:true});
+  document.fonts.ready.then(()=>restoreAnchor(resizeAnchor));
+}
+
+let foregroundGeneration=0;
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)foregroundGeneration++;});
+export function isActive(){return !document.hidden;}
+export function activityGeneration(){return foregroundGeneration;}
+export function safeInsets(){
+  const viewport=window.visualViewport;
+  const bottom=viewport?Math.max(0,innerHeight-viewport.height-viewport.offsetTop):0;
+  return [0,0,bottom,0];
+}

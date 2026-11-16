@@ -60,9 +60,9 @@ to be visible during passive reading.
 _Avoid_: Scroll URL, current viewport link, position hash
 
 **Scripture Cache**:
-The versioned collection of Scripture passages used as the browser's complete
-text source for reading, result display, passage lookup, and similar-passage
-source text.
+The immutable, versioned collection of canonical Scripture passages used to
+package the shared Library and browser Chapter fragments. Verification and
+deployment consume existing cache artifacts without regenerating them.
 _Avoid_: Database cache, search index, static JSON
 
 **Collection**:

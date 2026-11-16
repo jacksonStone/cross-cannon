@@ -11,12 +11,12 @@ import {
   setIndexedEmbeddingConfig,
   syncPassageAudioFile,
   vectorSql
-} from "../app/lib/db.server";
+} from "./lib/db";
 import {
   embedText,
   getDefaultEmbeddingConfig,
   type EmbeddingConfig
-} from "../app/lib/embeddings.server";
+} from "./lib/embeddings";
 
 type PassageType = "paragraph";
 

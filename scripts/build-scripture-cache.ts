@@ -2,11 +2,11 @@ import { gzipSync } from "node:zlib";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ensureDatabase } from "../app/lib/db.server";
+import { ensureDatabase } from "./lib/db";
 import {
   buildScriptureCachePayload,
   getScriptureCachePayloadVersion
-} from "../app/lib/scripture-cache.server";
+} from "./lib/scripture-cache";
 
 const cacheDir = path.join(process.cwd(), "scripture-cache");
 

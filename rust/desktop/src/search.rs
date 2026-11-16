@@ -112,32 +112,40 @@ pub(super) fn decode_results(
         .collect()
 }
 
+#[cfg(all(test, not(target_arch = "wasm32")))]
 pub(super) fn remote_search(
     library: &Library,
     api: &str,
     request: &SearchRequest,
 ) -> Result<Vec<ResultPassage>> {
-    // Retain the connection pool and TLS session across searches.
-    static CLIENT: std::sync::OnceLock<std::result::Result<reqwest::blocking::Client, String>> =
-        std::sync::OnceLock::new();
-    let client = CLIENT
-        .get_or_init(|| {
-            reqwest::blocking::Client::builder()
-                .timeout(Duration::from_secs(60))
-                .connect_timeout(Duration::from_secs(15))
-                .build()
-                .map_err(|error| error.to_string())
-        })
-        .as_ref()
-        .map_err(|error| anyhow::anyhow!("{error}"))?;
+    platform::block_on(remote_search_async(library, api, request))
+}
+
+pub(super) async fn remote_search_async(
+    library: &Library,
+    api: &str,
+    request: &SearchRequest,
+) -> Result<Vec<ResultPassage>> {
+    let payload = fetch_payload(api, request).await?;
+    decode_results(
+        library,
+        request.corpus.context("Choose a search target")?,
+        &payload,
+    )
+}
+
+pub(super) async fn fetch_payload(api: &str, request: &SearchRequest) -> Result<Value> {
+    let client = platform::http_client(Duration::from_secs(60))?;
     let response = client
         .post(format!("{api}/search"))
         .json(request)
         .send()
+        .await
         .context("Search service is unreachable. Try again online or select Search Keywords.")?;
     let status = response.status();
     let payload: Value = response
         .json()
+        .await
         .context("Search service returned an invalid response")?;
     if !status.is_success() {
         anyhow::bail!(
@@ -147,11 +155,7 @@ pub(super) fn remote_search(
                 .unwrap_or("Search is unavailable; please try again")
         );
     }
-    decode_results(
-        library,
-        request.corpus.context("Choose a search target")?,
-        &payload,
-    )
+    Ok(payload)
 }
 
 impl Desktop {

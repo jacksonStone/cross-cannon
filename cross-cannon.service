@@ -1,16 +1,30 @@
 [Unit]
-Description=CrossCannonScriptureSearch
+Description=Cross Canon shared Rust reader and account server
 After=network.target
+Conflicts=r-cross-cannon.service
 
 [Service]
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/cross-cannon
-ExecStart=/home/ubuntu/.nvm/versions/node/v26.13.0/bin/npm run start
+ExecStart=/home/ubuntu/cross-cannon/bin/cross-cannon
 EnvironmentFile=/home/ubuntu/.ubuntu-env
-Environment=PORT=3005
-Environment=PATH=/home/ubuntu/.nvm/versions/node/v26.13.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=CROSS_CANON_DATA_DIR=/home/ubuntu/cross-cannon
+Environment=R_CROSS_CANNON_BIND=127.0.0.1:3005
+# Preserve the existing edge API/resource upstream without loading a second Library.
+Environment=R_CROSS_CANNON_COMPAT_BIND=127.0.0.1:3006
+Environment=ACCOUNTS_DATABASE_PATH=/home/ubuntu/.workspace-deploy/shared/cross-cannon/accounts/accounts.db
+Environment=CROSS_CANNON_UPDATE_DB=0
 Restart=on-failure
+RestartSec=5
+MemoryMax=1200M
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/.workspace-deploy/shared/cross-cannon/accounts
+PrivateTmp=true
+UMask=0077
+TimeoutStopSec=30
 
 [Install]
 WantedBy=multi-user.target

@@ -28,7 +28,8 @@ def build_native_catalog(root):
                             for v in group if 'scriptureVerseStart' in v]
                     paragraphs.append({'start': group[0]['verse'], 'end': group[-1]['verse'],
                                        'scriptureStart': min(starts) if starts else None,
-                                       'scriptureEnd': max(ends) if ends else None})
+                                       'scriptureEnd': max(ends) if ends else None,
+                                       **({'scriptureQuotation': True} if all(v.get('scriptureQuotation', False) for v in group) else {})})
                 catalog['chapters'][asset['id']] = {
                     'scriptureReference': asset.get('scriptureReference'),
                     'paragraphs': paragraphs,

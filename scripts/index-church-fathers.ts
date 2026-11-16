@@ -9,14 +9,14 @@ import {
   normalizeVector,
   vectorSql,
   type IndexedEmbeddingConfig,
-} from "../app/lib/db.server";
-import { getDefaultEmbeddingConfig } from "../app/lib/embeddings.server";
+} from "./lib/db";
+import { getDefaultEmbeddingConfig } from "./lib/embeddings";
 
 import type {
   BookIndex as WorkIndex,
   BookSummary as WorkSummary,
   ChapterAsset,
-} from "../app/features/early-christian-reader/types";
+} from "./lib/work-library";
 
 type Passage = {
   id: string;

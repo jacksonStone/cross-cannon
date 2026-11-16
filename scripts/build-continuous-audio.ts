@@ -12,9 +12,9 @@ import {
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { pipeline } from "node:stream/promises";
-import { buildAudioChapterFiles } from "../app/lib/audio-chapters.server";
-import type { BookIndex } from "../app/features/early-christian-reader/types";
-import type { ContinuousAudioManifest } from "../app/features/audio/continuous-audio";
+import { buildAudioChapterFiles } from "./lib/audio-chapters";
+import type { BookIndex } from "./lib/work-library";
+import type { ContinuousAudioManifest } from "./lib/continuous-audio";
 
 // Never changes source recordings, Scripture caches, or alignment artifacts.
 // PCM sample counts give exact offsets even when source MP3 sample rates differ.
@@ -33,8 +33,6 @@ await mkdir(backup, { recursive: true });
 for (const file of [
   "public/church-fathers-preview/books.json",
   "data/public-domain/church-fathers/audio-sources.json",
-  "app/features/early-christian-reader/useEarlyChristianAudioPlayback.ts",
-  "app/features/passage-reader/PassageReader.tsx",
 ]) {
   const destination = path.join(
     backup,

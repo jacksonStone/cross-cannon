@@ -4,9 +4,9 @@ import { createReadStream } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { buildAudioChapterFiles } from "../app/lib/audio-chapters.server";
-import type { ContinuousAudioManifest } from "../app/features/audio/continuous-audio";
-import type { BookIndex } from "../app/features/early-christian-reader/types";
+import { buildAudioChapterFiles } from "./lib/audio-chapters";
+import type { ContinuousAudioManifest } from "./lib/continuous-audio";
+import type { BookIndex } from "./lib/work-library";
 
 const manifest: ContinuousAudioManifest = JSON.parse(
   await readFile("public/continuous-audio.json", "utf8")

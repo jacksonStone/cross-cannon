@@ -1,8 +1,10 @@
 //! Optional offline recordings. Only complete, validated files become playable.
 use anyhow::{ensure, Context, Result};
-use cross_canon_core::{Corpus, Library};
+#[cfg(test)]
+use cross_canon_core::Corpus;
+use cross_canon_core::Library;
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::HashMap,
     fs::{self, File},
     io::{Read, Write},
     path::{Path, PathBuf},
@@ -13,18 +15,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[derive(Clone)]
-pub(super) struct Work {
-    pub id: String,
-    pub corpus: Corpus,
-    pub title: String,
-    pub chapters: usize,
-    pub total_chapters: usize,
-    pub urls: Vec<String>,
-    pub downloaded: usize,
-    pub bytes: u64,
-}
-
+use super::platform::download_catalog::works;
+pub(super) use super::platform::download_catalog::{Work, ALL_BIBLE};
 pub(super) struct Active {
     pub id: String,
     pub done: usize,
@@ -143,69 +135,6 @@ impl PlaybackSources {
         self.resolved.insert(url.into(), value.clone());
         value
     }
-}
-
-pub(super) const ALL_BIBLE: &str = "__all_bible_audio__";
-
-fn works(library: &Library) -> Vec<Work> {
-    let mut works: Vec<Work> = library
-        .books
-        .iter()
-        .filter_map(|book| {
-            let audio = book
-                .chapters
-                .iter()
-                .filter_map(|c| library.audio(&c.id))
-                .collect::<Vec<_>>();
-            if audio.is_empty() {
-                return None;
-            }
-            let chapters = audio.len();
-            let urls = audio
-                .into_iter()
-                .map(|a| a.url)
-                .collect::<BTreeSet<_>>()
-                .into_iter()
-                .collect();
-            Some(Work {
-                id: book.id.clone(),
-                corpus: book.corpus,
-                title: book.title.clone(),
-                chapters,
-                total_chapters: book.chapters.len(),
-                urls,
-                downloaded: 0,
-                bytes: 0,
-            })
-        })
-        .collect();
-    let bible: Vec<_> = works
-        .iter()
-        .filter(|w| w.corpus == Corpus::Scripture)
-        .collect();
-    let urls: Vec<_> = bible
-        .iter()
-        .flat_map(|w| w.urls.iter().cloned())
-        .collect::<BTreeSet<_>>()
-        .into_iter()
-        .collect();
-    if !urls.is_empty() {
-        let chapters = bible.iter().map(|w| w.chapters).sum();
-        works.insert(
-            0,
-            Work {
-                id: ALL_BIBLE.into(),
-                corpus: Corpus::Scripture,
-                title: "Entire Bible".into(),
-                chapters,
-                total_chapters: chapters,
-                urls,
-                downloaded: 0,
-                bytes: 0,
-            },
-        );
-    }
-    works
 }
 
 impl Downloads {

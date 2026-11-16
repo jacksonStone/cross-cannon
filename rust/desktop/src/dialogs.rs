@@ -800,6 +800,10 @@ impl Desktop {
                         "Search by theme or words",
                     )
                 });
+                ui.ctx().accesskit_node_builder(field.id, |node| {
+                    node.set_role(egui::accesskit::Role::MultilineTextInput);
+                    node.set_value(self.query.clone());
+                });
             }
             ui.add_space(if compact { 4.0 } else { 10.0 });
             let action_layout = if compact {

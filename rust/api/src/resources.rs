@@ -236,7 +236,7 @@ fn byte_range(header: &str, size: u64) -> Option<(u64, u64)> {
     (start < size && end >= start).then_some((start, end))
 }
 
-async fn serve_file(
+pub(super) async fn serve_file(
     directory: PathBuf,
     name: &str,
     content_type: &str,

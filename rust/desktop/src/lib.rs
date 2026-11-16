@@ -1,31 +1,45 @@
 mod account;
+#[cfg(not(target_arch = "wasm32"))]
 mod audio;
+#[cfg(target_arch = "wasm32")]
+#[path = "platform/browser_audio.rs"]
+mod audio;
+#[cfg(target_arch = "wasm32")]
+mod browser;
+#[cfg(target_arch = "wasm32")]
+mod browser_library;
 mod catalog;
 mod commentary;
 mod dialogs;
+#[cfg(not(target_arch = "wasm32"))]
+mod downloads;
+#[cfg(target_arch = "wasm32")]
+#[path = "platform/browser_downloads.rs"]
 mod downloads;
 mod icons;
-#[cfg(any(target_os = "ios", test))]
-mod ios_reader;
 mod mobile;
 mod navigation;
 mod note_markdown;
 #[cfg(test)]
 mod performance;
 mod persistence;
+mod platform;
 mod reader;
 mod reading_translation;
 mod search;
 #[cfg(test)]
 mod search_regressions;
 mod study;
+#[cfg(any(target_os = "ios", target_arch = "wasm32", test))]
+mod text_surface;
 mod theme;
 mod touch_scroll;
 use anyhow::{Context, Result};
-use cross_canon_core::{
-    data_root, Book, Canon, Corpus, Library, Passage, SearchMode, SearchRequest,
-};
+#[cfg(not(target_arch = "wasm32"))]
+use cross_canon_core::data_root;
+use cross_canon_core::{Book, Canon, Corpus, Library, Passage, SearchMode, SearchRequest};
 use eframe::egui::{self, Align, Align2, FontId, Id, Key, Layout, Rect, RichText, Sense, Stroke};
+use platform::Instant;
 use search::ResultPassage;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -34,7 +48,7 @@ use std::{
         mpsc::{self, Receiver, Sender},
         Arc,
     },
-    time::{Duration, Instant},
+    time::Duration,
 };
 use theme::{heading, serif, Theme};
 
@@ -115,8 +129,8 @@ struct SearchOutput {
     result: std::result::Result<Vec<ResultPassage>, String>,
 }
 struct Desktop {
-    #[cfg(target_os = "ios")]
-    ios_reader: ios_reader::Reader,
+    #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
+    text_surface: text_surface::Reader,
     reader_storage: Option<persistence::ReaderStorage>,
     account: account::Account,
     study: study::Study,
@@ -176,6 +190,7 @@ struct Desktop {
     startup_reported: bool,
 }
 impl Desktop {
+    #[cfg(not(target_arch = "wasm32"))]
     fn new(
         cc: &eframe::CreationContext<'_>,
         library: Arc<Library>,
@@ -229,6 +244,7 @@ impl Desktop {
             state.location_passage_id =
                 library.book("Genesis").unwrap().chapters[0].passage_ids[0].clone()
         }
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(id) =
             std::env::args().find_map(|arg| navigation::passage_from_link(&library, &arg))
         {
@@ -246,8 +262,8 @@ impl Desktop {
         let catalog = catalog::Catalog::load(&library.root);
         let reading_text = Arc::new(reading_translation::ReadingText::new(&library));
         let mut desktop = Self {
-            #[cfg(target_os = "ios")]
-            ios_reader: Default::default(),
+            #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
+            text_surface: Default::default(),
             reader_storage: None,
             study: study::Study::new(if fresh {
                 Default::default()
@@ -383,6 +399,10 @@ impl Desktop {
         self.search_books.retain(|book| canon.includes(book));
     }
     fn open(&mut self, id: String) {
+        #[cfg(target_arch = "wasm32")]
+        if browser_library::defer(&self.library, &id, true) {
+            return;
+        }
         if self.library.passage(&id).is_none() {
             return;
         }
@@ -393,6 +413,10 @@ impl Desktop {
         self.restore_location(id);
     }
     fn restore_location(&mut self, id: String) {
+        #[cfg(target_arch = "wasm32")]
+        if browser_library::defer(&self.library, &id, false) {
+            return;
+        }
         let Some(passage) = self.library.passage(&id) else {
             return;
         };
@@ -463,7 +487,12 @@ impl Desktop {
         let tx = self.search_tx.clone();
         let ctx = ctx.clone();
         let api = self.state.api_url.trim_end_matches('/').to_owned();
-        std::thread::spawn(move || {
+        platform::spawn(async move {
+            #[cfg(target_arch = "wasm32")]
+            let result = browser_library::search(library.clone(), catalog.clone(), &api, &request)
+                .await
+                .map_err(|e| e.to_string());
+            #[cfg(not(target_arch = "wasm32"))]
             let result = if request.source_id.is_none()
                 && matches!(request.mode, SearchMode::Keyword)
             {
@@ -499,12 +528,16 @@ impl Desktop {
                     })
                     .collect())
             } else {
-                search::remote_search(&library, &api, &request).map_err(|e| e.to_string())
+                search::remote_search_async(&library, &api, &request)
+                    .await
+                    .map_err(|e| e.to_string())
             };
+            #[cfg(not(target_arch = "wasm32"))]
             let result = result.map(|mut hits: Vec<ResultPassage>| {
                 for hit in &mut hits {
                     catalog.decorate(&library, hit);
                 }
+                hits.retain(|hit| !hit.text.trim().is_empty());
                 hits
             });
             let _ = tx.send(SearchOutput { generation, result });
@@ -531,8 +564,10 @@ fn control(ui: &mut egui::Ui, label: &str) -> egui::Response {
 }
 impl Desktop {
     fn render(&mut self, ctx: &egui::Context) {
-        #[cfg(target_os = "ios")]
-        self.ios_reader_events(ctx);
+        #[cfg(target_arch = "wasm32")]
+        browser_library::tick(self, ctx);
+        #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
+        self.text_surface_events(ctx);
         self.account_tick(ctx);
         let owner = self
             .account
@@ -546,8 +581,8 @@ impl Desktop {
             .tick(ctx, owner, self.account.study_credentials())
         {
             self.account.persist_now = true;
-            #[cfg(target_os = "ios")]
-            self.ios_reader.invalidate();
+            #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
+            self.text_surface.invalidate();
         }
         if let Some(downloads) = &mut self.downloads {
             downloads.poll();
@@ -625,8 +660,8 @@ impl Desktop {
         }
         let p = self.state.theme.palette();
         let insets = mobile::insets();
-        #[cfg(target_os = "ios")]
-        if self.show_ios_reader(ctx) {
+        #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
+        if self.show_text_surface(ctx) {
             self.account.schedule_tick(ctx);
             return;
         }
@@ -735,13 +770,13 @@ impl Desktop {
                     });
                 });
         }
-        #[cfg(any(target_os = "ios", test))]
+        #[cfg(any(target_os = "ios", target_arch = "wasm32", test))]
         {
             let root = Id::new("ios-dialog-accessibility");
             ctx.accesskit_node_builder(root, |node| node.set_role(egui::accesskit::Role::Dialog));
             ctx.with_accessibility_parent(root, || self.dialogs(ctx));
         }
-        #[cfg(not(any(target_os = "ios", test)))]
+        #[cfg(not(any(target_os = "ios", target_arch = "wasm32", test)))]
         self.dialogs(ctx);
         if self.screenshot.is_some()
             && !self.screenshot_sent
@@ -751,7 +786,9 @@ impl Desktop {
             ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
             self.screenshot_sent = true;
         }
+        #[cfg(not(target_arch = "wasm32"))]
         let events = ctx.input(|i| i.events.clone());
+        #[cfg(not(target_arch = "wasm32"))]
         for event in events {
             if let egui::Event::Screenshot { image, .. } = event {
                 if let Some(path) = self.screenshot.take() {
@@ -784,13 +821,15 @@ impl Desktop {
     }
 }
 impl eframe::App for Desktop {
-    #[cfg(target_os = "ios")]
+    #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
     fn raw_input_hook(&mut self, ctx: &egui::Context, input: &mut egui::RawInput) {
-        ios_reader::input(ctx, input);
+        text_surface::input(ctx, input);
     }
-    #[cfg(target_os = "ios")]
+    #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
     fn platform_output_hook(&mut self, ctx: &egui::Context, output: &egui::PlatformOutput) {
-        ios_reader::accessibility(
+        #[cfg(target_arch = "wasm32")]
+        browser::finish_input(ctx);
+        text_surface::accessibility(
             ctx,
             output,
             self.dialog.map(|d| format!("{d:?}:{}", self.filters_open)),
@@ -798,6 +837,8 @@ impl eframe::App for Desktop {
     }
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         self.render(ctx);
+        #[cfg(target_arch = "wasm32")]
+        audio::flush();
         self.study.checkpoint();
         if self.study.storage_error().is_some() {
             ctx.request_repaint_after(Duration::from_secs(1));
@@ -850,6 +891,7 @@ impl eframe::App for Desktop {
         let _ = self.audio_tx.send(audio::Command::Stop);
     }
 }
+#[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> Result<()> {
     let startup = Instant::now();
     let root = data_root()?;

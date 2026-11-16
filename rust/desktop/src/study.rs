@@ -1,6 +1,6 @@
 //! Offline study items share the web protocol and stable Reader Location anchors.
 use super::*;
-use std::io::Read;
+
 use std::{
     cell::OnceCell,
     collections::{BTreeMap, HashMap},
@@ -207,7 +207,7 @@ impl Study {
     }
     pub fn create(&mut self, kind: &str, passage: Option<&Passage>, original: bool) -> Result<()> {
         let mut bytes = [0u8; 16];
-        std::fs::File::open("/dev/urandom")?.read_exact(&mut bytes)?;
+        platform::random_bytes(&mut bytes)?;
         let item = Item {
             id: bytes.iter().map(|b| format!("{b:02x}")).collect(),
             kind: kind.into(),
@@ -227,11 +227,7 @@ impl Study {
             color: "yellow".into(),
             notebook_id: None,
             deleted: false,
-            created_at: Some(
-                std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)?
-                    .as_millis() as i64,
-            ),
+            created_at: Some(platform::epoch_millis() as i64),
         };
         self.put(item.clone());
         self.focus_note = kind == "note";
@@ -444,8 +440,8 @@ impl Study {
                 let ctx = ctx.clone();
                 self.busy = true;
                 self.last_request = Instant::now();
-                std::thread::spawn(move || {
-                    let result = synchronize(&origin, &token, &user, snapshot);
+                platform::spawn(async move {
+                    let result = synchronize(&origin, &token, &user, snapshot).await;
                     let _ = tx.send((owner, result));
                     ctx.request_repaint();
                 });
@@ -499,16 +495,15 @@ fn reconcile(local: Option<Entry>, remote: Record, sent: Option<&Item>) -> Entry
     local
 }
 
-fn synchronize(origin: &str, token: &str, user: &str, snapshot: Profile) -> Result<Output> {
-    let client = reqwest::blocking::Client::builder()
-        .timeout(Duration::from_secs(8))
-        .build()?;
-    let response: Response = client
-        .get(format!("{origin}/api/study"))
-        .bearer_auth(token)
-        .send()?
-        .error_for_status()?
-        .json()?;
+async fn synchronize(origin: &str, token: &str, user: &str, snapshot: Profile) -> Result<Output> {
+    let client = platform::http_client(Duration::from_secs(8))?;
+    let response: Response =
+        platform::authenticated(client.get(format!("{origin}/api/study")), token)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
     anyhow::ensure!(
         response.user_id == user,
         "Account changed before study sync"
@@ -528,8 +523,8 @@ fn synchronize(origin: &str, token: &str, user: &str, snapshot: Profile) -> Resu
         {
             continue;
         }
-        let response = client.post(format!("{origin}/api/study")).bearer_auth(token)
-            .json(&serde_json::json!({"userId": user, "item": entry.item, "revision": entry.revision})).send()?;
+        let response = platform::authenticated(client.post(format!("{origin}/api/study")), token)
+            .json(&serde_json::json!({"userId": user, "item": entry.item, "revision": entry.revision})).send().await?;
         let conflict = response.status() == reqwest::StatusCode::CONFLICT;
         let response = if conflict {
             response
@@ -541,7 +536,7 @@ fn synchronize(origin: &str, token: &str, user: &str, snapshot: Profile) -> Resu
             saved: bool,
             record: Option<Record>,
         }
-        let result: Write = response.json()?;
+        let result: Write = response.json().await?;
         if let Some(record) = result.record {
             if result.saved {
                 uploaded.insert(entry.item.id.clone(), entry.item.clone());
@@ -704,6 +699,10 @@ impl Desktop {
                         ui.is_enabled(),
                         "Passage note",
                     )
+                });
+                ui.ctx().accesskit_node_builder(response.id, |node| {
+                    node.set_role(egui::accesskit::Role::MultilineTextInput);
+                    node.set_value(item.body.clone());
                 });
                 if std::mem::take(&mut self.study.focus_note) {
                     response.request_focus();

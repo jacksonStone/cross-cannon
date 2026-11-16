@@ -22,6 +22,10 @@ pub(super) struct Selection {
 
 impl Desktop {
     pub(super) fn show_commentaries(&mut self, passage: &Passage) {
+        #[cfg(target_arch = "wasm32")]
+        if browser_library::defer_commentaries(&self.library, &self.catalog, passage) {
+            return;
+        }
         let displayed = self
             .reading_text
             .passage(passage, self.state.scripture_translation);

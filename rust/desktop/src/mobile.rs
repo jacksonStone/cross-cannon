@@ -19,7 +19,15 @@ pub(crate) fn activity(ctx: &egui::Context) -> Activity {
         // SAFETY: UIKit's main thread returns this matching repr(C) value.
         unsafe { cross_canon_activity() }
     }
-    #[cfg(not(target_os = "ios"))]
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = ctx;
+        Activity {
+            generation: browser::activity_generation() as u64,
+            active: u32::from(browser::is_active()),
+        }
+    }
+    #[cfg(all(not(target_os = "ios"), not(target_arch = "wasm32")))]
     Activity {
         generation: 0,
         active: u32::from(ctx.input(|i| i.focused)),
@@ -50,7 +58,18 @@ pub(crate) fn insets() -> Insets {
         insets.bottom = insets.bottom.max(unsafe { cross_canon_keyboard_height() });
         insets
     }
-    #[cfg(not(target_os = "ios"))]
+    #[cfg(target_arch = "wasm32")]
+    {
+        let values = browser::safe_insets();
+        let value = |i| values.get(i).as_f64().unwrap_or(0.0) as f32;
+        Insets {
+            top: value(0),
+            left: value(1),
+            bottom: value(2),
+            right: value(3),
+        }
+    }
+    #[cfg(all(not(target_os = "ios"), not(target_arch = "wasm32")))]
     Insets::default()
 }
 

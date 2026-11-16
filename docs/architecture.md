@@ -1,301 +1,163 @@
 # Cross Cannon Architecture
 
-This document maps the key runtime, search, reader, build, deploy, and
-verification flows in Cross Cannon.
+The website, iOS, and macOS run the same `cross-canon-desktop` Rust app.
+The crate name remains stable for existing native build commands.
 
-## Rendering
-
-GitHub renders these Mermaid diagrams directly in the file preview.
-
-Local options:
-
-```bash
-# Open the HTML renderer in a browser.
-open docs/architecture.html
-
-# Or render a single Mermaid file to SVG/PNG with Mermaid CLI.
-npx -y @mermaid-js/mermaid-cli -i docs/runtime-architecture.mmd -o docs/runtime-architecture.svg
-npx -y @mermaid-js/mermaid-cli -i docs/runtime-architecture.mmd -o docs/runtime-architecture.png
-
-# Render every diagram and create docs/cross-cannon-architecture.png.
-npm run render:architecture
-```
-
-VS Code also renders this file with an extension such as
-`Markdown Preview Mermaid Support`.
-
-## Runtime Architecture
+## Runtime
 
 ```mermaid
 flowchart TD
-  User["Browser User"] --> EdgeProxy["Go reverse proxy"]
-  EdgeProxy -->|"React pages / data / actions"| Root["Index Route /"]
-  EdgeProxy --> ReaderRoute["Reader Route /reader/:passageId"]
-  EdgeProxy -->|"/r/api"| Rust
-
-  Root --> Loader[Index loader]
-  Root --> Action[Index action]
-  ReaderRoute --> ReaderLoader[Reader loader]
-
-  Loader --> IndexedBooks[getIndexedBooks]
-  Loader --> CacheInfo[getScriptureCacheInfo]
-  ReaderLoader --> CacheInfo
-
-  Root --> ScriptureLibrary[useScriptureLibrary]
-  ReaderRoute --> ScriptureLibrary
-
-  ScriptureLibrary --> BrowserCache["/scripture-cache/:version.json"]
-  BrowserCache --> FullPassageCache["Full browser passage cache"]
-  BrowserCache --> EdgeProxy
-  EdgeProxy -->|"Text / metadata / audio paths"| RustResources["Rust /r/api/resources"]
-  RustResources --> ExistingFiles["Existing text, gzip, metadata and recordings"]
-  ScriptureLibrary --> PassageLookup["Shared passageLookup Map"]
-
-  Root --> PassageReader[PassageReader]
-  Root --> SearchModal[Search modal]
-  ReaderRoute --> PassageReader
-
-  SearchModal --> SearchForm[SearchForm]
-  SearchModal --> SearchResults[SearchResults]
-  SearchForm --> SearchDialogState[Cross-corpus Search Dialog state]
-  PassageReader --> PassageJump[PassageJump]
-  SearchForm --> PassageJump
-
-  SearchForm --> Action
-  SearchResults --> PassageLookup
-  SearchForm --> PassageLookup
-  PassageReader --> ScriptureNavigation[Scripture Reader Navigation adapter]
-  ScriptureNavigation --> ChapterIndex[buildChapterIndex]
-  PassageJump --> JumpIndex[buildJumpIndex]
-
-  Action --> RateLimit[rateLimit by client IP]
-  RateLimit --> SearchRequest[Search Request module]
-  SearchRequest --> Filters[canon / books / authors]
-  SearchRequest --> SearchEngine["Rust adapter → loopback /r/api/search"]
-
-  SearchEngine --> Rust["R Cross Cannon / Axum"]
-  Rust --> OpenAI["OpenAI: new theme query embedding only"]
-  Rust --> DB[("Existing SQLite vectors, read-only")]
-  Rust --> Vector["Exact scoring + existing paragraph/verse refinement"]
-  Rust --> IndexedBooks
-  TextArtifacts["Existing immutable text artifacts"] -. catalog fallback .-> IndexedBooks
-  DB --> StartupPassages
-  DB --> CacheBuild[buildScriptureCachePayload]
-  CacheBuild --> StaticCache["scripture-cache manifest/json/gzip"]
+  Browser[Browser] --> Edge[Existing Go reverse proxy]
+  Edge -->|3005 app routes| Server[One Rust / Axum process]
+  Edge -->|3006 API and resource compatibility| Server
+  Server --> Shell[Shared Rust HTML shell and immutable assets]
+  Shell --> Wasm[Shared Rust reader / WASM]
+  Wasm --> Text[HTML text adapter]
+  Wasm --> Widgets[Shared egui widgets / AccessKit adapter]
+  Wasm --> Library[Local Library / offline keyword search]
+  Wasm --> Effects[Browser storage, audio, downloads, Fetch]
+  Wasm --> Server
+  Server --> Index[Existing read-only SQLite vectors]
+  Server -->|New theme queries only| OpenAI[Embedding service]
+  Server --> Auth[Google OAuth and native consent]
+  Server --> Account[Progress and study CAS]
+  Account --> AccountsDB[Dedicated writable accounts SQLite]
 ```
 
-## Native iPhone Reading Surface
+`r-cross-cannon` is the only server binary. Its primary listener defaults to
+3005; optional `R_CROSS_CANNON_COMPAT_BIND` provides the existing edge's 3006
+upstream using the same router, state and loaded Library. This preserves current
+edge routing without running a second search process. Reader documents, browser
+assets, both worker aliases, accounts, native login, compatibility search form
+POSTs, commentary metadata, search and text/audio resources all belong to Axum.
 
-The iPhone app hosts a selectable UIKit text view inside the existing Rust
-app's view controller. UIKit owns text layout, selection, Dynamic Type, system
-reading actions and scrolling. Rust retains canonical Passage identity, Reader
-Location, navigation, translations, study, account sync and audio. The adapter
-loads a bounded chapter window and retains the focused Passage and its local
-viewport position when typography changes or chapters enter and leave the
-window. Persisted state remains Passage based.
+Search CORS and body limits are local to the public search routes. Accounts
+retain their own same-origin checks, native bearer handling, private/no-store
+responses and larger study request bounds. Browser static gzip/Brotli variants
+are prepared off-server and covered by the artifact receipt; audio retains its
+existing byte-range behavior. Account and consent documents need no React
+runtime. Retained TypeScript helpers live under `scripts/lib/` for explicit import,
+indexing, audio and export tasks; no React/Remix server remains.
 
-Library, jump, search and study dialogs use the shared egui UI. A narrow
-platform-output hook exports the active dialog's AccessKit nodes to UIKit;
-stable element IDs, clipped interaction bounds and a separate nested-filter
-scope keep VoiceOver inside the visible dialog. Actions return through egui's
-own input events. Reader settings use a native sheet. The framework's sleeping
-redraw scheduler is unchanged; both native release builds retain its regression
-gate. See [the accessibility verification record](test-reports/ios-text-accessibility-2026-11-15.md).
+Google sign-in uses a new opaque browser session and validated OIDC identity.
+Existing Better Auth browser sessions require fresh sign-in, as authorized for
+this transition; account IDs, stored progress/study and native session hashes
+are preserved. Native app handoff still requires browser consent plus private
+proof and a one-use return ticket. See [Google login](google-login.md).
 
-## Scripture Readiness
+## Reader and platform adapters
 
-```mermaid
-stateDiagram-v2
-  [*] --> Loading
-  Loading --> Ready: immutable cache loaded
-  Loading --> Error: cache request fails
+`rust/desktop/src/text_surface.rs` owns the shared chapter window, passage
+events, text projection, and reading snapshot. UIKit (`apple_reader.m`) and HTML
+(`web/platform.js`) implement that contract. Native selectable text owns layout,
+selection, scrolling, and reading accessibility. The focused Passage is the
+persisted source of truth. Adapters retain passage anchors through typography
+changes and chapter prepends, with verse numbers hidden in the main flow.
 
-  note right of Ready
-    Reader, search, jump modal,
-    result text, similar passage actions,
-    and passage lookup all use the same
-    complete scripture cache.
-  end note
-```
+Library, jump, search, account, and study dialogs share egui widgets. A narrow
+eframe platform-output hook exports clipped AccessKit nodes to UIKit or semantic
+HTML buttons/inputs. The HTML adapter maps UTF-16 selections to Rust character
+offsets and waits for pending text/selection changes before formatting actions.
+Native rendering and its sleeping redraw scheduler remain unchanged.
 
-## Search Flow
+`text_surface/events.rs` decodes the UIKit/HTML event protocol into typed reader
+commands and applies their state changes without requiring either rendering
+adapter. Native tests exercise that same reducer, including Passage identity,
+pending navigation, study edits, and malformed preferences. The macOS egui
+reader still calls shared domain methods directly; its measured Chapter window
+retains its own geometry rather than adopting UIKit/HTML window trimming.
 
-```mermaid
-sequenceDiagram
-  participant User
-  participant SearchForm
-  participant IndexAction as / action
-  participant SearchRequest as Search Request module
-  participant SearchEngine as Rust /r/api/search
-  participant DB as Existing SQLite vectors, read-only
-  participant OpenAI
-  participant UI as SearchResults
+`platform/` supplies tasks, HTTP credentials, clocks, randomness, media, and
+download effects. Browser auth uses same-origin HttpOnly cookies. Native auth
+uses revocable Keychain credentials. Persistence writes the same RON checkpoint
+to browser localStorage or the native filesystem.
+The HTTP adapter shares the native connection pool and applies each caller's
+request deadline consistently: study sync, accounts, and search keep their own
+timeouts on native and browser requests.
 
-  User->>SearchForm: Submit theme query or similar passage
-  SearchForm->>IndexAction: POST /?index form data
-  IndexAction->>IndexAction: rateLimit(client IP)
-  IndexAction->>SearchRequest: handleSearchRequest(formData)
-  SearchRequest->>SearchRequest: validate and prepare Search Request
-  SearchRequest->>SearchEngine: validate catalog /r/api/books
+The browser adapter uses the bundled Source Serif/Inter fonts, phone controls
+matching iOS, and a centered reading column on wide screens. The existing MSB
+artifact supplies display text over canonical WEB passage IDs; search IDs and
+existing vectors remain stable.
 
-  alt Theme search
-    SearchRequest->>SearchEngine: semantic query, target, books/authors, web=true
-    SearchEngine->>OpenAI: embed new query using indexed model/config
-    SearchEngine->>DB: read existing verse / best-paragraph vectors
-  else Similar passage search
-    SearchRequest->>SearchEngine: sourceId, target, books/authors, web=true
-    SearchEngine->>DB: exact selected paragraph vector + refinement
-  end
+## Storage and offline releases
 
-  SearchEngine-->>SearchRequest: passage IDs + score metadata
-  SearchRequest-->>IndexAction: existing route-specific JSON
-  IndexAction-->>UI: results metadata
-  UI->>UI: join IDs to full passage text via passageLookup
-```
+`web/migrate.js` imports the previous browser preferences, passage locations,
+account progress queues, and IndexedDB study profiles once. Originals remain
+intact. Rust keeps guest/account profiles separate. A Web Lock allows one active
+reader per browser profile/origin; waiting tabs resume when it closes.
 
-## Reader Flow
+`web/service-worker.js` stages the entire version before activation. An update
+shows a reload control. Existing `/cross-canon-sw.js` installations receive the
+new worker through the compatibility URL. Account/OAuth/API responses never
+enter content caches. Cached complete audio supports byte ranges.
 
-```mermaid
-flowchart TD
-  InitialPassage[readerPassageId] --> ScriptureNavigation[Scripture Reader Navigation adapter]
-  ScriptureNavigation --> ChapterIndex["buildChapterIndex(passages)"]
-  ChapterIndex --> Chapters[Chapter windows]
-  Chapters --> RenderedRange[Rendered chapter range]
+The browser opens from a compact identity index (about 1.8 MB), catalog,
+and only the saved/deep-linked reading window. WASM compilation overlaps these
+requests. Shared canonical IDs, verse coverage, Book/Chapter metadata, and audio
+locations remain available before text hydration. Complete Chapter fragments
+validate against that identity before installation. MSB text loads alongside
+its corresponding fragment rather than being embedded in browser WASM. Native
+packaging remains complete.
 
-  RenderedRange --> InitialScroll[Initial scroll settling]
-  InitialScroll --> RAF[bounded requestAnimationFrame loop]
-  InitialScroll --> Fonts[document.fonts.ready if available]
+Translation projection visits the supplied Scripture Chapters through the
+Library's Chapter index. Incremental MSB hydration never scans or groups the
+complete Library; equivalence tests compare incremental and complete loading
+over the same canonical Passage IDs and verse coverage.
 
-  UserScroll[User scrolls] --> ExpandWindow[Expand rendered chapter window]
-  ExpandWindow --> Prepend[Preserve scroll when prepending chapters]
-  ExpandWindow --> Append[Append next chapters near bottom]
+After the first readable paint, the worker stages the full immutable library
+with bounded concurrency. Online keyword queries use the existing Rust API and
+hydrate result text; offline keyword queries hydrate cached scope fragments and
+use shared Rust search. Navigation retains the current page until the requested
+Chapter is available, and later actions supersede pending navigation. Browser
+quota and eviction still apply. Audio is downloaded separately.
 
-  UserPosition[Reading anchor] --> LocationReport[onLocationChange]
-  LocationReport --> LocalStorage[remember reader position]
+## Text resources and operational tools
 
-  ExplicitJump[Explicit jump] --> ReaderLink[Reader Link]
-  ReaderLink --> BrowserHistory[Back / Forward]
-  PassageSelection[Passage selection] --> ReaderLink
-  UserScroll -. no URL update .-> ReaderLink
+`rust/api/src/compat.rs` owns the retained form POST and commentary contracts.
+`rust/api/src/accounts/` owns server authentication, progress/study validation,
+CAS storage and native handoffs. Reader reconciliation runs exclusively in
+shared Rust. `scripts/lib/` contains the remaining off-server database,
+embedding, Scripture-cache, Work-text and audio helpers.
 
-  PassageReader --> Audio[Chapter audio button]
-  PassageReader --> PassageActions[Similar passages action]
-  PassageReader --> PassageJump[Jump modal]
-```
+Christian Classics imports preserve source quotation and Scripture coverage
+metadata. Indexing and text-cache generation remain explicit database-named or
+index commands. Ordinary verification and deployment use existing immutable
+artifacts and never rebuild indexes or maintain production databases.
 
-## Build, Deploy, And Verification
+## Build and release
 
-```mermaid
-flowchart LR
-  Dev[Local workspace] --> Verify[npm run verify]
-  Verify --> Typecheck[tsc --noEmit]
-  Verify --> RustChecks["Rust API tests + release build"]
-  RustChecks --> LocalRust["Start loopback Rust API"]
-  Verify --> Build[npm run build]
-  Verify --> LocalServer[Start production server locally]
-  Verify --> LocalSmoke["HEAD / + web POST results and Rust header"]
-  Verify --> StopServer[Stop local web and Rust servers]
+`npm run build:browser` builds the WASM cdylib off-server with
+`wasm-bindgen-cli 0.2.130`, packages existing texts using the portable gzip codec,
+and emits content-addressed assets under ignored `public/browser/`. Its receipt
+covers compiler inputs, generated files, encodings and the worker. `npm run build`
+also builds the native Rust server. Node and npm remain local tools only.
 
-  Build --> RemixBuild["remix vite:build"]
-  RemixBuild --> BuildDir["build/client + build/server"]
+`npm run verify` runs retained unit/type/protocol checks and Rust tests, builds
+the app, then starts one production Rust process for startup, form, resource and
+account checks. `npm run verify:browser` exercises the actual WASM reader at
+phone, tablet, desktop and wide sizes. `verify:offline` manages that same Rust
+binary and records screenshots under `docs/screenshots/`.
 
-  Dev --> RustSnapshot["Publish compiler-input snapshot on dedicated build branch"]
-  RustSnapshot --> RustCI["GitHub Actions queue; working checkout/index unchanged"]
-  RustCI --> RustContainer["Hosted Linux Docker: pinned Rust image, linux/amd64"]
-  RustContainer --> RustArtifact["Tested binary + systemd unit + checksums"]
-  RustArtifact --> RustRelease["Commit-specific public release artifact"]
-  RustRelease --> RustUpload["Download + verify + upload; shared deploy lock"]
-  RustUpload --> RustReplace["Replace single managed Rust instance"]
-  RustReplace --> RustHealth["Search/resource checks; rollback on failure"]
+`npm run ship` verifies, builds off-server, deploys and checks production. The
+hosted Linux compiler snapshot includes current uncommitted Rust source without
+pushing unrelated local history. The binary's compiler inputs must match the
+current checkout before packaging it with the tested browser release. The
+Docker alternative compiles/tests that binary on a local Linux x86-64 builder.
+Remote Docker contexts are refused.
 
-  Dev --> UpdateDbCache["npm run update-db:scripture-cache"]
-  UpdateDbCache --> CacheScript["scripts/build-scripture-cache.ts"]
-  CacheScript --> DB[("Local active DB")]
-  CacheScript --> CacheArtifacts["scripture-cache/*.json + *.gz + manifest"]
+Production receives a checksummed Rust executable, static resources and unit;
+it receives no Node modules, server JavaScript, package manager or compiler.
+Activation reuses the shared deploy lock, existing storage preservation,
+atomic release link, health checks and rollback. The old API service is stopped
+before the one unified service starts, avoiding two loaded Libraries on the
+2 GB host. Both edge ports reach the same process.
 
-  Dev --> Deploy["./deploy.sh"]
-  Deploy --> Package["Zip build/public/scripts/cache/package files"]
-  Package --> SCP[SCP to Ubuntu box]
-  SCP --> Remote["/home/ubuntu/cross-cannon"]
-  Remote --> PreserveStorage["Preserve remote storage/"]
-  Remote --> NpmCi[npm ci --omit=dev --legacy-peer-deps]
-  NpmCi --> Restart[systemctl restart cross-cannon]
-  Restart --> RuntimeDbGuard["DB maintenance skipped unless CROSS_CANNON_UPDATE_DB=1"]
-
-  Restart --> VerifyProd[npm run verify-prod]
-  VerifyProd --> Systemd[SSH systemctl is-active + journalctl]
-  VerifyProd --> LiveHead["HEAD https://www.crosscanon.com/"]
-  VerifyProd --> LivePost[POST production search]
-```
-
-## Ownership Boundaries
-
-```text
-app/routes/
-  Thin Remix route wiring: loaders, actions, page composition.
-
-app/features/scripture/
-  Browser scripture cache loading, shared readiness state, passageLookup.
-
-app/features/search/
-  Search UI, shared Search Dialog state, filters, result rendering, and
-  server-side Search Request handling.
-
-app/features/reader-navigation/
-  Reader Links and the Scripture Reader Navigation adapter.
-
-app/features/passage-reader/
-  Reader layout, chapter windows, scroll preservation, passage actions.
-
-app/features/passage-jump/
-  Book/chapter/verse navigation modal.
-
-app/lib/
-  Database setup, scripture cache server metadata, embeddings, search engine,
-  rate limiting, audio chapter helpers.
-
-scripts/
-  Index/build/download/deploy-adjacent operational scripts, shared Early
-  Christian Work audio alignment, plus verification.
-```
-
-## Continuous Audio Playback
-
-`app/features/audio/` owns the Scripture audio session,
-chapter timestamps, original-recording fallback, and Media Session controls.
-The Scripture reader adapts its chapter index to this player and does not
-advance between files inside a combined book. Early Christian playback is
-unchanged in the initial Bible-only rollout. Reader state follows audio time when
-JavaScript is active again.
-
-`scripts/build-continuous-audio.ts` preserves originals on the Mac mini and
-creates a separate AAC file per book/Work from decoded source samples.
-`public/continuous-audio.json` is a small timestamp manifest independent of the
-scripture cache and database. `audio.continuous.$fileName.ts` forwards to Rust,
-which streams content-addressed files from production storage with byte ranges.
-Derived media is uploaded separately before the normal application release;
-original recordings and source mappings remain available for rollback.
-
-
-## Christian Classics
-
-`app/features/work-reader/` configures the existing Work reader for Early
-Christian Works and Christian Classics. The routes are thin adapters; chapter
-rendering, navigation, selected Passage links, settings, Jump, search, audio
-availability, and offline Work downloads share the existing implementation.
-`/christian-classics` provides the browsing view and `/christian-classics/read`
-opens the reader. Collections retain independent Reader Locations and favorites.
-
-`scripts/import-christian-classics.py` verifies pinned raw sources and emits the
-same book index, manifest, and immutable Chapter assets as Early Christian Works.
-Commentaries additionally retain Scripture chapter/verse coverage. The Scripture
-reader’s “View commentaries” action matches the selected book, chapter, and
-overlapping verse ranges to show indexed notes. The native reader uses the same
-coverage from its bundled catalog without an online search.
-
-`npm run index:christian-classics` explicitly indexes these artifacts with the
-shared indexer into `storage/christian-classics.db`. Rust loads this optional
-third corpus read-only, preserving collection-specific author filters and vector
-scoring. Existing Scripture and Early Christian databases are unchanged. A
-normal deploy preserves production storage, so deploying this feature requires
-separately provisioning the indexed Classics database before release.
+The account database and its sidecars live in a dedicated writable directory.
+Initial activation moves closed legacy files intact and leaves old-path links;
+rollback restores those files, including any changes made by the failed release.
+Search indexes and other storage remain read-only. Explicit schema setup uses
+`CROSS_CANNON_UPDATE_DB=1 .../bin/cross-cannon --init-accounts <path>`; verification,
+startup and deployment never create/migrate a database or rebuild an index.
+See [deployment and recovery](deployment.md) for activation/rollback boundaries,
+[the API contract](api.md), and [README](../README.md) for development commands.

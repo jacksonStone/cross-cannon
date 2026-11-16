@@ -5,6 +5,17 @@ use anyhow::{bail, ensure};
 use std::collections::BTreeMap;
 
 const ORIGIN: &str = "https://www.crosscanon.com";
+fn origin() -> String {
+    #[cfg(target_arch = "wasm32")]
+    {
+        browser::origin()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        ORIGIN.into()
+    }
+}
+
 pub(super) const CORPORA: [&str; 3] = ["scripture", "fathers", "classics"];
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -183,17 +194,17 @@ impl Account {
             received_refresh: None,
             resume: None,
             // Background sync tests opt into a loopback server explicitly.
-            sync_origin: (!cfg!(test)).then(|| ORIGIN.to_owned()),
+            sync_origin: (!cfg!(test)).then(origin),
         }
     }
-    fn run(&mut self, ctx: &egui::Context, job: impl FnOnce() -> Event + Send + 'static) {
+    fn run(&mut self, ctx: &egui::Context, job: impl platform::Task<Output = Event>) {
         self.busy = true;
         self.last_request = Instant::now();
         let tx = self.tx.clone();
         let generation = self.generation;
         let ctx = ctx.clone();
-        std::thread::spawn(move || {
-            let _ = tx.send((generation, job()));
+        platform::spawn(async move {
+            let _ = tx.send((generation, job.await));
             ctx.request_repaint();
         });
     }
@@ -201,30 +212,43 @@ impl Account {
         if self.busy || self.saved.revoke_pending {
             return;
         }
-        self.generation += 1;
-        self.status = "Preparing secure Google sign-in…".into();
-        self.run(ctx, || {
-            Event::Started((|| {
-                let platform = if cfg!(target_os = "ios") {
-                    "ios"
-                } else {
-                    "desktop"
-                };
-                let login: Login = client()?
-                    .post(format!("{ORIGIN}/api/native-login"))
-                    .json(&serde_json::json!({"operation":"start", "platform":platform}))
-                    .send()?
-                    .error_for_status()?
-                    .json()?;
-                ensure!(
-                    login
-                        .url
-                        .starts_with(&format!("{ORIGIN}/account/native?id=")),
-                    "Invalid sign-in address"
-                );
-                Ok(login)
-            })())
-        });
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = ctx;
+            browser::sign_in();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.generation += 1;
+            self.status = "Preparing secure Google sign-in…".into();
+            self.run(ctx, async {
+                Event::Started(
+                    (async {
+                        let platform = if cfg!(target_os = "ios") {
+                            "ios"
+                        } else {
+                            "desktop"
+                        };
+                        let login: Login = client()?
+                            .post(format!("{ORIGIN}/api/native-login"))
+                            .json(&serde_json::json!({"operation":"start", "platform":platform}))
+                            .send()
+                            .await?
+                            .error_for_status()?
+                            .json()
+                            .await?;
+                        ensure!(
+                            login
+                                .url
+                                .starts_with(&format!("{ORIGIN}/account/native?id=")),
+                            "Invalid sign-in address"
+                        );
+                        Ok(login)
+                    })
+                    .await,
+                )
+            });
+        }
     }
     pub fn cancel_login(&mut self) {
         self.generation += 1;
@@ -234,17 +258,25 @@ impl Account {
         self.status = "Sign-in canceled. You can keep reading.".into();
     }
     pub fn sign_out(&mut self, ctx: &egui::Context) {
-        self.persist_now = true;
-        self.generation += 1;
-        self.busy = false;
-        self.login = None;
-        self.saved.user = None;
-        self.identity_changed = true;
-        self.saved.revoke_pending = self.token.is_some();
-        self.close_browser = true;
-        self.status = "Signed out on this device. Revoking its session…".into();
-        self.force_sync();
-        self.tick(ctx);
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = ctx;
+            browser::sign_out();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.persist_now = true;
+            self.generation += 1;
+            self.busy = false;
+            self.login = None;
+            self.saved.user = None;
+            self.identity_changed = true;
+            self.saved.revoke_pending = self.token.is_some();
+            self.close_browser = true;
+            self.status = "Signed out on this device. Revoking its session…".into();
+            self.force_sync();
+            self.tick(ctx);
+        }
     }
     pub fn force_sync(&mut self) {
         self.last_request = Instant::now() - Duration::from_secs(60);
@@ -382,6 +414,16 @@ impl Account {
                                 "Your reading progress is up to date."
                             }
                             .into();
+                        } else {
+                            #[cfg(target_arch = "wasm32")]
+                            {
+                                if self.saved.user.take().is_some() {
+                                    self.identity_changed = true;
+                                }
+                                self.token = None;
+                                self.persist_now = true;
+                                self.status = "Sign in to sync your reading across devices.".into();
+                            }
                         }
                     }
                     Err(error) => {
@@ -422,25 +464,29 @@ impl Account {
             self.restore_started = true;
             // Tests and throwaway previews never access a real credential store.
             if !cfg!(test) && std::env::var_os("CROSS_CANON_FRESH").is_none() {
-                self.run(ctx, || Event::Restored(load_token()));
+                self.run(ctx, async { Event::Restored(load_token()) });
                 return;
             }
         }
         if self.saved.revoke_pending && self.last_request.elapsed() >= Duration::from_secs(3) {
             if let Some(token) = self.token.clone() {
-                self.run(ctx, move || {
-                    Event::Revoked((|| {
-                        let response = client()?
-                            .post(format!("{ORIGIN}/api/native-login"))
-                            .bearer_auth(token)
-                            .json(&serde_json::json!({"operation":"revoke"}))
-                            .send()?;
-                        if response.status() != reqwest::StatusCode::UNAUTHORIZED {
-                            response.error_for_status()?;
-                        }
-                        store_token(None)?;
-                        Ok(())
-                    })())
+                self.run(ctx, async move {
+                    Event::Revoked(
+                        (async {
+                            let response = client()?
+                                .post(format!("{ORIGIN}/api/native-login"))
+                                .bearer_auth(token)
+                                .json(&serde_json::json!({"operation":"revoke"}))
+                                .send()
+                                .await?;
+                            if response.status() != reqwest::StatusCode::UNAUTHORIZED {
+                                response.error_for_status()?;
+                            }
+                            store_token(None)?;
+                            Ok(())
+                        })
+                        .await,
+                    )
                 });
             } else {
                 self.saved.revoke_pending = false;
@@ -452,11 +498,11 @@ impl Account {
             } else if login.ticket.is_some()
                 && self.last_request.elapsed() >= Duration::from_secs(2)
             {
-                self.run(ctx, move || Event::Polled((|| {
+                self.run(ctx, async move { Event::Polled((async {
                     let response = client()?.post(format!("{ORIGIN}/api/native-login"))
-                        .json(&serde_json::json!({"operation":"poll", "id":login.id, "secret":login.secret, "ticket":login.ticket})).send()?;
+                        .json(&serde_json::json!({"operation":"poll", "id":login.id, "secret":login.secret, "ticket":login.ticket})).send().await?;
                     if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS { return Ok(None); }
-                    let body: serde_json::Value = response.error_for_status()?.json()?;
+                    let body: serde_json::Value = response.error_for_status()?.json().await?;
                     match body["status"].as_str() {
                         Some("complete") => {
                             let token = body["token"].as_str().context("Missing session")?.to_owned();
@@ -466,15 +512,18 @@ impl Account {
                         Some("expired") => bail!("This sign-in expired. Cancel and try again."),
                         _ => Ok(None),
                     }
-                })()));
+                }).await) });
             }
         } else if let (Some(token), Some(origin)) = (self.token.clone(), self.sync_origin.clone()) {
             if self.last_request.elapsed() >= self.sync_interval() {
                 let profile = self.profile().cloned().unwrap_or_default();
                 let user_id = self.saved.user.as_ref().map(|u| u.id.clone());
                 let refresh = self.refresh_generation;
-                self.run(ctx, move || {
-                    Event::Synced(refresh, sync(&origin, &token, user_id.as_deref(), profile))
+                self.run(ctx, async move {
+                    Event::Synced(
+                        refresh,
+                        sync_async(&origin, &token, user_id.as_deref(), profile).await,
+                    )
                 });
             }
         }
@@ -559,31 +608,25 @@ impl Account {
 }
 
 fn epoch_millis() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64
+    platform::epoch_millis()
 }
-fn client() -> Result<reqwest::blocking::Client> {
-    Ok(reqwest::blocking::Client::builder()
-        .timeout(Duration::from_secs(15))
-        .redirect(reqwest::redirect::Policy::none())
-        .user_agent("CrossCanon-Native/1")
-        .build()?)
+fn client() -> Result<platform::HttpClient> {
+    platform::http_client(Duration::from_secs(15))
 }
-fn sync(
+async fn sync_async(
     origin: &str,
     token: &str,
     expected_user: Option<&str>,
     local: BTreeMap<String, LocalProgress>,
 ) -> Result<SyncOutput> {
     let client = client()?;
-    let mut account: AccountResponse = client
-        .get(format!("{origin}/api/account"))
-        .bearer_auth(token)
-        .send()?
-        .error_for_status()?
-        .json()?;
+    let mut account: AccountResponse =
+        platform::authenticated(client.get(format!("{origin}/api/account")), token)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
     let mut uploaded = BTreeMap::new();
     // A credential restored from Keychain must be identified before any queued
     // account's data is sent. A different Google account starts a separate queue.
@@ -604,18 +647,17 @@ fn sync(
         {
             continue;
         }
-        let response = client
-            .post(format!("{origin}/api/account"))
-            .bearer_auth(token)
+        let response = platform::authenticated(client.post(format!("{origin}/api/account")), token)
             .json(&serde_json::json!({"location":saved.location, "revision":saved.revision}))
-            .send()?;
+            .send()
+            .await?;
         let conflict = response.status() == reqwest::StatusCode::CONFLICT;
         let response = if conflict {
             response
         } else {
             response.error_for_status()?
         };
-        let body: serde_json::Value = response.json()?;
+        let body: serde_json::Value = response.json().await?;
         let progress: Progress = serde_json::from_value(body["progress"].clone())?;
         if !conflict {
             uploaded.insert(corpus.clone(), progress.clone());
@@ -624,6 +666,16 @@ fn sync(
     }
     Ok(SyncOutput { account, uploaded })
 }
+#[cfg(all(test, not(target_arch = "wasm32")))]
+fn sync(
+    origin: &str,
+    token: &str,
+    user: Option<&str>,
+    local: BTreeMap<String, LocalProgress>,
+) -> Result<SyncOutput> {
+    platform::block_on(sync_async(origin, token, user, local))
+}
+
 fn reconcile(
     local: &mut BTreeMap<String, LocalProgress>,
     cloud: BTreeMap<String, Progress>,
@@ -682,8 +734,14 @@ fn load_token() -> Result<Option<String>> {
         ensure!(valid_token(&token), "Invalid stored session");
         Ok(Some(token))
     }
-    #[cfg(not(target_vendor = "apple"))]
-    Ok(None)
+    #[cfg(all(not(target_vendor = "apple"), not(target_arch = "wasm32")))]
+    {
+        Ok(None)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        Ok(Some("browser-session".into()))
+    }
 }
 fn store_token(token: Option<&str>) -> Result<()> {
     #[cfg(target_vendor = "apple")]
@@ -701,7 +759,12 @@ fn store_token(token: Option<&str>) -> Result<()> {
         );
         Ok(())
     }
-    #[cfg(not(target_vendor = "apple"))]
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = token;
+        Ok(())
+    }
+    #[cfg(all(not(target_vendor = "apple"), not(target_arch = "wasm32")))]
     {
         if token.is_some() {
             bail!("Persistent sign-in requires a system credential store");
@@ -723,7 +786,12 @@ pub(super) fn browser(url: &str) -> Result<()> {
         );
         Ok(())
     }
-    #[cfg(not(target_vendor = "apple"))]
+    #[cfg(target_arch = "wasm32")]
+    {
+        browser::open_url(url);
+        Ok(())
+    }
+    #[cfg(all(not(target_vendor = "apple"), not(target_arch = "wasm32")))]
     {
         webbrowser::open(url)?;
         Ok(())

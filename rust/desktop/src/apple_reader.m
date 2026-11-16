@@ -718,11 +718,24 @@ float cross_canon_keyboard_height(void) {
             p[@"chapterTitle"] = chapter[@"title"];
             p[@"chapterKey"] = chapterKey;
             NSString *value = [source[@"text"] stringByAppendingString:@"\n"];
+            NSArray *quotations = source[@"quotations"];
+            NSString *quoteLabel = quotations.count ? @"Scripture quotation\n" : @"";
+            value = [quoteLabel stringByAppendingString:value];
             NSRange range = NSMakeRange(text.length, value.length);
             p[@"range"] = [NSValue valueWithRange:range];
             if (source == [chapter[@"paragraphs"] firstObject]) p[@"heading"] = @(headingStart);
             [paragraphs addObject:p];
             [text appendAttributedString:[[NSAttributedString alloc] initWithString:value attributes:bodyAttributes]];
+            if (quoteLabel.length) {
+                [text addAttributes:@{NSFontAttributeName:[UIFont preferredFontForTextStyle:UIFontTextStyleCaption1],
+                    NSForegroundColorAttributeName:muted} range:NSMakeRange(range.location, quoteLabel.length)];
+            }
+            for (NSArray *quote in quotations) {
+                NSRange quoted = NSMakeRange(range.location + quoteLabel.length + [quote[0] unsignedIntegerValue], [quote[1] unsignedIntegerValue]);
+                if (NSMaxRange(quoted) <= NSMaxRange(range)) {
+                    [text addAttribute:NSObliquenessAttributeName value:@0.18 range:quoted];
+                }
+            }
             NSString *highlight = CCValue(source, @"highlight");
             if (highlight) {
                 UIColor *tint = [highlight isEqual:@"green"] ? UIColor.systemGreenColor :
@@ -730,7 +743,7 @@ float cross_canon_keyboard_height(void) {
                 [text addAttribute:NSBackgroundColorAttributeName value:[tint colorWithAlphaComponent:0.22] range:range];
             }
             for (NSArray *mark in source[@"modernization"]) {
-                NSRange changed = NSMakeRange(range.location + [mark[0] unsignedIntegerValue], [mark[1] unsignedIntegerValue]);
+                NSRange changed = NSMakeRange(range.location + quoteLabel.length + [mark[0] unsignedIntegerValue], [mark[1] unsignedIntegerValue]);
                 if (NSMaxRange(changed) <= NSMaxRange(range)) {
                     [text addAttributes:@{NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle | NSUnderlinePatternDot),
                         NSUnderlineColorAttributeName:[CCColor(self.model[@"accent"]) colorWithAlphaComponent:0.45]} range:changed];

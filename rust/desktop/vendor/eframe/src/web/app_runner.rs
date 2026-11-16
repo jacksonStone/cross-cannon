@@ -261,6 +261,8 @@ impl AppRunner {
             }
         }
 
+        self.app
+            .platform_output_hook(&self.egui_ctx, &platform_output);
         self.handle_platform_output(platform_output);
         self.textures_delta.append(textures_delta);
         self.clipped_primitives = Some(self.egui_ctx.tessellate(shapes, pixels_per_point));

@@ -1,8 +1,8 @@
 import { createClient } from "@libsql/client";
 import OpenAI from "openai";
 
-import { normalizeVector, vectorSql } from "../app/lib/db.server";
-import { getDefaultEmbeddingConfig } from "../app/lib/embeddings.server";
+import { normalizeVector, vectorSql } from "./lib/db";
+import { getDefaultEmbeddingConfig } from "./lib/embeddings";
 
 type StoredEmbeddingRow = {
   embedding?: unknown;

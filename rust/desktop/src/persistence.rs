@@ -1,7 +1,9 @@
 //! iOS can stop rendering or terminate without an exit callback. Keep its small
 //! reader checkpoint synchronous and atomic, using the existing eframe format.
 use super::*;
-use std::{collections::HashMap, io::Write, path::Path};
+use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
+use std::{io::Write, path::Path};
 
 pub(super) struct ReaderStorage {
     path: PathBuf,
@@ -18,11 +20,17 @@ pub(super) struct ReaderStorage {
 
 impl ReaderStorage {
     pub fn open(path: PathBuf) -> Result<Self> {
+        #[cfg(not(target_arch = "wasm32"))]
         let values = match std::fs::read_to_string(&path) {
             Ok(contents) => ron::from_str(&contents).context("Read saved reader state")?,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => HashMap::new(),
             Err(error) => return Err(error).context("Open saved reader state"),
         };
+        #[cfg(target_arch = "wasm32")]
+        let values = browser::storage_get(&path.to_string_lossy())?
+            .map(|v| ron::from_str(&v))
+            .transpose()?
+            .unwrap_or_default();
         Ok(Self {
             path,
             values,
@@ -69,6 +77,7 @@ impl ReaderStorage {
         // leave dirty set and the complete latest values available for retry.
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn write(&mut self) -> Result<()> {
         let parent = self.path.parent().unwrap_or_else(|| Path::new("."));
         std::fs::create_dir_all(parent)?;
@@ -83,6 +92,12 @@ impl ReaderStorage {
         {
             self.writes += 1;
         }
+        self.dirty = false;
+        Ok(())
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn write(&mut self) -> Result<()> {
+        browser::storage_set(&self.path.to_string_lossy(), &ron::to_string(&self.values)?)?;
         self.dirty = false;
         Ok(())
     }

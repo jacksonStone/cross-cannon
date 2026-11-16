@@ -16,11 +16,14 @@ pulldown-cmark = { version = "0.12", default-features = false }
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 cross-canon-core.workspace = true
 eframe = { version = "=0.31.1", path = "vendor/eframe", default-features = false, features = ["default_fonts", "persistence"] }
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "time"] }
 rodio = { version = "0.21.1", default-features = false, features = ["playback", "symphonia-all"] }
 
-[target.'cfg(not(target_os = "ios"))'.dependencies]
+[target.'cfg(all(not(target_os = "ios"), not(target_arch = "wasm32")))'.dependencies]
 eframe = { version = "=0.31.1", path = "vendor/eframe", default-features = false, features = ["glow", "x11", "wayland", "accesskit"] }
 webbrowser = "1.2"
 
@@ -29,3 +32,10 @@ eframe = { version = "=0.31.1", path = "vendor/eframe", default-features = false
 
 [build-dependencies]
 cc = "1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+eframe = { version = "=0.31.1", path = "vendor/eframe", default-features = false, features = ["glow", "accesskit"] }
+wasm-bindgen = "=0.2.130"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Window", "Navigator", "Document", "HtmlCanvasElement", "Storage", "Location", "Crypto"] }

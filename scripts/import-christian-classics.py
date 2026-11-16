@@ -57,6 +57,19 @@ def paragraphs(element):
     return [text(p) for p in shared.iter_paragraphs(element) if text(p)]
 
 
+def quotation_sentence_ranges(verses):
+    ranges = []
+    for verse in verses:
+        if not verse.get("scriptureQuotation"):
+            continue
+        number = verse["verse"]
+        if ranges and ranges[-1][1] == number - 1:
+            ranges[-1][1] = number
+        else:
+            ranges.append([number, number])
+    return ranges
+
+
 def notes(element):
     return [
         {"id": n.get("id", f"note-{i+1}"), "text": clean("".join(n.itertext()))}
@@ -74,6 +87,7 @@ def chapter(
     lineage=None,
     footnotes=None,
     ranges=None,
+    quotations=None,
 ):
     return {
         "code": code,
@@ -84,6 +98,7 @@ def chapter(
         "lineage": lineage or [],
         "notes": footnotes or [],
         "ranges": ranges or [],
+        "quotations": quotations or [],
     }
 
 
@@ -111,6 +126,7 @@ def commentary_paragraphs(element, *, osis=False):
                 pending = None
     content = []
     ranges = []
+    quotations = []
     for p in shared.iter_paragraphs(element):
         value = clean("".join(p.itertext())) if osis else text(p)
         if not value:
@@ -135,7 +151,8 @@ def commentary_paragraphs(element, *, osis=False):
             ancestor = parents.get(ancestor)
         content.append(value)
         ranges.append(scripture_range)
-    return content, ranges
+        quotations.append("passage" in p.get("class", "").lower().split())
+    return content, ranges, quotations
 
 
 def imitation():
@@ -211,7 +228,7 @@ def henry():
                 else:
                     code = marker.get("parsed").split("|")[1]
                 assert code in BOOKS and number, (volume, code, heading)
-                content, ranges = commentary_paragraphs(div)
+                content, ranges, quotations = commentary_paragraphs(div)
                 result.append(
                     chapter(
                         code,
@@ -220,6 +237,7 @@ def henry():
                         content,
                         footnotes=notes(div),
                         ranges=ranges,
+                        quotations=quotations,
                     )
                 )
     assert (
@@ -313,9 +331,9 @@ def catena():
     result = []
     for div in root.iter("chapter"):
         code, num = div.get("osisID").split(".")
-        content, ranges = commentary_paragraphs(div, osis=True)
+        content, ranges, quotations = commentary_paragraphs(div, osis=True)
         result.append(
-            chapter(code, int(num), f"{BOOKS[code]} {num}", content, ranges=ranges)
+            chapter(code, int(num), f"{BOOKS[code]} {num}", content, ranges=ranges, quotations=quotations)
         )
     assert len(result) == 89 and {x["code"] for x in result} == {
         "Matt",
@@ -453,6 +471,11 @@ def main():
         for value in parse():
             chapter_id = f"{work_id}:{value['code']}.{value['number']}"
             verses = sentences(value["paragraphs"])
+            if value["quotations"]:
+                assert len(value["paragraphs"]) == len(value["quotations"])
+                for verse in verses:
+                    if value["quotations"][verse["sourceParagraph"] - 1]:
+                        verse["scriptureQuotation"] = True
             if value["ranges"]:
                 position = 0
                 assert len(value["paragraphs"]) == len(value["ranges"])
@@ -509,6 +532,8 @@ def main():
                     if "scriptureReference" in asset
                     else {}
                 )
+                | ({"quotationSentenceRanges": quotation_sentence_ranges(verses)}
+                   if any(value["quotations"]) else {})
             )
         books.append(
             {

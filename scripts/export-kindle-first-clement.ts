@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { buildModernizedTextParts } from "../app/features/early-christian-reader/modernized-text";
+import { buildModernizedTextParts } from "./lib/modernized-text";
 import {
   createEpubArchive,
   epubTextEntry,

@@ -915,6 +915,23 @@ impl ResizeObserverContext {
                             web_sys::window().unwrap().device_pixel_ratio()
                         );
                     }
+                    // Some Chromium device-emulation modes report CSS pixels
+                    // in devicePixelContentBoxSize. Keep the backing store in
+                    // physical pixels so layout and DOM accessibility agree.
+                    let dpr = web_sys::window().unwrap().device_pixel_ratio();
+                    let rect = canvas.get_bounding_client_rect();
+                    let expected_width = (rect.width() * dpr).round() as u32;
+                    let expected_height = (rect.height() * dpr).round() as u32;
+                    let width = if width.abs_diff(expected_width) > 1 {
+                        expected_width
+                    } else {
+                        width
+                    };
+                    let height = if height.abs_diff(expected_height) > 1 {
+                        expected_height
+                    } else {
+                        height
+                    };
                     canvas.set_width(width);
                     canvas.set_height(height);
 

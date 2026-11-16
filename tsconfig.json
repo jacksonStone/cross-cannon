@@ -1,7 +1,6 @@
 {
   "include": [
-    "**/*.ts",
-    "**/*.tsx"
+    "scripts/**/*.ts"
   ],
   "compilerOptions": {
     "lib": [
@@ -10,13 +9,10 @@
       "ES2022"
     ],
     "types": [
-      "@remix-run/node",
-      "vite/client",
       "node"
     ],
     "isolatedModules": true,
     "esModuleInterop": true,
-    "jsx": "react-jsx",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
@@ -26,14 +22,6 @@
     "skipLibCheck": true,
     "allowJs": false,
     "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "*": [
-        "./*"
-      ],
-      "~/*": [
-        "./app/*"
-      ]
-    },
     "noEmit": true
   }
 }

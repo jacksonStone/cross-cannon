@@ -1,208 +1,146 @@
-# Google login and reading progress
+# Google login and account synchronization
 
-Cross Canon uses Better Auth with Google as its only login provider. Reading
-without an account remains available. There are no password, email-code, or
-magic-link flows, and no email delivery service is needed.
+The Rust server handles Google OIDC, browser sessions, native-app consent,
+reading progress and personal study. Reading without an account stays available.
+Only Google's identity scopes (`openid`, `email`, `profile`) are requested; no
+email delivery service, password flow or native Google SDK is needed.
 
-## Configure Google
+## Configure the existing Google web client
 
-Create a **Web application** OAuth client in Google Cloud Console, configure
-the Google Auth Platform branding/audience screens, and register these exact
-authorized redirect URIs:
+Register the exact authorized redirect URI for each environment:
 
 ```text
 https://www.crosscanon.com/api/auth/callback/google
 http://127.0.0.1:3005/api/auth/callback/google
 ```
 
-Use the same hostname when opening local development. Add a separate localhost
-callback only if you also configure `BETTER_AUTH_URL` to use localhost. Request
-only the default identity scopes: `openid`, `email`, and `profile`. Google's
-basic-identity exception permits these scopes without a test-user allowlist,
-even in Testing. Use an External audience for public Google accounts, and set
-the publishing status to In production when releasing publicly. Adding other
-scopes changes Google's testing/verification requirements; this app needs none.
+Use the same local hostname in the browser and configured origin. The production
+web client can also serve native sign-in: the native app opens the system browser,
+Google returns to the web callback, and explicit consent returns a one-use ticket
+to `crosscanon://login-complete`. That app link is not a Google redirect URI and
+contains no Google token or persistent session credential. See
+[Google's OpenID Connect documentation](https://developers.google.com/identity/openid-connect/openid-connect)
+for provider configuration.
 
-Official references: [Google OpenID Connect setup](https://developers.google.com/identity/openid-connect/openid-connect)
-and [Better Auth Google integration](https://better-auth.com/docs/authentication/google).
-See [Google's audience and basic-identity exception](https://support.google.com/cloud/answer/15549945).
-
-## iPhone and desktop: no additional GCP clients
-
-The native apps use the existing server login through the system browser. Google
-still returns to `https://www.crosscanon.com/api/auth/callback/google`; its web
-client secret never ships in an app. There is no iOS client ID, desktop client
-ID, Firebase project, Google SDK, or additional Google redirect to configure for
-this flow. `crosscanon://login-complete` is a local app return link, **not** a
-Google redirect URI. It carries a short-lived return ticket and cannot sign in an app without its
-matching private proof.
-
-Phone-friendly GCP check, in the existing project:
-
-1. Open [Google Auth Platform → Clients](https://console.cloud.google.com/auth/clients?project=gen-lang-client-0153949172).
-   Keep the existing Web application client and the production redirect above.
-   No changes are needed if the website already signs in successfully.
-2. Open [Audience](https://console.cloud.google.com/auth/audience?project=gen-lang-client-0153949172).
-   Use External for public access. For a public release, select Publish app if
-   its status still says Testing. Basic Google sign-in has the exception described
-   above; you do not need to add test users for the current identity-only scopes.
-3. [Data access](https://console.cloud.google.com/auth/scopes?project=gen-lang-client-0153949172)
-   should contain only identity scopes (`openid`, email, profile). Do not add
-   Gmail, Drive, or other API permissions for progress sync.
-
-In the app, open Reader tools (⋮) → Account and tap Continue with Google.
-The browser opens directly. Sign in if needed, tap Continue as your account,
-and return to Cross Canon. No pairing codes or manual comparison are shown.
-The native account sheet keeps sign-in, close, and back-to-reading controls
-visible on small phones; reading details expand only when requested.
-
-The server issues a 10-minute request with separate public ID and 256-bit
-private device proof. Explicit confirmation requires a same-origin,
-authenticated browser session. Confirmation sends a one-use return ticket to
-`crosscanon://login-complete`; the native app accepts it only for its own
-pending request. Only that return ticket together with the app-held proof can
-atomically redeem a 30-day device session. Sending an approval-page link to
-another device cannot give a remote initiator a session. Proofs, return tickets
-and session tokens are stored only as hashes in SQLite. Return links contain
-only the short-lived ticket, never Google tokens or the persistent device
-session. The old schema's `code` column is retained empty for compatibility;
-there are no manual codes in the flow.
-
-Both distributed apps must register the `crosscanon` scheme; macOS also forwards
-its system authentication session's callback to the existing native link
-handler. A return URL alone cannot sign in an app without its matching pending
-request and private proof.
-
-iOS opens the full default browser (Safari by default); macOS uses
-ASWebAuthenticationSession. Google account choices stalled inside the iOS
-system authentication sheet during device testing, while the same login worked
-in regular Safari. Both apps store their device session in Keychain with a
-ThisDeviceOnly accessibility policy. The currently distributed
-desktop app is macOS. Other desktop builds need platform URL-scheme and single-instance callback
-routing before distributing native login. Their current credential adapter
-retains a session in memory only; their Account screen states that a
-restart requires sign-in. No plaintext token fallback is used.
-
-Each account has its own durable offline progress queue. Guest locations are
-preserved separately and imported only on request. Sync uses the same server
-revisions as the website. A remote update changes resume targets without moving
-an open reader. Conflicts offer Use other device / Keep this device. Sign-out
-immediately returns to guest reading; if offline, revocation is queued and
-retried on reconnection, including after restart. Sessions expire after 30 days.
-
-After deploying this feature, explicitly run `npm run update-db:accounts` with
-the existing production service environment. This adds `native_login` and
-`native_session` without modifying existing accounts or Reader Locations.
-Normal deploys do not migrate databases automatically.
-Release the backend, run that explicit migration, and verify the native-login
-endpoint before distributing updated native apps.
-
-## Server configuration
-
-Set these in the web server's environment, keeping the secret out of source
-control and browser bundles:
-
-Production keeps these settings in `/home/ubuntu/.cross-canon-auth.env` with
-owner-only permissions (`0600`). The `cross-cannon` systemd service loads this
-file through `/etc/systemd/system/cross-cannon.service.d/20-auth.conf`, after the
-shared environment file, so Google credentials are isolated to this app. Keep
-the existing `BETTER_AUTH_SECRET` when updating Google credentials.
+Keep these values in the server environment, outside source and browser bundles:
 
 ```text
-GOOGLE_CLIENT_ID=<OAuth web client ID>
-GOOGLE_CLIENT_SECRET=<OAuth web client secret>
-BETTER_AUTH_SECRET=<at least 32 random characters>
-BETTER_AUTH_URL=https://www.crosscanon.com
-ACCOUNTS_DATABASE_PATH=/home/ubuntu/cross-cannon/storage/accounts.db
+GOOGLE_CLIENT_ID=<existing OAuth web client ID>
+GOOGLE_CLIENT_SECRET=<existing OAuth web client secret>
+CROSS_CANON_ACCOUNT_ORIGIN=https://www.crosscanon.com
+ACCOUNTS_DATABASE_PATH=/home/ubuntu/.workspace-deploy/shared/cross-cannon/accounts/accounts.db
 ```
 
-Generate the authentication secret with `openssl rand -base64 32`. For local
-development, use `BETTER_AUTH_URL=http://127.0.0.1:3005` and omit
+`BETTER_AUTH_URL` remains an alias for the canonical origin so existing environment
+configuration continues to work. `BETTER_AUTH_SECRET` is not used by the Rust
+runtime. Existing credentials can remain in `/home/ubuntu/.cross-canon-auth.env`
+with mode 0600 and its existing `20-auth.conf` systemd EnvironmentFile drop-in;
+they do not need to move into a shared environment file. A custom existing
+`ACCOUNTS_DATABASE_PATH` is relocated intact by the release transition, with an
+old-path symlink. SQLite opens the canonical path so sidecars use the dedicated
+writable directory.
+
+For local development, configure the origin as `http://127.0.0.1:3005` and omit
 `ACCOUNTS_DATABASE_PATH` to use `storage/accounts.db`.
 
-Initialize the separate account database with the server environment loaded:
+## Explicit account database setup
+
+Normal startup, build, verification and deployment never initialize or migrate
+a database. For an explicitly requested local account setup:
 
 ```bash
 npm run update-db:accounts
 ```
 
-This explicit command creates/updates Better Auth's account/session tables and
-the reader-progress table. It never touches scripture/search databases. Normal
-builds, verification, deployment, and server startup do not run this migration.
-On first production enablement, run the command in the application directory
-with the production service's environment, then restart `cross-cannon`.
-Subsequent auth dependency upgrades may require rerunning this explicit command.
+That off-server convenience command compiles/runs the Rust server's explicit
+initializer with `CROSS_CANNON_UPDATE_DB=1`. On production, use the installed
+binary with the intended path; Node and npm are not needed:
 
-An unconfigured installation continues to serve the reader normally and shows
-sign-in as unavailable on `/account`. Missing schema or invalid configuration
-fails closed. Account endpoints and OAuth callbacks use private, non-cacheable
-responses and bypass the offline service worker's shell fallback. No personal
-account data is embedded in cached reader HTML.
+```bash
+CROSS_CANNON_UPDATE_DB=1 /home/ubuntu/cross-cannon/bin/cross-cannon \
+  --init-accounts /home/ubuntu/.workspace-deploy/shared/cross-cannon/accounts/accounts.db
+```
 
-## Reader behavior
+Run initialization as the service owner and load the production environment when
+needed. The initializer operates only on the named accounts database; it never
+opens Scripture/search indexes. Existing account IDs, provider associations,
+progress revisions, study records and native-session hashes retain their schema.
+An unconfigured server serves reading normally. Invalid account configuration or
+missing schema fails closed rather than creating a database during a request.
 
-- Open reader tools (`⋮`) and choose the account icon to sign in.
-- Locations save separately for Scripture, Early Christian Works, and Christian
-  Classics. Account locations are isolated from guest locations and other
-  accounts in the browser.
-- Before-sign-in progress can be imported explicitly from the account page.
-- Active reading queues changes locally and syncs after a short delay, when the
-  browser reconnects or regains focus, and periodically while open. The simple
-  offline Scripture fallback also queues progress for the next connected visit.
-- Opening a reader restores the saved account location; an explicit Reader Link
-  still takes priority. Remote changes never move an already-open reading view.
-- Concurrent/offline writes use server revisions. When two devices disagree,
-  the account page asks which location to keep instead of silently overwriting.
-- Sign-out revokes the server session and returns to guest reading. Previously
-  queued account changes remain isolated on that browser for the same account.
-- This implementation syncs Reader Locations across web, native iOS and macOS.
-  Notes, favorites and reader settings sync are future features.
+## Browser sessions
 
-## Storage and backups
+The server validates the Google ID token's signature, issuer, audience, expiry
+and nonce after the state/proof and PKCE exchange. It stores an opaque browser
+session as a hash and discards provider tokens rather than maintaining an OAuth
+token vault. Account matching follows the provider identity; email addresses do
+not silently link unrelated accounts.
 
-The account database is writable and independent of the read-only search
-indexes. It lives under the existing deploy-preserved `storage/` directory and
-must never be included in deploy packages. Back it up off-server with SQLite's
-online backup API (or an equivalent consistent backup), including a restore
-check. Copying only the live `.db` file can miss committed WAL data. Session
-signing and encrypted OAuth tokens depend on `BETTER_AUTH_SECRET`; retain that
-secret securely with the operational recovery configuration.
+Browser sessions use opaque HttpOnly cookies and hashed server records. Legacy
+Better Auth cookies require fresh sign-in; account IDs, Reader Locations and study
+remain available. Native sessions retain their hash/expiry/revocation protocol. Account APIs, OAuth callbacks
+and account/consent documents return private/no-store responses and bypass the
+offline reader cache.
+
+## Native iOS and macOS login
+
+Open Reader tools (⋮) → Account and choose Continue with Google. Sign in in the
+system browser, approve the named app, and return to the reader. iOS opens the
+full default browser; macOS uses ASWebAuthenticationSession. Distributed apps
+register the `crosscanon` URL scheme and accept a callback only for their own
+pending request. No additional Google client ID or secret belongs in the app.
+
+A request lasts ten minutes and has a public ID plus a private 256-bit device
+proof. Browser approval requires a same-origin authenticated session and issues
+a one-use return ticket. The app must present both the ticket and its private
+proof to redeem a 30-day native session atomically. Approval-page links alone
+cannot mint a session. SQLite stores hashes of proofs, tickets and native session
+tokens. Native sign-out revokes only that credential; the browser session stays
+independent. iOS/macOS store credentials in Keychain; other desktop platforms
+retain their existing in-memory credential behavior until a platform adapter is
+implemented.
+
+## Progress, study and offline state
+
+The shared Rust reader owns account reconciliation on browser, iOS and macOS.
+Each account has separate local progress/study queues; guest locations remain
+separate. Reader Links take priority over restored locations. Remote progress
+updates change resume targets without moving an actively read passage. A return
+refresh may restore a newer location only when local reading has not changed and
+no unsynchronized changes, conflict or playing audio prevents it.
+
+Progress writes use a per-Collection compare-and-swap revision; study writes use
+per-item revisions and account-change checks. Deleted study items remain as
+revisioned tombstones so an offline device cannot resurrect them. Offline edits,
+sign-out and later reconnection retain the same shared client reconciliation.
+Favorites and reader settings stay local. See [personal study](personal-study.md).
+
+## Storage and recovery
+
+The unified systemd service can write only the dedicated accounts directory.
+Search indexes and other runtime artifacts remain read-only. Initial release
+activation stops both previous services before moving the existing account
+SQLite main file and any WAL/SHM/journal together. The old location links to the
+new files; a failed activation restores account files before restarting the prior
+services. Archives never include account/search databases or live storage.
+
+Keep consistent account backups off-server and test restoration. Use SQLite's
+online backup API or stop all writers before copying the main file and sidecars;
+a copy of only a live `.db` can omit committed WAL data. The old
+`BETTER_AUTH_SECRET` is not a dependency of new Rust sessions.
 
 ## Verification
 
-`npm run verify` includes account/session/security and conflict tests using a
-temporary database and fake Google client credentials. `npm run e2e:accounts`
-uses temporary accounts and real server sessions to exercise browser sync and
-capture desktop/mobile screenshots under `docs/screenshots/`, including native
-browser approval and native-session-to-web sync. Native tests run with
-`scripts/rust.sh test --locked -p cross-canon-desktop -- --test-threads=1` and
-cover location compatibility, account isolation, offline conflicts, in-flight
-reading updates, authenticated transport, and compact Account UI.
+`npm run verify` runs Rust account/OIDC/native handoff/progress/study tests,
+production-shape anonymous document/API checks and a temporary-account browser
+journey. Tests must not use production account data. `npm run verify:offline` exercises reading and local study through
+the actual browser app. Native client tests use:
 
-Neither test contacts Google or completes a real Google login. After configuring
-credentials, complete Google consent in two browser profiles/devices, read in
-one, resume in the other, and verify sign-out before enabling production login.
+```bash
+scripts/rust.sh test --locked -p cross-canon-desktop -- --test-threads=1
+```
 
-## Build away from production
-
-`npm run ship:docker` snapshots the deployment inputs, installs and tests with
-Node 24.13.0 in a local `linux/amd64` Docker container, and exports
-only the production runtime. It refuses remote Docker engines. No credentials,
-databases, or live storage enter the build context or release artifact.
-The runtime exports as one tar stream and unpacks in an OS temporary directory;
-this avoids slow file-provider coordination when the checkout is on a synced
-Desktop. Temporary runtime files are removed after packaging.
-
-The production runtime remains Node 26.13.0 from `.nvmrc`, checked on Ubuntu
-before activation. The builder uses Node 24 because the Node 26 x64 container
-misparses fractional numbers under the local Docker Desktop emulator, causing
-npm's packument cache initialization to fail. The Dockerfile checks fractional
-arithmetic before installing anything, and artifact metadata records both Node
-versions. `--build-node-version` can select another exact builder patch version.
-
-The artifact omits identical copies of public files from `build/client`; the
-existing web server serves those files from `public/`. A container smoke check
-verifies the pruned runtime before upload. File hashes, runtime architecture,
-source identity, and the previous release receipt are checked before activation.
-The shared deploy lock, health checks, rollback, storage preservation, and
-release retention are reused. Production does not install or compile anything.
+Before release, finish a real Google callback in two browser profiles/devices,
+verify shared progress and study, sign out, and complete the native system-browser
+consent/app-link return. Mocked token/provider tests cannot prove the external
+Google account configuration or operating system app-link registration.

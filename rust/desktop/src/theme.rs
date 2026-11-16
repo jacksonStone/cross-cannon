@@ -38,6 +38,13 @@ impl Theme {
         }
     }
     pub fn apply(self, ctx: &egui::Context) {
+        // Apply the chosen palette to its explicit egui theme. The first web
+        // system-theme event must not swap it for an unstyled default palette.
+        ctx.set_theme(if self == Self::Dark {
+            egui::Theme::Dark
+        } else {
+            egui::Theme::Light
+        });
         let p = self.palette();
         let mut style = (*ctx.style()).clone();
         style.visuals = if self == Self::Dark {

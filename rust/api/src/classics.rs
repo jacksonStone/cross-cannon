@@ -2,9 +2,39 @@
 //! or vectors. Internal sentence positions remain available for reader navigation.
 use anyhow::{Context, Result};
 use serde_json::{json, Value};
-use std::{collections::HashSet, fs, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::Path,
+};
 
-pub(crate) fn display_results(root: &Path, results: &mut [Value]) -> Result<()> {
+pub(crate) fn quotation_ranges(root: &Path) -> Result<HashMap<String, Vec<[u32; 2]>>> {
+    let index: Value = serde_json::from_slice(&fs::read(
+        root.join("public/christian-classics-text/books.json"),
+    )?)?;
+    index["books"]
+        .as_array()
+        .context("Missing Classics books")?
+        .iter()
+        .flat_map(|book| book["chapters"].as_array().into_iter().flatten())
+        .filter(|chapter| chapter["quotationSentenceRanges"].is_array())
+        .map(|chapter| {
+            Ok((
+                chapter["id"]
+                    .as_str()
+                    .context("Missing Classics chapter ID")?
+                    .to_owned(),
+                serde_json::from_value(chapter["quotationSentenceRanges"].clone())?,
+            ))
+        })
+        .collect()
+}
+
+pub(crate) fn display_results(
+    root: &Path,
+    results: &mut [Value],
+    exclude_quotations: bool,
+) -> Result<()> {
     if results.is_empty() {
         return Ok(());
     }
@@ -32,12 +62,12 @@ pub(crate) fn display_results(root: &Path, results: &mut [Value]) -> Result<()> 
         let chapter: Value = serde_json::from_slice(&fs::read(
             root.join("public").join(path.trim_start_matches('/')),
         )?)?;
-        apply_display(result, &chapter)?;
+        apply_display(result, &chapter, exclude_quotations)?;
     }
     Ok(())
 }
 
-fn apply_display(result: &mut Value, chapter: &Value) -> Result<()> {
+fn apply_display(result: &mut Value, chapter: &Value, exclude_quotations: bool) -> Result<()> {
     let verses = chapter["verses"]
         .as_array()
         .context("Missing Classics sentences")?;
@@ -52,6 +82,10 @@ fn apply_display(result: &mut Value, chapter: &Value) -> Result<()> {
             .as_u64()
             .is_some_and(|v| v >= start && v <= end)
     };
+    anyhow::ensure!(
+        verses.iter().any(|verse| selected(&verse)),
+        "Missing selected Classics text"
+    );
     let paragraphs: HashSet<_> = verses
         .iter()
         .filter(selected)
@@ -59,6 +93,7 @@ fn apply_display(result: &mut Value, chapter: &Value) -> Result<()> {
         .collect();
     let displayed: Vec<_> = verses
         .iter()
+        .filter(|verse| !exclude_quotations || verse["scriptureQuotation"] != true)
         .filter(|verse| {
             selected(verse)
                 || verse["sourceParagraph"]
@@ -66,7 +101,10 @@ fn apply_display(result: &mut Value, chapter: &Value) -> Result<()> {
                     .is_some_and(|p| paragraphs.contains(&p))
         })
         .collect();
-    anyhow::ensure!(!displayed.is_empty(), "Missing selected Classics text");
+    if displayed.is_empty() {
+        result["highlightPassage"]["text"] = json!("");
+        return Ok(());
+    }
     let first = displayed
         .iter()
         .filter_map(|verse| verse["scriptureVerseStart"].as_u64())
@@ -124,7 +162,7 @@ mod tests {
             {"verse":8,"text":"Next note.","sourceParagraph":3,"scriptureVerseStart":2,"scriptureVerseEnd":2}
         ]});
         let mut result = json!({"score":0.7,"highlightPassage":{"id":"ccw:original", "verseStart":4,"verseEnd":6,"rangeLabel":"4-6"}});
-        apply_display(&mut result, &chapter).unwrap();
+        apply_display(&mut result, &chapter, true).unwrap();
         assert_eq!(result["chapterReference"], "Henry · Proverbs 16:1");
         assert_eq!(
             result["highlightPassage"]["text"],
@@ -133,5 +171,26 @@ mod tests {
         assert_eq!(result["highlightPassage"]["id"], "ccw:original");
         assert_eq!(result["highlightPassage"]["rangeLabel"], "4-6");
         assert_eq!(result["score"], 0.7);
+    }
+
+    #[test]
+    fn search_previews_exclude_quotation_paragraphs_and_keep_inline_citations() {
+        let chapter = json!({"book":"Henry", "reference":"Acts 6", "verses":[
+            {"verse":1,"text":"1 And in those days.","sourceParagraph":1,"scriptureQuotation":true},
+            {"verse":2,"text":"2 Then the twelve.","sourceParagraph":1,"scriptureQuotation":true},
+            {"verse":3,"text":"A note quoting the twelve.","sourceParagraph":2}
+        ]});
+        let mut quote_only = json!({"highlightPassage":{"verseStart":1,"verseEnd":2}});
+        apply_display(&mut quote_only, &chapter, true).unwrap();
+        assert_eq!(quote_only["highlightPassage"]["text"], "");
+        let mut mixed =
+            json!({"score":0.7,"highlightPassage":{"id":"original", "verseStart":2,"verseEnd":3}});
+        apply_display(&mut mixed, &chapter, true).unwrap();
+        assert_eq!(
+            mixed["highlightPassage"]["text"],
+            "A note quoting the twelve."
+        );
+        assert_eq!(mixed["highlightPassage"]["id"], "original");
+        assert_eq!(mixed["score"], 0.7);
     }
 }

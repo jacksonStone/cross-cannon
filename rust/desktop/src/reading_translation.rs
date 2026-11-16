@@ -65,6 +65,76 @@ mod tests {
         let legacy: ReaderState = serde_json::from_str("{}").unwrap();
         assert_eq!(legacy.scripture_translation, Translation::Web);
     }
+
+    #[test]
+    fn incremental_chapters_match_bundled_reading_without_replacing_previous_chapters() {
+        let library =
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap();
+        let complete = ReadingText::new(&library);
+        let mut text: Text = serde_json::from_str(include_str!(
+            "../../../public/scripture-translations/msb.json"
+        ))
+        .unwrap();
+        let mut incremental = ReadingText::default();
+        let chapters = ["Genesis:1", "1 Timothy:3"];
+        let first = &library.chapter(chapters[0]).unwrap().1.passage_ids[0];
+        assert_eq!(
+            incremental.passage(library.passage(first).unwrap(), Translation::Msb),
+            library.passage(first).unwrap(),
+        );
+        for (index, chapter) in chapters.into_iter().enumerate() {
+            let verses = text.chapters.remove(chapter).unwrap();
+            let json = serde_json::json!({ "chapters": { chapter: verses } }).to_string();
+            incremental.add_json(&library, &json).unwrap();
+            for loaded in &chapters[..=index] {
+                for id in &library.chapter(loaded).unwrap().1.passage_ids {
+                    let source = library.passage(id).unwrap();
+                    assert_eq!(
+                        incremental.passage(source, Translation::Msb),
+                        complete.passage(source, Translation::Msb),
+                    );
+                    assert_eq!(incremental.passage(source, Translation::Web), source);
+                }
+            }
+        }
+        assert!(incremental.add_json(&library, "invalid JSON").is_err());
+        assert_eq!(
+            incremental.passage(library.passage(first).unwrap(), Translation::Msb),
+            complete.passage(library.passage(first).unwrap(), Translation::Msb),
+        );
+        assert_eq!(
+            incremental.label("Genesis", Translation::Msb),
+            complete.label("Genesis", Translation::Msb)
+        );
+        assert_eq!(
+            incremental.label("Tobit", Translation::Msb),
+            complete.label("Tobit", Translation::Msb)
+        );
+    }
+
+    #[test]
+    #[ignore = "Serial release-mode incremental Chapter translation timing"]
+    fn incremental_translation_projection_audit() {
+        let library =
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap();
+        let text: Text = serde_json::from_str(include_str!(
+            "../../../public/scripture-translations/msb.json"
+        ))
+        .unwrap();
+        let json =
+            serde_json::json!({ "chapters": { "John:3": text.chapters["John:3"] } }).to_string();
+        let mut reading = ReadingText::default();
+        let start = std::time::Instant::now();
+        for _ in 0..1000 {
+            reading.add_json(&library, &json).unwrap();
+            std::hint::black_box(&reading);
+        }
+        eprintln!(
+            "single_chapter_projection_us={:.2}; library_passages={}",
+            start.elapsed().as_secs_f64() * 1000.0,
+            library.passages.len()
+        );
+    }
 }
 
 #[derive(Deserialize)]
@@ -72,38 +142,64 @@ struct Text {
     chapters: HashMap<String, Vec<Verse>>,
 }
 
+#[derive(Clone, Default)]
 pub(super) struct ReadingText {
     passages: HashMap<String, Passage>,
     books: HashSet<String>,
 }
 
 impl ReadingText {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new(library: &Library) -> Self {
-        // Compiled into both native apps: available offline without a second index.
         let text: Text = serde_json::from_str(include_str!(
             "../../../public/scripture-translations/msb.json"
         ))
         .expect("validated, bundled MSB reading text");
+        Self::project(library, text)
+    }
+    #[cfg(target_arch = "wasm32")]
+    pub fn new(_library: &Library) -> Self {
+        Self::default()
+    }
+
+    #[cfg(any(target_arch = "wasm32", test))]
+    pub fn add_json(&mut self, library: &Library, json: &str) -> Result<()> {
+        let projection = Self::project(library, serde_json::from_str(json)?);
+        self.passages.extend(projection.passages);
+        self.books.extend(projection.books);
+        Ok(())
+    }
+
+    fn project(library: &Library, text: Text) -> Self {
         let books = text
             .chapters
             .keys()
             .filter_map(|key| key.rsplit_once(':').map(|(book, _)| book.to_owned()))
             .collect();
-        let mut groups: HashMap<&str, Vec<&Passage>> = HashMap::new();
-        for passage in &library.passages {
-            if passage.corpus == Corpus::Scripture {
-                groups.entry(&passage.chapter_id).or_default().push(passage);
-            }
-        }
         let mut passages = HashMap::new();
-        for (chapter, mut group) in groups {
-            let Some(verses) = text.chapters.get(chapter) else {
+        // Progressive readers supply a handful of Chapters at a time. Resolve
+        // those Chapters through the shared identity index rather than scanning
+        // and grouping the complete Library again for every incoming fragment.
+        for (id, verses) in text.chapters {
+            let Some((book, chapter)) = library.chapter(&id) else {
                 continue;
             };
+            if book.corpus != Corpus::Scripture {
+                continue;
+            }
+            let mut group: Vec<_> = chapter
+                .passage_ids
+                .iter()
+                .filter_map(|id| library.passage(id))
+                .filter(|passage| !passage.text.is_empty())
+                .collect();
+            if group.is_empty() {
+                continue;
+            }
             group.sort_by_key(|passage| passage.verse_start);
             let mut assigned: Vec<Vec<Verse>> = vec![vec![]; group.len()];
             let mut index = 0;
-            for verse in verses {
+            for verse in &verses {
                 while index + 1 < group.len() && group[index + 1].verse_start <= verse.number {
                     index += 1;
                 }

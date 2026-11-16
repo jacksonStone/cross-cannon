@@ -36,6 +36,8 @@ struct ChapterDetails {
     scripture_reference: Option<ScriptureReference>,
     paragraphs: Vec<Paragraph>,
     asset_path: Option<String>,
+    #[serde(skip)]
+    loaded_paragraphs: OnceLock<Vec<Paragraph>>,
 }
 
 #[derive(Deserialize)]
@@ -51,9 +53,48 @@ struct Paragraph {
     end: u32,
     scripture_start: Option<u32>,
     scripture_end: Option<u32>,
+    #[serde(default)]
+    scripture_quotation: bool,
 }
 
 impl Catalog {
+    /// Byte ranges in the displayed text, keeping canonical passage IDs intact.
+    pub fn quotation_ranges(
+        &self,
+        library: &Library,
+        passage: &Passage,
+        displayed: &str,
+    ) -> Vec<std::ops::Range<usize>> {
+        let Some(details) = self.chapters.get(&passage.chapter_id) else {
+            return vec![];
+        };
+        let paragraphs = details.paragraphs(&library.root);
+        let mut ranges: Vec<std::ops::Range<usize>> = vec![];
+        let mut cursor = 0;
+        for verse in &passage.verses {
+            let Some(offset) = displayed[cursor..].find(&verse.text) else {
+                continue;
+            };
+            let start = cursor + offset;
+            let end = start + verse.text.len();
+            if paragraphs
+                .iter()
+                .any(|p| p.scripture_quotation && verse.number >= p.start && verse.number <= p.end)
+            {
+                if let Some(previous) = ranges
+                    .last_mut()
+                    .filter(|r| displayed[r.end..start].trim().is_empty())
+                {
+                    previous.end = end;
+                } else {
+                    ranges.push(start..end);
+                }
+            }
+            cursor = end;
+        }
+        ranges
+    }
+
     pub fn load(root: &Path) -> Arc<Self> {
         static CATALOGS: OnceLock<std::sync::Mutex<HashMap<PathBuf, Arc<Catalog>>>> =
             OnceLock::new();
@@ -102,6 +143,20 @@ impl Catalog {
         catalog
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn commentary_chapters(&self, source: &Passage) -> Vec<String> {
+        self.chapters
+            .iter()
+            .filter(|(_, details)| {
+                details
+                    .scripture_reference
+                    .as_ref()
+                    .is_some_and(|r| r.book == source.book && r.chapter == source.chapter)
+            })
+            .map(|(id, _)| id.clone())
+            .collect()
+    }
+
     pub fn commentaries(&self, library: &Library, source: &Passage) -> Vec<commentary::Work> {
         if source.corpus != Corpus::Scripture {
             return vec![];
@@ -123,6 +178,9 @@ impl Catalog {
                         continue;
                     }
                     for paragraph in details.paragraphs(&library.root) {
+                        if paragraph.scripture_quotation {
+                            continue;
+                        }
                         let Some(start) = paragraph.scripture_start else {
                             continue;
                         };
@@ -187,21 +245,33 @@ impl Catalog {
         let Some(details) = self.chapters.get(&passage.chapter_id) else {
             return;
         };
-        let paragraphs: Vec<_> = details
-            .paragraphs
+        let overlapping: Vec<_> = details
+            .paragraphs(&library.root)
             .iter()
             .filter(|p| p.start <= passage.verse_end && p.end >= passage.verse_start)
             .collect();
-        let (Some(first), Some(last)) = (paragraphs.first(), paragraphs.last()) else {
+        let paragraphs: Vec<_> = overlapping
+            .iter()
+            .copied()
+            .filter(|p| !p.scripture_quotation)
+            .collect();
+        if paragraphs.is_empty() {
+            if !overlapping.is_empty() {
+                hit.text.clear();
+            }
             return;
-        };
+        }
         if let Some((_, chapter)) = library.chapter(&passage.chapter_id) {
             hit.text = chapter
                 .passage_ids
                 .iter()
                 .filter_map(|id| library.passage(id))
                 .flat_map(|p| &p.verses)
-                .filter(|v| v.number >= first.start && v.number <= last.end)
+                .filter(|v| {
+                    paragraphs
+                        .iter()
+                        .any(|p| v.number >= p.start && v.number <= p.end)
+                })
                 .map(|v| v.text.as_str())
                 .collect::<Vec<_>>()
                 .join(" ");
@@ -228,10 +298,15 @@ impl Catalog {
 }
 
 impl ChapterDetails {
-    fn paragraphs(&self, root: &Path) -> Vec<Paragraph> {
+    fn paragraphs(&self, root: &Path) -> &[Paragraph] {
         if !self.paragraphs.is_empty() {
-            return self.paragraphs.clone();
+            return &self.paragraphs;
         }
+        self.loaded_paragraphs
+            .get_or_init(|| self.read_paragraphs(root))
+    }
+
+    fn read_paragraphs(&self, root: &Path) -> Vec<Paragraph> {
         // Development libraries retain the immutable assets; packaged libraries
         // already carry these same paragraph/verse mappings in catalog.json.
         let Some(path) = self.asset_path.as_deref().filter(|path| {
@@ -270,6 +345,7 @@ impl ChapterDetails {
                     end: number as u32,
                     scripture_start: start,
                     scripture_end: end,
+                    scripture_quotation: verse["scriptureQuotation"] == true,
                 });
             }
             previous = Some(group);
@@ -968,6 +1044,51 @@ mod tests {
         assert!(catalog.commentaries(&library, &source).is_empty());
         source.corpus = Corpus::ChristianClassics;
         assert!(catalog.commentaries(&library, &source).is_empty());
+    }
+
+    #[test]
+    fn acts_six_quotes_are_retained_for_reading_but_excluded_from_previews() {
+        let library = library();
+        let catalog = Catalog::load(&library.root);
+        let mut source = library
+            .passage(&library.book("Acts").unwrap().chapters[5].passage_ids[0])
+            .unwrap()
+            .clone();
+        source.verse_start = 1;
+        source.verse_end = 4;
+        let works = catalog.commentaries(&library, &source);
+        let henry = works
+            .iter()
+            .find(|w| w.author.starts_with("Matthew Henry"))
+            .unwrap();
+        assert!(henry
+            .notes
+            .iter()
+            .any(|n| n.text.starts_with("Having seen the church's struggles")));
+        assert!(!henry
+            .notes
+            .iter()
+            .any(|n| n.text.contains("1 And in those days")));
+
+        let quote = library.passage("classics:henry:Acts.6:25-27").unwrap();
+        assert!(!catalog
+            .quotation_ranges(&library, quote, &quote.text)
+            .is_empty());
+        let mut hit = ResultPassage::local(quote, 0.7);
+        catalog.decorate(&library, &mut hit);
+        assert!(
+            hit.text.is_empty(),
+            "A standalone quotation must not become a search preview"
+        );
+        let mixed = library.passage("classics:henry:Acts.6:28-30").unwrap();
+        let mut hit = ResultPassage::local(mixed, 0.7);
+        catalog.decorate(&library, &mut hit);
+        assert!(!hit
+            .text
+            .contains("4 But we will give ourselves continually"));
+        assert!(hit.text.starts_with("Having seen the church's struggles"));
+        assert_eq!(hit.source_id, mixed.id);
+        assert_eq!(hit.score, 0.7);
     }
 
     #[test]

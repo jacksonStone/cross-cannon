@@ -4,7 +4,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
-import { ensureDatabase, getDb } from "../app/lib/db.server";
+import { ensureDatabase, getDb } from "./lib/db";
 
 type AudioRow = {
   audio_url: unknown;

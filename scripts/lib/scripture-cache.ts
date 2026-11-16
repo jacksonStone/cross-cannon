@@ -1,0 +1,66 @@
+import { createHash } from "node:crypto";
+import { getDb } from "./db";
+
+export type BrowserPassage = {
+  translation?: "web" | "msb";
+  audioUrl?: string;
+  id: string;
+  reference: string;
+  text: string;
+  type: "paragraph";
+  verses: BrowserVerse[];
+};
+
+export type BrowserVerse = {
+  number: number;
+  text: string;
+};
+
+export type ScriptureCachePayload = {
+  passages: BrowserPassage[];
+};
+
+export function getScriptureCachePayloadVersion(payload: ScriptureCachePayload) {
+  return createHash("sha256")
+    .update(JSON.stringify(payload))
+    .digest("hex")
+    .slice(0, 16);
+}
+
+export async function buildScriptureCachePayload() {
+  const response = await getDb().execute(`
+    SELECT p.id, p.reference, p.text, p.result_type, paf.audio_url
+    FROM passages p
+    LEFT JOIN passage_audio_files paf
+      ON paf.passage_id = p.id
+    WHERE p.text <> ''
+    ORDER BY p.book, p.chapter, p.verse_start IS NULL, p.verse_start
+  `);
+  const versesResponse = await getDb().execute(`
+    SELECT paragraph_id, verse, text
+    FROM paragraph_verses
+    ORDER BY book, chapter, verse
+  `);
+  const versesByParagraph = new Map<string, BrowserPassage["verses"]>();
+
+  for (const row of versesResponse.rows) {
+    const paragraphId = String(row.paragraph_id);
+    const verses = versesByParagraph.get(paragraphId) ?? [];
+    verses.push({
+      number: Number(row.verse),
+      text: String(row.text)
+    });
+    versesByParagraph.set(paragraphId, verses);
+  }
+
+  return {
+    passages: response.rows.map((row) => ({
+      audioUrl: typeof row.audio_url === "string" ? row.audio_url : undefined,
+      id: String(row.id),
+      reference: String(row.reference),
+      text: String(row.text),
+      type: "paragraph",
+      verses: versesByParagraph.get(String(row.id)) ?? []
+    })) satisfies BrowserPassage[]
+  };
+}
