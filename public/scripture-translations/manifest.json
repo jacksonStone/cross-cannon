@@ -1,0 +1,13 @@
+{
+  "translation": "msb",
+  "name": "Majority Standard Bible",
+  "version": "d7ce0b4a1fb0c5ce",
+  "url": "/scripture-translations/msb.json?version=d7ce0b4a1fb0c5ce",
+  "sourceUrl": "https://ebible.org/Scriptures/engmsb_usfm.zip",
+  "sourceSha256": "8224adbd55ddde440d2461234590caf01c3c91b2d0a260b6c00703769077384b",
+  "rights": "Public domain",
+  "rightsUrl": "https://berean.bible/terms.htm",
+  "bookCount": 66,
+  "chapterCount": 1189,
+  "verseCount": 31098
+}

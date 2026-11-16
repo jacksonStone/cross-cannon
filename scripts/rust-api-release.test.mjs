@@ -11,7 +11,7 @@ async function releaseFixture(run) {
     await mkdir(path.join(root, "scripts"));
     await mkdir(path.join(root, "bin"));
     await mkdir(path.join(root, "scripture-cache"));
-    for (const name of ["build-rust-api-container.sh", "deploy-rust-api.sh", "validate-rust-api-artifact.py"]) {
+    for (const name of ["build-rust-api-container.sh", "validate-rust-api-artifact.py"]) {
       await copyFile(new URL(name, import.meta.url), path.join(root, "scripts", name));
     }
     await writeFile(path.join(root, "scripture-cache/manifest.json"), '{"version":"ab"}');
@@ -41,15 +41,14 @@ if(args[0]==='context') {
  binary.writeUInt16LE(process.env.BUILD_CASE==='arm'?183:62,18);
  for(const [name,data] of Object.entries({
   'target/release/r-cross-cannon':binary,
-  'rust/deploy/r-cross-cannon.service':'fixture unit',
   'BUILD-INFO':'fixture build',
   'storage/secret.db':'must never upload', '.env':'must never upload'
  })) {const file=path.join(output,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,data,{mode:0o755});}
- const names=['target/release/r-cross-cannon','rust/deploy/r-cross-cannon.service','BUILD-INFO'];
+ const names=['target/release/r-cross-cannon','BUILD-INFO'];
  fs.writeFileSync(path.join(output,'SHA256SUMS'),names.map(name=>crypto.createHash('sha256').update(fs.readFileSync(path.join(output,name))).digest('hex')+'  '+name).join('\\n')+'\\n');
 } else process.exit(43);
 `, { mode: 0o755 });
-    const invoke = (buildCase, extra = {}) => spawnSync("bash", ["scripts/deploy-rust-api.sh", "--build-local"], {
+    const invoke = (buildCase, extra = {}) => spawnSync("bash", ["scripts/build-rust-api-container.sh", path.join(root, "artifact")], {
       cwd: root, encoding: "utf8", timeout: 20_000,
       env: { ...process.env, PATH: path.join(root, "bin") + path.delimiter + process.env.PATH,
         EC2_PEM_PATH: "/unused-fixture-key", EC2_PUBLIC_IP: "example.invalid", DOCKER_HOST: "",
@@ -78,14 +77,18 @@ test("remote Docker engines and ARM binaries are rejected before upload", async 
   });
 });
 
-test("release uploads contain only the binary, service unit, and verification metadata", async () => {
+test("the Linux builder produces a validated artifact without contacting production", async () => {
   await releaseFixture(async ({ root, invoke, remoteLog }) => {
-    assert.equal(invoke("valid").status, 99); // Stop at the mocked remote activation.
-    assert.equal(await readFile(remoteLog, "utf8"), "scp\nssh\n");
-    const contents = spawnSync("tar", ["-tzf", path.join(root, "captured.tar.gz")], { encoding: "utf8" });
-    assert.equal(contents.status, 0);
-    assert.deepEqual(contents.stdout.trim().split("\n").sort(), [
-      "BUILD-INFO", "SHA256SUMS", "rust/deploy/r-cross-cannon.service", "target/release/r-cross-cannon",
-    ]);
+    const result = invoke("valid");
+    assert.equal(result.status, 0, result.stderr);
+    await assert.rejects(readFile(remoteLog), { code: "ENOENT" });
+    const binary = await readFile(path.join(root, "artifact/target/release/r-cross-cannon"));
+    assert.equal(binary.subarray(0, 6).toString("hex"), "7f454c460201");
+    assert.equal(binary.readUInt16LE(18), 62);
+    const checksum = path.join(root, "artifact/SHA256SUMS");
+    await writeFile(checksum, (await readFile(checksum, "utf8")).replace(/^[a-f0-9]{64}/, "0".repeat(64)));
+    const checked = spawnSync("python3", ["scripts/validate-rust-api-artifact.py", path.join(root, "artifact")], {cwd: root, encoding: "utf8"});
+    assert.notEqual(checked.status, 0);
+    assert.match(checked.stderr, /checksum mismatch/);
   });
 });

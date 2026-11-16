@@ -4,6 +4,7 @@ use std::sync::{Mutex, OnceLock};
 static INCOMING_LINK: Mutex<Option<String>> = Mutex::new(None);
 static READER_CONTEXT: OnceLock<egui::Context> = OnceLock::new();
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn install_reader_links(ctx: &egui::Context) {
     if READER_CONTEXT.set(ctx.clone()).is_err() {
         return;
@@ -38,6 +39,12 @@ pub unsafe extern "C" fn cross_canon_open_reader_link(url: *const std::ffi::c_ch
 
 pub(super) fn take_reader_link() -> Option<String> {
     INCOMING_LINK.lock().ok()?.take()
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(super) fn queue_link(link: &str, ctx: &egui::Context) {
+    *INCOMING_LINK.lock().unwrap() = Some(link.into());
+    ctx.request_repaint();
 }
 
 impl Desktop {
@@ -91,6 +98,9 @@ impl Desktop {
         // Reader chrome follows the Passage's Chapter for both explicit
         // navigation and passive reading. Pixel offsets are never Chapter IDs.
         self.active_chapter_id = passage.chapter_id.clone();
+        if self.state.location_passage_id != id {
+            self.account.remember(passage, &self.library);
+        }
         match passage.corpus {
             Corpus::Scripture => self.state.scripture_location = id.clone(),
             Corpus::EarlyChristian => self.state.fathers_location = id.clone(),

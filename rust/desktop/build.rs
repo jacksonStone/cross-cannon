@@ -1,6 +1,8 @@
 fn main() {
     println!("cargo:rerun-if-changed=src/apple_audio.m");
     println!("cargo:rerun-if-changed=src/apple_links.m");
+    println!("cargo:rerun-if-changed=src/apple_account.m");
+    println!("cargo:rerun-if-changed=src/apple_reader.m");
     let target = std::env::var("TARGET").unwrap();
     if !target.contains("apple") {
         return;
@@ -23,15 +25,27 @@ fn main() {
         .expect("Xcode SDK is required");
     assert!(output.status.success(), "Xcode SDK is unavailable");
     let sdk_path = String::from_utf8(output.stdout).unwrap();
-    cc::Build::new()
+    let mut build = cc::Build::new();
+    if target.contains("ios") {
+        build.file("src/apple_reader.m");
+    }
+    build
         .file("src/apple_audio.m")
         .file("src/apple_links.m")
+        .file("src/apple_account.m")
         .flag("-fobjc-arc")
         .flag("-fblocks")
         .flag("-isysroot")
         .flag(sdk_path.trim())
         .compile("cross_canon_apple_audio");
-    for framework in ["Foundation", "AVFoundation", "CoreMedia", "MediaPlayer"] {
+    for framework in [
+        "Foundation",
+        "AVFoundation",
+        "CoreMedia",
+        "MediaPlayer",
+        "Security",
+        "AuthenticationServices",
+    ] {
         println!("cargo:rustc-link-lib=framework={framework}");
     }
 }

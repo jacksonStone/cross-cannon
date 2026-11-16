@@ -1,5 +1,6 @@
 //! Existing, immutable Cross Canon artifacts, shared by native desktop and API.
 //! This crate has no networking, database writes, or artifact generation.
+mod fragments;
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -115,7 +116,7 @@ pub struct AudioLocation {
     pub end_seconds: Option<f64>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Library {
     #[serde(skip)]
     pub root: PathBuf,
@@ -135,6 +136,7 @@ pub struct Library {
     audio: HashMap<String, AudioLocation>,
 }
 
+#[derive(Clone)]
 struct SearchText {
     passage: usize,
     text: String,
@@ -384,37 +386,56 @@ impl Library {
     }
 
     fn load_native(root: &Path, bytes: &[u8]) -> Result<Self> {
+        let library = Self::from_bytes(root, bytes)?;
+        let manifest = read_json(&root.join("scripture-cache/manifest.json"))?;
+        anyhow::ensure!(
+            manifest["version"].as_str() == Some(&library.version),
+            "Stale native library"
+        );
+        Ok(library)
+    }
+
+    /// Decode immutable reading artifacts in memory. Browser and native adapters
+    /// own loading; passage identity and validation use this one implementation.
+    pub fn from_bytes(root: &Path, bytes: &[u8]) -> Result<Self> {
         use bincode::Options;
         use std::io::Read;
         const HEADER: &[u8] = b"CCLIB\0\x03\0";
         const GZIP_HEADER: &[u8] = b"CCLIB\0\x02\0";
+        const INDEX_HEADER: &[u8] = b"CCIDX\0\x01\0";
         const LEGACY_HEADER: &[u8] = b"CCLIB\0\x01\0";
         anyhow::ensure!(
             bytes.starts_with(HEADER)
                 || bytes.starts_with(GZIP_HEADER)
-                || bytes.starts_with(LEGACY_HEADER),
+                || bytes.starts_with(LEGACY_HEADER)
+                || bytes.starts_with(INDEX_HEADER),
             "Unsupported native library format"
         );
         let expanded = if bytes.starts_with(HEADER) {
-            let size_bytes: [u8; 8] = bytes
-                .get(8..16)
-                .context("Missing native library size")?
-                .try_into()?;
-            let size = u64::from_le_bytes(size_bytes);
-            anyhow::ensure!(
-                size > 0 && size <= 512 * 1024 * 1024,
-                "Native library exceeds size limit"
-            );
-            let mut decoded = Vec::with_capacity(size as usize);
-            let mut decoder = zstd::stream::read::Decoder::new(&bytes[16..])?;
-            decoder.window_log_max(29)?;
-            decoder
-                .take(size + 1)
-                .read_to_end(&mut decoded)
-                .context("Invalid compressed native library")?;
-            anyhow::ensure!(decoded.len() as u64 == size, "Invalid native library size");
-            Some(decoded)
-        } else if bytes.starts_with(GZIP_HEADER) {
+            #[cfg(target_arch = "wasm32")]
+            anyhow::bail!("Browser libraries use the portable gzip format");
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let size_bytes: [u8; 8] = bytes
+                    .get(8..16)
+                    .context("Missing native library size")?
+                    .try_into()?;
+                let size = u64::from_le_bytes(size_bytes);
+                anyhow::ensure!(
+                    size > 0 && size <= 512 * 1024 * 1024,
+                    "Native library exceeds size limit"
+                );
+                let mut decoded = Vec::with_capacity(size as usize);
+                let mut decoder = zstd::stream::read::Decoder::new(&bytes[16..])?;
+                decoder.window_log_max(29)?;
+                decoder
+                    .take(size + 1)
+                    .read_to_end(&mut decoded)
+                    .context("Invalid compressed native library")?;
+                anyhow::ensure!(decoded.len() as u64 == size, "Invalid native library size");
+                Some(decoded)
+            }
+        } else if bytes.starts_with(GZIP_HEADER) || bytes.starts_with(INDEX_HEADER) {
             let mut decoded = Vec::new();
             flate2::read::GzDecoder::new(&bytes[HEADER.len()..])
                 .take(512 * 1024 * 1024 + 1)
@@ -429,16 +450,14 @@ impl Library {
             None
         };
         let payload = expanded.as_deref().unwrap_or(&bytes[HEADER.len()..]);
+        if bytes.starts_with(INDEX_HEADER) {
+            return fragments::decode(root, payload);
+        }
         let mut library: Self = bincode::DefaultOptions::new()
             .with_limit(512 * 1024 * 1024)
             .deserialize(payload)
             .context("Invalid packaged native library")?;
         library.root = root.to_path_buf();
-        let manifest = read_json(&root.join("scripture-cache/manifest.json"))?;
-        anyhow::ensure!(
-            manifest["version"].as_str() == Some(&library.version),
-            "Stale native library"
-        );
         library.rebuild_indexes()?;
         library.validate()?;
         Ok(library)
@@ -484,6 +503,7 @@ impl Library {
         Ok(())
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn write_native(&self, path: impl AsRef<Path>) -> Result<()> {
         use bincode::Options;
         use std::io::Write;
@@ -497,6 +517,38 @@ impl Library {
         compressed.write_all(&bytes)?;
         let mut output = compressed.finish()?;
         output.flush()?;
+        Ok(())
+    }
+
+    /// Portable lossless package for browsers, prepared from existing text only.
+    pub fn write_browser(&self, path: impl AsRef<Path>) -> Result<()> {
+        use bincode::Options;
+        use std::io::Write;
+        let mut output = std::io::BufWriter::new(fs::File::create(path)?);
+        output.write_all(b"CCLIB\0\x02\0")?;
+        let mut compressed = flate2::write::GzEncoder::new(output, flate2::Compression::default());
+        // HashMap iteration must not make unchanged reading text a different
+        // 64 MB download on every code release. This has Library's exact wire
+        // field order; only the serialized audio map's iteration is sorted.
+        #[derive(Serialize)]
+        struct Portable<'a> {
+            version: &'a str,
+            books: &'a [Book],
+            passages: &'a [Passage],
+            audio: BTreeMap<&'a str, &'a AudioLocation>,
+        }
+        let portable = Portable {
+            version: &self.version,
+            books: &self.books,
+            passages: &self.passages,
+            audio: self
+                .audio
+                .iter()
+                .map(|(key, value)| (key.as_str(), value))
+                .collect(),
+        };
+        bincode::DefaultOptions::new().serialize_into(&mut compressed, &portable)?;
+        compressed.finish()?.flush()?;
         Ok(())
     }
 

@@ -71,6 +71,7 @@ impl Engine {
             crate::classics::display_results(
                 &self.library.root,
                 std::slice::from_mut(&mut display),
+                false,
             )?;
             metadata["reference"] = display["highlightPassage"]["reference"].take();
             metadata["text"] = display["highlightPassage"]["text"].take();
@@ -171,7 +172,12 @@ impl Engine {
             Ok(json!({"author":row.get::<_,Option<String>>(6)?,"chapterId":chapter,"chapterReference":row.get::<_,String>(4)?,"date":row.get::<_,Option<String>>(7)?,"highlightPassage":{"id":id,"rangeLabel":range,"reference":row.get::<_,String>(0)?,"text":row.get::<_,String>(1)?,"verseStart":start,"verseEnd":end},"score":score,"source":row.get::<_,Option<String>>(8)?.unwrap_or_default(),"title":row.get::<_,Option<String>>(5)?.unwrap_or_default()}))
         })).collect::<rusqlite::Result<Vec<_>>>()?;
         if request.corpus == Some(Corpus::ChristianClassics) {
-            crate::classics::display_results(&self.library.root, &mut results)?;
+            crate::classics::display_results(&self.library.root, &mut results, true)?;
+            results.retain(|result| {
+                result["highlightPassage"]["text"]
+                    .as_str()
+                    .is_some_and(|text| !text.trim().is_empty())
+            });
         }
         Ok(results)
     }
@@ -185,10 +191,15 @@ impl Engine {
     ) -> Result<HashMap<String, (f32, String)>> {
         let db = self.connection(corpus)?;
         let marks = vec!["?"; chapters.len()].join(",");
+        let quotations = if corpus == Corpus::ChristianClassics {
+            crate::classics::quotation_ranges(&self.library.root)?
+        } else {
+            HashMap::new()
+        };
         // Fetch text and descriptive metadata only for the final hits. Author
         // scopes can include over 100,000 stored paragraph embeddings.
         let sql = format!(
-            "SELECT p.id,p.embedding,pm.chapter_id FROM passages p \
+            "SELECT p.id,p.embedding,pm.chapter_id,p.verse_start,p.verse_end FROM passages p \
             JOIN early_christian_passage_metadata pm ON pm.passage_id=p.id \
             WHERE p.embedding IS NOT NULL AND pm.chapter_id IN ({marks})"
         );
@@ -200,10 +211,19 @@ impl Engine {
             if excluded == Some(id.as_str()) {
                 continue;
             }
+            let chapter: String = row.get(2)?;
+            let start: Option<u32> = row.get(3)?;
+            let end: Option<u32> = row.get(4)?;
+            if let (Some(ranges), Some(start)) = (quotations.get(&chapter), start) {
+                if (start..=end.unwrap_or(start))
+                    .all(|v| ranges.iter().any(|[a, b]| v >= *a && v <= *b))
+                {
+                    continue;
+                }
+            }
             let bytes = row.get_ref(1)?.as_blob()?;
             let vector = crate::engine::decode_embedding(bytes, query.len())?;
             let score = dot(query, &vector);
-            let chapter: String = row.get(2)?;
             if best.get(&chapter).is_some_and(|(s, _)| *s >= score) {
                 continue;
             }

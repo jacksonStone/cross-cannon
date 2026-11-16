@@ -42,7 +42,7 @@ if not re.fullmatch(r'[a-f0-9]{64}', expected) or hashlib.sha256(payload).hexdig
     raise SystemExit('Downloaded release archive failed checksum verification')
 root = pathlib.Path(destination)
 root.mkdir(parents=True, exist_ok=False)
-files = {'target/release/r-cross-cannon', 'rust/deploy/r-cross-cannon.service', 'BUILD-INFO', 'SHA256SUMS'}
+files = {'target/release/r-cross-cannon', 'BUILD-INFO', 'SHA256SUMS'}
 with tarfile.open(fileobj=io.BytesIO(payload), mode='r:gz') as archive:
     members = archive.getmembers()
     if len(members) != len(files) or {item.name for item in members} != files or not all(item.isfile() for item in members):

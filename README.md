@@ -91,6 +91,10 @@ Google sign-in and cross-device Reader Location sync are optional. See
 [Google login setup](docs/google-login.md) for OAuth credentials, the separate
 account database migration, and verification. No email service is required.
 
+For an off-server Linux web build and deploy, use `npm run ship:docker`. It runs
+tests and builds locally in Docker, uploads a pruned production artifact, then
+uses the existing deployment checks and rollback. It never updates databases.
+
 Requirements:
 
 - Node.js `26.13.0` (run `nvm use` to select the checked-in `.nvmrc`)
@@ -588,6 +592,31 @@ playback still requires device testing; desktop emulation cannot certify it.
 
 ## Native iPhone app
 
+The iPhone reader uses native, selectable text. Long-press a word for the iOS
+Copy, Look Up, Translate and Share menu; Speak Selection and Speak Screen use
+the iPhone's Read & Speak accessibility settings. VoiceOver can read passages
+and access reader actions. Reader settings follow system Larger Text and Bold
+Text, with the app's size, spacing, width, theme and translation choices applied
+on top. Reflow, rotation and chapter loading retain the focused Passage.
+Reader controls retain the original custom icons. Copy through the standard
+text-selection menu; the iPhone reader and search results omit separate copy
+buttons.
+The compact header holds the books control and reader tools. Ordinary reading
+uses the space down to the bottom safe area; passage actions appear only when
+selected. Modernized/Original text choices are in Reader tools → Reading text.
+
+Run `bash scripts/test-ios-accessibility.sh` for the isolated UIKit regression
+app and normal/large-text previews under `docs/screenshots/ios-text-accessibility/`.
+It uses an available iPhone simulator and never reads account data or databases.
+See [the accessibility verification record](docs/test-reports/ios-text-accessibility-2026-11-15.md)
+for the full reader/menu checks and remaining physical-device checks.
+
+Native iPhone and macOS apps support Google login and the same Reader Location
+sync as the website. Open Reader tools (⋮) → Account to connect. Google opens
+in the system browser, then the app stores its revocable session in Keychain.
+The existing Google web client is reused; no new GCP credentials are needed.
+See [Google login setup](docs/google-login.md) for the flow and release migration.
+
 The shared Rust reader includes Scripture, Early Christian Works, and Christian
 Classics. Its named collection chooser, Work reader, chapter jump, search target,
 author filters, favorites and saved Passage locations reuse the existing native
@@ -607,6 +636,18 @@ same `com.crosscanon.mobile` bundle preserves app data. Launching requires an
 unlocked phone. See `.scratch/christian-classics-ui/mobile-release.md` for the
 latest build and installation receipt.
 
+The Mac packager and iPhone Release builds run the redraw-scheduler regression
+gate automatically, before building the app. Run it directly with
+`npm run test:native-repaint`. It fails if a required test fails or disappears,
+including when upgrading the pinned framework. See
+[the framework backport](rust/desktop/vendor/eframe/UPSTREAM.md) and
+[the physical-phone measurements](docs/test-reports/native-background-audio-profile-2026-11-13.md).
+For UI-framework or event-loop changes, also repeat an unplugged, ninety-second
+background-audio capture on a real phone, checking locked playback and return to
+the reader. Investigate sustained background CPU above 5% of one core; the fixed
+iPhone baseline was 0.175%. Phone energy/thermal checks require a reachable device
+and are separate from the automatic host-side regression gate.
+
 ## Christian Classics
 
 The named collection chooser opens the shared reader or the browsing library at
@@ -615,9 +656,14 @@ Catena Aurea, Matthew Henry’s complete commentary, and Wesley’s Notes on the
 Bible. Source editions, translators, and rights are available through “About this
 edition.” Wesley’s CCEL source omits 2 Samuel 24; that gap is explicitly recorded.
 
-Selected Scripture Passages offer “Read with Classics.” This shows original
+Selected Scripture Passages offer “View commentaries” beside “Similar passages.” This shows original
 commentary whose source verse coverage overlaps the selection, with a choice of
 commentator. It uses the same imported Chapter text as the full reader.
+The web and native readers match the selected book, chapter, and verse range
+against source verse indexes, without semantic search. Only commentaries with
+overlapping verse coverage are shown.
+Run `node scripts/e2e-verse-commentaries.mjs` after building to check the web
+action on desktop and mobile and capture previews from the existing local indexes.
 
 Text importing and paid semantic indexing are explicit operations:
 

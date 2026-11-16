@@ -14,11 +14,10 @@ RUN --mount=type=cache,id=cross-canon-api-registry,target=/usr/local/cargo/regis
     cargo test --locked --release -p r-cross-cannon -j 2 -- \
       --skip actual_readonly_indexes && \
     cargo build --locked --release -p r-cross-cannon -j 2 && \
-    mkdir -p /out/target/release /out/rust/deploy && \
+    mkdir -p /out/target/release && \
     install -m 755 target/release/r-cross-cannon /out/target/release/r-cross-cannon && \
-    install -m 644 rust/deploy/r-cross-cannon.service /out/rust/deploy/r-cross-cannon.service && \
     { rustc --version; cargo --version; printf 'platform=linux/amd64\nsource_revision=%s\n' "$SOURCE_REVISION"; } > /out/BUILD-INFO && \
-    cd /out && sha256sum target/release/r-cross-cannon rust/deploy/r-cross-cannon.service BUILD-INFO > SHA256SUMS
+    cd /out && sha256sum target/release/r-cross-cannon BUILD-INFO > SHA256SUMS
 
 # Export release files only. This is not a production runtime container.
 FROM scratch AS artifact

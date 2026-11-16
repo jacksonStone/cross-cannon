@@ -30,6 +30,12 @@ production:
 npm run ship
 ```
 
+For a web release built off-server in local Docker, use `npm run ship:docker`.
+It tests a Linux x86-64 runtime artifact and reuses the shared deployment health
+checks, rollback, and storage preservation without installing or compiling on
+production. Its builder uses Node 24.13.0 to avoid a Node 26 x86-emulation bug;
+production stays on the pinned Node 26.13.0. See `docs/google-login.md`.
+
 `npm run verify` typechecks, builds the Remix app from existing scripture cache
 artifacts, starts the production server locally, checks the homepage, and runs a
 search POST smoke test.

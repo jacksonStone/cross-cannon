@@ -11,7 +11,11 @@ fn main() -> anyhow::Result<()> {
         library.use_original_bible_audio();
     }
     library.validate()?;
-    library.write_native(&output)?;
+    if std::env::args().any(|arg| arg == "--browser") {
+        library.write_browser(&output)?;
+    } else {
+        library.write_native(&output)?;
+    }
     println!(
         "Prepared {} books / {} passages in {:.2}s: {}",
         library.books.len(),

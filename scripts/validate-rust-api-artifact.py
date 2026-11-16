@@ -6,7 +6,7 @@ import re
 import struct
 import sys
 
-FILES = {'target/release/r-cross-cannon', 'rust/deploy/r-cross-cannon.service', 'BUILD-INFO'}
+FILES = {'target/release/r-cross-cannon', 'BUILD-INFO'}
 
 
 def validate(root, revision=None):

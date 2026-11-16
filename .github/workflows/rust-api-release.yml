@@ -1,4 +1,4 @@
-name: Build Rust API release
+name: Build Rust server release
 
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/release"
           tar -czf "$RUNNER_TEMP/release/r-cross-cannon-linux-amd64.tar.gz" -C "$RUNNER_TEMP/rust-api" \
-            target/release/r-cross-cannon rust/deploy/r-cross-cannon.service BUILD-INFO SHA256SUMS
+            target/release/r-cross-cannon BUILD-INFO SHA256SUMS
           cd "$RUNNER_TEMP/release"
           sha256sum r-cross-cannon-linux-amd64.tar.gz > r-cross-cannon-linux-amd64.tar.gz.sha256
       - name: Publish the commit-specific binary
@@ -52,7 +52,7 @@ jobs:
             gh release upload "$tag" "$RUNNER_TEMP/release/"* --clobber
           else
             gh release create "$tag" "$RUNNER_TEMP/release/"* --target "$REVISION" \
-              --draft --prerelease --title "Rust API $REVISION" \
+              --draft --prerelease --title "Rust server $REVISION" \
               --notes "Linux x86-64 binary built and tested in the pinned Rust container. Source: $REVISION."
           fi
           gh release edit "$tag" --draft=false

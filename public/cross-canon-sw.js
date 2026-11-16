@@ -44,7 +44,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Account pages, sessions and OAuth callbacks must never enter the offline shell.
-  if (url.pathname === "/account" || url.pathname === "/api/account"
+  if (url.pathname === "/account" || url.pathname.startsWith("/account/") || url.pathname === "/api/account" || url.pathname === "/api/native-login"
     || url.pathname.startsWith("/api/auth/")) {
     // An account-service failure must not mark the public reader/search offline.
     event.respondWith(fetch(new Request(request, { cache: "no-store" })).catch(() =>

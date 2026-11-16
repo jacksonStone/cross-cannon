@@ -13,6 +13,9 @@ try {
   // No plugins or custom auth fields: Better Auth's core schema is sufficient.
   await (await getMigrations({ database })).runMigrations();
   database.exec(readFileSync(new URL("./accounts-schema.sql", import.meta.url), "utf8"));
+  if (!database.prepare("PRAGMA table_info(native_login)").all().some((column) => column.name === "ticket_hash")) {
+    database.exec("ALTER TABLE native_login ADD COLUMN ticket_hash TEXT");
+  }
   console.log("Account database is ready. Scripture indexes were not changed.");
 } finally {
   database.close();

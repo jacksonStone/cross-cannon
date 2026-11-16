@@ -1,4 +1,7 @@
+mod accounts;
+mod browser;
 mod classics;
+mod compat;
 pub mod engine;
 mod resources;
 mod web;
@@ -18,6 +21,11 @@ use std::{
 };
 use tokio::sync::Semaphore;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
+
+/// Explicit maintenance entrypoint; normal server startup never changes schema.
+pub fn initialize_accounts(path: &std::path::Path) -> anyhow::Result<()> {
+    accounts::initialize(path)
+}
 
 pub struct AppState {
     pub engine: Arc<Engine>,
@@ -58,7 +66,9 @@ fn internal(error: impl std::fmt::Display) -> ApiError {
 }
 
 pub fn router(state: Arc<AppState>) -> Router {
-    Router::new()
+    let root = state.engine.library.root.clone();
+    let compatibility = compat::router(state.clone());
+    let api = Router::new()
         .nest(
             "/r/api/resources",
             resources::router(state.engine.library.root.clone()),
@@ -67,20 +77,32 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/r/api/health", get(health))
         .route("/r/api/books", get(books))
         .route("/r/api/search", post(search))
+        .layer(DefaultBodyLimit::max(16 * 1024))
+        .layer(CorsLayer::permissive())
+        .with_state(state);
+    Router::new()
+        .merge(api)
+        .merge(compatibility)
+        .merge(accounts::router(root.clone()))
+        .merge(resources::router(root.clone()))
+        .merge(browser::router(root))
         .fallback(|| async {
             (
                 StatusCode::NOT_FOUND,
                 Json(json!({"error":"Route not found"})),
             )
         })
-        .layer(DefaultBodyLimit::max(16 * 1024))
-        .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
+        .layer(axum::middleware::from_fn(runtime_header))
+}
+async fn runtime_header(request: axum::extract::Request, next: axum::middleware::Next) -> Response {
+    let mut response=next.run(request).await;
+    response.headers_mut().insert("x-cross-canon-runtime","rust".parse().unwrap());
+    response
 }
 async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
     Json(
-        json!({"service":"R Cross Cannon","version":env!("CARGO_PKG_VERSION"),"status":"ok","cacheVersion":state.engine.library.version,"books":state.engine.library.books.len(),"passages":state.engine.library.passages.len(),"storedVectors":state.engine.count(),"semanticQueries":state.api_key.is_some(),"webSearch":true,"resourceRoutes":true}),
+        json!({"service":"R Cross Cannon","version":env!("CARGO_PKG_VERSION"),"runtime":"rust","accountBackend":true,"status":"ok","cacheVersion":state.engine.library.version,"books":state.engine.library.books.len(),"passages":state.engine.library.passages.len(),"storedVectors":state.engine.count(),"semanticQueries":state.api_key.is_some(),"webSearch":true,"resourceRoutes":true}),
     )
 }
 async fn books(State(state): State<Arc<AppState>>) -> Json<Value> {
@@ -365,6 +387,30 @@ mod tests {
             .starts_with("classics:imitation:")
             && result["author"] == "Thomas à Kempis"));
         let app = router(Arc::new(AppState::new(engine, None).unwrap()));
+        for (path, cors) in [
+            ("/r/api/health", true),
+            ("/api/account", false),
+            ("/", false),
+        ] {
+            let response = app
+                .clone()
+                .oneshot(
+                    axum::http::Request::builder()
+                        .uri(path)
+                        .header("origin", "https://other.example")
+                        .body(axum::body::Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(
+                response
+                    .headers()
+                    .contains_key("access-control-allow-origin"),
+                cors,
+                "{path}"
+            );
+        }
         for (body, status) in [
             (
                 json!({"query":"beginning","books":["Genesis"],"limit":3}),

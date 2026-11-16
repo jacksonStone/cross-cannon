@@ -5,7 +5,7 @@ impl Desktop {
         self.dialogs_with_insets(ctx, mobile::insets());
     }
 
-    fn dialogs_with_insets(&mut self, ctx: &egui::Context, insets: mobile::Insets) {
+    pub(super) fn dialogs_with_insets(&mut self, ctx: &egui::Context, insets: mobile::Insets) {
         let Some(dialog) = self.dialog else {
             self.search_touch.cancel();
             return;
@@ -13,7 +13,18 @@ impl Desktop {
         if dialog != Dialog::Search {
             self.search_touch.cancel();
         }
+        if dialog == Dialog::Account {
+            self.account_sheet(ctx, insets);
+            return;
+        }
         let p = self.state.theme.palette();
+        let study_reference = self
+            .study
+            .anchor
+            .as_ref()
+            .and_then(|a| a.passage(&self.library))
+            .and_then(|id| self.library.passage(&id))
+            .map(|p| p.reference.clone());
         let compact = Self::compact(ctx);
         let phone_dialog = compact && dialog != Dialog::Settings;
         let width = if dialog == Dialog::Settings {
@@ -33,6 +44,10 @@ impl Desktop {
                     220.0,
                     if dialog == Dialog::Settings {
                         280.0
+                    } else if dialog == Dialog::Account {
+                        560.0
+                    } else if dialog == Dialog::Study {
+                        640.0
                     } else {
                         912.0
                     },
@@ -80,6 +95,8 @@ impl Desktop {
             )
             .show(ctx, |ui| {
                 ui.set_width(width);
+                let study_editor = dialog == Dialog::Study && self.study.editing.is_some();
+                let mut save_note = false;
                 if dialog == Dialog::Settings {
                     let height =
                         (ctx.screen_rect().bottom() - insets.bottom - ui.cursor().top() - 16.0)
@@ -90,13 +107,44 @@ impl Desktop {
                     return;
                 }
                 ui.horizontal(|ui| {
+                    let title_width = if study_editor {
+                        let button_font = egui::TextStyle::Button.resolve(ui.style());
+                        let save_width = ui.fonts(|fonts| {
+                            fonts
+                                .layout_no_wrap("Save".into(), button_font, p.ink)
+                                .size()
+                                .x
+                        }) + ui.spacing().button_padding.x * 2.0;
+                        let close_width = if compact { 44.0 } else { 34.0 };
+                        Some(
+                            (ui.available_width()
+                                - save_width.max(close_width)
+                                - close_width
+                                - ui.spacing().item_spacing.x * 2.0)
+                                .max(80.0),
+                        )
+                    } else {
+                        None
+                    };
                     if dialog != Dialog::Settings {
                         ui.vertical(|ui| {
+                            if let Some(width) = title_width {
+                                ui.set_width(width);
+                            }
                             ui.label(
                                 RichText::new(match dialog {
                                     Dialog::Collections => "LIBRARY",
                                     Dialog::Jump => "JUMP",
                                     Dialog::Downloads => "LISTEN",
+                                    Dialog::Account => "ACCOUNT",
+                                    Dialog::Commentary => "COMMENTARIES",
+                                    Dialog::Study => {
+                                        if self.study.anchor.is_some() {
+                                            "PASSAGE NOTES"
+                                        } else {
+                                            "STUDY"
+                                        }
+                                    }
                                     _ => "SEARCH",
                                 })
                                 .size(10.0)
@@ -112,6 +160,12 @@ impl Desktop {
                                     } else {
                                         "Choose a work"
                                     }
+                                } else if dialog == Dialog::Account {
+                                    "Your reading, together"
+                                } else if dialog == Dialog::Study {
+                                    study_reference.as_deref().unwrap_or("My study")
+                                } else if dialog == Dialog::Commentary {
+                                    "Commentaries"
                                 } else {
                                     if dialog == Dialog::Downloads {
                                         "Offline audio"
@@ -135,6 +189,9 @@ impl Desktop {
                                 Dialog::Search => "Search",
                                 Dialog::Settings => "Reader settings",
                                 Dialog::Downloads => "Offline audio",
+                                Dialog::Account => "Your account",
+                                Dialog::Commentary => "Commentaries",
+                                Dialog::Study => "My study",
                             })
                             .font(heading(
                                 if dialog == Dialog::Settings {
@@ -150,15 +207,23 @@ impl Desktop {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if control(
                             ui,
-                            if dialog != Dialog::Settings {
-                                "Close"
-                            } else {
+                            if matches!(dialog, Dialog::Settings | Dialog::Study) {
                                 "×"
+                            } else {
+                                "Close"
                             },
                         )
+                        .on_hover_text("Close")
                         .clicked()
                         {
+                            if dialog == Dialog::Study {
+                                self.study.finish_note();
+                                self.account.persist_now = true;
+                            }
                             self.dialog = None;
+                        }
+                        if study_editor && control(ui, "Save").clicked() {
+                            save_note = true;
                         }
                     });
                 });
@@ -194,12 +259,18 @@ impl Desktop {
                     self.search_max_scroll =
                         (output.content_size.y - output.inner_rect.height()).max(0.0);
                 } else {
+                    let editor_footer_height = if study_editor {
+                        44.0 + ui.spacing().item_spacing.y * 3.0 + 1.0
+                    } else {
+                        0.0
+                    };
                     let body_height = if dialog != Dialog::Settings {
                         (ctx.screen_rect().bottom()
                             - insets.bottom
                             - if compact { 22.0 } else { 40.0 }
-                            - ui.cursor().top())
-                        .max(48.0)
+                            - ui.cursor().top()
+                            - editor_footer_height)
+                            .max(48.0)
                     } else {
                         (ctx.screen_rect().bottom() - insets.bottom - ui.cursor().top() - 16.0)
                             .clamp(48.0, 420.0)
@@ -210,24 +281,56 @@ impl Desktop {
                             Dialog::Collections => "collections-body",
                             Dialog::Jump => "jump-body",
                             Dialog::Downloads => "audio-downloads-body",
+                            Dialog::Account => "account-body",
+                            Dialog::Commentary => "commentary-body",
+                            Dialog::Study => {
+                                if self.study.editing.is_some() {
+                                    "study-editor-body"
+                                } else {
+                                    "study-body"
+                                }
+                            }
                             _ => "settings-body",
                         },
                         body_height,
-                        true,
+                        dialog != Dialog::Account,
                         |ui, suppress_click| match dialog {
                             Dialog::Collections => self.collections_dialog(ui, suppress_click),
                             Dialog::Jump => self.jump_dialog(ui, suppress_click),
                             Dialog::Settings => self.settings_dialog(ui),
                             Dialog::Search => self.search_dialog(ui, ctx, suppress_click),
                             Dialog::Downloads => self.audio_downloads(ui, suppress_click),
+                            Dialog::Account => self.account_dialog(ui),
+                            Dialog::Commentary => self.commentary_dialog(ui, suppress_click),
+                            Dialog::Study => self.study_dialog(ui, suppress_click),
                         },
                     );
+                    if study_editor {
+                        self.study_editor_footer(ui);
+                    }
+                }
+                if save_note {
+                    self.study.finish_note();
+                    self.account.persist_now = true;
                 }
             });
         if response.should_close() {
+            if dialog == Dialog::Study {
+                self.study.finish_note();
+                self.account.persist_now = true;
+            }
             self.dialog = None;
         }
         if dialog == Dialog::Search && self.dialog.is_some() && self.filters_open {
+            #[cfg(any(target_os = "ios", test))]
+            {
+                let root = Id::new("ios-filter-accessibility");
+                ctx.accesskit_node_builder(root, |node| {
+                    node.set_role(egui::accesskit::Role::Dialog)
+                });
+                ctx.with_accessibility_parent(root, || self.search_filter_modal(ctx));
+            }
+            #[cfg(not(any(target_os = "ios", test)))]
             self.search_filter_modal(ctx);
         }
     }
@@ -273,20 +376,32 @@ impl Desktop {
                             (Canon::Catholic, "Catholic"),
                             (Canon::Orthodox, "Orthodox"),
                         ] {
-                            ui.selectable_value(&mut canon, canon_choice, name);
+                            if ui
+                                .selectable_value(&mut canon, canon_choice, name)
+                                .clicked()
+                            {
+                                ui.close_menu();
+                            }
                         }
                     });
             });
             self.update_canon(canon);
         } else {
             ui.label(RichText::new("Find work").strong().color(p.muted));
-            ui.add(
+            let field = ui.add(
                 egui::TextEdit::singleline(&mut self.jump_filter)
                     .hint_text("Title or author")
                     .char_limit(2000)
                     .margin(egui::vec2(10.0, 10.0))
                     .desired_width(f32::INFINITY),
             );
+            field.widget_info(|| {
+                egui::WidgetInfo::labeled(
+                    egui::WidgetType::TextEdit,
+                    ui.is_enabled(),
+                    "Find a work or author",
+                )
+            });
             ui.add_space(10.0);
             ui.label(RichText::new("Author").strong().color(p.muted));
             let mut authors = self
@@ -596,6 +711,14 @@ impl Desktop {
             }
             ui.add_space(if compact { 4.0 } else { 12.0 });
             if let Some(source) = self.search_source.clone() {
+                let displayed_source = self
+                    .library
+                    .passage(&source.id)
+                    .filter(|passage| passage.corpus == Corpus::Scripture)
+                    .map(|passage| {
+                        self.reading_text
+                            .passage(passage, self.state.scripture_translation)
+                    });
                 egui::Frame::NONE
                     .fill(p.panel)
                     .stroke(Stroke::new(1.0_f32, p.line))
@@ -606,7 +729,12 @@ impl Desktop {
                             ui.add_sized(
                                 [(ui.available_width() - 52.0).max(40.0), 44.0],
                                 egui::Label::new(
-                                    RichText::new(&source.reference).font(heading(20.0)),
+                                    RichText::new(
+                                        displayed_source
+                                            .map(|passage| &passage.reference)
+                                            .unwrap_or(&source.reference),
+                                    )
+                                    .font(heading(20.0)),
                                 )
                                 .wrap(),
                             );
@@ -618,7 +746,19 @@ impl Desktop {
                                 self.search_source = None;
                             }
                         });
-                        ui.label(RichText::new(&source.text).font(serif(18.0)));
+                        // A long source Passage can span a whole chapter. Keep
+                        // its preview bounded so the search controls remain
+                        // reachable without scrolling through the source again.
+                        let mut preview = egui::text::LayoutJob::simple(
+                            displayed_source
+                                .map(|passage| passage.text.clone())
+                                .unwrap_or_else(|| source.text.clone()),
+                            serif(18.0),
+                            p.ink,
+                            ui.available_width(),
+                        );
+                        preview.wrap.max_rows = if compact { 4 } else { 6 };
+                        ui.label(preview);
                     });
             } else {
                 ui.label(
@@ -634,7 +774,7 @@ impl Desktop {
                     .color(p.muted),
                 );
                 ui.add_space(4.0);
-                ui.add(
+                let field = ui.add(
                     egui::TextEdit::multiline(&mut self.query)
                         .desired_rows(4)
                         .id(Id::new("search-query"))
@@ -653,6 +793,17 @@ impl Desktop {
                         })
                         .desired_width(f32::INFINITY),
                 );
+                field.widget_info(|| {
+                    egui::WidgetInfo::labeled(
+                        egui::WidgetType::TextEdit,
+                        ui.is_enabled(),
+                        "Search by theme or words",
+                    )
+                });
+                ui.ctx().accesskit_node_builder(field.id, |node| {
+                    node.set_role(egui::accesskit::Role::MultilineTextInput);
+                    node.set_value(self.query.clone());
+                });
             }
             ui.add_space(if compact { 4.0 } else { 10.0 });
             let action_layout = if compact {
@@ -748,7 +899,16 @@ impl Desktop {
         }
         let results = self.results.clone();
         ui.scope(|ui| {
-            for (index, hit) in results.into_iter().enumerate() {
+            for (index, mut hit) in results.into_iter().enumerate() {
+                if hit.corpus == Corpus::Scripture {
+                    if let Some(source) = self.library.passage(&hit.id) {
+                        let displayed = self
+                            .reading_text
+                            .passage(source, self.state.scripture_translation);
+                        hit.text = displayed.text.clone();
+                        hit.reference = displayed.reference.clone();
+                    }
+                }
                 ui.add_space(12.0);
                 let selected = self.selected_result.as_deref() == Some(&hit.source_id);
                 let frame = egui::Frame::NONE
@@ -762,24 +922,33 @@ impl Desktop {
                     .show(ui, |ui| {
                         ui.set_width(ui.available_width());
                         let body_top = ui.cursor().min;
-                        ui.horizontal_wrapped(|ui| {
-                            ui.label(
-                                RichText::new(hit.reference.to_uppercase())
-                                    .size(11.0)
-                                    .strong()
-                                    .color(p.accent),
-                            );
-                            let passage = self.library.passage(&hit.id).unwrap();
-                            ui.label(
-                                RichText::new(if hit.corpus == Corpus::Scripture {
-                                    "WEB · WORLD ENGLISH BIBLE".to_owned()
-                                } else {
-                                    passage.author.clone().unwrap_or_default()
-                                })
-                                .size(10.5)
-                                .color(p.muted),
-                            );
-                        });
+                        ui.with_layout(
+                            if compact {
+                                Layout::top_down(Align::LEFT)
+                            } else {
+                                Layout::left_to_right(Align::Center).with_main_wrap(true)
+                            },
+                            |ui| {
+                                ui.label(
+                                    RichText::new(hit.reference.to_uppercase())
+                                        .size(11.0)
+                                        .strong()
+                                        .color(p.accent),
+                                );
+                                let passage = self.library.passage(&hit.id).unwrap();
+                                ui.label(
+                                    RichText::new(if hit.corpus == Corpus::Scripture {
+                                        self.reading_text
+                                            .label(&passage.book, self.state.scripture_translation)
+                                            .to_uppercase()
+                                    } else {
+                                        passage.author.clone().unwrap_or_default()
+                                    })
+                                    .size(10.5)
+                                    .color(p.muted),
+                                );
+                            },
+                        );
                         if self.results_semantic {
                             ui.horizontal(|ui| {
                                 ui.label(
@@ -804,6 +973,13 @@ impl Desktop {
                                         ui.painter().circle_filled(center, 3.0, p.accent);
                                     }
                                 }
+                                response.widget_info(|| {
+                                    egui::WidgetInfo::labeled(
+                                        egui::WidgetType::Label,
+                                        true,
+                                        format!("Match strength: {} of 4", hit.strength()),
+                                    )
+                                });
                                 response.on_hover_text(format!(
                                     "{} of 4 match strength",
                                     hit.strength()
@@ -811,9 +987,23 @@ impl Desktop {
                             });
                         }
                         ui.add_space(8.0);
-                        let passage = self.library.passage(&hit.id).unwrap();
+                        let passage = self.reading_text.passage(
+                            self.library.passage(&hit.id).unwrap(),
+                            self.state.scripture_translation,
+                        );
                         let mut job = egui::text::LayoutJob::default();
                         if hit.corpus == Corpus::Scripture {
+                            if passage.verses.is_empty() {
+                                job.append(
+                                    &passage.text,
+                                    0.0,
+                                    egui::TextFormat {
+                                        font_id: serif(18.0),
+                                        color: p.ink,
+                                        ..Default::default()
+                                    },
+                                );
+                            }
                             for (i, verse) in passage.verses.iter().enumerate() {
                                 if i > 0 {
                                     job.append(
@@ -862,15 +1052,20 @@ impl Desktop {
                             body_top,
                             egui::pos2(ui.max_rect().right(), ui.cursor().top()),
                         );
-                        if ui
-                            .interact(
-                                body_rect,
-                                Id::new(("search-result", &hit.source_id)),
-                                Sense::click(),
+                        let result_response = ui.interact(
+                            body_rect,
+                            Id::new(("search-result", &hit.source_id)),
+                            Sense::click(),
+                        );
+                        result_response.widget_info(|| {
+                            egui::WidgetInfo::selected(
+                                egui::WidgetType::Button,
+                                ui.is_enabled(),
+                                selected,
+                                format!("Passage actions for {}", hit.reference),
                             )
-                            .clicked()
-                            && !suppress_click
-                        {
+                        });
+                        if result_response.clicked() && !suppress_click {
                             self.selected_result = if selected {
                                 None
                             } else {
@@ -879,32 +1074,64 @@ impl Desktop {
                         }
                         if selected {
                             ui.add_space(10.0);
-                            ui.horizontal_wrapped(|ui| {
-                                if control(ui, "View in context").clicked() && !suppress_click {
-                                    self.open(hit.id.clone());
+                            let mut actions = vec![
+                                ("View in context".to_string(), 0, None),
+                                ("Similar passages".to_string(), 1, Some(hit.corpus)),
+                            ];
+                            for (target, _, label) in COLLECTIONS {
+                                if target != hit.corpus {
+                                    actions.push((format!("Find {label}"), 1, Some(target)));
                                 }
-                                ui.add_enabled_ui(!self.busy, |ui| {
-                                    if control(ui, "Similar passages").clicked() && !suppress_click
-                                    {
-                                        self.search_corpus = Some(hit.corpus);
-                                        self.search(ctx, Some(hit.source_id.clone()));
+                            }
+                            #[cfg(not(target_os = "ios"))]
+                            actions.push(("Copy".into(), 2, None));
+                            let mut chosen = None;
+                            let width = (ui.available_width() - 8.0) / 2.0;
+                            let mut buttons = |ui: &mut egui::Ui| {
+                                for (index, (label, action, target)) in actions.iter().enumerate() {
+                                    let response = ui
+                                        .add_enabled_ui(!self.busy || *action != 1, |ui| {
+                                            if compact {
+                                                ui.add_sized(
+                                                    [width, 44.0],
+                                                    egui::Button::new(label).wrap(),
+                                                )
+                                            } else {
+                                                control(ui, label)
+                                            }
+                                        })
+                                        .inner;
+                                    if response.clicked() && !suppress_click {
+                                        chosen = Some((*action, *target));
                                     }
-                                    for (target, _, label) in COLLECTIONS {
-                                        if target != hit.corpus
-                                            && control(ui, &format!("Find {label}")).clicked()
-                                            && !suppress_click
-                                        {
-                                            self.search_corpus = Some(target);
+                                    if compact && index % 2 == 1 {
+                                        ui.end_row();
+                                    }
+                                }
+                            };
+                            if compact {
+                                egui::Grid::new(("result-actions", &hit.source_id))
+                                    .num_columns(2)
+                                    .spacing([8.0, 8.0])
+                                    .show(ui, &mut buttons);
+                            } else {
+                                ui.horizontal_wrapped(&mut buttons);
+                            }
+                            if let Some((action, target)) = chosen {
+                                match action {
+                                    0 => self.open(hit.id.clone()),
+                                    1 => {
+                                        let target = target.unwrap();
+                                        if target != hit.corpus {
                                             self.search_books.clear();
                                             self.search_authors.clear();
-                                            self.search(ctx, Some(hit.source_id.clone()));
                                         }
+                                        self.search_corpus = Some(target);
+                                        self.search(ctx, Some(hit.source_id.clone()));
                                     }
-                                });
-                                if control(ui, "Copy").clicked() && !suppress_click {
-                                    ctx.copy_text(format!("{}\n{}", hit.reference, hit.text));
+                                    _ => ctx.copy_text(format!("{}\n{}", hit.reference, hit.text)),
                                 }
-                            });
+                            }
                         }
                     });
                 // Capture the scrolled results state without changing normal
@@ -990,6 +1217,9 @@ impl Desktop {
         }
     }
     fn search_filters(&mut self, ui: &mut egui::Ui) {
+        if Self::compact(ui.ctx()) {
+            ui.spacing_mut().interact_size.y = 44.0;
+        }
         ui.add_space(12.0);
         let p = self.state.theme.palette();
         egui::Frame::NONE
@@ -1009,7 +1239,12 @@ impl Desktop {
                         .selected_text(format!("{canon:?}"))
                         .show_ui(ui, |ui| {
                             for choice in [Canon::Protestant, Canon::Catholic, Canon::Orthodox] {
-                                ui.selectable_value(&mut canon, choice, format!("{choice:?}"));
+                                if ui
+                                    .selectable_value(&mut canon, choice, format!("{choice:?}"))
+                                    .clicked()
+                                {
+                                    ui.close_menu();
+                                }
                             }
                         });
                     self.update_canon(canon);
@@ -1061,11 +1296,18 @@ impl Desktop {
                         "{} authors · choose up to 3, or leave blank for all",
                         collection_short_name(self.search_corpus.unwrap_or_default())
                     ));
-                    ui.add(
+                    let field = ui.add(
                         egui::TextEdit::singleline(&mut self.author_filter)
                             .hint_text("Find author…")
                             .desired_width(f32::INFINITY),
                     );
+                    field.widget_info(|| {
+                        egui::WidgetInfo::labeled(
+                            egui::WidgetType::TextEdit,
+                            ui.is_enabled(),
+                            "Find an author",
+                        )
+                    });
                     let authors: std::collections::BTreeSet<_> = self
                         .library
                         .books
@@ -1109,6 +1351,37 @@ impl Desktop {
             });
     }
     pub(super) fn settings_dialog(&mut self, ui: &mut egui::Ui) {
+        let previous = self.state.scripture_translation;
+        ui.horizontal(|ui| {
+            if control(ui, "Account & sync…").clicked() {
+                self.dialog = Some(Dialog::Account);
+            }
+            ui.label("Bible");
+            egui::ComboBox::from_id_salt("scripture-translation")
+                .width(58.0)
+                .selected_text(match previous {
+                    reading_translation::Translation::Web => "WEB",
+                    reading_translation::Translation::Msb => "MSB",
+                })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(
+                        &mut self.state.scripture_translation,
+                        reading_translation::Translation::Web,
+                        "WEB · World English Bible",
+                    );
+                    ui.selectable_value(
+                        &mut self.state.scripture_translation,
+                        reading_translation::Translation::Msb,
+                        "MSB · Majority Standard Bible",
+                    );
+                })
+                .response
+                .on_hover_text("Bible translation");
+        });
+        if self.state.scripture_translation != previous {
+            self.scroll_target = Some(self.state.location_passage_id.clone());
+        }
+        ui.add_space(6.0);
         let p = self.state.theme.palette();
         let presets = [
             ("Default", 1.0, 1.72, 820.0),
@@ -1339,7 +1612,15 @@ impl Desktop {
                         ),
                     ),
                 );
-                if control(ui, "Pause download").clicked() && !suppress_click {
+                let button = control(ui, "Pause download");
+                button.widget_info(|| {
+                    egui::WidgetInfo::labeled(
+                        egui::WidgetType::Button,
+                        ui.is_enabled(),
+                        format!("Pause {} audio download", work.title),
+                    )
+                });
+                if button.clicked() && !suppress_click {
                     pause = true;
                 }
             } else {
@@ -1354,25 +1635,46 @@ impl Desktop {
                 }
                 ui.add_enabled_ui(downloads.active.is_none(), |ui| {
                     ui.horizontal_wrapped(|ui| {
-                        if work.downloaded < work.urls.len()
-                            && control(
+                        if work.downloaded < work.urls.len() {
+                            let button = control(
                                 ui,
                                 if work.downloaded > 0 {
                                     "Resume"
                                 } else {
                                     "Download audio"
                                 },
-                            )
-                            .clicked()
-                            && !suppress_click
-                        {
-                            start = Some(work.id.clone());
+                            );
+                            button.widget_info(|| {
+                                egui::WidgetInfo::labeled(
+                                    egui::WidgetType::Button,
+                                    ui.is_enabled(),
+                                    format!(
+                                        "{} {} audio",
+                                        if work.downloaded > 0 {
+                                            "Resume"
+                                        } else {
+                                            "Download"
+                                        },
+                                        work.title
+                                    ),
+                                )
+                            });
+                            if button.clicked() && !suppress_click {
+                                start = Some(work.id.clone());
+                            }
                         }
-                        if work.downloaded > 0
-                            && control(ui, "Remove audio").clicked()
-                            && !suppress_click
-                        {
-                            remove = Some(work.id.clone());
+                        if work.downloaded > 0 {
+                            let button = control(ui, "Remove audio");
+                            button.widget_info(|| {
+                                egui::WidgetInfo::labeled(
+                                    egui::WidgetType::Button,
+                                    ui.is_enabled(),
+                                    format!("Remove {} downloaded audio", work.title),
+                                )
+                            });
+                            if button.clicked() && !suppress_click {
+                                remove = Some(work.id.clone());
+                            }
                         }
                     });
                 });
@@ -1447,8 +1749,8 @@ fn jump_picker(
         .map(|(_, label)| label.as_str())
         .unwrap_or("Choose a book");
     let height = (ui.ctx().screen_rect().height() * 0.4).clamp(120.0, 260.0);
-    ui.spacing_mut().interact_size.y = 38.0;
-    egui::ComboBox::from_id_salt(id)
+    ui.spacing_mut().interact_size.y = 44.0;
+    let picker = egui::ComboBox::from_id_salt(id)
         .width(ui.available_width() - 16.0)
         .height(height + 10.0)
         .selected_text(label)
@@ -1462,6 +1764,9 @@ fn jump_picker(
                 }
             });
         });
+    picker.response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, ui.is_enabled(), label)
+    });
     next
 }
 
