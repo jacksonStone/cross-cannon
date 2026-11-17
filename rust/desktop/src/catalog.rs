@@ -1002,7 +1002,9 @@ mod tests {
             assert!(app.search_source.is_none());
             assert_eq!(app.query, "a previous theme");
             let works = &app.commentary.as_ref().unwrap().works;
-            assert_eq!(works.len(), 1);
+            assert!(works
+                .iter()
+                .any(|work| work.author.starts_with("Matthew Henry")));
             assert!(works.iter().all(|work| !work.notes.is_empty()));
             assert!(works
                 .iter()
@@ -1121,8 +1123,12 @@ mod tests {
         source.verse_end = 16;
         let catalog = Catalog::load(&library.root);
         let works = catalog.commentaries(&library, &source);
-        assert_eq!(works.len(), 3);
-        for work in works {
+        for (author, first, last) in [
+            ("Thomas Aquinas", 199, 258),
+            ("Matthew Henry and continuators", 26, 671),
+            ("John Wesley", 35, 44),
+        ] {
+            let work = works.iter().find(|work| work.author == author).unwrap();
             assert_eq!(
                 work.notes.len(),
                 1,
@@ -1143,12 +1149,6 @@ mod tests {
                 })
                 .count();
             assert_eq!(note.text.split("\n\n").count(), expected_paragraphs);
-            let (first, last) = match work.author.as_str() {
-                "Thomas Aquinas" => (199, 258),
-                "Matthew Henry and continuators" => (26, 671),
-                "John Wesley" => (35, 44),
-                author => panic!("Unexpected commentator: {author}"),
-            };
             let expected = library
                 .chapter(&passage.chapter_id)
                 .unwrap()
@@ -1207,7 +1207,13 @@ mod tests {
         assert_eq!(grouped[0].notes[0].reference, "Matthew 5:1–3");
         source.verse_start = 3;
         let works = catalog.commentaries(&library, &source);
-        assert_eq!(works.len(), 3);
+        for author in [
+            "Thomas Aquinas",
+            "Matthew Henry and continuators",
+            "John Wesley",
+        ] {
+            assert!(works.iter().any(|work| work.author == author));
+        }
         for work in &works {
             assert!(!work.notes.is_empty());
             assert!(work

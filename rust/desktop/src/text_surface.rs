@@ -514,7 +514,7 @@ mod tests {
     }
 
     #[test]
-    fn real_commentary_dialog_exposes_author_picker_and_reader_actions() {
+    fn real_commentary_dialog_shows_compact_quotes_and_source_actions() {
         let library = Arc::new(
             Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
         );
@@ -561,6 +561,7 @@ mod tests {
                 .filter(|(_, _, r)| r[1].as_f64().unwrap_or(0.0) < 844.0)
                 .collect::<Vec<_>>()
         );
+        assert!(nodes.iter().any(|n| n["label"] == "Source"));
         assert!(nodes.iter().any(|n| n["label"] == "Close"));
         assert!(!nodes.iter().any(|n| n["label"] == "Reader tools"));
     }
