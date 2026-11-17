@@ -7,6 +7,7 @@ import {spawn} from 'node:child_process';
 import puppeteer from 'puppeteer';
 
 let backend=process.env.BROWSER_TEST_URL,server,browser,proxy;
+const pending=new Set();
 const output=process.env.BROWSER_TEST_OUTPUT??'docs/screenshots/browser-upgrade';
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function listen(server){await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));return server.address().port;}
@@ -36,7 +37,9 @@ try{
     const upstream=(target.protocol==='https:'?https:http).request(target,{method:request.method,headers:{...request.headers,host:target.host}},incoming=>{
       response.writeHead(incoming.statusCode,incoming.headers);incoming.pipe(response);
     });
-    upstream.on('error',error=>{response.writeHead(502);response.end(error.message);});request.pipe(upstream);
+    pending.add(upstream);upstream.once('close',()=>pending.delete(upstream));
+    response.once('close',()=>{if(!response.writableFinished)upstream.destroy();});
+    upstream.on('error',error=>{if(response.destroyed)return;if(!response.headersSent)response.writeHead(502);response.end(error.message);});request.pipe(upstream);
   });
   const origin=`http://127.0.0.1:${await listen(proxy)}`;
   const manifest=await fetch(backend+'/browser/manifest.json').then(response=>response.json());
@@ -75,6 +78,7 @@ try{
   console.log(JSON.stringify({version:manifest.version,oldWorkerUpgrade:true,pinnedManifest:true,offlineReload:offline,preservedLocalState:true,freshDesktop:true,errors},null,2));
 }finally{
   if(browser)await browser.close();
-  if(proxy)await new Promise(resolve=>proxy.close(resolve));
-  if(server){server.kill('SIGTERM');await new Promise(resolve=>server.once('exit',resolve));}
+  for(const request of pending)request.destroy();
+  if(proxy){proxy.closeAllConnections();await new Promise(resolve=>proxy.close(resolve));}
+  if(server&&server.exitCode===null&&server.signalCode===null){const exited=new Promise(resolve=>server.once('exit',resolve));server.kill('SIGTERM');await exited;}
 }
