@@ -156,6 +156,14 @@ function renderAccessibility(tree) {
       element?.remove(); element = document.createElement(tag); element.dataset.id = node.id;
       if (tag === 'button') {
         element.type = 'button';
+        // HTML controls sit above the canvas, so wheel events need the same
+        // Rust scroll routing as touch drags. DOM deltas use the opposite sign.
+        element.addEventListener('wheel',(event)=>{
+          if(event.ctrlKey||!event.deltaY)return;
+          event.preventDefault();
+          const unit=event.deltaMode===WheelEvent.DOM_DELTA_LINE?16:event.deltaMode===WheelEvent.DOM_DELTA_PAGE?innerHeight:1;
+          emit('scroll',node.id,'',-event.deltaY*unit);
+        },{passive:false});
         element.addEventListener('pointerdown',(event)=>{if(document.activeElement?.localName==='textarea')event.preventDefault();});
         let drag;
         let suppressClick=false;
