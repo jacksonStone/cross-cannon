@@ -177,6 +177,12 @@ impl Catalog {
                     if reference.book != source.book || reference.chapter != source.chapter {
                         continue;
                     }
+                    let passages: Vec<_> = chapter
+                        .passage_ids
+                        .iter()
+                        .filter_map(|id| library.passage(id))
+                        .collect();
+                    let mut segments: Vec<Vec<&Paragraph>> = vec![];
                     for paragraph in details.paragraphs(&library.root) {
                         if paragraph.scripture_quotation {
                             continue;
@@ -188,26 +194,51 @@ impl Catalog {
                         if start > source.verse_end || end < source.verse_start {
                             continue;
                         }
-                        let passages: Vec<_> = chapter
-                            .passage_ids
-                            .iter()
-                            .filter_map(|id| library.passage(id))
-                            .collect();
+                        // Source paragraphs and stored passage chunks are not
+                        // result boundaries: keep each contiguous relevant run.
+                        if let Some(segment) = segments.last_mut().filter(|segment| {
+                            segment.last().unwrap().end.checked_add(1) == Some(paragraph.start)
+                        }) {
+                            segment.push(paragraph);
+                        } else {
+                            segments.push(vec![paragraph]);
+                        }
+                    }
+                    for segment in segments {
                         let Some(passage) = passages.iter().find(|p| {
-                            p.verse_start <= paragraph.start && p.verse_end >= paragraph.start
+                            p.verse_start <= segment[0].start && p.verse_end >= segment[0].start
                         }) else {
                             continue;
                         };
-                        let text = passages
+                        let text = segment
                             .iter()
-                            .flat_map(|p| &p.verses)
-                            .filter(|v| v.number >= paragraph.start && v.number <= paragraph.end)
-                            .map(|v| v.text.as_str())
+                            .map(|paragraph| {
+                                passages
+                                    .iter()
+                                    .flat_map(|p| &p.verses)
+                                    .filter(|v| {
+                                        v.number >= paragraph.start && v.number <= paragraph.end
+                                    })
+                                    .map(|v| v.text.as_str())
+                                    .collect::<Vec<_>>()
+                                    .join(" ")
+                            })
+                            .filter(|text| !text.is_empty())
                             .collect::<Vec<_>>()
-                            .join(" ");
+                            .join("\n\n");
                         if text.is_empty() {
                             continue;
                         }
+                        let start = segment
+                            .iter()
+                            .filter_map(|p| p.scripture_start)
+                            .min()
+                            .unwrap();
+                        let end = segment
+                            .iter()
+                            .filter_map(|p| p.scripture_end.or(p.scripture_start))
+                            .max()
+                            .unwrap();
                         let range = if start == end {
                             start.to_string()
                         } else {
@@ -501,7 +532,9 @@ mod tests {
             assert!(app.search_source.is_none());
             assert_eq!(app.query, "a previous theme");
             let works = &app.commentary.as_ref().unwrap().works;
-            assert_eq!(works.len(), 1);
+            assert!(works
+                .iter()
+                .any(|work| work.author.starts_with("Matthew Henry")));
             assert!(works.iter().all(|work| !work.notes.is_empty()));
             assert!(works
                 .iter()
@@ -511,6 +544,154 @@ mod tests {
                 egui::Shape::Text(text) if ["Copy", "Copy link", "Search commentaries"].contains(&text.galley.job.text.as_str()))));
             let output = render(&mut app, &ctx, width, vec![]);
             label_position(&output, "Commentaries");
+        }
+    }
+
+    #[test]
+    fn commentary_lookup_groups_contiguous_relevant_paragraphs() {
+        let library = library();
+        let mut source = library
+            .passage(&library.book("Matthew").unwrap().chapters[4].passage_ids[0])
+            .unwrap()
+            .clone();
+        source.verse_start = 3;
+        source.verse_end = 3;
+        let chapter = library
+            .book("classics:henry")
+            .unwrap()
+            .chapters
+            .iter()
+            .find(|chapter| chapter.id.ends_with(":Matt.5"))
+            .unwrap();
+        let catalog: Catalog = serde_json::from_value(serde_json::json!({"chapters": {
+            chapter.id.clone(): {"scriptureReference":{"book":"Matthew","chapter":5}, "paragraphs":[
+                {"start":2,"end":4,"scriptureStart":3,"scriptureEnd":3},
+                {"start":5,"end":7,"scriptureStart":3,"scriptureEnd":3}
+            ]}
+        }}))
+        .unwrap();
+        let works = catalog.commentaries(&library, &source);
+        assert_eq!(works.len(), 1);
+        assert_eq!(
+            works[0].notes.len(),
+            1,
+            "Adjacent commentary paragraphs belong to one result"
+        );
+        let note = &works[0].notes[0];
+        let text = |start, end| {
+            chapter
+                .passage_ids
+                .iter()
+                .filter_map(|id| library.passage(id))
+                .flat_map(|p| &p.verses)
+                .filter(|v| v.number >= start && v.number <= end)
+                .map(|v| v.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+        assert_eq!(note.text, format!("{}\n\n{}", text(2, 4), text(5, 7)));
+        assert_eq!(note.reference, "Matthew 5:3");
+        assert_eq!(note.passage_id, chapter.passage_ids[0]);
+    }
+
+    #[test]
+    fn commentary_lookup_keeps_gaps_and_chapters_separate() {
+        let library = library();
+        let mut source = library
+            .passage(&library.book("Matthew").unwrap().chapters[4].passage_ids[0])
+            .unwrap()
+            .clone();
+        source.verse_start = 3;
+        source.verse_end = 3;
+        let chapter = library
+            .book("classics:henry")
+            .unwrap()
+            .chapters
+            .iter()
+            .find(|chapter| chapter.id.ends_with(":Matt.5"))
+            .unwrap();
+        let next = library
+            .book("classics:henry")
+            .unwrap()
+            .chapters
+            .iter()
+            .find(|chapter| chapter.id.ends_with(":Matt.6"))
+            .unwrap();
+        for middle in [
+            serde_json::json!({"start":3,"end":3,"scriptureStart":4}),
+            serde_json::json!({"start":3,"end":3}),
+            serde_json::json!({"start":3,"end":3,"scriptureStart":3,"scriptureQuotation":true}),
+        ] {
+            let catalog: Catalog = serde_json::from_value(serde_json::json!({"chapters": {
+                chapter.id.clone(): {"scriptureReference":{"book":"Matthew","chapter":5}, "paragraphs":[
+                    {"start":1,"end":2,"scriptureStart":3}, middle,
+                    {"start":4,"end":5,"scriptureStart":3},
+                    {"start":7,"end":8,"scriptureStart":3}
+                ]},
+                next.id.clone(): {"scriptureReference":{"book":"Matthew","chapter":5}, "paragraphs":[
+                    {"start":9,"end":10,"scriptureStart":3}
+                ]}
+            }})).unwrap();
+            let works = catalog.commentaries(&library, &source);
+            assert_eq!(works[0].notes.len(), 4);
+            assert!(works[0]
+                .notes
+                .iter()
+                .all(|note| note.reference == "Matthew 5:3"));
+            assert_eq!(works[0].notes[3].passage_id, next.passage_ids[2]);
+        }
+    }
+
+    #[test]
+    fn john_three_sixteen_commentaries_preserve_complete_contiguous_sections() {
+        let library = library();
+        let mut source = library
+            .passage(&library.book("John").unwrap().chapters[2].passage_ids[0])
+            .unwrap()
+            .clone();
+        source.verse_start = 16;
+        source.verse_end = 16;
+        let catalog = Catalog::load(&library.root);
+        let works = catalog.commentaries(&library, &source);
+        for (author, first, last) in [
+            ("Thomas Aquinas", 199, 258),
+            ("Matthew Henry and continuators", 26, 671),
+            ("John Wesley", 35, 44),
+        ] {
+            let work = works.iter().find(|work| work.author == author).unwrap();
+            assert_eq!(
+                work.notes.len(),
+                1,
+                "{} should be one continuous section",
+                work.author
+            );
+            let note = &work.notes[0];
+            let passage = library.passage(&note.passage_id).unwrap();
+            let details = &catalog.chapters[&passage.chapter_id];
+            let expected_paragraphs = details
+                .paragraphs(&library.root)
+                .iter()
+                .filter(|p| {
+                    !p.scripture_quotation
+                        && p.scripture_start.is_some_and(|start| {
+                            start <= 16 && p.scripture_end.unwrap_or(start) >= 16
+                        })
+                })
+                .count();
+            assert_eq!(note.text.split("\n\n").count(), expected_paragraphs);
+            let expected = library
+                .chapter(&passage.chapter_id)
+                .unwrap()
+                .1
+                .passage_ids
+                .iter()
+                .filter_map(|id| library.passage(id))
+                .flat_map(|p| &p.verses)
+                .filter(|v| v.number >= first && v.number <= last)
+                .map(|v| v.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
+            assert_eq!(note.text.replace("\n\n", " "), expected);
         }
     }
 
@@ -551,10 +732,18 @@ mod tests {
         assert_eq!(exact[0].notes.len(), 1);
         assert_eq!(exact[0].notes[0].reference, "Matthew 5:3");
         source.verse_start = 2;
-        assert_eq!(packaged.commentaries(&library, &source)[0].notes.len(), 2);
+        let grouped = packaged.commentaries(&library, &source);
+        assert_eq!(grouped[0].notes.len(), 1);
+        assert_eq!(grouped[0].notes[0].reference, "Matthew 5:1–3");
         source.verse_start = 3;
         let works = catalog.commentaries(&library, &source);
-        assert_eq!(works.len(), 3);
+        for author in [
+            "Thomas Aquinas",
+            "Matthew Henry and continuators",
+            "John Wesley",
+        ] {
+            assert!(works.iter().any(|work| work.author == author));
+        }
         for work in &works {
             assert!(!work.notes.is_empty());
             assert!(work
