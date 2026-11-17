@@ -401,18 +401,17 @@ impl Desktop {
         if let Some(saved) = self.saved_library_location(self.jump_corpus).cloned() {
             if ui
                 .add(
-                    egui::Button::new(
+                    egui::Link::new(
                         RichText::new(format!("Last place · {}", saved.reference))
                             .size(12.0)
-                            .color(p.muted),
-                    )
-                    .frame(false)
-                    .wrap(),
+                            .color(p.accent)
+                            .underline(),
+                    ),
                 )
                 .clicked()
                 && !suppress_click
             {
-                self.switch_corpus(self.jump_corpus);
+                self.open(saved.id);
             }
         }
         ui.add_space(8.0);
