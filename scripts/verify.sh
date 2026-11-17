@@ -47,6 +47,7 @@ done
 run_step 'Homepage HEAD' curl -fsS -I "$base_url/"
 run_step 'Compatibility listener shares the same server' curl -fsS "http://${verify_host}:${compat_port}/r/api/health"
 run_step 'Rust browser artifact and workers' node scripts/smoke-browser-artifact.mjs "$base_url"
+run_step 'Mouse wheel scrolling over dialog buttons' env BROWSER_TEST_URL="$base_url" node scripts/browser-scroll.test.mjs
 run_step 'Mobile startup budget' env BROWSER_TEST_URL="$base_url" node scripts/browser-startup.test.mjs
 run_step 'Compatibility search forms use Rust' node --import tsx scripts/smoke-rust-web.ts "$base_url"
 run_step 'Resource bytes, compression and audio ranges' node scripts/smoke-rust-resources.mjs "$base_url"
