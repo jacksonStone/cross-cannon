@@ -106,7 +106,6 @@ float cross_canon_keyboard_height(void) {
 @property(nonatomic) UIStackView *footer;
 @property(nonatomic) UILabel *reference;
 @property(nonatomic) UIStackView *actions;
-@property(nonatomic) UIButton *libraryButton;
 @property(nonatomic) UILabel *status;
 @property(nonatomic) NSLayoutConstraint *readingBottom;
 @property(nonatomic) NSLayoutConstraint *passageBottom;
@@ -384,15 +383,14 @@ float cross_canon_keyboard_height(void) {
     self.titleButton.titleLabel.numberOfLines = 2;
     self.titleButton.titleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
     self.titleButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeading;
-    self.titleButton.accessibilityHint = @"Choose a book and chapter";
+    self.titleButton.accessibilityHint = @"Open Library to choose a collection, book, chapter or last place";
     self.titleButton.accessibilityIdentifier = @"reader-jump";
     __weak CCReaderView *weak = self;
-    [self.titleButton addAction:[UIAction actionWithHandler:^(__unused UIAction *a) { CCEvent(@"jump", nil, nil, 0); }]
+    [self.titleButton addAction:[UIAction actionWithHandler:^(__unused UIAction *a) { CCEvent(@"library", nil, nil, 0); }]
         forControlEvents:UIControlEventTouchUpInside];
     self.toolsButton = [self button:@"ellipsis.circle" label:@"Reader tools" action:@"tools"];
     self.toolsButton.showsMenuAsPrimaryAction = YES;
-    self.libraryButton = [self button:@"books.vertical" label:@"Choose collection or work" action:@"library"];
-    UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[self.titleButton, self.libraryButton, self.toolsButton]];
+    UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[self.titleButton, self.toolsButton]];
     header.alignment = UIStackViewAlignmentCenter;
     header.spacing = 4;
     header.translatesAutoresizingMaskIntoConstraints = NO;
@@ -405,7 +403,6 @@ float cross_canon_keyboard_height(void) {
     [self.titleButton.topAnchor constraintEqualToAnchor:header.topAnchor].active = YES;
     [self.titleButton.bottomAnchor constraintEqualToAnchor:header.bottomAnchor].active = YES;
     [self.toolsButton.widthAnchor constraintEqualToConstant:44].active = YES;
-    [self.libraryButton.widthAnchor constraintEqualToConstant:44].active = YES;
 
     self.text = [[CCReadingText alloc] initWithFrame:CGRectZero textContainer:nil];
     self.text.editable = NO;
@@ -609,7 +606,7 @@ float cross_canon_keyboard_height(void) {
     // UIButton's intrinsic size is one line even for a multiline title label.
     // Measure its actual available width so long work names cannot paint over
     // the status area or chapter content above and below the header.
-    CGFloat titleWidth = self.bounds.size.width - insets.left - insets.right - 16 - 16 - 44 * 2 - 4 * 2;
+    CGFloat titleWidth = self.bounds.size.width - insets.left - insets.right - 16 - 16 - 44 - 4;
     if (titleWidth > 0) {
         UIFont *font = self.titleButton.titleLabel.font;
         CGRect rect = [self.titleButton.currentTitle boundingRectWithSize:CGSizeMake(titleWidth, CGFLOAT_MAX)
@@ -867,9 +864,10 @@ float cross_canon_keyboard_height(void) {
         BOOL report = ![self.reportedLocation isEqual:p[@"id"]] || ![self.model[@"location"] isEqual:p[@"id"]];
         self.reportedLocation = p[@"id"];
         NSString *title = p[@"chapterTitle"];
-        if (title && ![self.titleButton.currentTitle isEqual:title]) {
-            [self.titleButton setTitle:title forState:UIControlStateNormal];
-            self.titleButton.accessibilityLabel = [NSString stringWithFormat:@"%@, %@", self.model[@"collection"], title];
+        NSString *libraryTitle = [@"Library · " stringByAppendingString:title ?: @""];
+        if (title && ![self.titleButton.currentTitle isEqual:libraryTitle]) {
+            [self.titleButton setTitle:libraryTitle forState:UIControlStateNormal];
+            self.titleButton.accessibilityLabel = [NSString stringWithFormat:@"Library, %@, %@", self.model[@"collection"], title];
             self.text.accessibilityLabel = title;
             [self prepareLayout];
             [self setNeedsLayout];
@@ -939,12 +937,13 @@ float cross_canon_keyboard_height(void) {
     self.reference.textColor = accent;
     self.status.textColor = CCColor(model[@"muted"]);
     self.status.text = CCValue(model, @"status");
-    if (![self.titleButton.currentTitle isEqual:model[@"title"]]) {
-        [self.titleButton setTitle:model[@"title"] forState:UIControlStateNormal];
+    NSString *libraryTitle = [@"Library · " stringByAppendingString:model[@"title"] ?: @""];
+    if (![self.titleButton.currentTitle isEqual:libraryTitle]) {
+        [self.titleButton setTitle:libraryTitle forState:UIControlStateNormal];
         [self setNeedsLayout];
     }
     [self.titleButton setTitleColor:ink forState:UIControlStateNormal];
-    self.titleButton.accessibilityLabel = [NSString stringWithFormat:@"%@, %@", model[@"collection"], model[@"title"]];
+    self.titleButton.accessibilityLabel = [NSString stringWithFormat:@"Library, %@, %@", model[@"collection"], model[@"title"]];
     BOOL selected = CCValue(model, @"selected") != nil;
     if (!selected && self.selectionActive) {
         self.updating = YES;
@@ -968,7 +967,6 @@ float cross_canon_keyboard_height(void) {
     commentary.hidden = !scripture;
     UIColor *controlBorder = [CCColor(model[@"muted"]) colorWithAlphaComponent:0.28];
     self.toolsButton.layer.borderColor = controlBorder.CGColor;
-    self.libraryButton.layer.borderColor = controlBorder.CGColor;
     self.status.hidden = selected;
     BOOL footerVisible = selected || self.status.text.length > 0;
     self.footer.hidden = !footerVisible;
@@ -979,7 +977,7 @@ float cross_canon_keyboard_height(void) {
         self.passageBottom.active = NO;
         self.readingBottom.active = YES;
     }
-    NSArray *items = @[@[@"Reader settings", @"textformat.size", @"settings"], @[@"Jump to passage", @"arrow.turn.down.right", @"jump"],
+    NSArray *items = @[@[@"Reader settings", @"textformat.size", @"settings"],
         @[@"Search", @"magnifyingglass", @"search"],
         @[[model[@"playing"] boolValue] ? @"Pause audio" : @"Play audio", @"playpause", @"audio"],
         @[@"Audio downloads", @"arrow.down.circle", @"downloads"], @[@"Account and sync", @"person.crop.circle", @"account"]];

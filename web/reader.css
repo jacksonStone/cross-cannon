@@ -16,3 +16,5 @@
 #dialog-accessibility>input:focus-visible,#dialog-accessibility>textarea:focus-visible{opacity:0}
 
 #library-status{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:6;margin:0;padding:10px 16px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--muted);box-shadow:0 4px 20px #0002;font:13px/1.5 Inter,sans-serif;max-width:calc(100vw - 32px)}
+
+#reader-jump::before{content:"Library · ";font:500 12px/1.4 Inter,sans-serif;color:var(--muted)}#reader-jump::after{content:" ⌄";font:16px Inter,sans-serif;color:var(--accent)}

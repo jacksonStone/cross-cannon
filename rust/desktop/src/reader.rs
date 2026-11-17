@@ -66,7 +66,7 @@ impl Desktop {
             .unwrap()
             .clone();
         let compact = Self::compact(ctx);
-        let label = format!("{} {}", focused.book, focused.chapter);
+        let label = format!("Library · {} {} ⌄", focused.book, focused.chapter);
         // Reserve the same title width in both states. Tools float above the reader,
         // so toggling them cannot change title fitting or the reader's origin.
         let title_width = (ui.available_width() - 56.0).max(20.0);
@@ -96,9 +96,14 @@ impl Desktop {
         let kicker = if fathers { 18.0 } else { 0.0 };
         let height = (galley.size().y + kicker + 18.0).max(if compact { 63.0 } else { 61.0 });
         let (rect, header_response) =
-            ui.allocate_exact_size(egui::vec2(ui.available_width(), height), Sense::hover());
+            ui.allocate_exact_size(egui::vec2(ui.available_width(), height), Sense::click());
         header_response
-            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, &label));
+            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, &label));
+        self.jump_button_rect =
+            Rect::from_min_max(rect.min, egui::pos2(rect.right() - 56.0, rect.bottom()));
+        if header_response.on_hover_text("Open Library").clicked() {
+            self.show_library();
+        }
         let title_origin = rect.min + egui::vec2(0.0, 9.0);
         if fathers {
             ui.painter().text(
@@ -172,9 +177,9 @@ impl Desktop {
     }
     fn toolbar_controls(&mut self, ui: &mut egui::Ui, focused: &Passage) {
         let order = if Self::compact(ui.ctx()) {
-            [0, 4, 3, 2, 1, 5]
+            [0, 4, 3, 2, 5]
         } else {
-            [0, 1, 2, 3, 4, 5]
+            [0, 2, 3, 4, 5]
         };
         for action in order {
             match action {
@@ -184,13 +189,6 @@ impl Desktop {
                         .clicked()
                     {
                         self.tools = false;
-                    }
-                }
-                1 => {
-                    let response = control(ui, "Jump");
-                    self.jump_button_rect = response.rect;
-                    if response.clicked() {
-                        self.show_jump();
                     }
                 }
                 2 => {

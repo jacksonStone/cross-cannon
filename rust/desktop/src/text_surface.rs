@@ -288,8 +288,7 @@ impl Desktop {
                         .iter()
                         .position(|(_, chapter)| chapter.id == self.active_chapter_id)
                         .unwrap_or(0);
-                    self.text_surface
-                        .extend(forward, chapter, chapters.len());
+                    self.text_surface.extend(forward, chapter, chapters.len());
                 }
             }
         }
@@ -586,8 +585,7 @@ mod tests {
                 .study
                 .direct_action("note", library.passage(&id).unwrap(), false);
             for (name, dialog) in [
-                ("library", Dialog::Collections),
-                ("jump", Dialog::Jump),
+                ("library", Dialog::Library),
                 ("search", Dialog::Search),
                 ("audio", Dialog::Downloads),
                 ("account", Dialog::Account),

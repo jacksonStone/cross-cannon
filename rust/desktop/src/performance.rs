@@ -343,7 +343,7 @@ fn native_performance_audit() {
             ),
         );
     }
-    app.show_jump();
+    app.show_library();
     app.jump_corpus = Corpus::EarlyChristian;
     app.jump_book = "npnf102:iv".into();
     for _ in 0..3 {
