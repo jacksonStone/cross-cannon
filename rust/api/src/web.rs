@@ -68,7 +68,7 @@ impl Engine {
         if let Some((chapter, start, end)) = classic_location {
             let mut display =
                 json!({"chapterId":chapter,"highlightPassage":{"verseStart":start,"verseEnd":end}});
-            crate::classics::display_results(
+            self.classics()?.display_results(
                 &self.library.root,
                 std::slice::from_mut(&mut display),
                 false,
@@ -172,7 +172,8 @@ impl Engine {
             Ok(json!({"author":row.get::<_,Option<String>>(6)?,"chapterId":chapter,"chapterReference":row.get::<_,String>(4)?,"date":row.get::<_,Option<String>>(7)?,"highlightPassage":{"id":id,"rangeLabel":range,"reference":row.get::<_,String>(0)?,"text":row.get::<_,String>(1)?,"verseStart":start,"verseEnd":end},"score":score,"source":row.get::<_,Option<String>>(8)?.unwrap_or_default(),"title":row.get::<_,Option<String>>(5)?.unwrap_or_default()}))
         })).collect::<rusqlite::Result<Vec<_>>>()?;
         if request.corpus == Some(Corpus::ChristianClassics) {
-            crate::classics::display_results(&self.library.root, &mut results, true)?;
+            self.classics()?
+                .display_results(&self.library.root, &mut results, true)?;
             results.retain(|result| {
                 result["highlightPassage"]["text"]
                     .as_str()
@@ -192,9 +193,9 @@ impl Engine {
         let db = self.connection(corpus)?;
         let marks = vec!["?"; chapters.len()].join(",");
         let quotations = if corpus == Corpus::ChristianClassics {
-            crate::classics::quotation_ranges(&self.library.root)?
+            Some(&self.classics()?.quotations)
         } else {
-            HashMap::new()
+            None
         };
         // Fetch text and descriptive metadata only for the final hits. Author
         // scopes can include over 100,000 stored paragraph embeddings.
@@ -214,7 +215,9 @@ impl Engine {
             let chapter: String = row.get(2)?;
             let start: Option<u32> = row.get(3)?;
             let end: Option<u32> = row.get(4)?;
-            if let (Some(ranges), Some(start)) = (quotations.get(&chapter), start) {
+            if let (Some(ranges), Some(start)) =
+                (quotations.and_then(|ranges| ranges.get(&chapter)), start)
+            {
                 if (start..=end.unwrap_or(start))
                     .all(|v| ranges.iter().any(|[a, b]| v >= *a && v <= *b))
                 {
@@ -246,7 +249,7 @@ mod tests {
     fn actual_readonly_indexes_chapter_batches_and_source_display() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let engine = Engine::load(
-            Arc::new(Library::load(&root).unwrap()),
+            Arc::new(Library::load_server(&root).unwrap()),
             &root.join("storage/crosscannon.db"),
             &root.join("storage/early-christian-works.db"),
         )

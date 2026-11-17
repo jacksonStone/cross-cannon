@@ -12,7 +12,6 @@ use cross_canon_core::{Canon, Corpus, SearchMode, SearchRequest, CANONICAL_BOOKS
 use serde_json::{json, Value};
 use std::{
     collections::{HashMap, HashSet},
-    path::Path,
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -32,6 +31,7 @@ struct CompatState {
     app: Arc<AppState>,
     catalog: Catalog,
     limits: Mutex<HashMap<String, Bucket>>,
+    commentary_slots: Arc<tokio::sync::Semaphore>,
 }
 struct Bucket {
     count: u32,
@@ -39,32 +39,47 @@ struct Bucket {
 }
 
 pub fn router(app: Arc<AppState>) -> Router {
-    let catalog = Catalog {
-        books: app
-            .engine
-            .library
-            .books
-            .iter()
-            .filter(|book| book.corpus == Corpus::Scripture)
-            .map(|book| book.id.clone())
-            .collect(),
-        fathers: app
-            .engine
-            .library
-            .books
-            .iter()
-            .filter(|book| book.corpus == Corpus::EarlyChristian)
-            .filter_map(|book| book.author.clone())
-            .collect(),
-        classics: app
-            .engine
-            .library
-            .books
-            .iter()
-            .filter(|book| book.corpus == Corpus::ChristianClassics)
-            .filter_map(|book| book.author.clone())
-            .collect(),
-    };
+    routes(Arc::new(CompatState::new(app)))
+}
+
+impl CompatState {
+    fn new(app: Arc<AppState>) -> Self {
+        let catalog = Catalog {
+            books: app
+                .engine
+                .library
+                .books
+                .iter()
+                .filter(|book| book.corpus == Corpus::Scripture)
+                .map(|book| book.id.clone())
+                .collect(),
+            fathers: app
+                .engine
+                .library
+                .books
+                .iter()
+                .filter(|book| book.corpus == Corpus::EarlyChristian)
+                .filter_map(|book| book.author.clone())
+                .collect(),
+            classics: app
+                .engine
+                .library
+                .books
+                .iter()
+                .filter(|book| book.corpus == Corpus::ChristianClassics)
+                .filter_map(|book| book.author.clone())
+                .collect(),
+        };
+        Self {
+            app,
+            catalog,
+            limits: Mutex::new(HashMap::new()),
+            commentary_slots: Arc::new(tokio::sync::Semaphore::new(2)),
+        }
+    }
+}
+
+fn routes(state: Arc<CompatState>) -> Router {
     Router::new()
         .route("/", post(scripture))
         .route("/church-fathers", post(fathers))
@@ -73,11 +88,7 @@ pub fn router(app: Arc<AppState>) -> Router {
         .route("/christian-classics/read/", post(classics))
         .route("/api/classic-commentary", get(commentary))
         .layer(DefaultBodyLimit::max(64 * 1024))
-        .with_state(Arc::new(CompatState {
-            app,
-            catalog,
-            limits: Mutex::new(HashMap::new()),
-        }))
+        .with_state(state)
 }
 
 fn error(status: StatusCode, message: &str) -> Response {
@@ -575,68 +586,6 @@ fn commentary_query(uri: &Uri) -> Option<CommentaryQuery> {
         end: end as u32,
     })
 }
-fn read_artifact(root: &Path, path: &str) -> anyhow::Result<Value> {
-    anyhow::ensure!(
-        path.starts_with("/christian-classics-text/") && !path.contains(".."),
-        "Invalid commentary artifact path"
-    );
-    let directory = root.join("public/christian-classics-text").canonicalize()?;
-    let file = root
-        .join("public")
-        .join(path.trim_start_matches('/'))
-        .canonicalize()?;
-    anyhow::ensure!(
-        file.starts_with(directory),
-        "Commentary artifact is outside its collection"
-    );
-    Ok(serde_json::from_slice(&std::fs::read(file)?)?)
-}
-fn commentary_data(root: &Path, query: &CommentaryQuery) -> anyhow::Result<Value> {
-    let manifest = read_artifact(root, "/christian-classics-text/manifest.json")?;
-    let index = read_artifact(
-        root,
-        manifest["bookIndexPath"]
-            .as_str()
-            .unwrap_or("/christian-classics-text/books.json"),
-    )?;
-    let mut works = vec![];
-    for work in index["books"]
-        .as_array()
-        .ok_or_else(|| anyhow::anyhow!("Missing commentary catalog"))?
-    {
-        for chapter in work["chapters"].as_array().into_iter().flatten() {
-            if chapter["scriptureReference"]["book"].as_str() != Some(&query.book)
-                || chapter["scriptureReference"]["chapter"].as_u64() != Some(query.chapter as u64)
-            {
-                continue;
-            }
-            let asset = read_artifact(
-                root,
-                chapter["assetPath"]
-                    .as_str()
-                    .ok_or_else(|| anyhow::anyhow!("Missing commentary text"))?,
-            )?;
-            let overlaps = asset["verses"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .any(|verse| {
-                    verse["scriptureQuotation"] != true
-                        && verse["scriptureVerseStart"].as_u64().is_some_and(|start| {
-                            start <= query.end as u64
-                                && verse["scriptureVerseEnd"].as_u64().unwrap_or(start)
-                                    >= query.start as u64
-                        })
-                });
-            if overlaps {
-                works.push(json!({"id":work["id"],"title":work["name"],"author":work["author"],"tradition":work["metadata"]["tradition"].as_str().unwrap_or(""),"chapter":chapter}));
-            }
-        }
-    }
-    Ok(
-        json!({"error":null,"version":manifest["version"].as_str().unwrap_or("christian-classics-v1"),"works":works}),
-    )
-}
 async fn commentary(State(state): State<Arc<CompatState>>, uri: Uri) -> Response {
     let Some(query) = commentary_query(&uri) else {
         return (
@@ -647,8 +596,32 @@ async fn commentary(State(state): State<Arc<CompatState>>, uri: Uri) -> Response
         )
             .into_response();
     };
-    let root = state.app.engine.library.root.clone();
-    match tokio::task::spawn_blocking(move || commentary_data(&root, &query)).await {
+    let Ok(permit) = state.commentary_slots.clone().try_acquire_owned() else {
+        let mut response = (
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(json!({"error":"Commentary is busy; try again shortly.","version":"","works":[]})),
+        )
+            .into_response();
+        response
+            .headers_mut()
+            .insert("retry-after", "1".parse().unwrap());
+        return response;
+    };
+    let engine = state.app.engine.clone();
+    match tokio::task::spawn_blocking(move || {
+        // Own the permit inside the blocking task: disconnecting a request must
+        // not release capacity while its uncancellable work is still running.
+        let _permit = permit;
+        engine.classics()?.commentary(
+            &engine.library.root,
+            &query.book,
+            query.chapter,
+            query.start,
+            query.end,
+        )
+    })
+    .await
+    {
         Ok(Ok(data)) => {
             let mut response = Json(data).into_response();
             response
@@ -674,6 +647,7 @@ mod tests {
     use super::*;
     use cross_canon_core::Library;
     use http_body_util::BodyExt;
+    use std::path::Path;
     use tower::ServiceExt;
 
     fn fixture_catalog() -> Catalog {
@@ -1053,6 +1027,18 @@ mod tests {
             .to_string(),
         )
         .unwrap();
+        let cache = crate::classics::CatalogCache::default();
+        let manifest = std::fs::read(folder.join("manifest.json")).unwrap();
+        std::fs::remove_file(folder.join("manifest.json")).unwrap();
+        assert!(cache.get(&root).is_err());
+        std::fs::write(folder.join("manifest.json"), manifest).unwrap();
+        let catalog = cache.get(&root).unwrap();
+        let chapter_bytes = std::fs::read(folder.join("chapters/commentary.json")).unwrap();
+        std::fs::remove_file(folder.join("chapters/commentary.json")).unwrap();
+        assert!(catalog.commentary(&root, "John", 3, 16, 16).is_err());
+        std::fs::write(folder.join("chapters/commentary.json"), chapter_bytes).unwrap();
+        std::fs::remove_file(folder.join("books.json")).unwrap();
+        assert_eq!(catalog.quotations.get("commentary"), Some(&vec![[1, 1]]));
         let query = |start, end| CommentaryQuery {
             book: "John".into(),
             chapter: 3,
@@ -1060,17 +1046,20 @@ mod tests {
             end,
         };
         assert_eq!(
-            commentary_data(&root, &query(16, 16)).unwrap()["works"],
+            catalog
+                .commentary(&root, &query(16, 16).book, 3, 16, 16)
+                .unwrap()["works"],
             json!([])
         );
-        let response = commentary_data(&root, &query(19, 19)).unwrap();
+        std::fs::remove_file(folder.join("chapters/commentary.json")).unwrap();
+        let response = catalog.commentary(&root, "John", 3, 19, 19).unwrap();
         assert_eq!(response["version"], "fixture");
         assert_eq!(
             response["works"][0],
             json!({"id":"classic","title":"Classic commentary","author":"Commentator","tradition":"Test","chapter":chapter})
         );
         assert_eq!(
-            commentary_data(&root, &query(20, 20)).unwrap()["works"],
+            catalog.commentary(&root, "John", 3, 20, 20).unwrap()["works"],
             json!([])
         );
         std::fs::remove_dir_all(root).unwrap();
@@ -1080,7 +1069,7 @@ mod tests {
     async fn actual_readonly_indexes_form_searches_preserve_sources_scopes_and_errors() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let engine = crate::engine::Engine::load(
-            Arc::new(Library::load(&root).unwrap()),
+            Arc::new(Library::load_server(&root).unwrap()),
             &root.join("storage/crosscannon.db"),
             &root.join("storage/early-christian-works.db"),
         )
@@ -1097,7 +1086,34 @@ mod tests {
             .clone();
         let classics =
             engine.library.book("classics:imitation").unwrap().chapters[0].passage_ids[0].clone();
-        let router = router(Arc::new(AppState::new(engine, None).unwrap()));
+        let state = Arc::new(CompatState::new(Arc::new(
+            AppState::new(engine, None).unwrap(),
+        )));
+        let router = routes(state.clone());
+        let permits = state
+            .commentary_slots
+            .clone()
+            .acquire_many_owned(2)
+            .await
+            .unwrap();
+        let busy = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/classic-commentary?book=John&chapter=3&verseStart=16")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(busy.status(), StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(busy.headers()["retry-after"], "1");
+        assert_eq!(
+            state.app.slots.available_permits(),
+            4,
+            "Commentary has its own budget"
+        );
+        drop(permits);
         for (index, (route, pairs, field, corpus)) in [
             (
                 "/",

@@ -25,6 +25,7 @@ pub struct Engine {
     pub(crate) scripture_db: PathBuf,
     pub(crate) fathers_db: PathBuf,
     pub(crate) classics_db: PathBuf,
+    classics: crate::classics::CatalogCache,
 }
 fn corpus_key(corpus: Corpus) -> u8 {
     match corpus {
@@ -35,6 +36,10 @@ fn corpus_key(corpus: Corpus) -> u8 {
 }
 
 impl Engine {
+    pub(crate) fn classics(&self) -> Result<&crate::classics::Catalog> {
+        self.classics.get(&self.library.root)
+    }
+
     pub fn load(library: Arc<Library>, scripture_db: &Path, fathers_db: &Path) -> Result<Self> {
         let classics_db = std::env::var_os("CHRISTIAN_CLASSICS_DATABASE_PATH")
             .map(PathBuf::from)
@@ -51,6 +56,7 @@ impl Engine {
             scripture_db: scripture_db.to_path_buf(),
             fathers_db: fathers_db.to_path_buf(),
             classics_db: classics_db.clone(),
+            classics: crate::classics::CatalogCache::default(),
         };
         for (corpus, path, table) in [
             (Corpus::Scripture, scripture_db, "passages"),

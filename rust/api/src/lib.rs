@@ -19,7 +19,7 @@ use std::{
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
-use tokio::sync::Semaphore;
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
 /// Explicit maintenance entrypoint; normal server startup never changes schema.
@@ -96,8 +96,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         .layer(axum::middleware::from_fn(runtime_header))
 }
 async fn runtime_header(request: axum::extract::Request, next: axum::middleware::Next) -> Response {
-    let mut response=next.run(request).await;
-    response.headers_mut().insert("x-cross-canon-runtime","rust".parse().unwrap());
+    let mut response = next.run(request).await;
+    response
+        .headers_mut()
+        .insert("x-cross-canon-runtime", "rust".parse().unwrap());
     response
 }
 async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
@@ -110,6 +112,19 @@ async fn books(State(state): State<Arc<AppState>>) -> Json<Value> {
         json!({"books":state.engine.library.books.iter().map(|b|json!({"id":b.id,"title":b.title,"author":b.author,"corpus":b.corpus,"chapters":b.chapters.len()})).collect::<Vec<_>>()}),
     )
 }
+// Dropping an HTTP future cannot cancel spawn_blocking. Keep its permit inside
+// every blocking stage, as well as the handler, to bound disconnected clients.
+async fn search_blocking<T: Send + 'static>(
+    slot: Arc<OwnedSemaphorePermit>,
+    work: impl FnOnce() -> T + Send + 'static,
+) -> Result<T, tokio::task::JoinError> {
+    tokio::task::spawn_blocking(move || {
+        let _slot = slot;
+        work()
+    })
+    .await
+}
+
 async fn search(
     State(state): State<Arc<AppState>>,
     Json(request): Json<SearchRequest>,
@@ -152,12 +167,12 @@ async fn search(
     }) {
         return Err(bad("Unknown author filter"));
     }
-    let _slot = state.slots.clone().try_acquire_owned().map_err(|_| {
+    let slot = Arc::new(state.slots.clone().try_acquire_owned().map_err(|_| {
         ApiError(
             StatusCode::TOO_MANY_REQUESTS,
             "Search is busy; try again shortly".into(),
         )
-    })?;
+    })?);
     let start = Instant::now();
     let mode = if request.source_id.is_some() {
         SearchMode::Semantic
@@ -169,7 +184,7 @@ async fn search(
         let reader = engine.clone();
         let target = request.corpus;
         Some(
-            tokio::task::spawn_blocking(move || reader.source(&id, target))
+            search_blocking(slot.clone(), move || reader.source(&id, target))
                 .await
                 .map_err(internal)?
                 .map_err(|e| bad(e.to_string()))?,
@@ -182,7 +197,7 @@ async fn search(
         .then(|| source.as_ref().map(|s| s.metadata.clone()))
         .flatten();
     let hits: Value = match mode {
-        SearchMode::Keyword => tokio::task::spawn_blocking(move || {
+        SearchMode::Keyword => search_blocking(slot.clone(), move || {
             json!(engine.library.search(
                 &request.query,
                 request.corpus,
@@ -238,7 +253,7 @@ async fn search(
                 embedding
             };
             let web = request.web;
-            tokio::task::spawn_blocking(move || -> anyhow::Result<Value> {
+            search_blocking(slot.clone(), move || -> anyhow::Result<Value> {
                 if web {
                     Ok(json!(engine.web_results(
                         &embedding,
@@ -267,9 +282,27 @@ mod tests {
     use std::path::Path;
     use tower::ServiceExt;
     #[tokio::test]
+    async fn cancelled_search_retains_permit_until_blocking_work_finishes() {
+        let slots = Arc::new(Semaphore::new(1));
+        let slot = Arc::new(slots.clone().acquire_owned().await.unwrap());
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+        let (finish_tx, finish_rx) = std::sync::mpsc::channel();
+        let request = tokio::spawn(search_blocking(slot, move || {
+            started_tx.send(()).unwrap();
+            finish_rx.recv().unwrap();
+        }));
+        started_rx.await.unwrap();
+        request.abort();
+        assert!(request.await.unwrap_err().is_cancelled());
+        assert_eq!(slots.available_permits(), 0);
+        finish_tx.send(()).unwrap();
+        let _released = slots.acquire().await.unwrap();
+    }
+
+    #[tokio::test]
     async fn actual_readonly_indexes_search_and_api_contract() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let library = Arc::new(Library::load(&root).unwrap());
+        let library = Arc::new(Library::load_server(&root).unwrap());
         let engine = Engine::load(
             library,
             &root.join("storage/crosscannon.db"),
