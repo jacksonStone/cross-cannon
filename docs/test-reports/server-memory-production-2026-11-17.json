@@ -1,0 +1,207 @@
+{
+  "implementation_commit": "c69d7d85a69d510d93169668287d1b79cca96ab0",
+  "hosted_source_revision": "af4df0aab11b2b48c8ad5a2c4fc1337d9f331a24",
+  "hosted_build_url": "https://github.com/jacksonStone/cross-cannon/actions/runs/44113002745",
+  "ship_exit_code": 0,
+  "production_verification": "passed",
+  "before": {
+    "utc": "2026-11-17T15:16:45Z",
+    "release": "20261117T143709-rust-f07b4750",
+    "pid": 73936,
+    "rss_kib": 868244,
+    "anonymous_kib": 859152,
+    "process_swap_kib": 0,
+    "service_memory_current_bytes": 1005813760,
+    "service_memory_peak_bytes": 1009143808,
+    "service_swap_bytes": 0,
+    "service_memory_max_bytes": 1258291200,
+    "cgroup_anon_bytes": 879771648,
+    "cgroup_file_bytes": 122494976,
+    "cgroup_kernel_bytes": 3547136,
+    "restarts": 0,
+    "oom_events": 0,
+    "oom_kill_events": 0
+  },
+  "after": {
+    "executable": "/home/ubuntu/.workspace-deploy/releases/cross-cannon/20261117T152502-rust-4eb9aa3c/app/bin/cross-cannon",
+    "binary_sha256": "8c554853e35d210e0846728e04e3b4665bc9d1a63421d6ee262d4cb6c6325a50",
+    "build_info": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\ncargo 1.99.1 (5f94df478 2026-08-27)\nplatform=linux/amd64\nsource_revision=af4df0aab11b2b48c8ad5a2c4fc1337d9f331a24",
+    "legacy_service": "inactive",
+    "samples": [
+      {
+        "utc": "2026-11-17T15:27:06.286096+00:00",
+        "service": {
+          "MainPID": "75552",
+          "NRestarts": "0",
+          "ControlGroup": "/system.slice/cross-cannon.service",
+          "MemoryCurrent": "883834880",
+          "MemoryPeak": "906977280",
+          "MemorySwapCurrent": "0",
+          "MemoryMax": "1258291200",
+          "ActiveState": "active",
+          "SubState": "running",
+          "ActiveEnterTimestamp": "Tue 2026-11-17 15:25:44 UTC"
+        },
+        "process": {
+          "VmRSS": "522256 kB",
+          "VmHWM": "522256 kB",
+          "RssAnon": "514256 kB",
+          "RssFile": "8000 kB",
+          "VmSwap": "0 kB",
+          "Threads": "5"
+        },
+        "cgroup": {
+          "anon": 526598144,
+          "file": 354082816,
+          "kernel": 3153920
+        },
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "memory_pressure": "some avg10=0.00 avg60=0.00 avg300=0.00 total=0\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0",
+        "host": {
+          "MemTotal": "1951736 kB",
+          "MemAvailable": "857920 kB",
+          "SwapTotal": "1048572 kB",
+          "SwapFree": "831476 kB"
+        },
+        "health": {
+          "accountBackend": true,
+          "books": 498,
+          "cacheVersion": "98c414bddc31ea96",
+          "passages": 315170,
+          "resourceRoutes": true,
+          "runtime": "rust",
+          "semanticQueries": true,
+          "service": "R Cross Cannon",
+          "status": "ok",
+          "storedVectors": 23896,
+          "version": "0.1.0",
+          "webSearch": true
+        }
+      },
+      {
+        "utc": "2026-11-17T15:27:21.294674+00:00",
+        "service": {
+          "MainPID": "75552",
+          "NRestarts": "0",
+          "ControlGroup": "/system.slice/cross-cannon.service",
+          "MemoryCurrent": "883838976",
+          "MemoryPeak": "906977280",
+          "MemorySwapCurrent": "0",
+          "MemoryMax": "1258291200",
+          "ActiveState": "active",
+          "SubState": "running",
+          "ActiveEnterTimestamp": "Tue 2026-11-17 15:25:44 UTC"
+        },
+        "process": {
+          "VmRSS": "522256 kB",
+          "VmHWM": "522256 kB",
+          "RssAnon": "514256 kB",
+          "RssFile": "8000 kB",
+          "VmSwap": "0 kB",
+          "Threads": "5"
+        },
+        "cgroup": {
+          "anon": 526598144,
+          "file": 354082816,
+          "kernel": 3158016
+        },
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "memory_pressure": "some avg10=0.00 avg60=0.00 avg300=0.00 total=0\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0",
+        "host": {
+          "MemTotal": "1951736 kB",
+          "MemAvailable": "852488 kB",
+          "SwapTotal": "1048572 kB",
+          "SwapFree": "831476 kB"
+        },
+        "health": {
+          "accountBackend": true,
+          "books": 498,
+          "cacheVersion": "98c414bddc31ea96",
+          "passages": 315170,
+          "resourceRoutes": true,
+          "runtime": "rust",
+          "semanticQueries": true,
+          "service": "R Cross Cannon",
+          "status": "ok",
+          "storedVectors": 23896,
+          "version": "0.1.0",
+          "webSearch": true
+        }
+      },
+      {
+        "utc": "2026-11-17T15:27:36.303120+00:00",
+        "service": {
+          "MainPID": "75552",
+          "NRestarts": "0",
+          "ControlGroup": "/system.slice/cross-cannon.service",
+          "MemoryCurrent": "884097024",
+          "MemoryPeak": "906977280",
+          "MemorySwapCurrent": "0",
+          "MemoryMax": "1258291200",
+          "ActiveState": "active",
+          "SubState": "running",
+          "ActiveEnterTimestamp": "Tue 2026-11-17 15:25:44 UTC"
+        },
+        "process": {
+          "VmRSS": "522256 kB",
+          "VmHWM": "522256 kB",
+          "RssAnon": "514256 kB",
+          "RssFile": "8000 kB",
+          "VmSwap": "0 kB",
+          "Threads": "5"
+        },
+        "cgroup": {
+          "anon": 526598144,
+          "file": 354082816,
+          "kernel": 3153920
+        },
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "memory_pressure": "some avg10=0.00 avg60=0.00 avg300=0.00 total=0\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0",
+        "host": {
+          "MemTotal": "1951736 kB",
+          "MemAvailable": "852572 kB",
+          "SwapTotal": "1048572 kB",
+          "SwapFree": "831476 kB"
+        },
+        "health": {
+          "accountBackend": true,
+          "books": 498,
+          "cacheVersion": "98c414bddc31ea96",
+          "passages": 315170,
+          "resourceRoutes": true,
+          "runtime": "rust",
+          "semanticQueries": true,
+          "service": "R Cross Cannon",
+          "status": "ok",
+          "storedVectors": 23896,
+          "version": "0.1.0",
+          "webSearch": true
+        }
+      }
+    ]
+  }
+}

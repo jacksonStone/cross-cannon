@@ -1,5 +1,8 @@
 # Server memory implementation and validation — 2026-11-17
 
+Follow-up: [successful production release and memory observations](server-memory-production-2026-11-17.md).
+The implementation phase described below preceded that separately requested deployment.
+
 Implemented the first recommendations from the
 [memory investigation](../research/server-memory-2026-11-17.md).
 No deployment, production configuration change, database update, or indexing
@@ -136,9 +139,10 @@ one complete chapter per active lookup, with at most two commentary tasks.
 Vector quantization, replacement search artifacts, metadata interning and account
 pagination were deferred. They require separate ranking/protocol design or
 additional attribution and are not needed for the measured reduction. Existing
-float32 vectors and exact ranking behavior remain intact. A production before/
-after sample and longer load test remain future validation after an authorized
-deployment; production was not touched by this implementation task.
+float32 vectors and exact ranking behavior remain intact. The separately
+requested [production release](server-memory-production-2026-11-17.md) includes
+initial before/after samples; a longer load test remains future validation.
+Production was not touched during the initial implementation phase.
 
 Local evidence lives under `.tmp/server-memory/`: `verify-final.log`,
 `api-final.log`, `linux-final-build.log`, `benchmark.py`, and before/after JSON.
