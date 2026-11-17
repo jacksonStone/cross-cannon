@@ -31,6 +31,20 @@ edge routing without running a second search process. Reader documents, browser
 assets, both worker aliases, accounts, native login, compatibility search form
 POSTs, commentary metadata, search and text/audio resources all belong to Axum.
 
+The server Library keeps passage identity, filtering metadata and display text
+for search, omitting original and per-verse reader strings during loading.
+Native and browser artifact loaders retain complete reader text. Server keyword
+normalization uses a 16-MiB LRU entry budget; oversized books normalize one
+passage at a time. In-flight searches can retain evicted entries, so all blocking
+search stages hold the shared four-search permit through completion, including
+after a request disconnects. Reader keyword caching keeps its existing policy.
+
+Classics searches and commentary share one lazily initialized metadata catalog
+per process. Commentary stores merged verse-coverage ranges after the first
+chapter lookup, releasing parsed chapter text. Two separate commentary permits
+bound blocking work, with HTTP 429 and Retry-After when busy. Successful catalog
+and coverage initialization is cached; transient read failures can retry.
+
 Search CORS and body limits are local to the public search routes. Accounts
 retain their own same-origin checks, native bearer handling, private/no-store
 responses and larger study request bounds. Browser static gzip/Brotli variants

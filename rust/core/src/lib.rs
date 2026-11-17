@@ -1,6 +1,7 @@
 //! Existing, immutable Cross Canon artifacts, shared by native desktop and API.
 //! This crate has no networking, database writes, or artifact generation.
 mod fragments;
+mod keyword;
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -133,6 +134,8 @@ pub struct Library {
     book_passages: Vec<Vec<usize>>,
     #[serde(skip)]
     search_books: Vec<OnceLock<Vec<SearchText>>>,
+    #[serde(skip)]
+    server_search: Option<keyword::KeywordCache>,
     audio: HashMap<String, AudioLocation>,
 }
 
@@ -171,14 +174,15 @@ impl Library {
         Self::load_artifacts_with_policy(root, true)
     }
 
-    /// Verse-linked works need only Book/Chapter metadata on the server. Their
-    /// immutable text is streamed by resource routes when a reader requests it.
-    /// Build/native loaders still include every passage for offline reading.
+    /// Search-only server projection: retain display text and passage identity,
+    /// but omit original/verse reader strings. Verse-linked unindexed works need
+    /// only metadata. Complete reader resources are served from immutable files;
+    /// build/native/browser loaders retain all original and per-verse text.
     pub fn load_server(root: impl AsRef<Path>) -> Result<Self> {
         Self::load_artifacts_with_policy(root, false)
     }
 
-    fn load_artifacts_with_policy(root: impl AsRef<Path>, preload_unindexed: bool) -> Result<Self> {
+    fn load_artifacts_with_policy(root: impl AsRef<Path>, complete_reader: bool) -> Result<Self> {
         let root = root.as_ref().to_path_buf();
         let manifest = read_json(&root.join("scripture-cache/manifest.json"))?;
         let version = string(&manifest, "version");
@@ -197,6 +201,7 @@ impl Library {
             chapter_lookup: HashMap::new(),
             book_passages: vec![],
             search_books: vec![],
+            server_search: None,
             audio: HashMap::new(),
         };
         let mut scripture: BTreeMap<String, BTreeMap<u32, Chapter>> = BTreeMap::new();
@@ -230,18 +235,26 @@ impl Library {
                 chapter_id: chapter_id.clone(),
                 chapter,
                 reference: reference.clone(),
-                original_text: text.clone(),
+                original_text: if complete_reader {
+                    text.clone()
+                } else {
+                    String::new()
+                },
                 text,
                 author: None,
                 verse_start: verses.first().map(|v| number(v, "number")).unwrap_or(1),
                 verse_end: verses.last().map(|v| number(v, "number")).unwrap_or(1),
-                verses: verses
-                    .iter()
-                    .map(|v| Verse {
-                        number: number(v, "number"),
-                        text: string(v, "text"),
-                    })
-                    .collect(),
+                verses: if complete_reader {
+                    verses
+                        .iter()
+                        .map(|v| Verse {
+                            number: number(v, "number"),
+                            text: string(v, "text"),
+                        })
+                        .collect()
+                } else {
+                    vec![]
+                },
             };
             let entry = scripture
                 .entry(book.into())
@@ -300,8 +313,7 @@ impl Library {
                     corpus,
                     chapters: vec![],
                 };
-                let metadata_only =
-                    !preload_unindexed && work["metadata"]["searchIndexed"] == false;
+                let metadata_only = !complete_reader && work["metadata"]["searchIndexed"] == false;
                 for entry in work["chapters"]
                     .as_array()
                     .context("Missing work chapters")?
@@ -358,11 +370,15 @@ impl Library {
                             })
                             .collect::<Vec<_>>()
                             .join(" ");
-                        let original_text = range
-                            .iter()
-                            .map(|v| string(v, "text"))
-                            .collect::<Vec<_>>()
-                            .join(" ");
+                        let original_text = if complete_reader {
+                            range
+                                .iter()
+                                .map(|v| string(v, "text"))
+                                .collect::<Vec<_>>()
+                                .join(" ")
+                        } else {
+                            String::new()
+                        };
                         let passage_id = format!("{id}:{verse_start}-{verse_end}");
                         chapter.passage_ids.push(passage_id.clone());
                         library.passages.push(Passage {
@@ -385,17 +401,21 @@ impl Library {
                             author: book.author.clone(),
                             verse_start,
                             verse_end,
-                            verses: range
-                                .iter()
-                                .map(|v| Verse {
-                                    number: number(v, "verse"),
-                                    text: v["modernizedText"]
-                                        .as_str()
-                                        .filter(|s| !s.trim().is_empty())
-                                        .unwrap_or(v["text"].as_str().unwrap_or_default())
-                                        .to_owned(),
-                                })
-                                .collect(),
+                            verses: if complete_reader {
+                                range
+                                    .iter()
+                                    .map(|v| Verse {
+                                        number: number(v, "verse"),
+                                        text: v["modernizedText"]
+                                            .as_str()
+                                            .filter(|s| !s.trim().is_empty())
+                                            .unwrap_or(v["text"].as_str().unwrap_or_default())
+                                            .to_owned(),
+                                    })
+                                    .collect()
+                            } else {
+                                vec![]
+                            },
                         });
                     }
                     book.chapters.push(chapter);
@@ -404,6 +424,9 @@ impl Library {
             }
         }
         library.rebuild_indexes()?;
+        if !complete_reader {
+            library.server_search = Some(keyword::KeywordCache::new(keyword::SERVER_CACHE_BYTES));
+        }
         library.load_audio()?;
         Ok(library)
     }
@@ -702,34 +725,49 @@ impl Library {
             {
                 continue;
             }
-            // Normalize only searched Books, once. This cache is never serialized
-            // or built during startup, and is shared safely by search workers.
-            let texts = self.search_books[index].get_or_init(|| {
-                self.book_passages[index]
-                    .iter()
-                    .map(|&passage| {
-                        let p = &self.passages[passage];
-                        SearchText {
-                            passage,
-                            text: p.text.to_lowercase(),
-                            reference: p.reference.to_lowercase(),
-                        }
-                    })
-                    .collect()
-            });
-            for entry in texts {
+            let mut visit = |passage: usize, text: &str, reference: &str| {
                 if !tokens
                     .iter()
-                    .all(|t| entry.text.contains(t) || entry.reference.contains(t))
+                    .all(|t| text.contains(t) || reference.contains(t))
                 {
-                    continue;
+                    return;
                 }
                 let score = tokens
                     .iter()
-                    .map(|t| entry.text.matches(t).count() as f32)
+                    .map(|t| text.matches(t).count() as f32)
                     .sum::<f32>()
-                    / (entry.text.len().max(100) as f32).sqrt();
-                hits.push((&self.passages[entry.passage], score));
+                    / (text.len().max(100) as f32).sqrt();
+                hits.push((&self.passages[passage], score));
+            };
+            if let Some(cache) = &self.server_search {
+                if let Some(texts) = cache.book(index, self) {
+                    for entry in texts.iter() {
+                        visit(entry.passage, &entry.text, &entry.reference);
+                    }
+                } else {
+                    for &passage in &self.book_passages[index] {
+                        let p = &self.passages[passage];
+                        visit(passage, &p.text.to_lowercase(), &p.reference.to_lowercase());
+                    }
+                }
+            } else {
+                // Reader caches are not serialized and initialize only searched books.
+                let texts = self.search_books[index].get_or_init(|| {
+                    self.book_passages[index]
+                        .iter()
+                        .map(|&passage| {
+                            let p = &self.passages[passage];
+                            SearchText {
+                                passage,
+                                text: p.text.to_lowercase(),
+                                reference: p.reference.to_lowercase(),
+                            }
+                        })
+                        .collect()
+                });
+                for entry in texts {
+                    visit(entry.passage, &entry.text, &entry.reference);
+                }
             }
         }
         let compare = |a: &(&Passage, f32), b: &(&Passage, f32)| {
@@ -946,7 +984,7 @@ mod tests {
     #[test]
     fn indexed_keyword_search_preserves_exact_legacy_results() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let library = Library::load_artifacts(&root).unwrap();
+        let mut library = Library::load_artifacts(&root).unwrap();
         assert!(
             library.search_books.iter().all(|book| book.get().is_none()),
             "Startup must not normalize all text"
@@ -1031,6 +1069,21 @@ mod tests {
                     .collect::<Vec<_>>(),
                 "Search behavior changed for {query}"
             );
+            // The bounded server path must match exact Unicode scores and tie order,
+            // including books too large to cache and searches after eviction.
+            library.server_search = Some(keyword::KeywordCache::new(1024));
+            let uncached = library.search(query, corpus, &books, limit, canon);
+            assert_eq!(
+                serde_json::to_value(&actual).unwrap(),
+                serde_json::to_value(&uncached).unwrap()
+            );
+            library.server_search = Some(keyword::KeywordCache::new(keyword::SERVER_CACHE_BYTES));
+            let bounded = library.search(query, corpus, &books, limit, canon);
+            assert_eq!(
+                serde_json::to_value(&actual).unwrap(),
+                serde_json::to_value(&bounded).unwrap()
+            );
+            library.server_search = None;
             let cached = library.search(query, corpus, &books, limit, canon);
             assert_eq!(
                 actual.iter().map(|h| &h.id).collect::<Vec<_>>(),
@@ -1134,6 +1187,25 @@ mod tests {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let library = Library::load_server(&root).unwrap();
         library.validate().unwrap();
+        assert!(library.server_search.is_some());
+        assert!(library
+            .passages
+            .iter()
+            .all(|p| p.original_text.is_empty() && p.verses.is_empty()));
+        assert!(library.passages.iter().all(|p| !p.text.is_empty()));
+        // Compare the complete reader representation at stable server identities.
+        let reader = Library::load_artifacts(&root).unwrap();
+        for p in &library.passages {
+            let original = reader.passage(&p.id).unwrap();
+            assert_eq!(p.text, original.text);
+            assert_eq!(p.reference, original.reference);
+            assert_eq!(
+                (p.verse_start, p.verse_end),
+                (original.verse_start, original.verse_end)
+            );
+            assert!(!original.original_text.is_empty());
+            assert!(!original.verses.is_empty());
+        }
         for (id, chapters) in [
             ("classics:jfb", 1189),
             ("classics:keil-delitzsch", 929),

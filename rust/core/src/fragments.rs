@@ -69,6 +69,7 @@ pub(super) fn decode(root: &Path, bytes: &[u8]) -> Result<Library> {
         chapter_lookup: HashMap::new(),
         book_passages: vec![],
         search_books: vec![],
+        server_search: None,
         audio: index.audio.into_iter().collect(),
     };
     library.rebuild_indexes()?;
@@ -151,6 +152,7 @@ impl Library {
             chapter_lookup: HashMap::new(),
             book_passages: vec![],
             search_books: vec![],
+            server_search: None,
             audio: HashMap::new(),
         };
         fragment.rebuild_indexes()?;
@@ -213,6 +215,9 @@ impl Library {
         for book in &fragment.books {
             let index = self.book_lookup[&book.id];
             self.search_books[index] = OnceLock::new();
+            if let Some(cache) = &self.server_search {
+                cache.invalidate(index);
+            }
         }
         for passage in fragment.passages {
             let index = self.lookup[&passage.id];
