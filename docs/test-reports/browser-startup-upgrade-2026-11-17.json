@@ -1,0 +1,20 @@
+{
+  "browser_version": "d92309fd6ed8ca7dadfc",
+  "implementation_commit": "74dac7298255967add28193f0e455e697bcd3dc3",
+  "test_cleanup_commit": "16c4d369706388144418ecdcc1e36954bc52e113",
+  "release": "20261117T165043-rust-25a7c232",
+  "ship_exit_code": 0,
+  "production_verification": "passed",
+  "live_startup_regression": {
+    "version": "d92309fd6ed8ca7dadfc",
+    "oldWorkerUpgrade": true,
+    "pinnedManifest": true,
+    "offlineReload": false,
+    "preservedLocalState": true,
+    "freshDesktop": true,
+    "errors": []
+  },
+  "live_startup_note": "Uses live production assets through a local proxy with a simulated incumbent worker; full offline reload tested locally, not repeated against production.",
+  "service_snapshot": "2026-11-17T16:52:38Z\nMainPID=77214\nNRestarts=0\nMemoryCurrent=755896320\nMemoryPeak=771919872\nMemorySwapCurrent=0\nActiveState=active\nActiveEnterTimestamp=Tue 2026-11-17 16:51:19 UTC\n/home/ubuntu/.workspace-deploy/releases/cross-cannon/20261117T165043-rust-25a7c232/app/bin/cross-cannon\n8c554853e35d210e0846728e04e3b4665bc9d1a63421d6ee262d4cb6c6325a50  /proc/77214/exe\nlow 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n{\"accountBackend\":true,\"books\":498,\"cacheVersion\":\"98c414bddc31ea96\",\"passages\":315170,\"resourceRoutes\":true,\"runtime\":\"rust\",\"semanticQueries\":true,\"service\":\"R Cross Cannon\",\"status\":\"ok\",\"storedVectors\":23896,\"version\":\"0.1.0\",\"webSearch\":true}\ninactive\n",
+  "physical_iphone_tested": false
+}
