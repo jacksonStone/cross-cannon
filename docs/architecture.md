@@ -110,6 +110,15 @@ shows a reload control. Existing `/cross-canon-sw.js` installations receive the
 new worker through the compatibility URL. Account/OAuth/API responses never
 enter content caches. Cached complete audio supports byte ranges.
 
+Browser HTML selects byte-addressed startup modules, styles and fonts. The
+startup module pins its manifest to that release, and each worker stages a
+versioned HTML document and manifest. Network-first navigation can therefore
+open a newer release while an older worker still controls the page: its cached
+mutable module aliases cannot shadow the new bootstrap. Offline navigation
+opens the active worker's own complete document. Previous immutable assets and
+the prior pinned manifest remain available across publication; updating never
+requires clearing reader preferences, study storage or recordings.
+
 The browser opens from a compact identity index (about 1.8 MB), catalog,
 and only the saved/deep-linked reading window. WASM compilation overlaps these
 requests. Shared canonical IDs, verse coverage, Book/Chapter metadata, and audio

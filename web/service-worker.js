@@ -1,22 +1,24 @@
 // This worker stages an entire tested Rust reader release before activation.
 const VERSION='__READER_VERSION__';
 const SHELL='cross-canon-rust-shell-'+VERSION;
+const MANIFEST='/browser/manifest.'+VERSION+'.json';
+const DOCUMENT='/browser/index.'+VERSION+'.html';
 const AUDIO='cross-canon-browser-audio-v1';
 self.addEventListener('message',(event)=>{if(event.data?.type==='ACTIVATE_READER_UPDATE')self.skipWaiting();});
 self.addEventListener('install',(event)=>event.waitUntil((async()=>{
-  const response=await fetch('/browser/manifest.json',{cache:'no-store'});
+  const response=await fetch(MANIFEST,{cache:'no-store'});
   if(!response.ok)throw Error('Reader manifest unavailable');
   const manifest=await response.clone().json();
   if(manifest.version!==VERSION)throw Error('Reader changed while staging');
   const cache=await caches.open(SHELL);
   try{
-    const files=Object.keys(manifest.files).filter(p=>p!=='service-worker.js'&&!p.endsWith('.gz')&&!p.endsWith('.br'));
+    const files=Object.keys(manifest.files).filter(p=>p!=='service-worker.js'&&p!=='index.html'&&!p.endsWith('.gz')&&!p.endsWith('.br'));
     // Bound background work instead of issuing over a thousand requests at once.
     let next=0;
     await Promise.all(Array.from({length:4},async()=>{
       while(next<files.length){const path='/browser/'+files[next++];await cache.add(new Request(path,{priority:'low'}));}
     }));
-    await cache.put('/browser/manifest.json',response);
+    await cache.put(MANIFEST,response);
   }
   catch(error){await caches.delete(SHELL);throw error;}
   // A waiting update activates only after the user reloads/closes old tabs.
@@ -36,7 +38,7 @@ self.addEventListener('fetch',(event)=>{
   if(request.method!=='GET')return;
   if(url.origin===location.origin&&url.pathname.startsWith('/r/api/'))return;
   if(request.mode==='navigate'&&url.origin===location.origin&&readingPath(url.pathname)){
-    event.respondWith((async()=>{try{return await fetch(request);}catch(error){const cached=await caches.open(SHELL).then((c)=>c.match('/browser/index.html'));if(cached)return cached;throw error;}})());return;
+    event.respondWith((async()=>{try{return await fetch(request);}catch(error){const cached=await caches.open(SHELL).then((c)=>c.match(DOCUMENT));if(cached)return cached;throw error;}})());return;
   }
   if(url.origin===location.origin&&url.pathname.startsWith('/browser/')){
     event.respondWith((async()=>{const cache=await caches.open(SHELL);return await cache.match(request)||fetch(request);})());return;
