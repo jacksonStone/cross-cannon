@@ -1013,18 +1013,19 @@ float cross_canon_keyboard_height(void) {
     BOOL contentChanged = chapters && ![chapters isEqual:self.chapters];
     if (chapters) { self.chapters = chapters; self.edgeRequest = nil; }
     NSString *jump = CCValue(model, @"jump");
-    if (changedBook) { self.paragraphs = nil; self.reportedLocation = nil; }
+    // Passive book changes keep TextKit's current Passage anchor.
+    if (changedBook && jump) { self.paragraphs = nil; self.reportedLocation = nil; }
     [self prepareLayout];
     [self layoutIfNeeded];
     if (contentChanged || jump || ![styleKey isEqual:self.styleKey]) {
         self.styleKey = styleKey;
-        [self reflowTo:jump ?: (changedBook || !self.paragraphs.count ? model[@"location"] : nil)];
+        [self reflowTo:jump ?: (!self.paragraphs.count ? model[@"location"] : nil)];
     }
     [self applyPassageHighlight];
     // A queued model may still describe the prior chapter. Reconcile it with
     // the stable native viewport after layout, reflow and explicit jumps.
     [self reportLocation];
-    if (wasHidden || changedBook || jump) UIAccessibilityPostNotification(UIAccessibilityScreenChangedNotification, self.text);
+    if (wasHidden || jump) UIAccessibilityPostNotification(UIAccessibilityScreenChangedNotification, self.text);
 }
 @end
 

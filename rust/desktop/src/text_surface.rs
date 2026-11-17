@@ -8,7 +8,7 @@ mod events;
 
 #[derive(Default)]
 pub(super) struct Reader {
-    pub(super) book: String,
+    pub(super) sequence: String,
     pub(super) window: Range<usize>,
     #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
     content_key: String,
@@ -21,9 +21,9 @@ impl Reader {
     pub(super) fn invalidate(&mut self) {
         self.content_key.clear();
     }
-    fn locate(&mut self, book: &str, chapter: usize, count: usize, jump: bool) {
-        if self.book != book || !self.window.contains(&chapter) || jump {
-            self.book = book.into();
+    fn locate(&mut self, sequence: &str, chapter: usize, count: usize, jump: bool) {
+        if self.sequence != sequence || !self.window.contains(&chapter) || jump {
+            self.sequence = sequence.into();
             self.window = chapter.saturating_sub(1)..(chapter + 2).min(count);
         }
     }
@@ -283,13 +283,13 @@ impl Desktop {
                 events::Effect::Invalidate => self.text_surface.invalidate(),
                 events::Effect::Extend { forward } => {
                     let book = self.library.book(&self.current_passage().book_id).unwrap();
-                    let chapter = book
-                        .chapters
+                    let chapters = reader::chapter_sequence(&self.library, book, self.state.canon);
+                    let chapter = chapters
                         .iter()
-                        .position(|chapter| chapter.id == self.active_chapter_id)
+                        .position(|(_, chapter)| chapter.id == self.active_chapter_id)
                         .unwrap_or(0);
                     self.text_surface
-                        .extend(forward, chapter, book.chapters.len());
+                        .extend(forward, chapter, chapters.len());
                 }
             }
         }
@@ -306,24 +306,25 @@ impl Desktop {
         }
         let passage = self.current_passage().clone();
         let book = self.library.book(&passage.book_id).unwrap();
-        let index = book
-            .chapters
+        let sequence = reader::sequence_key(book, self.state.canon);
+        let reading_chapters = reader::chapter_sequence(&self.library, book, self.state.canon);
+        let index = reading_chapters
             .iter()
-            .position(|c| c.id == passage.chapter_id)
+            .position(|(_, c)| c.id == passage.chapter_id)
             .unwrap_or(0);
         let jump = self.scroll_target.take();
         self.text_surface
-            .locate(&book.id, index, book.chapters.len(), jump.is_some());
+            .locate(&sequence, index, reading_chapters.len(), jump.is_some());
         #[cfg(target_arch = "wasm32")]
         browser_library::request(
             &self.library,
-            book.chapters[self.text_surface.window.clone()]
+            reading_chapters[self.text_surface.window.clone()]
                 .iter()
-                .map(|c| c.id.clone()),
+                .map(|(_, c)| c.id.clone()),
         );
         let key = format!(
             "{}:{:?}:{}:{:?}",
-            book.id,
+            sequence,
             self.text_surface.window,
             self.state.original,
             self.state.scripture_translation
@@ -331,10 +332,10 @@ impl Desktop {
         let chapters = if key != self.text_surface.content_key || !self.text_surface.visible {
             self.text_surface.content_key = key;
             Some(
-                book.chapters[self.text_surface.window.clone()]
+                reading_chapters[self.text_surface.window.clone()]
                     .iter()
-                    .filter(|chapter| !cfg!(target_arch = "wasm32") || self.library.chapter_ready(&chapter.id))
-                    .map(|chapter| Chapter {
+                    .filter(|(_, chapter)| !cfg!(target_arch = "wasm32") || self.library.chapter_ready(&chapter.id))
+                    .map(|&(book, chapter)| Chapter {
                         title: format!("{} {}", book.title, chapter.number),
                         subtitle: if book.corpus == Corpus::Scripture {
                             self.reading_text
@@ -419,7 +420,7 @@ impl Desktop {
                 "playing": self.playing, "audio": self.library.audio(&self.active_chapter_id).is_some(),
                 "versionControl": self.has_text_version_control(), "original": self.state.original,
                 "previous": self.text_surface.window.start > 0,
-                "next": self.text_surface.window.end < book.chapters.len(),
+                "next": self.text_surface.window.end < reading_chapters.len(),
                 "status": if self.study.storage_error().is_some() { self.study.storage_error().unwrap_or_default() } else { &self.message },
             }),
             false,

@@ -1,5 +1,34 @@
 use super::*;
 
+// Scripture is one continuous reading sequence in the selected Canon. Works
+// keep their own chapter sequence; collection/catalog order is not reading order.
+pub(super) fn sequence_key(book: &Book, canon: Canon) -> String {
+    if book.corpus == Corpus::Scripture && canon.includes(&book.title) {
+        format!("scripture:{canon:?}")
+    } else {
+        book.id.clone()
+    }
+}
+
+pub(super) fn chapter_sequence<'a>(
+    library: &'a Library,
+    book: &'a Book,
+    canon: Canon,
+) -> Vec<(&'a Book, &'a cross_canon_core::Chapter)> {
+    library
+        .books
+        .iter()
+        .filter(|candidate| {
+            if book.corpus == Corpus::Scripture && canon.includes(&book.title) {
+                candidate.corpus == Corpus::Scripture && canon.includes(&candidate.title)
+            } else {
+                candidate.id == book.id
+            }
+        })
+        .flat_map(|book| book.chapters.iter().map(move |chapter| (book, chapter)))
+        .collect()
+}
+
 /// Exact measured geometry survives egui's per-frame text-cache eviction. Reuse
 /// it for off-screen content so a drag doesn't lay out every page of a Work.
 #[derive(Default)]
@@ -17,7 +46,7 @@ pub(super) struct ReaderLayout {
 
 #[derive(PartialEq)]
 struct LayoutKey {
-    book: String,
+    sequence: String,
     width: f32,
     font_scale: f32,
     line_height: f32,
@@ -222,6 +251,8 @@ impl Desktop {
         let library = self.library.clone();
         let reading_text = self.reading_text.clone();
         let book = library.book(&self.current_passage().book_id).unwrap();
+        let sequence = sequence_key(book, self.state.canon);
+        let chapters = chapter_sequence(&library, book, self.state.canon);
         let mut measured = std::mem::take(&mut self.reader_layout);
         let mut focused_visible = None;
         let mut target = self.scroll_target.clone();
@@ -234,7 +265,7 @@ impl Desktop {
             target.is_none() && self.dialog.is_none() && !self.tools,
         );
         let mut area = egui::ScrollArea::vertical()
-            .id_salt(("reader", &book.id))
+            .id_salt(("reader", &sequence))
             // Explicit Reader Locations settle in one frame. Animated offsets
             // otherwise look like passive reading and overwrite the requested focus.
             .animated(false)
@@ -248,7 +279,7 @@ impl Desktop {
             ui.set_width(content_width);
             ui.spacing_mut().item_spacing.y = 0.0;
             let key = LayoutKey {
-                book: book.id.clone(),
+                sequence: sequence.clone(),
                 width: content_width,
                 font_scale: self.state.font_scale,
                 line_height: self.state.line_height,
@@ -273,12 +304,11 @@ impl Desktop {
                     .and_then(|id| library.passage(id))
                     .map(|p| p.chapter_id.as_str())
                     .unwrap_or(&self.active_chapter_id);
-                let index = book
-                    .chapters
+                let index = chapters
                     .iter()
-                    .position(|c| c.id == chapter_id)
+                    .position(|(_, c)| c.id == chapter_id)
                     .unwrap_or(0);
-                measured.window = index.saturating_sub(1)..(index + 2).min(book.chapters.len());
+                measured.window = index.saturating_sub(1)..(index + 2).min(chapters.len());
             }
             if measured.selected != self.selected {
                 for id in measured.selected.iter().chain(self.selected.iter()) {
@@ -300,14 +330,13 @@ impl Desktop {
                     measured.window.start -= 1;
                 }
                 if viewport.top() > self.reader_max_scroll - viewport.height()
-                    && measured.window.end < book.chapters.len()
+                    && measured.window.end < chapters.len()
                 {
                     measured.window.end += 1;
                     ui.ctx().request_repaint();
                 }
             }
-            for (index, chapter) in book
-                .chapters
+            for (index, &(book, chapter)) in chapters
                 .iter()
                 .enumerate()
                 .take(measured.window.end)
@@ -906,7 +935,10 @@ mod window_tests {
                     if let Some(offset) = offset.take() {
                         let id = ui.make_persistent_id(Id::new((
                             "reader",
-                            &app.current_passage().book_id,
+                            sequence_key(
+                                app.library.book(&app.current_passage().book_id).unwrap(),
+                                app.state.canon,
+                            ),
                         )));
                         let mut state = egui::scroll_area::State::load(ctx, id).unwrap();
                         state.offset.y = offset;
@@ -915,6 +947,43 @@ mod window_tests {
                     app.reader(ui);
                 });
             },
+        );
+    }
+
+    #[test]
+    fn scrolling_past_genesis_continues_into_exodus() {
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        let ctx = egui::Context::default();
+        let mut app = Desktop::initialize(&ctx, None, library.clone());
+        app.open(library.chapter("Genesis:50").unwrap().1.passage_ids[0].clone());
+        for _ in 0..3 {
+            frame(&mut app, &ctx, None);
+        }
+        for _ in 0..4 {
+            let bottom = app.reader_max_scroll;
+            frame(&mut app, &ctx, Some(bottom));
+        }
+        assert_eq!(app.current_passage().book_id, "Exodus");
+        let offset = app.last_scroll;
+        frame(&mut app, &ctx, None);
+        assert!(
+            (app.last_scroll - offset).abs() < 1.0,
+            "Crossing books must not reset layout"
+        );
+
+        app.open(library.chapter("Exodus:1").unwrap().1.passage_ids[0].clone());
+        for _ in 0..3 {
+            frame(&mut app, &ctx, None);
+        }
+        frame(&mut app, &ctx, Some(0.0));
+        assert_eq!(app.current_passage().book_id, "Genesis");
+        let offset = app.last_scroll;
+        frame(&mut app, &ctx, None);
+        assert!(
+            (app.last_scroll - offset).abs() < 1.0,
+            "Returning to Genesis must retain the viewport"
         );
     }
 
