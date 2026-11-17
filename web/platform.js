@@ -100,7 +100,7 @@ function updateReader(next) {
   root.dataset.theme = next.theme === 2 ? 'dark' : 'light';
   document.querySelector('meta[name=theme-color]').content = next.paper;
   $('reader-jump').textContent = next.title;
-  $('reader-jump').setAttribute('aria-label', `${next.collection}, ${next.title}, jump to passage`);
+  $('reader-jump').setAttribute('aria-label', `Library, ${next.collection}, ${next.title}`);
   $('reader-text').classList.toggle('work', !next.scripture);
   if (next.chapters) renderChapters(next.chapters);
   for (const p of $('reader-text').querySelectorAll('.passage')) {
@@ -156,6 +156,14 @@ function renderAccessibility(tree) {
       element?.remove(); element = document.createElement(tag); element.dataset.id = node.id;
       if (tag === 'button') {
         element.type = 'button';
+        // HTML controls sit above the canvas, so wheel events need the same
+        // Rust scroll routing as touch drags. DOM deltas use the opposite sign.
+        element.addEventListener('wheel',(event)=>{
+          if(event.ctrlKey||!event.deltaY)return;
+          event.preventDefault();
+          const unit=event.deltaMode===WheelEvent.DOM_DELTA_LINE?16:event.deltaMode===WheelEvent.DOM_DELTA_PAGE?innerHeight:1;
+          emit('scroll',node.id,'',-event.deltaY*unit);
+        },{passive:false});
         element.addEventListener('pointerdown',(event)=>{if(document.activeElement?.localName==='textarea')event.preventDefault();});
         let drag;
         let suppressClick=false;
@@ -208,7 +216,7 @@ export function updateSurface(json, accessibility) {
 function closeMenu() { $('tools-menu').close(); $('reader-tools').setAttribute('aria-expanded','false'); }
 function openTools() {
   const menu = $('tools-menu'); menu.replaceChildren();
-  const items = [['Reader settings','settings','settings'],['Jump to passage','jump','jump'],['Search','search','search'],[model.playing?'Pause audio':'Play audio','audio',model.playing?'pause':'play'],['Audio downloads','downloads','download'],['Account and sync','account','account']];
+  const items = [['Reader settings','settings','settings'],['Search','search','search'],[model.playing?'Pause audio':'Play audio','audio',model.playing?'pause':'play'],['Audio downloads','downloads','download'],['Account and sync','account','account']];
   if (model.versionControl) items.push([model.original?'Read modernized text':'Read original text','original','book']);
   for (const [label,action,icon] of items) {
     const item = button(label,action,icon,'menu-item');
@@ -270,8 +278,8 @@ export async function signOut() {
 export function openURL(url) { if(/^https?:\/\//.test(url)) window.open(url,'_blank','noopener,noreferrer'); }
 export function connect(send, icons) {
   dispatch=send;iconMarkup=icons;
-  $('reader-library').innerHTML=icons.library; $('reader-tools').innerHTML=icons.tools;
-  $('reader-jump').onclick=()=>emit('jump');$('reader-library').onclick=()=>emit('library');$('reader-tools').onclick=openTools;
+  $('reader-tools').innerHTML=icons.tools;
+  $('reader-jump').onclick=()=>emit('library');$('reader-tools').onclick=openTools;
   for(const [label,action,icon] of [['Highlight passage','highlight','highlight'],['Passage notes','note','note'],['View commentaries','commentary','commentary'],['Similar passages','similar','search'],['Close passage actions','clear','close']]) {const b=button(label,action,icon);b.id='action-'+action;$('passage-actions').append(b);}
   $('settings-done').onclick=()=>{$('reader-settings').close();$('reader-tools').focus();};
   $('tools-menu').addEventListener('click',(e)=>{if(e.target===$('tools-menu'))closeMenu();});

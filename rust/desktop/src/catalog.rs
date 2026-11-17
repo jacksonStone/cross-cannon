@@ -385,435 +385,6 @@ impl ChapterDetails {
     }
 }
 
-pub(super) struct Browser {
-    pub corpus: Corpus,
-    pub query: String,
-    pub category: String,
-    pub favorites_only: bool,
-    pub about: Option<String>,
-}
-
-impl Browser {
-    pub fn new(corpus: Corpus) -> Self {
-        Self {
-            corpus,
-            query: String::new(),
-            category: String::new(),
-            favorites_only: false,
-            about: None,
-        }
-    }
-
-    pub fn choose_collection(&mut self, corpus: Corpus) {
-        if self.corpus != corpus {
-            *self = Self::new(corpus);
-        }
-    }
-
-    pub fn matches(
-        &self,
-        book: &Book,
-        details: Option<&WorkDetails>,
-        favorites: &[String],
-        canon: Canon,
-    ) -> bool {
-        let haystack = format!(
-            "{} {} {} {}",
-            book.title,
-            book.author.as_deref().unwrap_or(""),
-            details.and_then(|d| d.genre.as_deref()).unwrap_or(""),
-            details.and_then(|d| d.tradition.as_deref()).unwrap_or("")
-        )
-        .to_lowercase();
-        book.corpus == self.corpus
-            && (book.corpus != Corpus::Scripture || canon.includes(&book.title))
-            && (!self.favorites_only || favorites.contains(&book.id))
-            && (self.category.is_empty()
-                || details.and_then(|d| d.genre.as_deref()) == Some(self.category.as_str()))
-            && self
-                .query
-                .to_lowercase()
-                .split_whitespace()
-                .all(|term| haystack.contains(term))
-    }
-}
-
-impl Desktop {
-    pub(super) fn show_catalog(&mut self) {
-        self.catalog_browser
-            .choose_collection(self.current_passage().corpus);
-        self.catalog_browser.about = None;
-        self.dialog = Some(Dialog::Collections);
-    }
-
-    fn saved_catalog_location(&self, corpus: Corpus) -> Option<&Passage> {
-        let saved = if self.current_passage().corpus == corpus {
-            &self.state.location_passage_id
-        } else {
-            match corpus {
-                Corpus::Scripture => &self.state.scripture_location,
-                Corpus::EarlyChristian => &self.state.fathers_location,
-                Corpus::ChristianClassics => &self.state.classics_location,
-            }
-        };
-        self.library.passage(saved).filter(|p| p.corpus == corpus)
-    }
-
-    fn open_catalog_work(&mut self, book: &Book) {
-        let id = self
-            .saved_catalog_location(book.corpus)
-            .filter(|p| p.book_id == book.id)
-            .map(|p| p.id.clone())
-            .or_else(|| book.chapters.first()?.passage_ids.first().cloned());
-        if let Some(id) = id {
-            self.remember_location(self.state.location_passage_id.clone());
-            self.open(id);
-        }
-    }
-
-    pub(super) fn collections_dialog(&mut self, ui: &mut egui::Ui, suppress_click: bool) {
-        let library = self.library.clone();
-        let catalog = self.catalog.clone();
-        let p = self.state.theme.palette();
-        ui.horizontal(|ui| {
-            let width = (ui.available_width() - 16.0) / 3.0;
-            for (corpus, _, label) in COLLECTIONS {
-                if ui
-                    .add_sized(
-                        [width, 40.0],
-                        egui::Button::new(label).selected(self.catalog_browser.corpus == corpus),
-                    )
-                    .clicked()
-                    && !suppress_click
-                {
-                    self.catalog_browser.choose_collection(corpus);
-                }
-            }
-        });
-        ui.add_space(10.0);
-        if let Some(book) = self
-            .catalog_browser
-            .about
-            .as_deref()
-            .and_then(|id| library.book(id))
-        {
-            if control(ui, "Back to library").clicked() && !suppress_click {
-                self.catalog_browser.about = None;
-            }
-            ui.add_space(12.0);
-            ui.label(RichText::new(&book.title).font(heading(23.0)).strong());
-            if let Some(author) = &book.author {
-                ui.label(author);
-            }
-            ui.add_space(10.0);
-            ui.label(RichText::new("About this edition").strong().color(p.accent));
-            if let Some(details) = catalog.works.get(&book.id) {
-                for (name, value) in [
-                    ("Type", details.genre.as_deref()),
-                    ("Tradition", details.tradition.as_deref()),
-                    ("Written", details.authorship_date_range.as_deref()),
-                    ("Translator", details.translator.as_deref()),
-                    ("Edition", details.edition.as_deref()),
-                    ("Rights", details.rights.as_deref()),
-                ] {
-                    if let Some(value) = value.filter(|v| !v.is_empty()) {
-                        ui.label(RichText::new(name).strong().color(p.muted));
-                        ui.add(egui::Label::new(value).wrap());
-                        ui.add_space(6.0);
-                    }
-                }
-                if let Some(url) = details
-                    .source
-                    .as_ref()
-                    .and_then(|s| s.source_url.as_deref())
-                {
-                    ui.hyperlink_to("View source edition", url);
-                }
-            }
-            ui.add_space(12.0);
-            if control(ui, "Read this work").clicked() && !suppress_click {
-                self.open_catalog_work(book);
-            }
-            return;
-        }
-        let corpus = self.catalog_browser.corpus;
-        ui.label(
-            RichText::new(collection_name(corpus))
-                .font(heading(21.0))
-                .strong(),
-        );
-        ui.add_space(6.0);
-        ui.label(
-            RichText::new(if corpus == Corpus::Scripture {
-                "Find a book"
-            } else {
-                "Find a work or author"
-            })
-            .strong()
-            .color(p.muted),
-        );
-        ui.horizontal(|ui| {
-            let width = (ui.available_width() - 52.0).max(100.0);
-            let field = ui.add(
-                egui::TextEdit::singleline(&mut self.catalog_browser.query)
-                    .id(Id::new("catalog-query"))
-                    .hint_text(if corpus == Corpus::Scripture {
-                        "Book name"
-                    } else {
-                        "Title or author"
-                    })
-                    .char_limit(200)
-                    .margin(egui::vec2(10.0, 10.0))
-                    // TextEdit's desired width excludes its two inner margins.
-                    // Including them here pushes the clear button and modal
-                    // beyond the phone's right edge.
-                    .desired_width((width - 20.0).max(60.0)),
-            );
-            field.widget_info(|| {
-                egui::WidgetInfo::labeled(
-                    egui::WidgetType::TextEdit,
-                    ui.is_enabled(),
-                    if corpus == Corpus::Scripture {
-                        "Find a book"
-                    } else {
-                        "Find a work or author"
-                    },
-                )
-            });
-            let clear = icons::button(ui, icons::Icon::Close, "", egui::vec2(44.0, 44.0), false)
-                .on_hover_text("Clear catalog search");
-            clear.widget_info(|| {
-                egui::WidgetInfo::labeled(
-                    egui::WidgetType::Button,
-                    ui.is_enabled(),
-                    "Clear catalog search",
-                )
-            });
-            if clear.clicked() && !suppress_click {
-                self.catalog_browser.query.clear();
-            }
-        });
-        if corpus != Corpus::Scripture {
-            ui.add_space(6.0);
-            ui.horizontal_wrapped(|ui| {
-                if ui
-                    .add(egui::Button::new("All works").selected(
-                        self.catalog_browser.category.is_empty()
-                            && !self.catalog_browser.favorites_only,
-                    ))
-                    .clicked()
-                    && !suppress_click
-                {
-                    self.catalog_browser.category.clear();
-                    self.catalog_browser.favorites_only = false;
-                }
-                if ui
-                    .add(
-                        egui::Button::new("Favorites")
-                            .selected(self.catalog_browser.favorites_only),
-                    )
-                    .clicked()
-                    && !suppress_click
-                {
-                    self.catalog_browser.favorites_only = !self.catalog_browser.favorites_only;
-                }
-                if corpus == Corpus::ChristianClassics {
-                    let genres: std::collections::BTreeSet<_> = library
-                        .books
-                        .iter()
-                        .filter(|b| b.corpus == corpus)
-                        .filter_map(|b| catalog.works.get(&b.id)?.genre.as_deref())
-                        .collect();
-                    for genre in genres {
-                        if ui
-                            .add(
-                                egui::Button::new(genre)
-                                    .selected(self.catalog_browser.category == genre),
-                            )
-                            .clicked()
-                            && !suppress_click
-                        {
-                            self.catalog_browser.category = genre.into();
-                            self.catalog_browser.favorites_only = false;
-                        }
-                    }
-                }
-            });
-        }
-        ui.add_space(12.0);
-        if self.catalog_browser.query.trim().is_empty()
-            && self.catalog_browser.category.is_empty()
-            && !self.catalog_browser.favorites_only
-        {
-            let saved = self.saved_catalog_location(corpus).cloned();
-            let featured = saved.clone().or_else(|| {
-                let book = library.book(match corpus {
-                    Corpus::Scripture => "Genesis",
-                    Corpus::EarlyChristian => "anf09:xii.iv",
-                    Corpus::ChristianClassics => "classics:imitation",
-                })?;
-                library
-                    .passage(book.chapters.first()?.passage_ids.first()?)
-                    .cloned()
-            });
-            if let Some(featured) = featured {
-                ui.label(
-                    RichText::new(if saved.is_some() {
-                        "CONTINUE READING"
-                    } else {
-                        "A PLACE TO BEGIN"
-                    })
-                    .size(10.0)
-                    .strong()
-                    .color(p.accent),
-                );
-                let label = format!(
-                    "{}\n{} →",
-                    featured
-                        .reference
-                        .rsplit_once(':')
-                        .map_or(featured.reference.as_str(), |(reference, _)| reference),
-                    if saved.is_some() {
-                        "Return to your place"
-                    } else {
-                        "Start reading"
-                    }
-                );
-                if ui
-                    .add_sized(
-                        [ui.available_width(), 60.0],
-                        egui::Button::new(label).wrap(),
-                    )
-                    .clicked()
-                    && !suppress_click
-                {
-                    if saved.is_some() {
-                        self.switch_corpus(corpus);
-                    } else if let Some(book) = library.book(&featured.book_id) {
-                        self.open_catalog_work(book);
-                    }
-                }
-                ui.add_space(12.0);
-            }
-        }
-        let mut books: Vec<_> = library
-            .books
-            .iter()
-            .filter(|book| {
-                self.catalog_browser.matches(
-                    book,
-                    catalog.works.get(&book.id),
-                    &self.state.favorite_books,
-                    self.state.canon,
-                )
-            })
-            .collect();
-        if corpus != Corpus::Scripture {
-            books.sort_by_key(|book| {
-                (
-                    !self.state.favorite_books.contains(&book.id),
-                    book.title.to_lowercase(),
-                    book.author.as_deref(),
-                )
-            });
-        }
-        ui.horizontal(|ui| {
-            ui.label(RichText::new("Explore the collection").strong());
-            ui.label(
-                RichText::new(format!(
-                    "{} {}",
-                    books.len(),
-                    match (corpus == Corpus::Scripture, books.len() == 1) {
-                        (true, true) => "book",
-                        (true, false) => "books",
-                        (false, true) => "work",
-                        (false, false) => "works",
-                    }
-                ))
-                .color(p.muted),
-            );
-        });
-        if books.is_empty() {
-            ui.add_space(12.0);
-            ui.label(if self.catalog_browser.favorites_only {
-                "No favorites match these filters. Star a work to save it here."
-            } else {
-                "No matching works. Try another author or title."
-            });
-            if control(ui, "Clear filters").clicked() && !suppress_click {
-                self.catalog_browser = Browser::new(corpus);
-            }
-        }
-        for book in books {
-            ui.add_space(8.0);
-            egui::Frame::NONE
-                .fill(p.panel)
-                .stroke(Stroke::new(1.0_f32, p.line))
-                .corner_radius(6.0)
-                .inner_margin(12.0)
-                .show(ui, |ui| {
-                    ui.set_width(ui.available_width());
-                    ui.add(egui::Label::new(RichText::new(&book.title).strong().size(15.0)).wrap());
-                    if let Some(author) = &book.author {
-                        ui.add(egui::Label::new(RichText::new(author).color(p.muted)).wrap());
-                    }
-                    let details = catalog.works.get(&book.id);
-                    let mut meta = details
-                        .into_iter()
-                        .flat_map(|d| [d.genre.as_deref(), d.tradition.as_deref()])
-                        .flatten()
-                        .filter(|v| !v.is_empty())
-                        .map(str::to_owned)
-                        .collect::<Vec<_>>();
-                    meta.push(format!("{} chapters", book.chapters.len()));
-                    ui.add(
-                        egui::Label::new(RichText::new(meta.join(" · ")).size(11.0).color(p.muted))
-                            .wrap(),
-                    );
-                    ui.add_space(4.0);
-                    ui.horizontal_wrapped(|ui| {
-                        if control(
-                            ui,
-                            if corpus == Corpus::Scripture {
-                                "Read book"
-                            } else {
-                                "Read work"
-                            },
-                        )
-                        .clicked()
-                            && !suppress_click
-                        {
-                            self.open_catalog_work(book);
-                        }
-                        if corpus != Corpus::Scripture {
-                            if control(ui, "Edition").clicked() && !suppress_click {
-                                self.catalog_browser.about = Some(book.id.clone());
-                            }
-                            let favorite = self.state.favorite_books.contains(&book.id);
-                            if icons::button(
-                                ui,
-                                icons::Icon::Star,
-                                "",
-                                egui::vec2(44.0, 44.0),
-                                favorite,
-                            )
-                            .on_hover_text(if favorite {
-                                "Remove favorite"
-                            } else {
-                                "Favorite work"
-                            })
-                            .clicked()
-                                && !suppress_click
-                            {
-                                self.toggle_favorite(&book.id);
-                            }
-                        }
-                    });
-                });
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -834,47 +405,6 @@ mod tests {
                 )
             })
             .clone()
-    }
-
-    #[test]
-    fn discovery_matches_title_author_and_tradition_without_truncating_the_catalog() {
-        let library = library();
-        let catalog = Catalog::load(&library.root);
-        let mut browser = Browser::new(Corpus::ChristianClassics);
-        browser.query = "  REFORMED henry  ".into();
-        let visible = |browser: &Browser, favorites: &[String]| {
-            library
-                .books
-                .iter()
-                .filter(|book| {
-                    browser.matches(
-                        book,
-                        catalog.works.get(&book.id),
-                        favorites,
-                        Canon::Protestant,
-                    )
-                })
-                .map(|book| book.id.as_str())
-                .collect::<Vec<_>>()
-        };
-        assert_eq!(visible(&browser, &[]), ["classics:henry"]);
-        browser.query = "wesley".into();
-        assert_eq!(visible(&browser, &[]), ["classics:wesley"]);
-        browser.query.clear();
-        browser.category = "Spiritual Reading".into();
-        assert_eq!(visible(&browser, &[]), ["classics:imitation"]);
-        browser.choose_collection(Corpus::EarlyChristian);
-        assert!(
-            visible(&browser, &[]).len() > 24,
-            "Every matching work is discoverable"
-        );
-        browser.favorites_only = true;
-        assert_eq!(
-            visible(&browser, &["anf09:xii.iv".into()]),
-            ["anf09:xii.iv"]
-        );
-        browser.choose_collection(Corpus::ChristianClassics);
-        assert!(browser.query.is_empty() && browser.category.is_empty() && !browser.favorites_only);
     }
 
     #[test]
@@ -1284,15 +814,14 @@ mod tests {
     fn reading_henry_from_catalog_bounds_first_frame_text_layout() {
         let ctx = egui::Context::default();
         let mut app = Desktop::initialize(&ctx, None, library());
-        app.show_catalog();
-        app.catalog_browser
-            .choose_collection(Corpus::ChristianClassics);
-        app.catalog_browser.query = "Henry".into();
+        app.show_library();
+        app.jump_corpus = Corpus::ChristianClassics;
+        app.jump_filter = "Henry".into();
         for _ in 0..3 {
             render(&mut app, &ctx, 393.0, vec![]);
         }
         let output = render(&mut app, &ctx, 393.0, vec![]);
-        tap(&mut app, &ctx, 393.0, label_position(&output, "Read work"));
+        tap(&mut app, &ctx, 393.0, label_position(&output, "1"));
         assert_eq!(app.current_passage().book_id, "classics:henry");
         // Navigation is only half the action: the next frame actually opens
         // Henry's very large commentary on memory-constrained phones.
@@ -1336,13 +865,13 @@ mod tests {
     }
 
     #[test]
-    fn phone_library_filters_by_keyboard_and_only_navigates_when_read_is_selected() {
+    fn phone_library_filters_by_keyboard_and_only_navigates_when_chapter_is_selected() {
         let library = library();
         for width in [320.0, 393.0, 1000.0] {
             let ctx = egui::Context::default();
             let mut app = Desktop::initialize(&ctx, None, library.clone());
             let original = app.current_passage().id.clone();
-            app.show_catalog();
+            app.show_library();
             for _ in 0..3 {
                 render(&mut app, &ctx, width, vec![]);
             }
@@ -1353,18 +882,17 @@ mod tests {
                 original,
                 "Browsing must not replace Reader Location"
             );
-            assert!(app.dialog == Some(Dialog::Collections));
-            ctx.memory_mut(|memory| memory.request_focus(Id::new("catalog-query")));
+            assert!(app.dialog == Some(Dialog::Library));
+            ctx.memory_mut(|memory| memory.request_focus(Id::new("library-query")));
             render(
                 &mut app,
                 &ctx,
                 width,
                 vec![egui::Event::Text("Henry".into())],
             );
-            assert_eq!(app.catalog_browser.query, "Henry");
+            assert_eq!(app.jump_filter, "Henry");
             let output = render(&mut app, &ctx, width, vec![]);
             label_position(&output, "Commentary on the Whole Bible");
-            label_position(&output, "1 work");
             for shape in &output.shapes {
                 if let egui::Shape::Text(text) = &shape.shape {
                     if shape.clip_rect.contains(text.pos) {
@@ -1376,7 +904,7 @@ mod tests {
                     }
                 }
             }
-            tap(&mut app, &ctx, width, label_position(&output, "Read work"));
+            tap(&mut app, &ctx, width, label_position(&output, "1"));
             assert_eq!(app.current_passage().book_id, "classics:henry");
             assert_eq!(app.state.scripture_location, original);
             assert!(app.dialog.is_none());

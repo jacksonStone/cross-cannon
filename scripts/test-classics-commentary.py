@@ -3,14 +3,80 @@ import importlib.util
 import json
 from pathlib import Path
 import unittest
+import struct
+import zlib
 from xml.etree import ElementTree as ET
 
 spec = importlib.util.spec_from_file_location('classics_import', Path(__file__).with_name('import-christian-classics.py'))
 importer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(importer)
+from lib.sword_commentary import decode_records, kjv_keys
 
 
 class CommentaryTest(unittest.TestCase):
+    def test_sword_linked_verses_keep_one_text_and_their_full_range(self):
+        body = '<p>One discussion of three verses.</p>'.encode()
+        packed = zlib.compress(body)
+        block_index = struct.pack('<III', 0, len(packed), len(body))
+        record = struct.pack('<III', 0, 0, len(body))
+        keys = [('Ps', 23, n) for n in [1, 2, 3]]
+        decoded = decode_records(record * 3, block_index, packed, keys)
+        self.assertEqual(len(decoded), 1)
+        self.assertEqual(decoded[0]['verses'], [1, 2, 3])
+        self.assertEqual(decoded[0]['xml'], body.decode())
+        with self.assertRaises(ValueError):
+            decode_records(record, block_index, packed, keys)
+        with self.assertRaises(ValueError):
+            decode_records(struct.pack('<III', 0, 1, len(body)), block_index, packed, keys[:1])
+
+    def test_osis_milestones_keep_paragraphs_headings_and_inline_notes(self):
+        raw = '''<title>EXPOSITION</title><div type="x-p" sID="p1"/>
+        <hi type="bold">Verse 1.</hi> A <hi>shepherd</hi> cares.
+        <note>Source explanation.</note><div type="x-p" eID="p1"/>
+        <div type="x-p" sID="p2"/>Next paragraph.<div type="x-p" eID="p2"/>'''
+        self.assertEqual(importer.osis_paragraphs(raw), [
+            'EXPOSITION', 'Verse 1. A shepherd cares. (Source explanation.)', 'Next paragraph.'])
+
+    @unittest.skipUnless((importer.SOURCE / 'raw/KD.zip').is_file(), 'Pinned import source')
+    def test_keil_delitzsch_ranges_use_leading_source_reference_not_index_endpoint(self):
+        chapters = importer.sword_commentary('KD')
+        self.assertEqual(len(chapters), 929)
+        psalm = next(c for c in chapters if c['code'] == 'Ps' and c['number'] == 23)
+        found = [(p, r) for p, r in zip(psalm['paragraphs'], psalm['ranges']) if 'The poet calls Jahve' in p]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0][1], [1, 3])
+        self.assertTrue(any('רע' in p for p in psalm['paragraphs']))
+
+    @unittest.skipUnless((importer.SOURCE / 'raw/TDavid.zip').is_file(), 'Pinned import source')
+    def test_spurgeon_has_all_psalms_and_actual_verse_notes(self):
+        chapters = importer.sword_commentary('TDavid')
+        self.assertEqual([c['number'] for c in chapters], list(range(1, 151)))
+        psalm = next(c for c in chapters if c['number'] == 23)
+        first = [(p, r) for p, r in zip(psalm['paragraphs'], psalm['ranges']) if 'What condescension is this' in p]
+        self.assertEqual(len(first), 1)
+        self.assertEqual(first[0][1], [1, 1])
+        self.assertTrue(any(r and r[0] == 6 for r in psalm['ranges']))
+        longest = next(c for c in chapters if c['number'] == 119)
+        self.assertGreater(len(longest['paragraphs']), 176)
+        opening = [(p, r) for p, r in zip(longest['paragraphs'], longest['ranges']) if 'The Psalmist is so enraptured' in p]
+        self.assertEqual(len(opening), 1)
+        self.assertEqual(opening[0][1], [1, 1])
+        abbreviated = [(p, r) for p, r in zip(longest['paragraphs'], longest['ranges']) if p.startswith('Ver. 2. Blessed are they')]
+        self.assertEqual(abbreviated[0][1], [2, 2])
+        limits = {(code, ch): v for keys in kjv_keys((importer.SOURCE / 'raw/canon.h').read_text()).values() for code, ch, v in keys}
+        for c in chapters:
+            self.assertTrue(all(r is None or 1 <= r[0] <= r[1] <= limits['Ps', c['number']] for r in c['ranges']))
+
+    @unittest.skipUnless((importer.SOURCE / 'raw/jfb.xml').is_file(), 'Pinned import source')
+    def test_jfb_covers_all_bible_chapters_and_retains_verse_linked_exposition(self):
+        chapters = importer.jfb()
+        self.assertEqual(len(chapters), 1189)
+        self.assertEqual(len({(c['code'], c['number']) for c in chapters}), 1189)
+        matthew = next(c for c in chapters if c['code'] == 'Matt' and c['number'] == 11)
+        found = [(p, r) for p, r in zip(matthew['paragraphs'], matthew['ranges']) if 'Incomparable, ravishing sounds' in p]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0][1], [28, 28])
+
     def test_source_scripture_blocks_are_flagged_without_flagging_inline_citations(self):
         element = ET.fromstring('''<div2><div id="Bible:Acts.6.1-Acts.6.7">
           <p class="passage">1 And in those days. 2 Then the twelve.</p>

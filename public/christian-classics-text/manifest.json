@@ -1,8 +1,8 @@
 {
-  "bookCount": 4,
+  "bookCount": 7,
   "bookIndexPath": "/christian-classics-text/books.json",
-  "chapterCount": 2580,
-  "generatedAt": "2026-11-11T00:00:00.000Z",
+  "chapterCount": 4848,
+  "generatedAt": "2026-11-17T00:00:00.000Z",
   "source": "Christian Classics \u00b7 verified historical English editions",
-  "version": "f78547a8970d527b"
+  "version": "41a6949de9af4667"
 }

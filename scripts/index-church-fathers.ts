@@ -394,7 +394,7 @@ async function buildIndexData(
   const passages: Passage[] = [];
 
   for (const work of workIndex.books) {
-    if (isExcludedSourceVolume(work)) {
+    if (work.metadata.searchIndexed === false || isExcludedSourceVolume(work)) {
       continue;
     }
 

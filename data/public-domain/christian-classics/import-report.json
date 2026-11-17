@@ -1,5 +1,5 @@
 {
-  "version": "f78547a8970d527b",
+  "version": "41a6949de9af4667",
   "works": [
     {
       "id": "classics:imitation",
@@ -30,6 +30,27 @@
       "knownSourceGaps": [
         "2 Samuel 24"
       ]
+    },
+    {
+      "id": "classics:jfb",
+      "chapterCount": 1189,
+      "source": "https://www.ccel.org/ccel/jamieson/jfb.html",
+      "rights": "Public Domain",
+      "knownSourceGaps": []
+    },
+    {
+      "id": "classics:keil-delitzsch",
+      "chapterCount": 929,
+      "source": "https://www.crosswire.org/sword/modules/ModInfo.jsp?modName=KD",
+      "rights": "Public Domain",
+      "knownSourceGaps": []
+    },
+    {
+      "id": "classics:treasury-of-david",
+      "chapterCount": 150,
+      "source": "https://www.crosswire.org/sword/modules/ModInfo.jsp?modName=TDavid",
+      "rights": "Public Domain",
+      "knownSourceGaps": []
     }
   ]
 }

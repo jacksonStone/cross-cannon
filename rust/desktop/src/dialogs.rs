@@ -48,6 +48,8 @@ impl Desktop {
                         560.0
                     } else if dialog == Dialog::Study {
                         640.0
+                    } else if dialog == Dialog::Library {
+                        680.0
                     } else {
                         912.0
                     },
@@ -133,8 +135,7 @@ impl Desktop {
                             }
                             ui.label(
                                 RichText::new(match dialog {
-                                    Dialog::Collections => "LIBRARY",
-                                    Dialog::Jump => "JUMP",
+                                    Dialog::Library => "LIBRARY",
                                     Dialog::Downloads => "LISTEN",
                                     Dialog::Account => "ACCOUNT",
                                     Dialog::Commentary => "COMMENTARIES",
@@ -152,14 +153,8 @@ impl Desktop {
                                 .color(p.accent),
                             );
                             ui.label(
-                                RichText::new(if dialog == Dialog::Collections {
-                                    "Your library"
-                                } else if dialog == Dialog::Jump {
-                                    if self.jump_corpus == Corpus::Scripture {
-                                        "Choose a passage"
-                                    } else {
-                                        "Choose a work"
-                                    }
+                                RichText::new(if dialog == Dialog::Library {
+                                    "Choose where to read"
                                 } else if dialog == Dialog::Account {
                                     "Your reading, together"
                                 } else if dialog == Dialog::Study {
@@ -173,7 +168,7 @@ impl Desktop {
                                         "Find passages"
                                     }
                                 })
-                                .font(if dialog == Dialog::Jump {
+                                .font(if dialog == Dialog::Library {
                                     FontId::proportional(16.0)
                                 } else {
                                     heading(if compact { 23.0 } else { 29.6 })
@@ -184,8 +179,7 @@ impl Desktop {
                     } else {
                         ui.label(
                             RichText::new(match dialog {
-                                Dialog::Collections => "Your library",
-                                Dialog::Jump => "Jump to a passage",
+                                Dialog::Library => "Choose where to read",
                                 Dialog::Search => "Search",
                                 Dialog::Settings => "Reader settings",
                                 Dialog::Downloads => "Offline audio",
@@ -278,8 +272,7 @@ impl Desktop {
                     touch_scroll::vertical(
                         ui,
                         match dialog {
-                            Dialog::Collections => "collections-body",
-                            Dialog::Jump => "jump-body",
+                            Dialog::Library => "library-body",
                             Dialog::Downloads => "audio-downloads-body",
                             Dialog::Account => "account-body",
                             Dialog::Commentary => "commentary-body",
@@ -295,8 +288,7 @@ impl Desktop {
                         body_height,
                         dialog != Dialog::Account,
                         |ui, suppress_click| match dialog {
-                            Dialog::Collections => self.collections_dialog(ui, suppress_click),
-                            Dialog::Jump => self.jump_dialog(ui, suppress_click),
+                            Dialog::Library => self.library_dialog(ui, suppress_click),
                             Dialog::Settings => self.settings_dialog(ui),
                             Dialog::Search => self.search_dialog(ui, ctx, suppress_click),
                             Dialog::Downloads => self.audio_downloads(ui, suppress_click),
@@ -334,62 +326,105 @@ impl Desktop {
             self.search_filter_modal(ctx);
         }
     }
-    pub(super) fn jump_dialog(&mut self, ui: &mut egui::Ui, suppress_click: bool) {
+    fn library_canon(&mut self, ui: &mut egui::Ui) {
+        let p = self.state.theme.palette();
+        ui.label(RichText::new("Canon").strong().color(p.muted));
+        let mut canon = self.state.canon;
+        ui.scope(|ui| {
+            ui.spacing_mut().interact_size.y = 38.0;
+            egui::ComboBox::from_id_salt("jump-canon")
+                .width(ui.available_width() - 8.0)
+                .selected_text(format!("{canon:?}"))
+                .show_ui(ui, |ui| {
+                    for (canon_choice, name) in [
+                        (Canon::Protestant, "Protestant"),
+                        (Canon::Catholic, "Catholic"),
+                        (Canon::Orthodox, "Orthodox"),
+                    ] {
+                        if ui
+                            .selectable_value(&mut canon, canon_choice, name)
+                            .clicked()
+                        {
+                            ui.close_menu();
+                        }
+                    }
+                });
+        });
+        self.update_canon(canon);
+    }
+
+    fn library_book(&mut self, ui: &mut egui::Ui, choices: &[(String, String)]) {
+        let p = self.state.theme.palette();
+        ui.label(RichText::new("Book").strong().color(p.muted));
+        if let Some(book) = jump_picker(ui, "jump-book", &self.jump_book, choices) {
+            self.jump_book = book;
+            self.jump_chapter = 1;
+            self.library_about = false;
+        }
+    }
+
+    pub(super) fn library_dialog(&mut self, ui: &mut egui::Ui, suppress_click: bool) {
         let library = self.library.clone();
         let p = self.state.theme.palette();
         let compact = Self::compact(ui.ctx());
-        // Reader history and copied links belong to reader actions. Keep the
-        // picker focused on the same Book / Chapter / Verse flow as mobile web.
-        if !compact {
-            ui.horizontal_wrapped(|ui| {
-                let previous = self.jump_corpus;
-                for (corpus, name, _) in COLLECTIONS {
-                    ui.selectable_value(&mut self.jump_corpus, corpus, name);
-                }
-                if previous != self.jump_corpus {
+        ui.horizontal(|ui| {
+            let width = (ui.available_width() - 16.0) / 3.0;
+            for (corpus, _, label) in COLLECTIONS {
+                if ui
+                    .add_sized(
+                        [width, 40.0],
+                        egui::Button::new(label).selected(self.jump_corpus == corpus),
+                    )
+                    .clicked()
+                    && !suppress_click
+                    && self.jump_corpus != corpus
+                {
+                    self.jump_corpus = corpus;
                     self.jump_filter.clear();
                     self.jump_author.clear();
-                    if let Some(b) = self
-                        .library
-                        .books
-                        .iter()
-                        .find(|b| b.corpus == self.jump_corpus)
+                    self.library_about = false;
+                    let saved = self
+                        .saved_library_location(corpus)
+                        .map(|p| (p.book_id.clone(), p.chapter));
+                    if let Some((book, chapter)) = saved {
+                        self.jump_book = book;
+                        self.jump_chapter = chapter;
+                    } else if let Some(book) =
+                        self.library.books.iter().find(|b| b.corpus == corpus)
                     {
-                        self.jump_book = b.id.clone();
+                        self.jump_book = book.id.clone();
                         self.jump_chapter = 1;
                     }
                 }
-            });
-            ui.add_space(8.0);
+            }
+        });
+        if let Some(saved) = self.saved_library_location(self.jump_corpus).cloned() {
+            if ui
+                .add(
+                    egui::Button::new(
+                        RichText::new(format!("Last place · {}", saved.reference))
+                            .size(12.0)
+                            .color(p.muted),
+                    )
+                    .frame(false)
+                    .wrap(),
+                )
+                .clicked()
+                && !suppress_click
+            {
+                self.switch_corpus(self.jump_corpus);
+            }
         }
+        ui.add_space(8.0);
         if self.jump_corpus == Corpus::Scripture {
-            ui.label(RichText::new("Canon").strong().color(p.muted));
-            let mut canon = self.state.canon;
-            ui.scope(|ui| {
-                ui.spacing_mut().interact_size.y = 38.0;
-                egui::ComboBox::from_id_salt("jump-canon")
-                    .width(ui.available_width() - 8.0)
-                    .selected_text(format!("{canon:?}"))
-                    .show_ui(ui, |ui| {
-                        for (canon_choice, name) in [
-                            (Canon::Protestant, "Protestant"),
-                            (Canon::Catholic, "Catholic"),
-                            (Canon::Orthodox, "Orthodox"),
-                        ] {
-                            if ui
-                                .selectable_value(&mut canon, canon_choice, name)
-                                .clicked()
-                            {
-                                ui.close_menu();
-                            }
-                        }
-                    });
-            });
-            self.update_canon(canon);
+            if compact {
+                self.library_canon(ui);
+            }
         } else {
             ui.label(RichText::new("Find work").strong().color(p.muted));
             let field = ui.add(
                 egui::TextEdit::singleline(&mut self.jump_filter)
+                    .id(Id::new("library-query"))
                     .hint_text("Title or author")
                     .char_limit(2000)
                     .margin(egui::vec2(10.0, 10.0))
@@ -451,15 +486,17 @@ impl Desktop {
         }
         ui.add_space(8.0);
         if self.jump_corpus == Corpus::Scripture {
-            ui.label(RichText::new("Book").strong().color(p.muted));
-            ui.spacing_mut().interact_size.y = 38.0;
             let choices = books
                 .iter()
                 .map(|book| (book.id.clone(), book.title.clone()))
                 .collect::<Vec<_>>();
-            if let Some(book) = jump_picker(ui, "jump-book", &self.jump_book, &choices) {
-                self.jump_book = book;
-                self.jump_chapter = 1;
+            if compact {
+                self.library_book(ui, &choices);
+            } else {
+                ui.columns(2, |columns| {
+                    self.library_canon(&mut columns[0]);
+                    self.library_book(&mut columns[1], &choices);
+                });
             }
         } else {
             touch_scroll::vertical(
@@ -524,6 +561,7 @@ impl Desktop {
                             if response.clicked() && !suppress_click && !inner_suppress {
                                 self.jump_book = book.id.clone();
                                 self.jump_chapter = 1;
+                                self.library_about = false;
                             }
                             let favorite = self.state.favorite_books.contains(&book.id);
                             if icons::button(
@@ -558,33 +596,98 @@ impl Desktop {
             .book(&self.jump_book)
             .filter(|b| books.iter().any(|visible| visible.id == b.id))
         {
-            ui.label(RichText::new("Chapter").strong().color(p.muted));
-            ui.horizontal_wrapped(|ui| {
-                for chapter in &book.chapters {
-                    if ui
-                        .add_sized(
-                            [42.0, 40.0],
-                            egui::Button::new(
-                                RichText::new(chapter.number.to_string())
-                                    .strong()
-                                    .color(p.accent),
-                            )
-                            .selected(self.jump_chapter == chapter.number)
-                            .corner_radius(8.0),
+            if book.corpus != Corpus::Scripture {
+                if ui
+                    .add(
+                        egui::Button::new(
+                            RichText::new("About this edition")
+                                .size(12.0)
+                                .color(p.muted),
                         )
-                        .on_hover_text(&chapter.title)
-                        .clicked()
-                        && !suppress_click
-                    {
-                        self.jump_chapter = chapter.number;
-                        if book.corpus != Corpus::Scripture {
-                            if let Some(id) = chapter.passage_ids.first() {
-                                self.open(id.clone());
+                        .frame(false),
+                    )
+                    .clicked()
+                    && !suppress_click
+                {
+                    self.library_about = !self.library_about;
+                }
+                if self.library_about {
+                    if let Some(details) = self.catalog.works.get(&book.id) {
+                        for (name, value) in [
+                            ("Type", details.genre.as_deref()),
+                            ("Tradition", details.tradition.as_deref()),
+                            ("Written", details.authorship_date_range.as_deref()),
+                            ("Translator", details.translator.as_deref()),
+                            ("Edition", details.edition.as_deref()),
+                            ("Rights", details.rights.as_deref()),
+                        ] {
+                            if let Some(value) = value.filter(|v| !v.is_empty()) {
+                                ui.add(
+                                    egui::Label::new(
+                                        RichText::new(format!("{name}: {value}"))
+                                            .size(12.0)
+                                            .color(p.muted),
+                                    )
+                                    .wrap(),
+                                );
                             }
+                        }
+                        if let Some(url) = details
+                            .source
+                            .as_ref()
+                            .and_then(|s| s.source_url.as_deref())
+                        {
+                            ui.hyperlink_to("View source edition", url);
+                        }
+                    }
+                    ui.add_space(8.0);
+                }
+            }
+            ui.label(RichText::new("Chapter").strong().color(p.muted));
+            // Large commentaries contain over a thousand chapters. Lay out only
+            // visible rows while the shared outer viewport owns the full grid.
+            let columns = ((ui.available_width() + 8.0) / 50.0).floor().max(1.0) as usize;
+            let rows = book.chapters.len().div_ceil(columns);
+            let (grid, _) = ui.allocate_exact_size(
+                egui::vec2(ui.available_width(), (rows as f32 * 48.0 - 8.0).max(0.0)),
+                Sense::hover(),
+            );
+            let clip = ui.clip_rect();
+            let first = ((clip.top() - grid.top()).max(0.0) / 48.0).floor() as usize;
+            let end = (((clip.bottom() - grid.top()).max(0.0) / 48.0).ceil() as usize).min(rows);
+            for index in first.saturating_mul(columns)..(end * columns).min(book.chapters.len()) {
+                let chapter = &book.chapters[index];
+                let rect = Rect::from_min_size(
+                    grid.min
+                        + egui::vec2(
+                            (index % columns) as f32 * 50.0,
+                            (index / columns) as f32 * 48.0,
+                        ),
+                    egui::vec2(42.0, 40.0),
+                );
+                if ui
+                    .put(
+                        rect,
+                        egui::Button::new(
+                            RichText::new(chapter.number.to_string())
+                                .strong()
+                                .color(p.accent),
+                        )
+                        .selected(self.jump_chapter == chapter.number)
+                        .corner_radius(8.0),
+                    )
+                    .on_hover_text(&chapter.title)
+                    .clicked()
+                    && !suppress_click
+                {
+                    self.jump_chapter = chapter.number;
+                    if book.corpus != Corpus::Scripture {
+                        if let Some(id) = chapter.passage_ids.first() {
+                            self.open(id.clone());
                         }
                     }
                 }
-            });
+            }
             if book.corpus == Corpus::Scripture {
                 if let Some(chapter) = book.chapters.iter().find(|c| c.number == self.jump_chapter)
                 {
@@ -630,14 +733,14 @@ impl Desktop {
             if icons::button(
                 ui,
                 icons::Icon::Jump,
-                "Jump to specific passage",
+                "Open Library",
                 egui::vec2(ui.available_width(), 44.0),
                 false,
             )
             .clicked()
                 && !suppress_click
             {
-                self.show_jump();
+                self.show_library();
             }
             ui.add_space(6.0);
             ui.horizontal_wrapped(|ui| {
@@ -1926,6 +2029,95 @@ mod tests {
     }
 
     #[test]
+    fn library_last_place_follows_the_collection_without_moving_the_reader() {
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        for width in [320.0, 393.0, 1000.0] {
+            let ctx = egui::Context::default();
+            let mut app = Desktop::initialize(&ctx, None, library.clone());
+            let john = library.book("John").unwrap().chapters[2]
+                .passage_ids
+                .last()
+                .unwrap()
+                .clone();
+            let clement = library.book("anf09:xii.iv").unwrap().chapters[3].passage_ids[0].clone();
+            app.open(clement.clone());
+            app.open(john.clone());
+            app.show_library();
+            let render = |app: &mut Desktop, events| {
+                ctx.run(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(width, 852.0),
+                        )),
+                        events,
+                        ..Default::default()
+                    },
+                    |ctx| app.render(ctx),
+                )
+            };
+            let find = |output: &egui::FullOutput, label: &str| {
+                output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| match &shape.shape {
+                        egui::Shape::Text(text)
+                            if text.galley.job.text == label
+                                && shape.clip_rect.contains_rect(Rect::from_min_size(
+                                    text.pos,
+                                    text.galley.size(),
+                                )) =>
+                        {
+                            Some(text.pos + text.galley.size() / 2.0)
+                        }
+                        _ => None,
+                    })
+                    .unwrap_or_else(|| panic!("Missing {label} at {width}"))
+            };
+            let tap = |app: &mut Desktop, pos| {
+                for pressed in [true, false] {
+                    render(
+                        app,
+                        vec![
+                            egui::Event::PointerMoved(pos),
+                            egui::Event::PointerButton {
+                                pos,
+                                button: egui::PointerButton::Primary,
+                                pressed,
+                                modifiers: egui::Modifiers::NONE,
+                            },
+                        ],
+                    );
+                }
+            };
+            for _ in 0..3 {
+                render(&mut app, vec![]);
+            }
+            let output = render(&mut app, vec![]);
+            let saved_label = format!("Last place · {}", library.passage(&john).unwrap().reference);
+            assert!(find(&output, &saved_label).y > find(&output, "Bible").y);
+            tap(&mut app, find(&output, "Fathers"));
+            assert_eq!(app.state.location_passage_id, john);
+            assert_eq!(app.jump_book, "anf09:xii.iv");
+            assert_eq!(app.jump_chapter, 4);
+            for _ in 0..3 {
+                render(&mut app, vec![]);
+            }
+            let output = render(&mut app, vec![]);
+            let saved_label = format!(
+                "Last place · {}",
+                library.passage(&clement).unwrap().reference
+            );
+            tap(&mut app, find(&output, &saved_label));
+            assert_eq!(app.state.location_passage_id, clement);
+            assert!(app.dialog.is_none());
+            assert_eq!(app.state.scripture_location, john);
+        }
+    }
+
+    #[test]
     fn phone_jump_keeps_picker_visible_and_navigates_all_collections() {
         let library = Arc::new(
             Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
@@ -1944,7 +2136,7 @@ mod tests {
                     .find(|p| p.corpus == corpus && p.chapter == 1)
                     .unwrap();
                 app.open(passage.id.clone());
-                app.show_jump();
+                app.show_library();
                 let render = |app: &mut Desktop, events| {
                     ctx.run(
                         egui::RawInput {
@@ -1958,53 +2150,6 @@ mod tests {
                         |ctx| app.render(ctx),
                     )
                 };
-                if corpus == Corpus::ChristianClassics {
-                    app.dialog = Some(Dialog::Collections);
-                    for _ in 0..3 {
-                        render(&mut app, vec![]);
-                    }
-                    let output = render(&mut app, vec![]);
-                    let mut classics = None;
-                    for (_, _, name) in COLLECTIONS {
-                        let text = output
-                            .shapes
-                            .iter()
-                            .find_map(|shape| match &shape.shape {
-                                egui::Shape::Text(text) if text.galley.job.text == name => {
-                                    Some(text)
-                                }
-                                _ => None,
-                            })
-                            .unwrap_or_else(|| {
-                                panic!("Collection {name} must be visible at {width}")
-                            });
-                        assert!(
-                            text.pos.x >= 8.0 && text.pos.x + text.galley.size().x <= width - 8.0
-                        );
-                        if name == "Classics" {
-                            classics = Some(text.pos + text.galley.size() / 2.0);
-                        }
-                    }
-                    let pos = classics.unwrap();
-                    for pressed in [true, false] {
-                        render(
-                            &mut app,
-                            vec![
-                                egui::Event::PointerMoved(pos),
-                                egui::Event::PointerButton {
-                                    pos,
-                                    button: egui::PointerButton::Primary,
-                                    pressed,
-                                    modifiers: egui::Modifiers::NONE,
-                                },
-                            ],
-                        );
-                    }
-                    assert!(app.dialog == Some(Dialog::Collections));
-                    assert_eq!(app.catalog_browser.corpus, corpus);
-                    assert_eq!(app.current_passage().corpus, corpus);
-                    app.show_jump();
-                }
                 for _ in 0..3 {
                     render(&mut app, vec![]);
                 }
@@ -2020,11 +2165,7 @@ mod tests {
                         }
                     })
                     .collect();
-                let title = if corpus == Corpus::Scripture {
-                    "Choose a passage"
-                } else {
-                    "Choose a work"
-                };
+                let title = "Choose where to read";
                 assert!(
                     texts.iter().any(|t| t.galley.job.text == title),
                     "Jump title must fit at {width}"
@@ -2071,7 +2212,7 @@ mod tests {
                     assert_eq!(app.current_passage().chapter, 2);
                 } else {
                     assert!(
-                        app.dialog == Some(Dialog::Jump),
+                        app.dialog == Some(Dialog::Library),
                         "Bible chapter selection keeps Verse choices open"
                     );
                 }

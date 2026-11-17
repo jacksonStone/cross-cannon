@@ -70,8 +70,24 @@ npm run index:christian-classics -- --embeddings-only
 Classics import sources/hashes and rights are recorded under
 `data/public-domain/christian-classics/`; see
 [source/edition research](research/christian-classics-import-sources.md).
-The collection includes Imitation of Christ, Catena Aurea, Henry and Wesley.
+The collection includes Imitation of Christ, Catena Aurea, Henry, Wesley,
+Jamieson–Fausset–Brown (1871 one-volume edition), Keil–Delitzsch (Old Testament)
+and Spurgeon's Treasury of David (all 150 Psalms).
 Wesley's source lacks 2 Samuel 24; preserve that coverage gap.
+
+The three additional commentaries use pinned CCEL ThML and CrossWire zCom4
+sources. The importer reads those packages off-server, deduplicates linked verse
+records, and preserves OSIS paragraphs, headings, attributions and inline notes.
+Treasury's packaged Psalm 119 skips verse 1. Its opening exposition is restored
+from printed pages 139–141 in the reviewed `psalm119-opening.json` supplement;
+this does not claim to restore every omitted quotation or preaching hint.
+Both `Verse` and abbreviated `Ver.` headings supply verse coverage.
+The pinned KJV verse table supplies source numbering; it does not replace the
+app's Scripture translation. See the [source audit](research/commentary-import-2026-11-17.md).
+Their metadata has `searchIndexed: false`: the server retains Book/Chapter
+metadata and reads the requested chapter through the existing verse-commentary
+and resource routes. The semantic indexer skips them. Browser fragments and native
+packages still contain their complete text for reading and offline keyword scans.
 
 Imports preserve original paragraph boundaries, Scripture verse coverage and
 quotation markers. Commentary lookup uses overlapping verse coverage. Search

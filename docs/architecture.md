@@ -50,11 +50,15 @@ proof and a one-use return ticket. See [Google login](google-login.md).
 `rust/desktop/src/text_surface.rs` owns the shared chapter window, passage
 events, text projection, and reading snapshot. UIKit (`apple_reader.m`) and HTML
 (`web/platform.js`) implement that contract. Native selectable text owns layout,
-selection, scrolling, and reading accessibility. The focused Passage is the
-persisted source of truth. Adapters retain passage anchors through typography
-changes and chapter prepends, with verse numbers hidden in the main flow.
+selection, scrolling, and reading accessibility. Scripture chapter windows follow
+the selected Canon across Book boundaries in both directions; Works retain their
+own chapter sequence. The focused Passage is the persisted source of truth.
+Adapters retain passage anchors through typography changes and chapter prepends,
+with verse numbers hidden in the main flow.
 
-Library, jump, search, account, and study dialogs share egui widgets. A narrow
+Library combines collection, book/work, chapter and verse selection in one shared
+picker, with a Last place shortcut for each collection. Library, search, account,
+and study dialogs share egui widgets. A narrow
 eframe platform-output hook exports clipped AccessKit nodes to UIKit or semantic
 HTML buttons/inputs. The HTML adapter maps UTF-16 selections to Rust character
 offsets and waits for pending text/selection changes before formatting actions.
