@@ -140,14 +140,30 @@ impl Desktop {
         }
     }
 
-    pub(super) fn show_jump(&mut self) {
+    pub(super) fn saved_library_location(&self, corpus: Corpus) -> Option<&Passage> {
+        let saved = if self.current_passage().corpus == corpus {
+            &self.state.location_passage_id
+        } else {
+            match corpus {
+                Corpus::Scripture => &self.state.scripture_location,
+                Corpus::EarlyChristian => &self.state.fathers_location,
+                Corpus::ChristianClassics => &self.state.classics_location,
+            }
+        };
+        self.library.passage(saved).filter(|p| p.corpus == corpus)
+    }
+
+    pub(super) fn show_library(&mut self) {
+        // Seed collection-specific resume for installations with only one saved place.
+        self.remember_location(self.state.location_passage_id.clone());
         let passage = self.current_passage().clone();
         self.jump_book = passage.book_id.clone();
         self.jump_chapter = passage.chapter;
         self.jump_corpus = passage.corpus;
         self.jump_filter.clear();
         self.jump_author.clear();
-        self.dialog = Some(Dialog::Jump);
+        self.library_about = false;
+        self.dialog = Some(Dialog::Library);
     }
 
     pub(super) fn go_back(&mut self) {

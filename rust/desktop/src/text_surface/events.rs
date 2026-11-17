@@ -134,9 +134,9 @@ pub(super) fn apply(app: &mut Desktop, ctx: &egui::Context, event: Event) -> Eff
                 return Effect::Extend { forward };
             }
         }
-        Command::Jump => app.show_jump(),
+        Command::Jump => app.show_library(),
         Command::Dialog(dialog) => app.dialog = Some(dialog),
-        Command::Library => app.show_catalog(),
+        Command::Library => app.show_library(),
         Command::Audio => app.play_audio(&app.active_chapter_id.clone()),
         Command::Original => app.state.original = !app.state.original,
         Command::BrowserStatus(status) => app.account.status = status,
@@ -331,8 +331,8 @@ mod tests {
             ("settings", Dialog::Settings),
             ("account", Dialog::Account),
             ("downloads", Dialog::Downloads),
-            ("jump", Dialog::Jump),
-            ("library", Dialog::Collections),
+            ("jump", Dialog::Library),
+            ("library", Dialog::Library),
         ] {
             send(&mut app, &ctx, serde_json::json!({ "action": action }));
             assert_eq!(app.dialog, Some(dialog));

@@ -115,8 +115,7 @@ impl Default for ReaderState {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Dialog {
-    Collections,
-    Jump,
+    Library,
     Search,
     Settings,
     Downloads,
@@ -137,7 +136,7 @@ struct Desktop {
     library: Arc<Library>,
     reading_text: Arc<reading_translation::ReadingText>,
     catalog: Arc<catalog::Catalog>,
-    catalog_browser: catalog::Browser,
+    library_about: bool,
     commentary: Option<commentary::Selection>,
     state: ReaderState,
     selected: Option<String>,
@@ -282,7 +281,7 @@ impl Desktop {
             library,
             reading_text,
             catalog,
-            catalog_browser: catalog::Browser::new(jump_corpus),
+            library_about: false,
             commentary: None,
             state: state.clone(),
             selected: None,
@@ -337,8 +336,8 @@ impl Desktop {
         if fresh {
             match std::env::var("CROSS_CANON_PREVIEW").as_deref() {
                 Ok("collections") => {
-                    desktop.show_catalog();
-                    desktop.catalog_browser.query =
+                    desktop.show_library();
+                    desktop.jump_filter =
                         std::env::var("CROSS_CANON_CATALOG_QUERY").unwrap_or_default();
                 }
                 Ok("settings") => desktop.dialog = Some(Dialog::Settings),
@@ -377,7 +376,7 @@ impl Desktop {
                     desktop.show_commentaries(&passage);
                 }
                 Ok("offline-audio") => desktop.dialog = Some(Dialog::Downloads),
-                Ok("jump") => desktop.dialog = Some(Dialog::Jump),
+                Ok("jump") => desktop.dialog = Some(Dialog::Library),
                 Ok("tools") => desktop.tools = true,
                 Ok("search" | "search-results") => {
                     desktop.dialog = Some(Dialog::Search);
@@ -650,7 +649,7 @@ impl Desktop {
             ctx.memory_mut(|m| m.request_focus(Id::new("search-query")));
         }
         if ctx.input(|i| i.modifiers.command && i.key_pressed(Key::J)) {
-            self.show_jump();
+            self.show_library();
         }
         if ctx.input(|i| i.modifiers.alt && i.key_pressed(Key::ArrowLeft)) {
             self.go_back();
@@ -697,35 +696,6 @@ impl Desktop {
                     ui.add_space(18.0);
                     self.reader(ui);
                 });
-            });
-        egui::Area::new(Id::new("corpus-switch"))
-            .anchor(
-                Align2::RIGHT_BOTTOM,
-                [-16.0 - insets.right, -16.0 - insets.bottom],
-            )
-            .show(ctx, |ui| {
-                let response = ui.add(
-                    egui::Button::new("")
-                        .min_size(egui::vec2(44.0, 44.0))
-                        .corner_radius(13.0),
-                );
-                response.widget_info(|| {
-                    egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Choose collection")
-                });
-                let center = response.rect.center();
-                for delta in [
-                    egui::vec2(-4.0, 0.0),
-                    egui::vec2(4.0, 0.0),
-                    egui::vec2(0.0, -4.0),
-                    egui::vec2(0.0, 4.0),
-                ] {
-                    ui.painter()
-                        .line_segment([center, center + delta], Stroke::new(1.2_f32, p.accent));
-                    ui.painter().circle_filled(center + delta, 1.7, p.accent);
-                }
-                if response.on_hover_text("Choose collection").clicked() {
-                    self.show_catalog();
-                }
             });
         if self.has_text_version_control() {
             egui::Area::new(Id::new("text-version"))
@@ -1298,7 +1268,7 @@ mod tests {
             let jump = app.jump_button_rect.center();
             phone_tap(&mut app, &ctx, width, jump);
             assert!(
-                app.dialog == Some(Dialog::Jump),
+                app.dialog == Some(Dialog::Library),
                 "Jump must open at width {width}; toolbar {:?}, tap {:?}",
                 app.toolbar_rect,
                 jump
@@ -1315,8 +1285,7 @@ mod tests {
             assert_eq!(restored.state.theme, Theme::Dark);
             assert_eq!(restored.state.font_scale, 1.14);
             for dialog in [
-                Dialog::Collections,
-                Dialog::Jump,
+                Dialog::Library,
                 Dialog::Settings,
                 Dialog::Search,
                 Dialog::Downloads,
@@ -1363,6 +1332,7 @@ mod tests {
             let mut app = Desktop::initialize(&ctx, None, library.clone());
             app.open(book.chapters[0].passage_ids[0].clone());
             let label = format!("{} 1", book.title);
+            let header_label = format!("Library · {label} ⌄");
             let mut initial_title = None;
             let mut initial_header_bottom = None;
             let mut options_button = None;
@@ -1383,7 +1353,9 @@ mod tests {
                     .iter()
                     .find_map(|s| {
                         if let egui::epaint::Shape::Text(t) = &s.shape {
-                            if t.galley.job.text == label && t.pos.y < app.toolbar_rect.bottom() {
+                            if t.galley.job.text == header_label
+                                && t.pos.y < app.toolbar_rect.bottom()
+                            {
                                 return Some((s.clip_rect, t));
                             }
                         }
@@ -1495,7 +1467,7 @@ mod tests {
             vec![key(Key::J, egui::Modifiers::COMMAND)],
             egui::Modifiers::COMMAND,
         );
-        assert!(app.dialog == Some(Dialog::Jump));
+        assert!(app.dialog == Some(Dialog::Library));
         draw(
             &mut app,
             &ctx,
