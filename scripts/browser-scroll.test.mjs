@@ -13,7 +13,9 @@ try {
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.setViewport({width,height});
     await page.goto(`${origin}/reader/0c558fd2c95099cf1909774d`,{waitUntil:'domcontentloaded'});
-    await page.waitForFunction(()=>window.crossCanonReader&&document.querySelectorAll('.passage').length>0&&!document.querySelector('#reader').hidden,{timeout:30000});
+    // The first text snapshot can precede removal of the blocking startup overlay.
+    // Wait for interactive controls before sending a real pointer click.
+    await page.waitForFunction(()=>window.crossCanonReader&&document.querySelectorAll('.passage').length>0&&!document.querySelector('#reader').hidden&&!document.querySelector('#loading'),{timeout:30000});
     await page.click('#reader-library');
     const anchor='#dialog-accessibility [aria-label="Genesis"]';
     const button='#dialog-accessibility [aria-label="Read book"]';
