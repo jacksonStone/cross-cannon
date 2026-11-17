@@ -53,6 +53,36 @@
       "url": "https://www.gutenberg.org/cache/epub/1653/pg1653.txt",
       "rights": "William Benham translation; public domain in the USA",
       "sha256": "7e9f72139575c267b0e65dd1c9665cc8541a289538fda4cff370dedd0cc83a74"
+    },
+    {
+      "file": "jfb.xml",
+      "url": "https://www.ccel.org/ccel/j/jamieson/jfb.xml",
+      "rights": "Public Domain; expanded 1871 one-volume electronic edition",
+      "sha256": "ce16900c4795d9bd3dc7f7aaec3fccd395c166d4d9593a14b9aae06869aab9af"
+    },
+    {
+      "file": "KD.zip",
+      "url": "https://www.crosswire.org/ftpmirror/pub/sword/packages/rawzip/KD.zip",
+      "rights": "Public Domain; CrossWire KD 2.0",
+      "sha256": "ca3bdb6a04c0b717ee2faed71b432d58195db96f217f490ce6f7d9c36a2876f7"
+    },
+    {
+      "file": "TDavid.zip",
+      "url": "https://www.crosswire.org/ftpmirror/pub/sword/packages/rawzip/TDavid.zip",
+      "rights": "Public Domain; CrossWire TDavid 2.1",
+      "sha256": "d0081cba094f399ceb95f372e13068a4d76814de4529bc6794eab0f2ed6e89cc"
+    },
+    {
+      "file": "canon.h",
+      "url": "https://crosswire.org/svn/sword/trunk/include/canon.h",
+      "rights": "KJV book/chapter/verse count facts; source header GPL-2.0",
+      "sha256": "782e7a603cdfb45ddfd6eed9d31a639929fb928b47c7042d83c8ee9b76af078a"
+    },
+    {
+      "file": "treasury-psalm119.pdf",
+      "url": "https://biblenotes.online/resources/spurgeonpsalms/pdfpsa/chspurgeon_treasuryofdavid_119.pdf",
+      "rights": "Public-domain historical Spurgeon text; printed pages 139–141 support the reviewed Psalm 119:1 exposition supplement",
+      "sha256": "9fc86de235ebde1ffd41ed509997569f5ca0dfc06a6ea15a39ef5d2d2bbe201e"
     }
   ]
 }

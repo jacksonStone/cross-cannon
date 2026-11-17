@@ -29,6 +29,8 @@ export type WorkMetadata = {
   translator?: string;
   edition?: string;
   rights?: string;
+  /** False for verse-linked reading resources that do not use semantic indexes. */
+  searchIndexed?: boolean;
 };
 
 export type EarlyChristianAudio = {

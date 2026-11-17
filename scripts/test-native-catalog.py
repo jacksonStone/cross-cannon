@@ -39,10 +39,13 @@ class NativeCatalogTest(unittest.TestCase):
 
     def test_real_catalog_covers_every_classic_without_copying_text_or_embeddings(self):
         catalog = build_native_catalog(Path(__file__).resolve().parent.parent)
-        self.assertEqual(len(catalog['chapters']), 2580)
+        self.assertEqual(len(catalog['chapters']), 4848)
         self.assertGreater(len(catalog['works']), 400)
         self.assertEqual(catalog['chapters']['classics:henry:Isa.1']['scriptureReference'], {'book': 'Isaiah', 'chapter': 1})
         self.assertTrue(catalog['chapters']['classics:henry:Isa.1']['paragraphs'])
+        for slug, code, chapter in [('jfb', 'Matt', 11), ('keil-delitzsch', 'Ps', 23), ('treasury-of-david', 'Ps', 119)]:
+            entry = catalog['chapters'][f'classics:{slug}:{code}.{chapter}']
+            self.assertTrue(any(p['scriptureStart'] for p in entry['paragraphs']))
         self.assertNotIn('embedding', json.dumps(catalog))
 
 

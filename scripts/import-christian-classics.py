@@ -4,6 +4,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 import argparse, concurrent.futures, hashlib, importlib.util, json, re, urllib.request
 from classics_modernization import apply_overlay, load_overlays
+from lib.sword_commentary import kjv_keys, read_commentary
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "data/public-domain/christian-classics"
@@ -344,6 +345,161 @@ def catena():
     return result
 
 
+def jfb():
+    root = ET.parse(SOURCE / 'raw/jfb.xml').getroot()
+    assert root.find('.//DC.Rights').text.strip() == 'Public Domain'
+    chapters = {}
+    for book in root.iter('div2'):
+        book_marker = next(book.iter('scripCom'), None)
+        if book_marker is None:
+            continue
+        book_code = book_marker.get('parsed').split('|')[1]
+        if book_code not in BOOKS:
+            continue
+        for div in book.findall('div3'):
+            marker = next(div.iter('scripCom'), None)
+            if marker is None:
+                # Keep author introductions with chapter 1, without pretending
+                # they explain a particular verse.
+                entry = chapters.setdefault((book_code, 1), chapter(book_code, 1, f'{BOOKS[book_code]} 1', []))
+                content = paragraphs(div)
+                entry['paragraphs'].extend(content)
+                entry['ranges'].extend([None] * len(content))
+                continue
+            _, code, number, *_ = marker.get('parsed').split('|')
+            if code not in BOOKS:
+                continue
+            number = int(number)
+            content, ranges = [], []
+            current = None
+
+            def walk(node):
+                nonlocal current
+                if node.tag == 'scripCom':
+                    parts = node.get('parsed', '').split('|')
+                    assert parts[1:3] == [code, str(number)], node.attrib
+                    start, end = int(parts[3]), int(parts[5])
+                    current = [start, end or start] if start else None
+                    return
+                if node.tag == 'p':
+                    # A few upstream markers are embedded at the beginning or
+                    # end of a paragraph rather than between paragraphs.
+                    leading_marker = next(iter(node), None)
+                    if leading_marker is not None and leading_marker.tag == 'scripCom' and not (node.text or '').strip():
+                        walk(leading_marker)
+                    value = text(node)
+                    if value and not re.fullmatch(r'CHAPTER \d+', value):
+                        content.append(value)
+                        ranges.append(current)
+                    for embedded in node.iter('scripCom'):
+                        walk(embedded)
+                    return
+                for child in node:
+                    walk(child)
+
+            walk(div)
+            entry = chapters.setdefault((code, number), chapter(code, number, f'{BOOKS[code]} {number}', []))
+            entry['paragraphs'].extend(content)
+            entry['ranges'].extend(ranges)
+    result = list(chapters.values())
+    assert len(result) == 1189 and len({c['code'] for c in result}) == 66
+    return result
+
+
+def osis_paragraphs(raw):
+    """Retain OSIS milestone paragraphs, headings, tables and inline footnotes."""
+    root = ET.fromstring('<root>' + raw + '</root>')
+
+    def render(node):
+        if node.tag in {'milestone', 'chapter'}:
+            return ''
+        if node.tag == 'div' and node.get('type') == 'x-p':
+            return '\n'
+        value = (node.text or '').replace('\n', ' ') + ''.join(
+            render(c) + (c.tail or '').replace('\n', ' ') for c in node)
+        if node.tag == 'note':
+            return ' (' + value.strip() + ') '
+        if node.tag == 'cell':
+            return value + ' | '
+        if node.tag in {'title', 'p', 'row', 'l', 'item'}:
+            return '\n' + value + '\n'
+        return value
+
+    return [clean(p) for p in render(root).splitlines() if clean(p)]
+
+
+def sword_commentary(module):
+    canon = (SOURCE / 'raw/canon.h').read_text()
+    limits = {(code, ch): verse for keys in kjv_keys(canon).values() for code, ch, verse in keys}
+    records = read_commentary(SOURCE / f'raw/{module}.zip', canon, module)
+    chapters = {}
+    for record in records:
+        code, number = record['code'], record['chapter'] or 1
+        key = code, number
+        entry = chapters.setdefault(key, chapter(code, number, f'{BOOKS[code]} {number}', []))
+        raw = record['xml']
+        verse_numbers = [v for v in record['verses'] if v]
+        current = [min(verse_numbers), max(verse_numbers)] if verse_numbers else None
+        if module == 'KD':
+            # This module sometimes stores 1-3 at verse 3; the leading source
+            # reference gives its true coverage. Later cited references do not.
+            leading = re.match(
+                r'(?:\s*<(?:div|chapter|milestone)\b[^>]*?/>|\s*<title\b[^>]*>.*?</title>)*'
+                r'\s*<reference osisRef="([^"]+)"', raw, re.S)
+            if leading:
+                locations = re.findall(r'([1-3]?[A-Za-z]+)\.(\d+)\.(\d+)', leading[1])
+                # Some upstream osisRef endpoints transpose chapter/verse
+                # (e.g. 2Sam.22.5-2Sam.7.5). Their linked KJV keys retain the
+                # correct range. Override only with a valid same-chapter label.
+                if locations and all(c == code and int(n) == number for c, n, _ in locations):
+                    current = [min(int(v) for _, _, v in locations), max(int(v) for _, _, v in locations)]
+            elif '<title' in raw and len(verse_numbers) != limits[code, number]:
+                current = None  # chapter / book introduction, not a verse note
+        else:
+            current = None  # Treasury stores each complete Psalm at verse 1.
+        titles = {text(t) for t in ET.fromstring('<root>' + raw + '</root>').iter('title')}
+        for paragraph in osis_paragraphs(raw):
+            if module == 'TDavid':
+                heading = re.match(r'^(?:Verses?|Ver\.)\s+([\d\s,–-]+)\.', paragraph, re.I)
+                if heading:
+                    numbers = set()
+                    for part in heading[1].split(','):
+                        pair = list(map(int, re.findall(r'\d+', part)))
+                        if len(pair) == 1:
+                            numbers.add(pair[0])
+                        elif len(pair) == 2 and pair[0] <= pair[1]:
+                            numbers.update(range(pair[0], pair[1] + 1))
+                    current = [min(numbers), max(numbers)] if numbers else None
+                    # Keep misnumbered upstream extracts in the full Work, but
+                    # do not attach (for example) Psalm 13's "Verse 8" to a
+                    # Bible verse that does not exist, or turn a noncontiguous
+                    # list ("Verses 39, 35") into an invented continuous range.
+                    if current and (current[0] < 1 or current[1] > limits[code, number]
+                                    or len(numbers) != current[1] - current[0] + 1):
+                        current = None
+                elif paragraph in titles or paragraph.upper() in {
+                        'EXPOSITION', 'EXPLANATORY NOTES AND QUAINT SAYINGS',
+                        'HINTS TO THE VILLAGE PREACHER', 'TITLE.', 'DIVISION.'}:
+                    current = None
+            entry['paragraphs'].append(paragraph)
+            entry['ranges'].append(current)
+    result = list(chapters.values())
+    if module == 'TDavid':
+        # The packaged electronic edition jumps from the Psalm's introduction
+        # straight to verse 2. Restore Spurgeon's verse 1 exposition from the
+        # reviewed, source-pinned transcription of printed pages 139–141.
+        opening = json.loads((SOURCE / 'psalm119-opening.json').read_text())['paragraphs']
+        psalm = next(c for c in result if c['number'] == 119)
+        position = psalm['paragraphs'].index('Psalms 119:2*')
+        psalm['paragraphs'][position:position] = ['EXPOSITION OF VERSE 1.'] + opening
+        psalm['ranges'][position:position] = [None] + [[1, 1] for _ in opening]
+    expected = 929 if module == 'KD' else 150
+    assert len(result) == expected, (module, len(result))
+    assert len({c['code'] for c in result}) == (39 if module == 'KD' else 1)
+    assert all(c['paragraphs'] for c in result)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--download", action="store_true")
@@ -418,6 +574,31 @@ def main():
             "https://www.ccel.org/ccel/wesley/notes.html",
             wesley,
         ),
+        (
+            'jfb',
+            'Commentary Critical and Explanatory on the Whole Bible',
+            'Robert Jamieson, A. R. Fausset and David Brown',
+            '19th century', 'Commentaries', 'Protestant', None,
+            '1871 one-volume text; expanded electronic edition by Ernie Stefanik',
+            'Public Domain', 'https://www.ccel.org/ccel/jamieson/jfb.html', jfb,
+        ),
+        (
+            'keil-delitzsch', 'Biblical Commentary on the Old Testament',
+            'C. F. Keil and Franz Delitzsch',
+            '19th century', 'Commentaries', 'Lutheran', None,
+            'Historical English text; CrossWire KD 2.0 (2022), Wikisource transcription',
+            'Public Domain',
+            'https://www.crosswire.org/sword/modules/ModInfo.jsp?modName=KD',
+            lambda: sword_commentary('KD'),
+        ),
+        (
+            'treasury-of-david', 'The Treasury of David', 'C. H. Spurgeon',
+            '1869–1885', 'Commentaries', 'Baptist', None,
+            '150 Psalms; CrossWire TDavid 2.1 (2022), Spurgeon Archive transcription; Psalm 119:1 exposition restored from print',
+            'Public Domain',
+            'https://www.crosswire.org/sword/modules/ModInfo.jsp?modName=TDavid',
+            lambda: sword_commentary('TDavid'),
+        ),
     ]
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "chapters").mkdir(exist_ok=True)
@@ -452,12 +633,15 @@ def main():
                 "provider": (
                     "Project Gutenberg"
                     if slug == "imitation"
-                    else "Isidore Guild" if slug == "catena" else "CCEL"
+                    else "Isidore Guild" if slug == "catena"
+                    else "CrossWire" if slug in {'keil-delitzsch', 'treasury-of-david'} else "CCEL"
                 ),
                 "sourceUrl": url,
                 "title": title,
             },
         }
+        if slug in {'jfb', 'keil-delitzsch', 'treasury-of-david'}:
+            metadata['searchIndexed'] = False
         classification = {
             "bucket": f"Christian Classics / {genre}",
             "canonicalStatus": "noncanonical",
@@ -562,7 +746,7 @@ def main():
         "books": books,
         "defaultWorkId": "classics:imitation",
         "source": "Christian Classics · verified historical English editions",
-        "generatedAt": "2026-11-11T00:00:00.000Z",
+        "generatedAt": "2026-11-17T00:00:00.000Z",
     }
     payload = json.dumps(index, ensure_ascii=False, separators=(",", ":")).encode()
     version = hashlib.sha256(payload).hexdigest()[:16]
