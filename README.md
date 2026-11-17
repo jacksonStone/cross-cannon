@@ -1,770 +1,98 @@
-(This was vibe coded, be warned!)
-
 # Cross Cannon
 
-Public Remix app for `crosscanon.com`.
+Cross Cannon reads Scripture, Early Christian Works and Christian Classics in
+the browser, on iPhone and on macOS. All three run the same Rust reader. One
+Rust/Axum process serves the website, accounts, synchronization, search and
+text/audio resources at [crosscanon.com](https://www.crosscanon.com).
 
-Cross Cannon searches Scripture, Early Christian Works, and Christian Classics
-by theme or passage similarity, returning original source passages. It does not
-generate commentary, answers, summaries, or application text. The runtime search
-returns paragraph-level passage IDs from a persisted libSQL/SQLite index, and
-the browser loads the full passage text from a versioned static scripture cache.
+Reading, passage-based resume, keyword search, notes and highlights work offline.
+Theme and similar-passage searches return original source passages; they do not
+generate answers or commentary. Search indexes stay read-only. Only a new theme
+query requests an embedding.
 
-## What The App Does
+## Run locally
 
-1. The index route in `app/routes/_index.tsx` is intentionally thin. It wires
-   the route loader/action to search feature modules, loads the browser
-   scripture cache, and composes the reader, search form, and results
-   components.
-2. `app/features/search/search-request.server.ts` handles Search Requests from
-   all three reading collections, preserving their form/result contracts while keeping
-   validation, corpus selection, canon/book/author scope, and result shaping in
-   one module.
-3. The route action rate-limits each client IP to 5 searches per minute before
-   handing form data to the Search Request module.
-4. `app/lib/search.server.ts` embeds the query with OpenAI when an API key is
-   configured, searches broad result sets through the persisted vector index,
-   and scores small selected-book searches exactly within those books.
-5. Search responses contain passage metadata only. The UI joins result IDs to
-   text loaded from `/scripture-cache/<version>.json`, highlighting the best
-   verse when verse embeddings indicate a stronger match than the full paragraph.
-6. The reader stores the current passage ID rather than a scroll offset. It
-   renders a bounded chapter window around the current passage, includes prior
-   chapters for backtracking, expands the window as the user scrolls up or down,
-   and preserves scroll position when chapters are prepended.
-7. A service worker retains the Scripture reader and lets readers download
-   complete, text-only Works from either non-scriptural collection for offline reading from the
-   reader tools menu.
-
-The current index shape is paragraph-only. The `paragraph_verses` table stores
-individual verse text and embeddings for highlight selection inside each
-returned paragraph.
-
-The UI defaults to the Protestant canon. Catholic mode searches the Protestant
-canon plus Tobit, Judith, Wisdom, Sirach, Baruch, Greek Daniel, Greek Esther,
-1 Maccabees, and 2 Maccabees. Orthodox mode adds 1 Esdras, 2 Esdras,
-3 Maccabees, 4 Maccabees, Prayer of Manasseh, and Psalm 151.
-
-## Project Navigation
-
-Start with these files when changing app behavior:
-
-```text
-app/routes/_index.tsx                         page composition, loader/action
-app/features/passage-reader/PassageReader.tsx immersive reader, dynamic chapter window
-app/features/passage-reader/chapter-index.ts  passage reference parsing and chapter grouping
-app/features/passage-jump/PassageJump.tsx     book/chapter/verse jump modal
-app/features/reader-navigation/               Reader Links and Scripture Reader Navigation adapter
-app/features/search/search-request.server.ts  cross-corpus Search Request handling
-app/features/search/useSearchDialogState.ts   cross-corpus Search Dialog state and filter behavior
-app/features/search/SearchForm.tsx            textarea, submit button, filters button
-app/features/search/FilterModal.tsx           canon/match/book filter modal
-app/features/search/useSearchFilters.ts       localStorage and filter state
-app/features/search/SearchResults.tsx         passage result cards
-app/features/search/canons.ts                 canon book lists and canonical sorting
-app/features/search/types.ts                  shared search feature types
-app/features/scripture/                       browser scripture cache resource and lookup helpers
-app/features/offline/                         reachability and Early Christian Work downloads
-app/lib/search.server.ts                      embedding/vector search engine
-app/lib/scripture-cache.server.ts             static scripture cache metadata/routes
-app/entry.server.tsx                          production cache warmers
-```
-
-Keep route files small. If a future feature is about searching, filtering, or
-displaying passage results, prefer adding it under `app/features/search/`
-instead of growing `app/routes/_index.tsx`.
-
-For upcoming passage-specific features, `SearchResults.tsx` is the current
-attachment point for result-card UI. New Search Request modes belong in
-`app/features/search/search-request.server.ts`; lower-level embedding and
-ranking behavior belongs in `app/lib/search.server.ts`.
-
-Reader Links use `/reader/:passageId` for Scripture and
-`/church-fathers?chapter=...&passage=...` for Early Christian Works and
-`/christian-classics/read?chapter=...&passage=...` for Christian Classics. Explicit
-jumps create browser history; selecting a Passage replaces the current link;
-passive scrolling only persists Reader Location.
-
-## Local Development
-
-Google sign-in and cross-device Reader Location sync are optional. See
-[Google login setup](docs/google-login.md) for OAuth credentials, the separate
-account database migration, and verification. No email service is required.
-
-For an off-server Linux web build and deploy, use `npm run ship:docker`. It runs
-tests and builds locally in Docker, uploads a pruned production artifact, then
-uses the existing deployment checks and rollback. It never updates databases.
-
-Requirements:
-
-- Node.js `26.13.0` (run `nvm use` to select the checked-in `.nvmrc`)
-- npm
-- optional `OPENAI_API_KEY` for semantic embeddings
-- optional `sqlite3` CLI for `scripts/index-remaining-books.sh`
-
-Install dependencies and build a small local test index:
+Use the Node version in `.nvmrc` for build tools, Python 3, and the Rust
+compiler. Browser builds also require the `wasm32-unknown-unknown` target and
+`wasm-bindgen-cli 0.2.130`. `scripts/rust.sh` uses the isolated toolchain under
+`.tmp/` when available, otherwise the installed Cargo toolchain.
 
 ```bash
-npm install
-npm run smoke:index
+npm ci
 npm run dev
+# http://127.0.0.1:3005
 ```
 
-Open:
-
-```text
-http://127.0.0.1:3005
-```
-
-`npm run smoke:index` uses `EMBEDDING_PROVIDER=mock` and
-`data/sample-bible.json`. It is useful for checking the app path without
-calling OpenAI or building the full Bible index.
-
-Useful checks:
+The app expects existing immutable text assets and read-only search databases
+under `storage/`. Obtain those artifacts separately; ordinary builds never
+regenerate text caches, index content or initialize account databases. Google
+login is optional. `OPENAI_API_KEY` enables new theme queries; similar-passage
+search reuses existing vectors.
 
 ```bash
-npm run verify
-npm run verify:offline
-npm run verify-prod
-npm run ship
+npm run build           # browser artifacts and release server
+npm start               # run the release server
+npm run verify          # unit/type/Rust checks and production-shape HTTP/browser tests
+npm run verify:offline  # complete responsive/offline reader journey
 ```
 
-For UI changes, capture relevant desktop and mobile screenshots before deploy
-and share them for preview. Save preview artifacts under `docs/screenshots/`
-and embed them with markdown image links so they render directly in chat.
+Use `VERIFY_PORT` for an alternate local verification port. For an already
+running server, use `BROWSER_TEST_URL=http://127.0.0.1:3005 npm run verify:browser`.
+Screenshots go under ignored `docs/screenshots/`.
 
-`npm run verify` is the one-shot local verification command. It typechecks,
-builds the Remix app using the existing scripture cache artifacts, starts the
-production server, waits for it to respond, smoke-checks the homepage,
-smoke-checks a search POST, and then stops the server process. Use
-`VERIFY_PORT=<port>` if port `3005` is already in use.
+## Find the code
 
-`npm run verify:offline` builds the production app, starts it on an isolated
-local port, and runs the Puppeteer offline-reader journey. The journey exercises
-atomic service-worker updates, whole-Work download progress and cancellation,
-interrupted-update resume, manual priority over background refreshes, quota
-recovery, missing-Chapter eviction and repair, failed-origin behavior, direct
-Reader Links, downloaded-only navigation, removal, and mobile/desktop offline
-UI without requiring a separately running server.
+| Area | Source |
+| --- | --- |
+| Library identity, immutable texts and keyword search | `rust/core/` |
+| Shared reading, navigation, dialogs, study and reconciliation | `rust/desktop/src/` |
+| Text snapshot and typed reader commands | `rust/desktop/src/text_surface.rs`, `text_surface/` |
+| Platform tasks, HTTP, media, downloads and credentials | `rust/desktop/src/platform/` |
+| HTML text/accessibility, browser media and offline staging | `web/` |
+| HTTP server, static resources and search | `rust/api/src/` |
+| Google login, native consent and account storage | `rust/api/src/accounts/` |
+| Explicit content imports, indexing and exports | `scripts/` |
 
-`npm run verify-prod` smoke-checks production without building or starting
-anything locally. It checks the remote `cross-cannon` systemd service over SSH,
-checks the production homepage, and submits a real search POST against
-`https://www.crosscanon.com`. It expects `EC2_PEM_PATH` and `EC2_PUBLIC_IP` for
-the remote service check. Use `PROD_URL=<url>` to point it at another deployed
-host, `VERIFY_PROD_SERVICE=<service>` for another systemd unit, or
-`VERIFY_PROD_SKIP_REMOTE=1` for public HTTP checks only.
+Keep reading behavior in shared Rust and platform effects in adapters. Persist
+Reader Locations by Passage identity, not scroll offsets. See
+[architecture](docs/architecture.md), [domain language](CONTEXT.md) and
+[reader navigation decisions](docs/adr/0001-reader-navigation-restores-reader-location.md).
 
-`npm run ship` is the standard release path: it runs `npm run verify`, then
-`./deploy.sh`, then `npm run verify-prod`.
-
-Manual smoke checks against a running dev or production server:
+## Native apps
 
 ```bash
-curl -I http://127.0.0.1:3005/
-
-curl -X POST 'http://127.0.0.1:3005/?index' \
-  -H 'Content-Type: application/x-www-form-urlencoded' \
-  --data 'question=fear and comfort&matchCount=10'
+scripts/rust.sh run --locked -p cross-canon-desktop
+scripts/package-desktop.sh   # signed local macOS app and ZIP under dist/
+scripts/run-ios.sh           # build/install/launch an iPhone simulator
 ```
 
-Production build/start locally:
+Native packages bundle the complete text library; recordings are optional
+separate downloads. See [native builds and device checks](docs/native-apps.md).
+
+## Release
 
 ```bash
-npm run build
-PORT=3005 npm run start
+npm run ship                 # verify, build off-server, deploy, verify production
+npm run ship:docker          # use a local Docker Linux builder
+npm run verify-prod          # check the existing production release
 ```
 
-`npm run build` only builds the Remix app. It does not rebuild the browser
-scripture cache and should not be used as an implicit database update step.
-Production runtime database maintenance is also disabled unless
-`CROSS_CANNON_UPDATE_DB=1` is set.
-
-To explicitly refresh the browser scripture cache from the active database, run:
-
-```bash
-npm run update-db:scripture-cache
-```
-
-That command sets `CROSS_CANNON_UPDATE_DB=1`, reads the active database, and
-writes:
-
-```text
-scripture-cache/<version>.json
-scripture-cache/<version>.json.gz
-scripture-cache/manifest.json
-```
-
-The cache route serves these artifacts with long-lived immutable cache headers
-and gzip when the browser accepts it.
-
-## Kindle Export
-
-Generate a reflowable EPUB of the World English Bible from `data/bible.json`:
-
-```bash
-npm run export:kindle
-```
-
-The generated personal-document artifact is written to:
-
-```text
-exports/kindle/The Holy Bible.epub
-```
-
-The EPUB includes a Kindle-compatible cover, a concise Book-level table of
-contents, and a ten-column Chapter grid at the beginning of each Book. Even
-Psalms fits into 15 compact navigation rows. The cover uses the public-domain
-sixth-century Christ Pantocrator icon from Saint Catherine's Monastery, Sinai.
-Upload the EPUB through Amazon Send to Kindle; generated EPUB artifacts are
-intentionally ignored by git. Override the source, cover, or destination when
-needed:
-
-```bash
-npm run export:kindle:bible -- \
-  --input data/bible.json \
-  --cover assets/kindle/cross-canon-bible-cover.jpg \
-  --output "exports/kindle/The Holy Bible.epub"
-```
-
-Generate the modernized First Clement edition:
-
-```bash
-npm run export:kindle:first-clement
-```
-
-The resulting EPUB is written to
-`exports/kindle/The First Epistle of Clement to the Corinthians.epub`. It
-includes a compact five-column Chapter grid, a full Kindle navigation menu, and
-a fine dotted underline on words that differ from the original translation.
-
-## Church Fathers Modernization
-
-Generate a small passage batch directly with the OpenAI API:
-
-```bash
-npm run modernize:church-fathers -- \
-  --work anf09:xii.iv \
-  --limit 10
-```
-
-Agent-authored modernization batches can instead be assembled without another
-model call. Each input JSON record must preserve the exact original passage
-alongside its modernized text. The assembler rejects incomplete work coverage,
-duplicate passage keys, changed original text, and conflicting prior
-modernization. Pass `--replace` only when deliberately applying reviewed
-corrections to previously assembled text. It also writes a Markdown audit
-showing deleted original words and added modernized words:
-
-```bash
-npm run apply:church-fathers-modernization -- \
-  --work anf09:xii.iv \
-  --input .scratch/first-clement-modernization/batch-01-chapters-02-21.json \
-  --input .scratch/first-clement-modernization/batch-02-chapters-22-43.json \
-  --input .scratch/first-clement-modernization/batch-03-chapters-44-65.json \
-  --review .scratch/first-clement-modernization/quality-review.json \
-  --replace \
-  --audit .scratch/first-clement-modernization/audit.md
-```
-
-## Early Christian Audio Alignment
-
-The Early Christian reader links remote audio instead of downloading MP3s into
-the app. Audio tracks do not always map cleanly to parsed Chapter names, so audio
-support is produced as a Chapter Audio Alignment selected by exact CCEL Work ID:
-
-```bash
-npm run build:church-fathers-audio-alignment -- --work-id npnf101:vi
-npm run build:church-fathers-audio-alignment -- --work-id npnf102:iv
-npm run build:church-fathers-audio-alignment -- --work-id anf09:xii.iv
-```
-
-Use `--track <file-name>` or `--limit <count>` for an incremental run,
-`--book <number>` to select one Book inside a Work, `--dry-run` to inspect the
-selection without OpenAI, and `--reset` to discard the selected Work's existing
-alignment. Runs merge into the existing artifact unless `--reset` is present:
-
-```bash
-npm run build:church-fathers-audio-alignment -- \
-  --work-id npnf101:vi \
-  --track confessions_01_11-19_augustine_64kb.mp3
-
-npm run build:church-fathers-audio-alignment -- \
-  --work-id npnf102:iv \
-  --book 1 \
-  --limit 1 \
-  --dry-run
-```
-
-The shared module downloads each selected track to a temp file, retries remote
-downloads, uses Archive.org mirrors when available, and automatically chunks
-oversized audio with `ffmpeg`. It sends audio to OpenAI `whisper-1` with
-`verbose_json` and word timestamps, archives the raw response under
-`storage/church-fathers-audio/transcripts/`, then applies the selected Work's
-Alignment Policy. Cached transcript JSON is reused on later runs.
-
-The deployed browser asset is:
-
-```text
-public/church-fathers-preview/confessions-audio-alignment.json
-```
-
-It has this shape:
-
-```json
-{
-  "chapters": {
-    "npnf101:vi.I_1.XIV": {
-      "audioUrl": "https://archive.org/download/confessions_augustine_0911_librivox/confessions_01_11-19_augustine_64kb.mp3",
-      "confidence": 0.8888888888888888,
-      "endSeconds": 695.3,
-      "label": "Book 01, Chapters 11-19",
-      "startSeconds": 591.9
-    }
-  },
-  "generatedAt": "2026-07-02T00:00:00.000Z",
-  "source": "https://archive.org/details/confessions_augustine_0911_librivox"
-}
-```
-
-Treat `audioUrl`, `startSeconds`, and `endSeconds` as the playback contract.
-Track labels and parsed chapter names are metadata only; do not assume they
-align exactly.
-
-Work-specific Chapter-ID parsing, matching preference, hints, confidence, and
-offset adjustments live in small Alignment Policy adapters under
-`scripts/audio-alignment-policies/`. Source URLs, tracks, and output artifact
-names live in `data/public-domain/church-fathers/audio-sources.json`.
-
-On production startup, `app/entry.server.tsx` warms the indexed-books cache.
-The browser loads the full immutable scripture cache before enabling reader and
-search controls that need passage text.
-
-## Environment
-
-Common runtime variables:
-
-```text
-PORT=3005
-DATABASE_URL=file:./storage/crosscannon.db
-OPENAI_API_KEY=
-OPENAI_EMBEDDING_MODEL=text-embedding-3-large
-OPENAI_EMBEDDING_DIMENSIONS=1536
-```
-
-Indexer-specific variables:
-
-```text
-BIBLE_JSON_PATH=data/bible.json
-INDEXING_JOBS_DATABASE_URL=file:./storage/indexing-jobs.db
-EMBEDDING_PROVIDER=mock
-```
-
-Use `file:./storage/crosscannon.db` for the local SQLite database.
-
-The indexer stores the active embedding model and dimensions in
-`scripture_embedding_config`. Runtime search reads that metadata before
-embedding queries so query vectors use the same model and dimension count as the
-stored passage and verse vectors.
-
-## Full Bible Index
-
-The expected source file is Jackson's public Bible JSON:
-
-```text
-https://github.com/jacksonStone/Bible_as_JSON
-https://raw.githubusercontent.com/jacksonStone/Bible_as_JSON/main/bible.json
-```
-
-Download it locally:
-
-```bash
-curl -L https://raw.githubusercontent.com/jacksonStone/Bible_as_JSON/main/bible.json \
-  -o data/bible.json
-```
-
-Build or resume the full paragraph index:
-
-```bash
-OPENAI_API_KEY=your_key_here \
-DATABASE_URL=file:./storage/crosscannon.db \
-INDEXING_JOBS_DATABASE_URL=file:./storage/indexing-jobs.db \
-npm run index:bible -- data/bible.json --passage-type paragraph
-```
-
-Useful indexer flags:
-
-```text
---reset                     clear runtime passages before indexing
---resume                    resume the latest unfinished matching job
---limit <n>                 index only n passages
---book <name>               index one book
---db <path-or-file-url>     runtime DB path
---jobs-db <path-or-file-url> indexing jobs DB path
---no-archive                skip local DB archive copies
---skip-index-rebuild        skip final vector index rebuild
---rebuild-indexes-only      rebuild vector indexes and exit
-```
-
-For a parallel book-by-book run:
-
-```bash
-OPENAI_API_KEY=your_key_here \
-INDEX_PARALLEL_BOOKS=5 \
-DATABASE_PATH=storage/crosscannon.db \
-INDEXING_JOBS_DB=storage/indexing-jobs.db \
-scripts/index-remaining-books.sh
-```
-
-After indexing, explicitly rebuild the browser scripture cache, then rebuild the
-app bundle:
-
-```bash
-npm run update-db:scripture-cache
-npm run build
-```
-
-To add or resume the Catholic deuterocanonical books without resetting the
-existing Protestant index, archive the DB first and then run the indexer per
-book with `--no-archive --skip-index-rebuild`; rebuild indexes once at the end:
-
-```bash
-for book in "Tobit" "Judith" "Wisdom" "Sirach" "Baruch" \
-  "Daniel (Greek)" "Esther (Greek)" "1 Maccabees" "2 Maccabees"; do
-  npm run index:bible -- data/bible.json \
-    --db storage/crosscannon.db \
-    --jobs-db storage/indexing-jobs.db \
-    --passage-type paragraph \
-    --book "$book" \
-    --no-archive \
-    --skip-index-rebuild
-done
-
-npm run index:bible -- data/bible.json \
-  --db storage/crosscannon.db \
-  --jobs-db storage/indexing-jobs.db \
-  --no-archive \
-  --rebuild-indexes-only
-```
-
-To add or resume the additional Orthodox books, use the same pattern for:
-
-```text
-1 Esdras
-2 Esdras
-Prayer of Manasseh
-Psalm 151
-3 Maccabees
-4 Maccabees
-```
-
-If `OPENAI_API_KEY` is blank, the importer still creates passages and
-`paragraph_verses`, but no OpenAI embeddings are stored. That is fine for smoke
-testing. Real semantic search requires indexing with the same embedding
-configuration used at runtime.
-
-Supported Bible JSON shapes:
-
-- flat arrays with `book`, `chapter`, `verse`, `text`
-- `{ "books": [{ "name": "...", "chapters": [...] }] }`
-- object maps like `{ "Genesis": { "1": { "1": "..." } } }`
-
-## Deployment
-
-Public icon assets receive long-lived immutable cache headers in production.
-When changing the icon, publish new SVG/PNG filenames (the current filenames
-include the first 12 characters of each file's SHA-256), update the links in
-`app/root.tsx` and `ReaderCorpusSwitch.tsx`, and publish a newly named manifest.
-Keep `public/manifest.webmanifest` consistent with the versioned manifest and
-update the service worker's precache list. Keep old asset URLs available for
-existing installations. An iOS Home Screen installation can retain its saved
-icon even after the new assets are available; check a fresh Add to Home Screen
-preview before replacing an existing installation.
-
-This repo includes:
-
-- `deploy.sh` to build, package, copy, install production dependencies, and
-  restart the service on the Ubuntu box
-- `cross-cannon.service` for systemd
-- default port `3005`
-
-The reverse proxy should route:
-
-```text
-crosscanon.com -> 127.0.0.1:3005
-```
-
-The systemd service expects:
-
-```text
-WorkingDirectory=/home/ubuntu/cross-cannon
-EnvironmentFile=/home/ubuntu/.ubuntu-env
-PORT=3005
-```
-
-`deploy.sh` packages `build`, `public`, `scripture-cache`, `package.json`,
-`package-lock.json`, and `README.md`. It preserves an existing remote
-`/home/ubuntu/cross-cannon/storage` directory during deploys, so the production
-database must already exist on the server or be copied there separately.
-
-Normal deploys and `npm run ship` do not opt into production database
-maintenance. Set `CROSS_CANNON_UPDATE_DB=1` only for an explicit DB update task.
-Deploy packages must not contain `storage` data. The deploy preserves live
-production storage between releases; database backups should be retained
-off-server instead of uploaded with an application release.
-
-Required deploy environment variables on the machine running `deploy.sh`:
-
-```text
-EC2_PEM_PATH=/path/to/key.pem
-EC2_PUBLIC_IP=<server-ip-or-host>
-```
-
-## Current Local State
-
-As of June 25, 2026, this checkout contains:
-
-- `data/bible.json`
-- `storage/crosscannon.db`
-- `storage/indexing-jobs.db`
-- generated scripture cache version `6dca027513ce9a26`
-- 81 indexed books: Protestant, Catholic, and Orthodox canon options
-- generated scripture cache includes the Orthodox additions from `data/bible.json`
-- 8,360 cached paragraph passages
-
-Those local artifacts are large and operationally significant. Rebuild the cache
-with `npm run update-db:scripture-cache` after changing the runtime database.
-
-## Continuous Audio
-
-Bible books play as a single AAC file per book. Early Christian playback is
-unchanged in this initial rollout. The builder can also prepare files for those
-Works for a later rollout. Chapter changes within that file do not depend on background
-JavaScript. The player keeps chapter timestamps, pause/resume, and Media Session
-controls; a failed combined file falls back to the original chapter recording.
-Playback stops at the end of the book/Work. Existing approximate Confessions
-chapter offsets remain approximate; this does not create new audio alignments.
-
-Build these explicitly, separately from application releases:
-
-```bash
-npm run build:continuous-audio -- --bible
-# Or select explicit groups:
-npm run build:continuous-audio -- bible-genesis fathers-npnf102-iv
-```
-
-On the Mac mini, `AUDIO_ENCODER=aac_at npm run build:continuous-audio -- --bible` uses
-the faster native encoder; the default `aac` encoder also works on Linux.
-
-Requires `ffmpeg`, `curl`, the local `storage/audio/WEBD_AT/` source recordings,
-and access to the remote source URLs listed in the existing book index. The
-builder first preserves each source in
-`storage/audio-originals/continuous-2026-09-22/` on the Mac mini and writes
-SHA-256 checksums in that folder. It does not overwrite source files. Override
-`AUDIO_BACKUP_DIR` for a new backup snapshot. Decoded PCM sample counts determine
-chapter offsets, including when recordings have different sample rates.
-
-Generated, content-addressed `.m4a` files live in `storage/audio/continuous/`;
-`public/continuous-audio.json` maps existing chapter URLs/IDs to their timestamps.
-The `moov` metadata is placed at the front for streaming, and the audio route
-supports HTTP byte ranges. Listening or seeking does not require a complete book
-download. Builds resume by skipping completed groups; remove a group's manifest
-entries to explicitly regenerate it after changing its source recordings.
-
-Before shipping a new manifest, upload its derived media separately:
-
-```bash
-scripts/sync-continuous-audio.sh
-npm run ship
-```
-
-Normal deployment never packages recordings or backups. Rollback: remove the
-entries from `public/continuous-audio.json` (or remove that manifest) and redeploy;
-new playback sessions use the unchanged originals. No database/cache rebuild is
-needed. Existing playback sessions retain their current source until restarted.
-
-With the local app running, `node --import tsx scripts/e2e-continuous-audio.ts`
-checks real playback across a chapter boundary with JavaScript disabled,
-pause/resume, a distant chapter seek, partial responses, and missing-file
-fallback. Screenshots go in `docs/screenshots/`. Physical iPhone lock-screen
-playback still requires device testing; desktop emulation cannot certify it.
-
-
-## Native iPhone app
-
-The iPhone reader uses native, selectable text. Long-press a word for the iOS
-Copy, Look Up, Translate and Share menu; Speak Selection and Speak Screen use
-the iPhone's Read & Speak accessibility settings. VoiceOver can read passages
-and access reader actions. Reader settings follow system Larger Text and Bold
-Text, with the app's size, spacing, width, theme and translation choices applied
-on top. Reflow, rotation and chapter loading retain the focused Passage.
-Reader controls retain the original custom icons. Copy through the standard
-text-selection menu; the iPhone reader and search results omit separate copy
-buttons.
-The compact header holds the books control and reader tools. Ordinary reading
-uses the space down to the bottom safe area; passage actions appear only when
-selected. Modernized/Original text choices are in Reader tools → Reading text.
-
-Run `bash scripts/test-ios-accessibility.sh` for the isolated UIKit regression
-app and normal/large-text previews under `docs/screenshots/ios-text-accessibility/`.
-It uses an available iPhone simulator and never reads account data or databases.
-See [the accessibility verification record](docs/test-reports/ios-text-accessibility-2026-11-15.md)
-for the full reader/menu checks and remaining physical-device checks.
-
-Native iPhone and macOS apps support Google login and the same Reader Location
-sync as the website. Open Reader tools (⋮) → Account to connect. Google opens
-in the system browser, then the app stores its revocable session in Keychain.
-The existing Google web client is reused; no new GCP credentials are needed.
-See [Google login setup](docs/google-login.md) for the flow and release migration.
-
-The shared Rust reader includes Scripture, Early Christian Works, and Christian
-Classics. Its named collection chooser, Work reader, chapter jump, search target,
-author filters, favorites and saved Passage locations reuse the existing native
-UI. All text is bundled for offline reading; recordings remain optional downloads.
-
-The native library supports immediate title/author lookup, complete work lists,
-favorites, Classics genre filters, saved-place resume, and source edition details.
-Catalog lookup is separate from online passage search and works offline. Native
-bundles include a small `catalog.json` alongside the existing text library; its
-original paragraph boundaries and Scripture coverage keep commentary excerpts
-complete and prevent internal sentence positions from appearing as Bible verses.
-
-Run `scripts/run-ios.sh` for the simulator. A physical-device Release build uses
-`ios/CrossCanon.xcodeproj`, Apple development signing, and the `iphoneos` SDK.
-Install its signed `.app` with `xcrun devicectl device install app`; updating the
-same `com.crosscanon.mobile` bundle preserves app data. Launching requires an
-unlocked phone. See `.scratch/christian-classics-ui/mobile-release.md` for the
-latest build and installation receipt.
-
-The Mac packager and iPhone Release builds run the redraw-scheduler regression
-gate automatically, before building the app. Run it directly with
-`npm run test:native-repaint`. It fails if a required test fails or disappears,
-including when upgrading the pinned framework. See
-[the framework backport](rust/desktop/vendor/eframe/UPSTREAM.md) and
-[the physical-phone measurements](docs/test-reports/native-background-audio-profile-2026-11-13.md).
-For UI-framework or event-loop changes, also repeat an unplugged, ninety-second
-background-audio capture on a real phone, checking locked playback and return to
-the reader. Investigate sustained background CPU above 5% of one core; the fixed
-iPhone baseline was 0.175%. Phone energy/thermal checks require a reachable device
-and are separate from the automatic host-side regression gate.
-
-## Christian Classics
-
-The named collection chooser opens the shared reader or the browsing library at
-`/christian-classics`. The first collection includes The Imitation of Christ,
-Catena Aurea, Matthew Henry’s complete commentary, and Wesley’s Notes on the
-Bible. Source editions, translators, and rights are available through “About this
-edition.” Wesley’s CCEL source omits 2 Samuel 24; that gap is explicitly recorded.
-
-Selected Scripture Passages offer “View commentaries” beside “Similar passages.” This shows original
-commentary whose source verse coverage overlaps the selection, with a choice of
-commentator. It uses the same imported Chapter text as the full reader.
-The web and native readers match the selected book, chapter, and verse range
-against source verse indexes, without semantic search. Only commentaries with
-overlapping verse coverage are shown.
-Run `node scripts/e2e-verse-commentaries.mjs` after building to check the web
-action on desktop and mobile and capture previews from the existing local indexes.
-
-Text importing and paid semantic indexing are explicit operations:
-
-```bash
-npm run import:christian-classics -- --download
-npm run index:christian-classics
-# Resume completed vectors without rewriting unchanged source metadata:
-npm run index:christian-classics -- --embeddings-only
-```
-
-The importer pins source hashes in `data/public-domain/christian-classics/sources.json`,
-uses the existing sentence parser, and emits versioned assets under
-`public/christian-classics-text/`. Raw source downloads are ignored by git.
-The shared indexer writes a separate `storage/christian-classics.db`; it leaves
-Scripture and Early Christian databases intact. Rust loads that database
-read-only when present (`CHRISTIAN_CLASSICS_DATABASE_PATH` can override its path).
-Provision the indexed database separately before deploying the feature: normal
-deploys preserve production `storage/` and reject packages containing databases.
-Neither importing nor indexing runs as part of verify, build, or deploy.
-
-Reviewed Classics modernizations are stored separately under
-`data/public-domain/christian-classics/modernization/`. Assemble a complete
-chapter from batches and a review using the existing modernization validator:
-
-```bash
-npm run apply:church-fathers-modernization -- \
-  --book-index public/christian-classics-text/books.json \
-  --work classics:imitation --chapter classics:imitation:book-1.1 \
-  --input path/to/batch.json --review path/to/review.json \
-  --overlay data/public-domain/christian-classics/modernization/imitation-book-1-chapter-1.json \
-  --audit path/to/audit.md
-npm run publish:christian-classics-modernization
-```
-
-The chapter scope requires every passage and exact original text. Publication
-creates a new content-addressed Chapter and updates the library version without
-rewriting older Chapter assets or changing search vectors. Explicit source
-imports also reapply and validate all durable overlays. Use `--replace` when
-applying a reviewed correction to already-published modernization.
-
-`npm run e2e:christian-classics` checks the desktop/mobile library, collection
-chooser, reader details, Jump, original commentary selection, and a full Classic
-Work download followed by offline reading with the origin stopped. It manages a
-local production web server on port 3115 and expects the Rust API to be running.
-Set `R_CROSS_CANNON_ORIGIN` and `E2E_PORT` for isolated local ports. Screenshots are
-saved under `docs/screenshots/christian-classics/`.
-
-
-Release the Rust API from its hosted Linux build:
-
-```bash
-scripts/deploy-rust-api.sh
-```
-
-The release command publishes a small source snapshot to the dedicated
-`ops/rust-api-ci-release` branch using `scripts/publish-rust-api-build.sh`. It
-includes the current Cargo/Rust source and release tooling, including uncommitted
-changes, without changing the working checkout or Git index or pushing unrelated
-local history. This GitHub repository and build branch are public, so publishing
-a build also publishes that source. Review the intended Rust changes before
-releasing.
-
-The GitHub Actions workflow `.github/workflows/rust-api-release.yml` builds that
-snapshot on an Ubuntu x86-64 runner and publishes a prerelease tagged
-`rust-api-<snapshot SHA>`. The command waits for that artifact, verifies its
-checksums and source revision, and uploads it over the existing SSH connection.
-Use `scripts/deploy-rust-api.sh --revision <full SHA>` to deploy an already built
-snapshot. Normal releases do not use Docker Desktop, need a macOS approval
-prompt, or expose SSH credentials to GitHub. A usable Git SSH identity and EC2
-SSH identity must still be available to the release process.
-
-Optional local builds use `scripts/build-rust-api-container.sh`; an explicit
-`scripts/deploy-rust-api.sh --build-local` builds and deploys from the working
-tree. This fallback requires a running local Docker engine. The Dockerfile pins
-the official Rust 1.99.1 Bookworm image by digest and targets `linux/amd64`
-(Intel/AMD x86-64). Its context
-includes only Cargo manifests, the lockfile, and Rust source. It runs the Linux
-API tests that need no private indexes; `npm run verify` retains the integration
-test against existing local indexes. Docker build caches stay on the builder.
-
-`scripts/deploy-rust-api.sh` uploads only the Linux binary, systemd unit, build
-metadata, and SHA256 checksums. Production verifies the package, checks dynamic
-library compatibility, and takes the same deployment lock as the web release.
-It never installs a toolchain, copies Cargo build caches, or runs Cargo remotely.
-A missing/invalid hosted artifact or failed local build stops before any SSH/SCP
-operation. Remote Docker contexts are refused for local builds. The web release
-still uses its separately bounded remote build.
-
-The Rust release helper verifies the replacement through the managed service
-after restarting it, and restores the previous release if a check fails. The
-production host has 2 GB RAM; running an additional
-full-library smoke instance alongside the live process can exhaust memory. The
-completed three-collection service measured approximately 848 MiB resident memory
-locally. Do not start a second production library instance during deployment.
-The managed Rust service has a 1,200 MiB memory limit. Production also has a
-1 GiB swap buffer at `/swapfile-cross-cannon`, enabled through `/etc/fstab`, to
-absorb temporary memory spikes. Swap does not replace checking deployment memory
-headroom. Keep the active Rust release and rollback versions when pruning old
-build releases to recover disk space.
-Production's web build also requires `fs.inotify.max_user_watches=65536`, persisted
-in `/etc/sysctl.d/60-cross-cannon-build.conf`. The Remix/Vite build creates file
-watchers while processing the text library; Ubuntu's previous 15,217-watch limit
-caused `ENOSPC: System limit for number of file watchers reached` before release
-activation. This error is distinct from running out of disk space.
+Releases contain a Rust executable and static resources. Production installs
+no compiler, Node or npm. The `cross-cannon` service shares one Library between
+ports 3005 and 3006 for the existing Go reverse proxy. Do not start a second
+Library process on the 2-GB host.
+
+Deployment preserves live storage, validates artifacts and rolls back failed
+activation. Database changes require an explicit database-named command and are
+separate from shipping. Capture desktop/mobile previews before releasing UI
+changes. See [deployment and recovery](docs/deployment.md) and the
+[verified runtime release](docs/test-reports/node-free-runtime-2026-11-16.md).
+
+## Working guides
+
+- [Google login and account setup](docs/google-login.md)
+- [Notes, highlights and synchronization](docs/personal-study.md)
+- [Search API](docs/api.md)
+- [Content, indexing, audio and Kindle exports](docs/content-maintenance.md)
+- [Text and edition research](docs/research/)
+- [Agent workflow](AGENTS.md)

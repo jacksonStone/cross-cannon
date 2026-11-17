@@ -129,7 +129,7 @@ struct SearchOutput {
     result: std::result::Result<Vec<ResultPassage>, String>,
 }
 struct Desktop {
-    #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
+    #[cfg(any(target_os = "ios", target_arch = "wasm32", test))]
     text_surface: text_surface::Reader,
     reader_storage: Option<persistence::ReaderStorage>,
     account: account::Account,
@@ -262,7 +262,7 @@ impl Desktop {
         let catalog = catalog::Catalog::load(&library.root);
         let reading_text = Arc::new(reading_translation::ReadingText::new(&library));
         let mut desktop = Self {
-            #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
+            #[cfg(any(target_os = "ios", target_arch = "wasm32", test))]
             text_surface: Default::default(),
             reader_storage: None,
             study: study::Study::new(if fresh {

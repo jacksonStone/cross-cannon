@@ -30,24 +30,31 @@ production:
 npm run ship
 ```
 
-For a web release built off-server in local Docker, use `npm run ship:docker`.
-It tests a Linux x86-64 runtime artifact and reuses the shared deployment health
-checks, rollback, and storage preservation without installing or compiling on
-production. Its builder uses Node 24.13.0 to avoid a Node 26 x86-emulation bug;
-production stays on the pinned Node 26.13.0. See `docs/google-login.md`.
+`npm run build` builds the shared Rust browser artifacts and the Rust server.
+`npm run verify` runs Rust and off-server tooling/protocol tests, starts one Rust
+server locally, and checks reading startup, form searches, resources and accounts.
+Node is only an off-server tool for content maintenance and browser tests;
+production never runs Node, npm, or a compiler.
 
-`npm run verify` typechecks, builds the Remix app from existing scripture cache
-artifacts, starts the production server locally, checks the homepage, and runs a
-search POST smoke test.
+`./deploy.sh` obtains a tested Linux x86-64 Rust binary from hosted CI and packages
+it with the matching browser/static artifacts. `npm run ship:docker` builds that
+binary in local Docker instead. Both reuse the shared deploy lock, storage
+preservation, atomic activation and rollback. They reject storage/database data,
+secrets and Node runtime files. `scripts/release-server.py` is the shared release
+entry point; the API is never released independently.
 
-`npm run verify-prod` checks the remote service over SSH, checks the production
-homepage, and runs a production search POST smoke test. It expects
-`EC2_PEM_PATH` and `EC2_PUBLIC_IP`, unless `VERIFY_PROD_SKIP_REMOTE=1` is set.
+The one `cross-cannon` service listens on 3005 and compatibility port 3006 using
+one shared Library. Deployment stops/disables the old `r-cross-cannon` service.
+Never start a second full-library smoke instance on the 2 GB production host.
+Accounts have a dedicated writable directory; other runtime data stays read-only.
+During initial transition, closed existing account DB/WAL/journal files move
+intact under the deployment lock, with old-path links and rollback preservation.
+This is a file relocation, not an implicit schema/database update.
 
-`./deploy.sh` builds the Remix app from existing scripture cache artifacts,
-packages, copies, installs production dependencies, and restarts the remote
-service. It preserves the remote `storage` directory and rejects deploy packages
-that contain `storage` data; production database backups belong off-server.
+`npm run verify-prod` proves the running executable is Rust and the old API
+service is inactive, then checks public reading, searches, resources and accounts.
+It expects `EC2_PEM_PATH` and `EC2_PUBLIC_IP`, unless
+`VERIFY_PROD_SKIP_REMOTE=1` is set.
 
 Do not refresh scripture cache artifacts or perform database-update work as part
 of `npm run ship`, `npm run verify`, or `./deploy.sh`. Use an explicit
@@ -66,16 +73,18 @@ task.
 
 ## Key Files
 
-- `app/features/passage-reader/PassageReader.tsx`: reader UI, reader controls,
-  focus passage behavior, chapter boundary behavior.
-- `app/features/search/SearchForm.tsx`: search controls and similar-passage
-  input behavior.
-- `app/features/search/SearchResults.tsx`: result cards and actions.
-- `app/lib/search.server.ts`: search execution and ranking.
-- `app/lib/scripture-cache.server.ts`: scripture cache loading.
-- `app/styles.css`: global and feature styling.
-- `README.md`: operational notes, indexing, verification, deployment.
-- `docs/architecture.md`: runtime and build/deploy architecture.
+- `rust/desktop/src/text_surface.rs`: shared reading snapshot and event reducer.
+- `rust/desktop/src/reader.rs`: passage identity, navigation, and chapter windows.
+- `rust/desktop/src/dialogs.rs`: shared library, jump, and search widgets.
+- `rust/desktop/src/study.rs`: shared notes, highlights, and reconciliation.
+- `rust/desktop/src/platform/`: native/browser effect adapters.
+- `web/platform.js` and `web/reader.css`: browser text/accessibility surface.
+- `web/service-worker.js`: complete-reader offline staging and updates.
+- `rust/api/src/accounts/`: Google login, native consent and account/study APIs.
+- `rust/api/src/compat.rs`: compatibility form POSTs and commentary endpoint.
+- `scripts/lib/`: shared content-maintenance, audio, and export helpers.
+- `scripts/build-browser.py`: off-server Rust browser artifact build.
+- `README.md` and `docs/architecture.md`: runtime/build/deploy notes.
 
 ## Reader State Decisions
 

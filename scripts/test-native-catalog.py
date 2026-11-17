@@ -30,6 +30,12 @@ class NativeCatalogTest(unittest.TestCase):
                     {'start': 1, 'end': 3, 'scriptureStart': 1, 'scriptureEnd': 1},
                     {'start': 4, 'end': 6, 'scriptureStart': 2, 'scriptureEnd': 2}]})
             self.assertNotIn('Text is already bundled', json.dumps(catalog))
+            for verse in asset['verses'][:3]:
+                verse['scriptureQuotation'] = True
+            (root / 'public/christian-classics-text/chapters/example.json').write_text(json.dumps(asset))
+            paragraphs = build_native_catalog(root)['chapters'][asset['id']]['paragraphs']
+            self.assertTrue(paragraphs[0]['scriptureQuotation'])
+            self.assertNotIn('scriptureQuotation', paragraphs[1])
 
     def test_real_catalog_covers_every_classic_without_copying_text_or_embeddings(self):
         catalog = build_native_catalog(Path(__file__).resolve().parent.parent)

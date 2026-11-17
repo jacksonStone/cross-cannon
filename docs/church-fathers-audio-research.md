@@ -1,18 +1,20 @@
 # Church Fathers Audio Research
 
-Research date: 2026-07-06
+Research date: 2026-07-06. Source discovery below is a dated research snapshot;
+current build/playback instructions are in [content maintenance](content-maintenance.md).
 
-## Current Inventory
+## Local artifact inventory (updated November 16, 2026)
 
 The generated Church Fathers preview index currently contains 410 works and
 12,956 parsed chapters in `public/church-fathers-preview/books.json`.
 
-Only two works have audio references wired into the current app/repo:
+Three Works have checked-in Chapter Audio Alignment artifacts:
 
 | Work id | Work | Author | Parsed chapters | Audio status |
 | --- | --- | --- | ---: | --- |
 | `npnf101:vi` | The Confessions | Augustine of Hippo | 275 | Known LibriVox/Archive.org source for all parsed Confessions chapters. Precise timestamp alignment currently exists for 18 parsed chapters. |
 | `anf09:xii.iv` | The First Epistle of Clement to the Corinthians. | Clement of Rome | 65 | BiblicalAudio source exists for chapters 1-3. Current alignment JSON exposes only chapter 1. |
+| `npnf102:iv` | City of God | Augustine of Hippo | 664 | All 664 Chapters have LibriVox/Archive.org alignment. |
 
 Many more works in our Fathers corpus have public audio archives available
 externally. They are not yet represented by app alignment JSON files.
@@ -100,8 +102,9 @@ index I checked on 2026-07-06.
 
 ## Audio Format
 
-The Fathers audio is not stored as local MP3 assets. The browser receives remote
-MP3 URLs plus optional timestamps.
+Recordings are referenced by URL and optional timestamps rather than bundled
+with native text. Readers may download them explicitly; derived continuous
+recordings and optional caches are separate from source alignment.
 
 Current audio files are plain MP3 URLs:
 
@@ -131,6 +134,7 @@ The alignment files live beside the generated Fathers preview index:
 
 - `public/church-fathers-preview/confessions-audio-alignment.json`
 - `public/church-fathers-preview/first-clement-audio-alignment.json`
+- `public/church-fathers-preview/city-of-god-audio-alignment.json`
 
 They share this shape:
 
@@ -179,8 +183,9 @@ by Augustine book/chapter ranges, not by Cross Cannon's parsed chapter rows. The
 LibriVox page also exposes whole-book ZIP, RSS, torrent, Archive.org, and M4B
 downloads.
 
-The app has a hard-coded 31-track table in `app/routes/church-fathers.tsx`.
-Track labels cover:
+The 31-track source catalog lives in
+`data/public-domain/church-fathers/audio-sources.json`; alignment policy lives
+under `scripts/audio-alignment-policies/`. Track labels cover:
 
 - Book 1, chapters 1-10 and 11-19
 - Books 2-9 in one or two tracks per book
@@ -194,7 +199,7 @@ Current precise alignment:
 - Unique aligned MP3 files: 2
 - Aligned coverage: Confessions Book 1, chapters 1-18
 
-Current fallback behavior:
+Fallback behavior observed during the July research:
 
 - If a Confessions chapter does not have a timestamp alignment, the UI maps the
   parsed chapter ID to the matching LibriVox track.

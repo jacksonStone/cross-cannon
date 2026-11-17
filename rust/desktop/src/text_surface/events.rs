@@ -119,12 +119,12 @@ pub(super) fn apply(app: &mut Desktop, ctx: &egui::Context, event: Event) -> Eff
     };
     match command {
         Command::Location { book, id } => {
-            if app.scroll_target.is_none() && passage_in_current_book(app, &book, &id) {
+            if app.scroll_target.is_none() && passage_in_reader(app, &book, &id) {
                 app.remember_location(id);
             }
         }
         Command::Select { book, id } => {
-            if passage_in_current_book(app, &book, &id) {
+            if passage_in_reader(app, &book, &id) {
                 app.selected = Some(id);
             }
         }
@@ -209,12 +209,21 @@ pub(super) fn apply(app: &mut Desktop, ctx: &egui::Context, event: Event) -> Eff
     Effect::None
 }
 
-fn passage_in_current_book(app: &Desktop, book: &str, id: &str) -> bool {
+fn passage_in_reader(app: &Desktop, book: &str, id: &str) -> bool {
     book == app.current_passage().book_id
-        && app
-            .library
-            .passage(id)
-            .is_some_and(|passage| passage.book_id == book)
+        && app.library.passage(id).is_some_and(|passage| {
+            if passage.book_id == book {
+                return true;
+            }
+            let current = app.library.book(book).unwrap();
+            app.text_surface.sequence == reader::sequence_key(current, app.state.canon)
+                && reader::chapter_sequence(&app.library, current, app.state.canon)
+                    .iter()
+                    .enumerate()
+                    .any(|(index, (_, chapter))| {
+                        app.text_surface.window.contains(&index) && chapter.id == passage.chapter_id
+                    })
+        })
 }
 
 #[cfg(test)]
@@ -344,6 +353,77 @@ mod tests {
             serde_json::json!({ "action": "connection", "id": "http://127.0.0.1:3006/r/api" }),
         );
         assert_eq!(app.state.api_url, "http://127.0.0.1:3006/r/api");
+    }
+
+    #[test]
+    fn cross_book_window_accepts_visible_passages_and_preserves_reading_history() {
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        let ctx = egui::Context::default();
+        let mut app = Desktop::initialize(&ctx, None, library.clone());
+        let genesis = library.book("Genesis").unwrap();
+        let chapters = reader::chapter_sequence(&library, genesis, Canon::Protestant);
+        let index = chapters
+            .iter()
+            .position(|(_, c)| c.id == "Genesis:50")
+            .unwrap();
+        let last = library.chapter("Genesis:50").unwrap().1.passage_ids[0].clone();
+        let next = library.chapter("Exodus:1").unwrap().1.passage_ids[0].clone();
+        app.open(last.clone());
+        app.scroll_target = None;
+        app.text_surface.locate(
+            &reader::sequence_key(genesis, Canon::Protestant),
+            index,
+            chapters.len(),
+            true,
+        );
+        let window = app.text_surface.window.clone();
+        let history = app.back.clone();
+        send(
+            &mut app,
+            &ctx,
+            serde_json::json!({"action":"select", "book":"Genesis", "id":next}),
+        );
+        assert_eq!(app.selected.as_ref(), Some(&next));
+        send(
+            &mut app,
+            &ctx,
+            serde_json::json!({"action":"location", "book":"Genesis", "id":next}),
+        );
+        assert_eq!(app.active_chapter_id, "Exodus:1");
+        assert_eq!(app.state.scripture_location, next);
+        assert_eq!(app.back, history);
+        assert!(app.scroll_target.is_none());
+        app.text_surface.locate(
+            &reader::sequence_key(library.book("Exodus").unwrap(), Canon::Protestant),
+            index + 1,
+            chapters.len(),
+            false,
+        );
+        assert_eq!(
+            app.text_surface.window, window,
+            "Crossing books must retain the window"
+        );
+        send(
+            &mut app,
+            &ctx,
+            serde_json::json!({"action":"location", "book":"Exodus", "id":last}),
+        );
+        assert_eq!(app.active_chapter_id, "Genesis:50");
+        assert_eq!(app.back, history);
+        let titles = chapters
+            .iter()
+            .map(|(b, _)| b.title.as_str())
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(titles.len(), 66);
+        assert_eq!(chapters.first().unwrap().1.id, "Genesis:1");
+        assert_eq!(chapters.last().unwrap().1.id, "Revelation:22");
+        for canon in [Canon::Catholic, Canon::Orthodox] {
+            let sequence = reader::chapter_sequence(&library, genesis, canon);
+            assert!(sequence.iter().all(|(b, _)| canon.includes(&b.title)));
+            assert!(sequence.iter().any(|(b, _)| b.title == "Tobit"));
+        }
     }
 
     #[test]

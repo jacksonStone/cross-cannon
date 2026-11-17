@@ -21,6 +21,7 @@ const response = await fetch(`${base}/?_data=routes%2F_index`, {
   signal: AbortSignal.timeout(30_000),
 });
 assert.equal(response.status, 200);
+assert.equal(response.headers.get("X-Cross-Canon-Runtime"), "rust");
 assert.equal(response.headers.get("X-Cross-Canon-Search"), "rust");
 const payload = await response.json();
 assert.equal(payload.results.length, 5);
@@ -52,6 +53,7 @@ const crossResponse = await fetch(
   }
 );
 assert.equal(crossResponse.status, 200);
+assert.equal(crossResponse.headers.get("X-Cross-Canon-Runtime"), "rust");
 assert.equal(crossResponse.headers.get("X-Cross-Canon-Search"), "rust");
 const cross = await crossResponse.json();
 assert.equal(cross.scriptureResults.length, 5);
@@ -98,6 +100,7 @@ for (const [route, form, field] of [
     signal: AbortSignal.timeout(30_000),
   });
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get("X-Cross-Canon-Runtime"), "rust");
   assert.equal(response.headers.get("X-Cross-Canon-Search"), "rust");
   const data = await response.json();
   assert.equal(data[field].length, 5);

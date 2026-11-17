@@ -21,9 +21,10 @@ Single-context repo:
 /
 ├── CONTEXT.md
 ├── docs/adr/
-│   ├── 0001-example-decision.md
-│   └── 0002-example-follow-up.md
-└── app/
+│   └── 0001-reader-navigation-restores-reader-location.md
+├── rust/
+├── web/
+└── scripts/
 ```
 
 ## Use the glossary's vocabulary

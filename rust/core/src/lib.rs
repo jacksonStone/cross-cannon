@@ -168,6 +168,17 @@ impl Library {
 
     /// Build-time preparation of existing texts; never reads or changes a database.
     pub fn load_artifacts(root: impl AsRef<Path>) -> Result<Self> {
+        Self::load_artifacts_with_policy(root, true)
+    }
+
+    /// Verse-linked works need only Book/Chapter metadata on the server. Their
+    /// immutable text is streamed by resource routes when a reader requests it.
+    /// Build/native loaders still include every passage for offline reading.
+    pub fn load_server(root: impl AsRef<Path>) -> Result<Self> {
+        Self::load_artifacts_with_policy(root, false)
+    }
+
+    fn load_artifacts_with_policy(root: impl AsRef<Path>, preload_unindexed: bool) -> Result<Self> {
         let root = root.as_ref().to_path_buf();
         let manifest = read_json(&root.join("scripture-cache/manifest.json"))?;
         let version = string(&manifest, "version");
@@ -289,6 +300,8 @@ impl Library {
                     corpus,
                     chapters: vec![],
                 };
+                let metadata_only =
+                    !preload_unindexed && work["metadata"]["searchIndexed"] == false;
                 for entry in work["chapters"]
                     .as_array()
                     .context("Missing work chapters")?
@@ -296,6 +309,16 @@ impl Library {
                     let asset_path = string(entry, "assetPath");
                     if !asset_path.starts_with(asset_prefix) || asset_path.contains("..") {
                         bail!("Invalid chapter asset path");
+                    }
+                    if metadata_only {
+                        book.chapters.push(Chapter {
+                            id: string(entry, "id"),
+                            number: number(entry, "chapter"),
+                            title: string(entry, "title"),
+                            passage_ids: vec![],
+                            original_audio: None,
+                        });
+                        continue;
                     }
                     let asset = read_json(
                         &library
@@ -404,6 +427,9 @@ impl Library {
         const GZIP_HEADER: &[u8] = b"CCLIB\0\x02\0";
         const INDEX_HEADER: &[u8] = b"CCIDX\0\x01\0";
         const LEGACY_HEADER: &[u8] = b"CCLIB\0\x01\0";
+        // Seven Classics exceed the former 512 MiB serialized-text ceiling.
+        // Keep native expansion bounded; browser identity/fragments stay small.
+        const MAX_LIBRARY_BYTES: u64 = 768 * 1024 * 1024;
         anyhow::ensure!(
             bytes.starts_with(HEADER)
                 || bytes.starts_with(GZIP_HEADER)
@@ -422,7 +448,7 @@ impl Library {
                     .try_into()?;
                 let size = u64::from_le_bytes(size_bytes);
                 anyhow::ensure!(
-                    size > 0 && size <= 512 * 1024 * 1024,
+                    size > 0 && size <= MAX_LIBRARY_BYTES,
                     "Native library exceeds size limit"
                 );
                 let mut decoded = Vec::with_capacity(size as usize);
@@ -438,11 +464,11 @@ impl Library {
         } else if bytes.starts_with(GZIP_HEADER) || bytes.starts_with(INDEX_HEADER) {
             let mut decoded = Vec::new();
             flate2::read::GzDecoder::new(&bytes[HEADER.len()..])
-                .take(512 * 1024 * 1024 + 1)
+                .take(MAX_LIBRARY_BYTES + 1)
                 .read_to_end(&mut decoded)
                 .context("Invalid compressed native library")?;
             anyhow::ensure!(
-                decoded.len() <= 512 * 1024 * 1024,
+                (decoded.len() as u64) <= MAX_LIBRARY_BYTES,
                 "Native library exceeds size limit"
             );
             Some(decoded)
@@ -454,7 +480,7 @@ impl Library {
             return fragments::decode(root, payload);
         }
         let mut library: Self = bincode::DefaultOptions::new()
-            .with_limit(512 * 1024 * 1024)
+            .with_limit(MAX_LIBRARY_BYTES)
             .deserialize(payload)
             .context("Invalid packaged native library")?;
         library.root = root.to_path_buf();
@@ -1075,8 +1101,8 @@ mod tests {
         assert!(loaded.audio("Genesis:2").unwrap().start_seconds > 260.0);
         let mut compressed = fs::read(destination.join("native-library.bin")).unwrap();
         assert!(
-            compressed.len() < 60_000_000,
-            "Complete text including the four Classics should compress losslessly below 60 MB"
+            compressed.len() < 90_000_000,
+            "Complete text including the seven Classics should compress losslessly below 90 MB"
         );
         compressed.truncate(compressed.len() - 10);
         assert!(
@@ -1104,6 +1130,31 @@ mod tests {
         fs::remove_dir_all(destination).unwrap();
     }
     #[test]
+    fn server_keeps_verse_linked_commentaries_as_metadata_only() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let library = Library::load_server(&root).unwrap();
+        library.validate().unwrap();
+        for (id, chapters) in [
+            ("classics:jfb", 1189),
+            ("classics:keil-delitzsch", 929),
+            ("classics:treasury-of-david", 150),
+        ] {
+            let book = library.book(id).unwrap();
+            assert_eq!(book.chapters.len(), chapters);
+            assert!(book.chapters.iter().all(|c| c.passage_ids.is_empty()));
+            assert!(!library.passages.iter().any(|p| p.book_id == id));
+        }
+        assert!(library
+            .chapter("classics:treasury-of-david:Ps.119")
+            .is_some());
+        // Existing keyword/semantic resources retain their original text.
+        assert!(library
+            .passages
+            .iter()
+            .any(|p| p.book_id == "classics:henry"));
+    }
+
+    #[test]
     fn actual_artifacts_are_complete_and_searchable_offline() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let library = Library::load(root).unwrap();
@@ -1113,13 +1164,13 @@ mod tests {
             .iter()
             .filter(|book| book.corpus == Corpus::ChristianClassics)
             .collect();
-        assert_eq!(classics.len(), 4);
+        assert_eq!(classics.len(), 7);
         assert_eq!(
             classics
                 .iter()
                 .map(|book| book.chapters.len())
                 .sum::<usize>(),
-            2580
+            4848
         );
         let classic_hits = library.search(
             "humility",

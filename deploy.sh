@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
+# Build off-server and activate one Rust process; never compile/install on production.
 set -euo pipefail
-exec "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/ship.sh" --only cross-cannon "$@"
+cd "$(dirname "$0")"
+exec python3 scripts/release-server.py "$@"

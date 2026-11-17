@@ -11,6 +11,16 @@ spec.loader.exec_module(importer)
 
 
 class CommentaryTest(unittest.TestCase):
+    def test_source_scripture_blocks_are_flagged_without_flagging_inline_citations(self):
+        element = ET.fromstring('''<div2><div id="Bible:Acts.6.1-Acts.6.7">
+          <p class="passage">1 And in those days. 2 Then the twelve.</p>
+          <p class="indent">A note quoting <scripRef>the twelve</scripRef>.</p>
+        </div></div2>''')
+        content, ranges, quotations = importer.commentary_paragraphs(element)
+        self.assertEqual(quotations, [True, False])
+        self.assertEqual(ranges, [[1, 7], [1, 7]])
+        self.assertEqual(content[1], 'A note quoting the twelve.')
+
     def test_sentence_positions_retain_original_paragraph_boundaries(self):
         verses = importer.sentences(['A complete thought. Another sentence.', 'Next paragraph.'])
         self.assertEqual([v['verse'] for v in verses], [1, 2, 3])
@@ -27,7 +37,7 @@ class CommentaryTest(unittest.TestCase):
           <div class="Commentary"><p>Second note.</p></div>
           <p>Unrelated trailing paragraph.</p>
         </div2>''')
-        content, ranges = importer.commentary_paragraphs(chapter)
+        content, ranges, _ = importer.commentary_paragraphs(chapter)
         self.assertEqual(len(content), 5)
         self.assertEqual(ranges, [None, [2, 9], [2, 9], [10, 15], None])
 
@@ -56,6 +66,9 @@ class CommentaryTest(unittest.TestCase):
         for chapter in henry['chapters']:
             asset = json.loads((importer.ROOT / 'public' / chapter['assetPath'].lstrip('/')).read_text())
             self.assertTrue(any('scriptureVerseStart' in verse for verse in asset['verses']), chapter['id'])
+            expected = {v['verse'] for v in asset['verses'] if v.get('scriptureQuotation')}
+            actual = {number for start, end in chapter.get('quotationSentenceRanges', []) for number in range(start, end + 1)}
+            self.assertEqual(actual, expected, chapter['id'])
 
 
 if __name__ == '__main__':

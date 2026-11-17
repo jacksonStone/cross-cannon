@@ -1,5 +1,10 @@
 # iOS text accessibility and UI review — November 15, 2026
 
+This records the device/simulator checks and their limits. Historical screenshot
+paths identify the original ignored captures; superseded previews were removed
+during repository cleanup. Regenerate current UIKit previews with
+`bash scripts/test-ios-accessibility.sh`.
+
 ## Follow-up: commentary unexpectedly opens the keyboard
 
 Reproduced with the simulator software keyboard enabled after selecting native
@@ -158,13 +163,13 @@ selection moves or clears. Reflow reapplies the current selection. The full
 UIKit regression now passes, including this failure case, moving selection,
 clearing it, exact saved-mark restoration and the existing Unicode/reflow checks.
 Log: `.tmp/ios-accessibility/tap-highlight-probe.log`. Fixture image:
-[Tapped Passage](../screenshots/ios-text-accessibility/native-tapped-passage.png).
+Tapped Passage (`docs/screenshots/ios-text-accessibility/native-tapped-passage.png`).
 Release build logs: `.tmp/ios-accessibility/tap-highlight-simulator-build.log`
 and `.tmp/ios-accessibility/tap-highlight-device-build.log`.
 
 The full Release simulator app was checked with a single real tap: the Passage
 received visible tint, and a second tap removed it and closed its action row.
-[Actual app screenshot](../screenshots/ios-text-accessibility/final-tap-highlight.png).
+Actual app screenshot (`docs/screenshots/ios-text-accessibility/final-tap-highlight.png`).
 The corrected signed build was installed over the existing app on the paired
 iPhone at 11:12 local time and launched successfully. Receipts:
 `.tmp/ios-accessibility/tap-highlight-install.json` and
@@ -259,12 +264,12 @@ energy certification remain separate from the simulator checks above.
 
 Actual full-app screenshots, separate from the fixture previews:
 
-- [Chapter boundary with selected Passage and one-row actions](../screenshots/ios-text-accessibility/final-chapter-boundary.png)
-- [Six actions in one row](../screenshots/ios-text-accessibility/final-single-row.png)
-- [Long work title and reader](../screenshots/ios-text-accessibility/final-long-title.png)
-- [Landscape with passage actions](../screenshots/ios-text-accessibility/final-landscape.png)
-- [Dark settings](../screenshots/ios-text-accessibility/final-dark-settings.png)
-- [Bounded source preview and search controls](../screenshots/ios-text-accessibility/final-search.png)
+- Chapter boundary with selected Passage and one-row actions (`docs/screenshots/ios-text-accessibility/final-chapter-boundary.png`)
+- Six actions in one row (`docs/screenshots/ios-text-accessibility/final-single-row.png`)
+- Long work title and reader (`docs/screenshots/ios-text-accessibility/final-long-title.png`)
+- Landscape with passage actions (`docs/screenshots/ios-text-accessibility/final-landscape.png`)
+- Dark settings (`docs/screenshots/ios-text-accessibility/final-dark-settings.png`)
+- Bounded source preview and search controls (`docs/screenshots/ios-text-accessibility/final-search.png`)
 
 Speak Selection was enabled in the simulator; its Speak menu action was present
 and activated. Look Up opened the system sheet and returned to the same Passage;
@@ -313,7 +318,7 @@ access to content on the displayed page:
 Both Release targets built successfully, including the native redraw scheduler
 gate; the device bundle passed strict codesign verification. The full simulator
 app reopened the saved Matthew Henry Classics location with normal reading
-layout ([screenshot](../screenshots/ios-text-accessibility/final-classics-speech-reader.png)).
+layout (screenshot (`docs/screenshots/ios-text-accessibility/final-classics-speech-reader.png`)).
 Build logs: `.tmp/ios-accessibility/classics-speech-simulator-build.log` and
 `classics-speech-device-build.log`.
 
@@ -352,7 +357,7 @@ Both Release builds and the native redraw scheduler gate passed; the signed
 device bundle passed strict codesign verification. The actual full app showed
 the restored icons and five visible Classics controls (highlight, note,
 similarity, close, collection) in one row, with no copy-only More button.
-[Full-app screenshot](../screenshots/ios-text-accessibility/final-original-icons-classics.png).
+Full-app screenshot (`docs/screenshots/ios-text-accessibility/final-original-icons-classics.png`).
 Logs: `.tmp/ios-accessibility/original-icons-simulator-build.log` and
 `original-icons-device-build.log`.
 
@@ -380,7 +385,7 @@ and `cargo check --locked --offline --target aarch64-apple-ios` passed there.
 No uncommitted web source was included. Evidence:
 `.tmp/ios-accessibility/native-clean-checkout-check.log`,
 `books-release-simulator-build.log`, and `books-release-device-build.log`.
-[Final controls](../screenshots/ios-text-accessibility/final-books-icon-release.png).
+Final controls (`docs/screenshots/ios-text-accessibility/final-books-icon-release.png`).
 
 The final books-icon build installed at 14:36 local time
 (`.tmp/ios-accessibility/books-release-install.json`). The phone had locked
@@ -423,8 +428,8 @@ title fits one header row, the books control and tools remain reachable, and
 the reading text continues to the bottom safe area. Reader tools → Reading
 text exposed both Modernized and Original choices. Selecting a Passage showed
 its four controls in one bottom row. Previews:
-[reading](../screenshots/ios-text-accessibility/final-compact-reading.png) and
-[passage actions](../screenshots/ios-text-accessibility/final-compact-passage-actions.png).
+reading (`docs/screenshots/ios-text-accessibility/final-compact-reading.png`) and
+passage actions (`docs/screenshots/ios-text-accessibility/final-compact-passage-actions.png`).
 
 The landscape pass caught a delayed model overwriting the native chapter title
 with the preceding chapter. A real-adapter regression reproduced this by
@@ -443,7 +448,7 @@ the chapter title remained 2 throughout. Clearing selection restored the full
 bottom reading area, and scrolling continued in chapter 2. The simulator was
 returned to portrait. Evidence: `reader-release-simulator-build.log`,
 `reader-release-device-build.log`, and
-[final landscape](../screenshots/ios-text-accessibility/final-compact-landscape.png).
+final landscape (`docs/screenshots/ios-text-accessibility/final-compact-landscape.png`).
 
 This final compact/rotation-corrected build installed and launched on the paired
 iPhone 14 Pro at 15:01 local time. A subsequent process query confirmed the

@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
     let fathers = std::env::var_os("R_CROSS_CANNON_FATHERS_DB")
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("storage/early-christian-works.db"));
-    let library = Arc::new(Library::load(&root)?);
+    let library = Arc::new(Library::load_server(&root)?);
     library.validate()?;
     let engine = Engine::load(library, &scripture, &fathers)?;
     tracing::info!(
