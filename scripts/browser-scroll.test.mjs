@@ -13,7 +13,7 @@ try {
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.setViewport({width,height});
     await page.goto(`${origin}/reader/0c558fd2c95099cf1909774d`,{waitUntil:'domcontentloaded'});
-    await page.waitForFunction(()=>window.crossCanonReader&&document.querySelectorAll('.passage').length>0&&!document.querySelector('#reader').hidden,{timeout:30000});
+    await page.waitForFunction(()=>window.crossCanonReader&&document.querySelectorAll('.passage').length>0&&!document.querySelector('#reader').hidden&&!document.querySelector('#loading'),{timeout:30000});
     assert.equal(await page.$('#reader-library'), null, 'Library uses one combined reader control');
     await page.click('#reader-jump');
     await page.waitForSelector('#dialog-accessibility [aria-label="Choose where to read"]');
@@ -24,6 +24,8 @@ try {
       resume:document.querySelector('#dialog-accessibility [aria-label^="Last place ·"]').getBoundingClientRect().top,
     }));
     assert.ok(positions.resume>=positions.tabs, `${label}: Last place belongs below the collection buttons`);
+    // AccessKit updates precede the canvas presentation; let the preview paint.
+    await new Promise(resolve=>setTimeout(resolve,150));
     await fs.mkdir('docs/screenshots/unified-library',{recursive:true});
     await page.screenshot({path:`docs/screenshots/unified-library/${label}.png`});
     await page.click('#dialog-accessibility [aria-label="Classics"]');
@@ -46,6 +48,8 @@ try {
       // Allow egui's smooth scrolling to settle before comparing directions.
       await new Promise(resolve=>setTimeout(resolve,700));
     };
+    // Keep the observed virtual row away from both clipping edges.
+    await wheel(Math.round(height*0.3));
     const before=await position();
     await wheel(160);
     const down=await position();
@@ -59,6 +63,7 @@ try {
     await page.mouse.wheel({deltaY:-10000});
     await new Promise(resolve=>setTimeout(resolve,700));
     await page.click('#dialog-accessibility [aria-label="Bible"]');
+    await page.waitForSelector(lastPlace);
     await page.click(lastPlace);
     await page.waitForFunction(()=>!document.querySelector('#reader').hidden);
     assert.equal(await page.$eval('#reader-jump',element=>element.textContent),'John 3');
