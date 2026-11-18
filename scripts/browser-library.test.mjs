@@ -12,7 +12,7 @@ const selector=label=>`#dialog-accessibility [aria-label=${JSON.stringify(label)
 const pause=()=>new Promise(resolve=>setTimeout(resolve,250));
 let page;
 try {
-  for(const [width,height,label] of [[1440,1000,'desktop'],[393,852,'mobile'],[320,740,'small-mobile']]) {
+  for(const [width,height,label] of [[1440,1000,'desktop'],[768,1024,'tablet'],[393,852,'mobile'],[320,740,'small-mobile']]) {
     const context=await browser.createBrowserContext();page=await context.newPage();
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
@@ -24,11 +24,12 @@ try {
       const button=document.querySelector('button#reader-library'),title=document.querySelector('#reader-jump'),tools=document.querySelector('#reader-tools');
       const b=button.getBoundingClientRect(),t=title.getBoundingClientRect(),r=tools.getBoundingClientRect();
       const text=document.querySelector('#reader-text'),s=document.querySelector('#reader-scroll').getBoundingClientRect();
-      return {button:{left:b.left,right:b.right,height:b.height},title:{left:t.left,right:t.right},tools:{left:r.left,right:r.right},readingWidth:s.width,weight:getComputedStyle(text).fontWeight,overflow:document.documentElement.scrollWidth>innerWidth};
+      return {button:{left:b.left,right:b.right,height:b.height},libraryLabel:button.textContent.trim(),title:{left:t.left,right:t.right},tools:{left:r.left,right:r.right},readingWidth:s.width,weight:getComputedStyle(text).fontWeight,overflow:document.documentElement.scrollWidth>innerWidth};
     });
     assert.ok(geometry.button.height>=44&&geometry.button.left>=0);
-    assert.ok(geometry.title.left>=geometry.button.right&&geometry.title.right<=geometry.tools.left);
-    assert.ok(geometry.tools.right<=width);assert.equal(geometry.overflow,false);
+    assert.ok(geometry.title.right<=geometry.tools.left&&geometry.tools.right<=geometry.button.left);
+    assert.ok(geometry.button.right<=width);assert.equal(geometry.overflow,false);
+    assert.equal(geometry.libraryLabel,'');
     if(width>=700){assert.equal(geometry.weight,'400');assert.ok(geometry.readingWidth<=864);}
     await page.screenshot({path:`${output}/${label}-reader.png`});
     await page.click('#reader-library');

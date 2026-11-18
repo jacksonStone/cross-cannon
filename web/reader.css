@@ -18,7 +18,7 @@
 
 #library-status{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:6;margin:0;padding:10px 16px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--muted);box-shadow:0 4px 20px #0002;font:13px/1.5 Inter,sans-serif;max-width:calc(100vw - 32px)}
 
-#reader-library{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;flex-shrink:0;padding:8px 12px;margin-right:10px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--accent);font:500 14px/1.4 Inter,sans-serif}
+#reader-library{display:inline-flex;align-items:center;justify-content:center;width:44px;min-width:44px;min-height:44px;flex-shrink:0;padding:9px;margin-left:6px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--accent);font:500 14px/1.4 Inter,sans-serif}
 #reader-library svg{width:20px;height:20px;display:block}
 #reader-library:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
 @media(min-width:700px){
@@ -26,7 +26,7 @@
   #reader-scroll{width:min(calc(var(--column) + 64px),calc(100% - 64px));margin:0 auto;border-inline:1px solid var(--line);scrollbar-width:thin;scrollbar-color:var(--muted) var(--paper)}
   #reader-text{font-weight:400}
 }
-@media(max-width:359px){#reader-library{padding-inline:8px;margin-right:2px;gap:5px}}
+@media(max-width:359px){#reader-library{margin-left:2px}}
 
 /* Desktop passage controls follow the selected text in the reading flow. */
 #passage-actions .action-label{display:none}
