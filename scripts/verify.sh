@@ -49,6 +49,7 @@ run_step 'Compatibility listener shares the same server' curl -fsS "http://${ver
 run_step 'Rust browser artifact and workers' node scripts/smoke-browser-artifact.mjs "$base_url"
 run_step 'Installed reader upgrades and offline startup' env BROWSER_TEST_URL="$base_url" node scripts/browser-upgrade.test.mjs
 run_step 'Mouse wheel scrolling over dialog buttons' env BROWSER_TEST_URL="$base_url" node scripts/browser-scroll.test.mjs
+run_step 'Passage actions follow desktop selections' env BROWSER_TEST_URL="$base_url" node scripts/browser-passage-actions.test.mjs
 run_step 'Mobile startup budget' env BROWSER_TEST_URL="$base_url" node scripts/browser-startup.test.mjs
 run_step 'Continuous Scripture book scrolling' env BROWSER_TEST_URL="$base_url" node scripts/browser-book-scroll.test.mjs
 run_step 'Compatibility search forms use Rust' node --import tsx scripts/smoke-rust-web.ts "$base_url"

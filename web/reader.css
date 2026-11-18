@@ -18,3 +18,15 @@
 #library-status{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:6;margin:0;padding:10px 16px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--muted);box-shadow:0 4px 20px #0002;font:13px/1.5 Inter,sans-serif;max-width:calc(100vw - 32px)}
 
 #reader-jump::before{content:"Library · ";font:500 12px/1.4 Inter,sans-serif;color:var(--muted)}#reader-jump::after{content:" ⌄";font:16px Inter,sans-serif;color:var(--accent)}
+
+/* Desktop passage controls follow the selected text in the reading flow. */
+#passage-actions .action-label{display:none}
+@media(min-width:700px){
+  .chapter>#passage-tools{margin:0 0 20px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--paper)}
+  .chapter>#passage-tools #reader-reference{margin:0 4px 2px}
+  .chapter>#passage-tools #passage-actions{justify-content:flex-start;flex-wrap:wrap;gap:2px 6px}
+  .chapter>#passage-tools button.icon{width:auto;gap:7px;padding:8px;font:500 13px/1.4 Inter,sans-serif}
+  .chapter>#passage-tools button.icon svg{width:20px;height:20px}
+  .chapter>#passage-tools .action-label{display:inline}
+  .chapter>#passage-tools button:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+}
