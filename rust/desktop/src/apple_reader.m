@@ -552,8 +552,19 @@ float cross_canon_keyboard_height(void) {
     point.y -= self.text.textContainerInset.top;
     NSUInteger glyph = [self.text.layoutManager glyphIndexForPoint:point inTextContainer:self.text.textContainer];
     if (glyph >= self.text.layoutManager.numberOfGlyphs) return;
-    NSDictionary *p = [self paragraphAtOffset:[self.text.layoutManager characterIndexForGlyphAtIndex:glyph]];
+    NSUInteger character = [self.text.layoutManager characterIndexForGlyphAtIndex:glyph];
+    // UIKit handles link activation (including VoiceOver) through its delegate.
+    if ([self.text.attributedText attribute:NSLinkAttributeName atIndex:character effectiveRange:NULL]) return;
+    NSDictionary *p = [self paragraphAtOffset:character];
     if (p) CCEvent([CCValue(self.model, @"selected") isEqual:p[@"id"]] ? @"clear" : @"select", p[@"id"], self.model[@"book"], 0);
+}
+- (BOOL)textView:(UITextView *)textView shouldInteractWithURL:(NSURL *)URL
+    inRange:(NSRange)range interaction:(UITextItemInteraction)interaction {
+    if (interaction != UITextItemInteractionInvokeDefaultAction) return NO;
+    NSString *target = [textView.attributedText attribute:@"CCScriptureTarget" atIndex:range.location effectiveRange:NULL];
+    NSDictionary *p = [self paragraphAtOffset:range.location];
+    if (target && p) CCEvent(@"scripture", p[@"id"], target, 0);
+    return NO;
 }
 - (void)textViewDidChangeSelection:(UITextView *)textView {
     if (self.updating) return;
@@ -638,6 +649,8 @@ float cross_canon_keyboard_height(void) {
 }
 - (void)reflowTo:(NSString *)jump {
     if (!self.chapters || self.text.bounds.size.width <= 0) return;
+    self.text.linkTextAttributes = @{NSForegroundColorAttributeName:CCColor(self.model[@"accent"]),
+        NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle)};
     NSDictionary *anchor = nil;
     for (NSDictionary *p in self.paragraphs) if ([p[@"id"] isEqual:self.reportedLocation]) { anchor = p; break; }
     if (!anchor && self.paragraphs.count) anchor = [self paragraphAtOffset:[self visibleCharacter]];
@@ -746,6 +759,16 @@ float cross_canon_keyboard_height(void) {
                         NSUnderlineColorAttributeName:[CCColor(self.model[@"accent"]) colorWithAlphaComponent:0.45]} range:changed];
                 }
             }
+            for (NSDictionary *link in source[@"scripture_links"]) {
+                NSMutableParagraphStyle *linkStyle = [style mutableCopy];
+                linkStyle.minimumLineHeight = 32;
+                linkStyle.maximumLineHeight = 0;
+                [text appendAttributedString:[[NSAttributedString alloc] initWithString:[link[@"reference"] stringByAppendingString:@"\n"]
+                    attributes:@{NSFontAttributeName:[UIFont preferredFontForTextStyle:UIFontTextStyleCaption1],
+                        NSForegroundColorAttributeName:CCColor(self.model[@"accent"]), NSParagraphStyleAttributeName:linkStyle,
+                        NSLinkAttributeName:link[@"link"], @"CCScriptureTarget":link[@"id"]}]];
+            }
+            p[@"range"] = [NSValue valueWithRange:NSMakeRange(range.location, text.length - range.location)];
         }
         [spans addObject:@{@"id":chapterKey,
             @"range":[NSValue valueWithRange:NSMakeRange(chapterStart, text.length - chapterStart)]}];

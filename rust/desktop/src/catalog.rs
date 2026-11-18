@@ -57,7 +57,115 @@ struct Paragraph {
     scripture_quotation: bool,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub(super) struct ScriptureLink {
+    pub id: String,
+    pub reference: String,
+    pub link: String,
+}
+
+pub(super) struct ScriptureGroup {
+    pub passages: Vec<String>,
+    pub links: Vec<ScriptureLink>,
+}
+
 impl Catalog {
+    /// Presentation groups retain every canonical Passage and its study anchors.
+    /// Only consecutive passages with identical nonempty coverage share a group.
+    pub fn scripture_groups(
+        &self,
+        library: &Library,
+        chapter: &cross_canon_core::Chapter,
+    ) -> Vec<ScriptureGroup> {
+        let mut groups: Vec<ScriptureGroup> = vec![];
+        for id in &chapter.passage_ids {
+            let Some(passage) = library.passage(id) else {
+                continue;
+            };
+            let links = self.scripture_links(library, passage);
+            if let Some(group) = groups.last_mut().filter(|g| {
+                !links.is_empty()
+                    && g.links == links
+                    && g.passages
+                        .last()
+                        .and_then(|id| library.passage(id))
+                        .is_some_and(|previous| {
+                            previous.verse_end.checked_add(1) == Some(passage.verse_start)
+                        })
+            }) {
+                group.passages.push(id.clone());
+            } else {
+                groups.push(ScriptureGroup {
+                    passages: vec![id.clone()],
+                    links,
+                });
+            }
+        }
+        groups
+    }
+
+    /// Resolve stored verse coverage against canonical identities, even before
+    /// browser Scripture text has been hydrated. Disjoint ranges stay separate.
+    pub fn scripture_links(&self, library: &Library, passage: &Passage) -> Vec<ScriptureLink> {
+        if passage.corpus != Corpus::ChristianClassics {
+            return vec![];
+        }
+        let Some(details) = self.chapters.get(&passage.chapter_id) else {
+            return vec![];
+        };
+        let Some(reference) = &details.scripture_reference else {
+            return vec![];
+        };
+        let Some(book) = library
+            .book(&reference.book)
+            .filter(|b| b.corpus == Corpus::Scripture)
+        else {
+            return vec![];
+        };
+        let Some(chapter) = book.chapters.iter().find(|c| c.number == reference.chapter) else {
+            return vec![];
+        };
+        let mut coverage: Vec<_> = details
+            .paragraphs(&library.root)
+            .iter()
+            .filter(|p| p.start <= passage.verse_end && p.end >= passage.verse_start)
+            .filter_map(|p| {
+                p.scripture_start
+                    .map(|start| (start, p.scripture_end.unwrap_or(start)))
+            })
+            .filter(|(start, end)| *start > 0 && start <= end)
+            .collect();
+        coverage.sort_unstable();
+        let mut ranges: Vec<(u32, u32)> = vec![];
+        for (start, end) in coverage {
+            if let Some(previous) = ranges.last_mut().filter(|r| start <= r.1.saturating_add(1)) {
+                previous.1 = previous.1.max(end);
+            } else {
+                ranges.push((start, end));
+            }
+        }
+        ranges
+            .into_iter()
+            .filter_map(|(start, end)| {
+                let target = chapter
+                    .passage_ids
+                    .iter()
+                    .filter_map(|id| library.passage(id))
+                    .find(|p| p.verse_start <= start && p.verse_end >= start)?;
+                let range = if start == end {
+                    start.to_string()
+                } else {
+                    format!("{start}–{end}")
+                };
+                Some(ScriptureLink {
+                    id: target.id.clone(),
+                    reference: format!("{} {}:{range}", reference.book, reference.chapter),
+                    link: navigation::reader_link(target),
+                })
+            })
+            .collect()
+    }
+
     /// Byte ranges in the displayed text, keeping canonical passage IDs intact.
     pub fn quotation_ranges(
         &self,
@@ -405,6 +513,120 @@ mod tests {
                 )
             })
             .clone()
+    }
+
+    #[test]
+    fn scripture_links_merge_overlaps_but_keep_gaps_and_ignore_unmapped_text() {
+        let library = library();
+        let mut passage = library
+            .passage("classics:henry:Prov.16:4-6")
+            .unwrap()
+            .clone();
+        passage.verse_start = 1;
+        passage.verse_end = 6;
+        let catalog: Catalog = serde_json::from_value(serde_json::json!({"chapters": {
+            "classics:henry:Prov.16": {"scriptureReference":{"book":"Proverbs","chapter":16},
+                "paragraphs":[
+                    {"start":1,"end":1,"scriptureStart":1,"scriptureEnd":3,"scriptureQuotation":true},
+                    {"start":2,"end":2,"scriptureStart":2,"scriptureEnd":3},
+                    {"start":3,"end":3,"scriptureStart":8},
+                    {"start":4,"end":4},
+                    {"start":5,"end":5,"scriptureStart":0},
+                    {"start":6,"end":6,"scriptureStart":999},
+                    {"start":7,"end":7,"scriptureStart":20}
+                ]}
+        }})).unwrap();
+        let links = catalog.scripture_links(&library, &passage);
+        assert_eq!(
+            links
+                .iter()
+                .map(|l| l.reference.as_str())
+                .collect::<Vec<_>>(),
+            ["Proverbs 16:1–3", "Proverbs 16:8"]
+        );
+        for (link, verse) in links.iter().zip([1, 8]) {
+            let target = library.passage(&link.id).unwrap();
+            assert_eq!(target.chapter_id, "Proverbs:16");
+            assert!(target.verse_start <= verse && target.verse_end >= verse);
+            assert_eq!(link.link, navigation::reader_link(target));
+        }
+        assert!(Catalog::default()
+            .scripture_links(&library, &passage)
+            .is_empty());
+        passage.verse_start = 4;
+        passage.verse_end = 4;
+        assert!(catalog.scripture_links(&library, &passage).is_empty());
+        passage.corpus = Corpus::Scripture;
+        assert!(catalog.scripture_links(&library, &passage).is_empty());
+    }
+
+    #[test]
+    fn scripture_groups_join_only_contiguous_passages_with_identical_coverage() {
+        let library = library();
+        let chapter = library.chapter("classics:henry:Prov.16").unwrap().1;
+        let catalog: Catalog = serde_json::from_value(serde_json::json!({"chapters": {
+            "classics:henry:Prov.16": {"scriptureReference":{"book":"Proverbs","chapter":16},
+                "paragraphs":[
+                    {"start":1,"end":6,"scriptureStart":1},
+                    {"start":7,"end":9},
+                    {"start":10,"end":12,"scriptureStart":1},
+                    {"start":13,"end":18,"scriptureStart":2},
+                    {"start":19,"end":21,"scriptureStart":1}
+                ]}
+        }}))
+        .unwrap();
+        let groups = catalog.scripture_groups(&library, chapter);
+        assert_eq!(groups[0].passages, chapter.passage_ids[..2]);
+        assert_eq!(groups[1].passages, chapter.passage_ids[2..3]);
+        assert!(groups[1].links.is_empty());
+        assert_eq!(
+            groups[2].links, groups[0].links,
+            "A gap must start a separate group even when coverage repeats"
+        );
+        assert_eq!(groups[3].passages, chapter.passage_ids[4..6]);
+        assert_ne!(groups[3].links, groups[2].links);
+        assert_eq!(
+            groups[4].links, groups[0].links,
+            "Returning to earlier verses must start a new group"
+        );
+        assert_eq!(
+            groups
+                .into_iter()
+                .flat_map(|g| g.passages)
+                .collect::<Vec<_>>(),
+            chapter.passage_ids,
+            "Grouping must preserve canonical order and all study/navigation anchors"
+        );
+    }
+
+    #[test]
+    fn commentary_reader_links_open_scripture_and_keep_a_way_back() {
+        let library = library();
+        let catalog = Catalog::load(&library.root);
+        let chapter = library
+            .book("classics:henry")
+            .unwrap()
+            .chapters
+            .iter()
+            .find(|c| c.id == "classics:henry:Ps.117")
+            .unwrap();
+        let groups = catalog.scripture_groups(&library, chapter);
+        let group = groups.iter().find(|g| !g.links.is_empty()).unwrap();
+        let source = library.passage(group.passages.last().unwrap()).unwrap();
+        let link = &group.links[0];
+        for width in [393.0, 1000.0] {
+            let ctx = egui::Context::default();
+            let mut app = Desktop::initialize(&ctx, None, library.clone());
+            app.open(source.id.clone());
+            for _ in 0..3 {
+                render(&mut app, &ctx, width, vec![]);
+            }
+            let output = render(&mut app, &ctx, width, vec![]);
+            let pos = label_position(&output, &link.reference);
+            tap(&mut app, &ctx, width, pos);
+            assert_eq!(app.state.location_passage_id, link.id);
+            assert_eq!(app.back.last(), Some(&source.id));
+        }
     }
 
     #[test]

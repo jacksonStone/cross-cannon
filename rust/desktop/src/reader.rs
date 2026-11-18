@@ -253,6 +253,7 @@ impl Desktop {
         let chapters = chapter_sequence(&library, book, self.state.canon);
         let mut measured = std::mem::take(&mut self.reader_layout);
         let mut focused_visible = None;
+        let mut scripture_target = None;
         let mut target = self.scroll_target.clone();
         let mut prepended_height = 0.0;
         let touch = self.reader_touch.frame(
@@ -446,7 +447,19 @@ impl Desktop {
                     ui.painter().galley(rect.min, title, p.muted);
                     ui.add_space(12.0);
                 }
-                for id in &chapter.passage_ids {
+                let groups = self.catalog.scripture_groups(&library, chapter);
+                for (id, links) in groups.iter().flat_map(|group| {
+                    group.passages.iter().map(move |id| {
+                        (
+                            id,
+                            if Some(id) == group.passages.last() {
+                                group.links.as_slice()
+                            } else {
+                                &[]
+                            },
+                        )
+                    })
+                }) {
                     let start = ui.cursor().min;
                     if target.as_deref() != Some(id) {
                         if let Some(&height) = measured.passages.get(id) {
@@ -628,6 +641,30 @@ impl Desktop {
                         focused_visible = Some(id.clone());
                     }
                     ui.add_space(2.0);
+                    if !links.is_empty() {
+                        ui.horizontal_wrapped(|ui| {
+                            for link in links {
+                                if ui
+                                    .add(
+                                        egui::Button::new(
+                                            RichText::new(&link.reference)
+                                                .size(12.0)
+                                                .color(p.accent)
+                                                .underline(),
+                                        )
+                                        .frame(false)
+                                        .min_size(egui::vec2(44.0, 32.0)),
+                                    )
+                                    .on_hover_text(format!("Read {} in Scripture", link.reference))
+                                    .clicked()
+                                    && !touch.suppress_click
+                                {
+                                    scripture_target = Some(link.id.clone());
+                                }
+                            }
+                        });
+                        ui.add_space(12.0);
+                    }
                     if selected {
                         ui.horizontal(|ui| {
                             ui.spacing_mut().item_spacing.x = 6.0;
@@ -826,6 +863,9 @@ impl Desktop {
         }
         if prepended_height == 0.0 {
             self.last_scroll = output.state.offset.y;
+        }
+        if let Some(id) = scripture_target {
+            self.open(id);
         }
     }
     pub(super) fn book_heading(&self, ui: &mut egui::Ui, book: &Book) {

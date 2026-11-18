@@ -61,6 +61,8 @@ struct Paragraph {
     link: String,
     modernization: Vec<[usize; 2]>,
     quotations: Vec<[usize; 2]>,
+    scripture_links: Vec<catalog::ScriptureLink>,
+    scripture_group: Option<String>,
 }
 
 #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
@@ -348,12 +350,15 @@ impl Desktop {
                             "title": book.title, "author": if book.corpus == Corpus::Scripture { self.reading_text.label(&book.title, self.state.scripture_translation) } else { book.author.as_deref().unwrap_or("") },
                             "collection": collection_name(book.corpus), "chapters": book.chapters.len(),
                         })),
-                        paragraphs: chapter
-                            .passage_ids
-                            .iter()
-                            .map(|id| {
+                        paragraphs: self.catalog.scripture_groups(&self.library, chapter)
+                            .into_iter().flat_map(|group| {
+                                let group_id = (!group.links.is_empty()).then(|| group.passages[0].clone());
+                                let last = group.passages.len() - 1;
+                                group.passages.into_iter().enumerate().map(move |(index, id)| (id, group_id.clone(), if index == last { group.links.clone() } else { vec![] }))
+                            })
+                            .map(|(id, scripture_group, scripture_links)| {
                                 let p = self.reading_text.passage(
-                                    self.library.passage(id).unwrap(),
+                                    self.library.passage(&id).unwrap(),
                                     self.state.scripture_translation,
                                 );
                                 let displayed = p.reader_text(self.state.original);
@@ -380,6 +385,8 @@ impl Desktop {
                                     highlight: self.study.marks(p),
                                     link: navigation::reader_link(p),
                                     modernization,
+                                    scripture_links,
+                                    scripture_group,
                                     quotations: self.catalog.quotation_ranges(&self.library, p, displayed)
                                         .iter().map(|r| [displayed[..r.start].encode_utf16().count(), displayed[r.clone()].encode_utf16().count()]).collect(),
                                 }
