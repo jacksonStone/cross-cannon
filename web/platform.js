@@ -5,6 +5,8 @@ let lastLink = location.pathname + location.search;
 let suppressLocation = false;
 let lastReported = '';
 let iconMarkup = {};
+let passageTools;
+const inlinePassageActions = matchMedia('(min-width:700px)');
 const $ = (id) => document.getElementById(id);
 const emit = (action, id = '', book = model.book ?? '', value = 0) => dispatch?.(JSON.stringify({ action, id, book, value }));
 const button = (label, action, icon, className = 'icon') => {
@@ -81,6 +83,30 @@ function renderChapters(chapters) {
 function highlightColor(mark) {
   return ({yellow:'#f9eab3',green:'#d5ead2',blue:'#d3e4f5',pink:'#f4d6e1',purple:'#e3d8ef'})[mark] ?? '#f9eab3';
 }
+function placePassageActions() {
+  const passage = model.selected && passageElement(model.selected);
+  const inline = inlinePassageActions.matches && passage;
+  if (inline) {
+    if (passage.nextElementSibling !== passageTools) passage.after(passageTools);
+  } else if (passageTools.parentElement !== $('reader-footer')) {
+    $('reader-footer').prepend(passageTools);
+  }
+  passageTools.hidden = !model.selected || (inlinePassageActions.matches && !passage);
+  $('reader-footer').hidden = Boolean(model.selected && inlinePassageActions.matches) || (!model.selected && !model.status);
+}
+function revealPassageActions() {
+  if (!inlinePassageActions.matches || !model.visible || !model.selected) return;
+  const passage = passageElement(model.selected);
+  if (!passage) return;
+  const viewport = $('reader-scroll').getBoundingClientRect();
+  const rect = passage.getBoundingClientRect();
+  // Only a new selection reveals its controls. Passive scrolling never pulls
+  // the reader back to a selected passage, and the row never overlays text.
+  if (rect.bottom > viewport.top && rect.top < viewport.bottom) {
+    const overflow = passageTools.getBoundingClientRect().bottom - viewport.bottom + 12;
+    if (overflow > 0) $('reader-scroll').scrollTop += overflow;
+  }
+}
 function updateReader(next) {
   const previous = model;
   const anchor = captureAnchor();
@@ -100,14 +126,16 @@ function updateReader(next) {
   root.dataset.theme = next.theme === 2 ? 'dark' : 'light';
   document.querySelector('meta[name=theme-color]').content = next.paper;
   $('reader-jump').textContent = next.title;
-  $('reader-jump').setAttribute('aria-label', `Library, ${next.collection}, ${next.title}`);
+  $('reader-jump').setAttribute('aria-label', `Current reading, ${next.collection}, ${next.title}`);
   $('reader-text').classList.toggle('work', !next.scripture);
   if (next.chapters) renderChapters(next.chapters);
   for (const p of $('reader-text').querySelectorAll('.passage')) {
     p.classList.toggle('selected', p.dataset.passageId === next.selected);
     p.setAttribute('aria-current', p.dataset.passageId === next.location ? 'location' : 'false');
   }
-  $('reader-footer').hidden = !next.selected && !next.status;
+  // A changed Chapter can detach the controls with its old text nodes. Put
+  // the retained controls back before updating their reference and buttons.
+  placePassageActions();
   $('reader-reference').hidden = !next.selected; $('reader-reference').textContent = next.reference ?? '';
   $('passage-actions').hidden = !next.selected;
   $('reader-status').hidden = Boolean(next.selected); $('reader-status').textContent = next.status ?? '';
@@ -127,6 +155,7 @@ function updateReader(next) {
   } else if (next.chapters || previous.fontScale !== next.fontScale || previous.lineHeight !== next.lineHeight || previous.width !== next.width) {
     restoreAnchor(anchor);
   }
+  if (next.selected && next.selected !== previous.selected) requestAnimationFrame(revealPassageActions);
   if ($('reader-settings').open) renderSettings();
 }
 function reportLocation() {
@@ -184,6 +213,14 @@ function renderAccessibility(tree) {
       if (tag === 'input' || tag === 'textarea') {
         element.autocomplete = 'off';
         element.addEventListener('focus', () => emit('accessibility',node.id,'focus'));
+        // Committing a suggestion releases Rust focus while the DOM input can
+        // remain active. A second click must reopen its completion list.
+        element.addEventListener('pointerdown',()=>{if(document.activeElement===element)emit('accessibility',node.id,'focus');});
+        if(tag==='input')element.addEventListener('keydown',event=>{
+          if(!event.isComposing&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&['ArrowUp','ArrowDown','Enter','Escape'].includes(event.key)){
+            event.preventDefault();event.stopPropagation();emit('key',event.key,node.id);
+          }
+        });
         const selection=()=>JSON.stringify({text:element.value,start:element.selectionStart??0,end:element.selectionEnd??0});
         element.addEventListener('input', () => emit('text',selection(),node.id));
         element.addEventListener('select', () => emit('selection',selection(),node.id));
@@ -256,7 +293,7 @@ function renderSettings() {
     const b=document.createElement('button');b.className='setting-row';b.textContent=label;b.setAttribute('aria-pressed',String(values.every((n,i)=>Math.abs(n-[model.fontScale,model.lineHeight,model.width][i])<.002)));b.onclick=()=>['font','spacing','width'].forEach((id,i)=>preference(id,values[i]));text.append(b);
   }
   for(const [title,id,key,choices,footer] of [
-    ['Bible translation','translation','translation',['World English Bible','Majority Standard Bible'],'Search uses the World English Bible index. Recordings remain WEB audio.'],
+    ['Bible translation','translation','translation',['World English Bible','Majority Standard Bible'],'Audio follows your translation. MSB recordings stream online. Offline audio downloads use WEB. Search uses the World English Bible index.'],
     ['Theme','theme','theme',['Paper','Sepia','Dark','High contrast'],''],
     ['Scripture canon','canon','canon',['Protestant','Catholic','Orthodox'],'']]) {
     const group=settingSection(title,footer);choices.forEach((label,value)=>{const b=document.createElement('button');b.className='setting-row';b.textContent=label;b.setAttribute('aria-pressed',String(model[key]===value));b.dataset.setting=id+value;b.onclick=()=>preference(id,value);group.append(b);});
@@ -278,9 +315,18 @@ export async function signOut() {
 export function openURL(url) { if(/^https?:\/\//.test(url)) window.open(url,'_blank','noopener,noreferrer'); }
 export function connect(send, icons) {
   dispatch=send;iconMarkup=icons;
+  passageTools=document.createElement('div');passageTools.id='passage-tools';
+  passageTools.append($('reader-reference'),$('passage-actions'));
+  $('reader-footer').prepend(passageTools);
   $('reader-tools').innerHTML=icons.tools;
-  $('reader-jump').onclick=()=>emit('library');$('reader-tools').onclick=openTools;
-  for(const [label,action,icon] of [['Highlight passage','highlight','highlight'],['Passage notes','note','note'],['View commentaries','commentary','commentary'],['Similar passages','similar','search'],['Close passage actions','clear','close']]) {const b=button(label,action,icon);b.id='action-'+action;$('passage-actions').append(b);}
+  $('reader-library').querySelector('.library-icon').innerHTML=icons.library;
+  $('reader-library').onclick=()=>emit('library');$('reader-tools').onclick=openTools;
+  for(const [label,action,icon,text] of [['Highlight passage','highlight','highlight','Highlight'],['Passage notes','note','note','Notes'],['View commentaries','commentary','commentary','Commentaries'],['Similar passages','similar','search','Similar passages'],['Close passage actions','clear','close','']]) {
+    const b=button(label,action,icon);b.id='action-'+action;
+    if(text){const span=document.createElement('span');span.className='action-label';span.textContent=text;span.setAttribute('aria-hidden','true');b.append(span);}
+    if(action==='clear')b.addEventListener('click',()=>passageElement(model.selected)?.focus({preventScroll:true}));
+    $('passage-actions').append(b);
+  }
   $('settings-done').onclick=()=>{$('reader-settings').close();$('reader-tools').focus();};
   $('tools-menu').addEventListener('click',(e)=>{if(e.target===$('tools-menu'))closeMenu();});
   $('tools-menu').addEventListener('cancel',()=>{$('reader-tools').setAttribute('aria-expanded','false');});
@@ -302,7 +348,7 @@ export function connect(send, icons) {
   window.addEventListener('popstate',()=>{lastLink=location.pathname+location.search;emit('link','https://www.crosscanon.com'+lastLink);});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')reportLocation();else emit('resume');});
   let resizeAnchor=captureAnchor();
-  new ResizeObserver(()=>{restoreAnchor(resizeAnchor);resizeAnchor=captureAnchor();}).observe($('reader-scroll'));
+  new ResizeObserver(()=>{placePassageActions();restoreAnchor(resizeAnchor);resizeAnchor=captureAnchor();}).observe($('reader-scroll'));
   $('reader-scroll').addEventListener('scroll',()=>{resizeAnchor=captureAnchor();},{passive:true});
   document.fonts.ready.then(()=>restoreAnchor(resizeAnchor));
 }

@@ -16,8 +16,8 @@ try {
     // The first text snapshot can precede removal of the blocking startup overlay.
     // Wait for interactive controls before sending a real pointer click.
     await page.waitForFunction(()=>window.crossCanonReader&&document.querySelectorAll('.passage').length>0&&!document.querySelector('#reader').hidden&&!document.querySelector('#loading'),{timeout:30000});
-    assert.equal(await page.$('#reader-library'), null, 'Library uses one combined reader control');
-    await page.click('#reader-jump');
+    assert.ok(await page.$('button#reader-library'), 'Reader exposes an explicit Library button');
+    await page.click('#reader-library');
     await page.waitForSelector('#dialog-accessibility [aria-label="Choose where to read"]');
     const lastPlace='#dialog-accessibility [aria-label^="Last place ·"]';
     await page.waitForSelector(lastPlace);

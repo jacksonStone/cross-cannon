@@ -58,7 +58,7 @@ try {
   await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await page.waitForFunction((y)=>{const e=document.querySelector('#dialog-accessibility [aria-label="Genesis"]');return !e||e.getBoundingClientRect().top<y-30;},{timeout:10000},before.y);
   report.push({touchScrollOverButton:true});await close(page);
-  await page.click('#reader-jump');await page.waitForSelector('#dialog-accessibility [aria-label="Close"]');await shot(page,'mobile-jump');await close(page);
+  await page.click('#reader-library');await page.waitForSelector('#dialog-accessibility [aria-label="Close"]');await shot(page,'mobile-jump');await close(page);
   await page.click('#reader-tools');await page.click('#tools-menu [aria-label="Search"]');await page.waitForSelector('#dialog-accessibility input, #dialog-accessibility textarea');await shot(page,'mobile-search');
   await click(page,'Filters');await page.waitForSelector('#dialog-accessibility [aria-label="Done"]');await shot(page,'mobile-filters');await click(page,'Done');
   await click(page,'Search Keywords');

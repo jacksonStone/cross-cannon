@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from lib.browser_assets import version_assets
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / 'public/browser'
@@ -23,10 +24,11 @@ def inputs():
     paths = [ROOT/'Cargo.toml', ROOT/'Cargo.lock', ROOT/'scripture-cache/manifest.json',
              ROOT/'public/church-fathers-preview/manifest.json', ROOT/'public/church-fathers-preview/books.json',
              ROOT/'public/christian-classics-text/manifest.json', ROOT/'public/christian-classics-text/books.json',
-             ROOT/'public/scripture-translations/msb.json', Path(__file__)]
+             ROOT/'public/scripture-translations/msb.json',
+             ROOT/'public/scripture-translations/msb-audio.json', Path(__file__)]
     for folder in ['rust/core', 'rust/desktop', 'web']:
         paths += [p for p in (ROOT/folder).rglob('*') if p.is_file() and p.suffix in {'.rs','.toml','.m','.ttf','.js','.css','.html'}]
-    paths += [ROOT/'scripts/lib/native_catalog.py', ROOT/'scripts/precompress-browser.mjs']
+    paths += [ROOT/'scripts/lib/native_catalog.py', ROOT/'scripts/lib/browser_assets.py', ROOT/'scripts/precompress-browser.mjs']
     value = hashlib.sha256()
     for path in sorted(set(paths)):
         value.update(str(path.relative_to(ROOT)).encode()); value.update(bytes.fromhex(digest(path)))
@@ -42,6 +44,12 @@ def valid_manifest():
             return None
         if gzip.decompress((OUTPUT/'manifest.json.gz').read_bytes()) != (OUTPUT/'manifest.json').read_bytes():
             return None
+        if 'shell' in manifest:
+            pinned = OUTPUT / ('manifest.' + manifest['version'] + '.json')
+            if pinned.read_bytes() != (OUTPUT/'manifest.json').read_bytes():
+                return None
+            if gzip.decompress(pinned.with_name(pinned.name + '.gz').read_bytes()) != pinned.read_bytes():
+                return None
         return manifest
     except (OSError, ValueError, KeyError):
         return None
@@ -80,7 +88,7 @@ def main():
         for source in (ROOT/'web').iterdir():
             if source.is_file(): shutil.copy2(source,staging/source.name)
         (staging/'fonts').mkdir()
-        for name in ['SourceSerif4-Semibold.ttf','SourceSerif4-Bold.ttf']:
+        for name in ['SourceSerif4-Regular.ttf','SourceSerif4-Semibold.ttf','SourceSerif4-Bold.ttf']:
             shutil.copy2(ROOT/'rust/desktop/fonts'/name,staging/'fonts'/name)
         shutil.copy2(ROOT/'rust/desktop/fonts/Inter.ttf',staging/'fonts/Inter.ttf')
         archive = json.loads((staging/'archive.json').read_text())
@@ -95,6 +103,7 @@ def main():
             if source.get('reading'): source['reading'] = renamed[source['reading']]
         (staging/'archive.json').write_text(json.dumps(archive,separators=(',',':')))
         manifest = {'source':fingerprint,'version':fingerprint[:20]}
+        manifest.update(version_assets(staging, manifest['version']))
         for key, name in [('module','reader.js'),('wasm','reader_bg.wasm'),('library','library.bin'),('catalog','catalog.json'),('archive','archive.json')]:
             path = staging/name; hashed=path.stem+'.'+digest(path)[:20]+path.suffix
             path.rename(staging/hashed); manifest[key]='/browser/'+hashed
@@ -117,6 +126,9 @@ def main():
         # Its encoding is verified by exact decompressed equality to the receipt,
         # avoiding a self-referential hash inside manifest.files.
         (staging/'manifest.json.gz').write_bytes(gzip.compress((staging/'manifest.json').read_bytes(), compresslevel=6, mtime=0))
+        pinned = staging / ('manifest.' + manifest['version'] + '.json')
+        pinned.write_bytes((staging/'manifest.json').read_bytes())
+        pinned.with_name(pinned.name + '.gz').write_bytes((staging/'manifest.json.gz').read_bytes())
         # The manifest is outside its own receipt; gzip is validated above, and
         # its Brotli encoding is intentionally omitted to avoid circular hashes.
         if inputs() != fingerprint:
@@ -124,7 +136,10 @@ def main():
         # Publish only a complete build. Keep prior immutable assets available
         # for open tabs; deploy packaging may carry both versions safely.
         OUTPUT.mkdir(parents=True,exist_ok=True)
-        keep = set(manifest['files']) | set((existing or {}).get('files', {})) | {'manifest.json', 'manifest.json.gz'}
+        keep = set(manifest['files']) | set((existing or {}).get('files', {})) | {'manifest.json', 'manifest.json.gz', pinned.name, pinned.name + '.gz'}
+        if existing:
+            previous = 'manifest.' + existing['version'] + '.json'
+            keep |= {previous, previous + '.gz'}
         # A newly incompressible mutable asset must not retain an older encoding.
         keep -= {name for name in keep if name.endswith('.gz') and name[:-3] in manifest['files'] and name not in manifest['files']}
         for path in OUTPUT.rglob('*'):

@@ -1,0 +1,1566 @@
+{
+  "date": "2026-11-17",
+  "baseline_commit": "743f7db2003a4fd4b26444b625a178934aeb947b",
+  "platform": "linux/amd64 on Apple Silicon Docker Desktop",
+  "runtime": "debian:bookworm-slim",
+  "cpus": 2,
+  "memory_limit_mib": 1200,
+  "swap_enabled": false,
+  "data_read_only": true,
+  "memory_runs_overlap_local_verification": true,
+  "latency_runs_after_verification": true,
+  "baseline_binary_sha256": "0e47bac59efe8508a7a1592f5b55ee5cab5358726994affee19d02b9037bd447",
+  "optimized_binary_sha256": "8c554853e35d210e0846728e04e3b4665bc9d1a63421d6ee262d4cb6c6325a50",
+  "before": [
+    {
+      "label": "before",
+      "run": 0,
+      "startup_ms": 11396.69,
+      "health": {
+        "ms": 22.14,
+        "sha256": "158ad3648fd9b02bdce78f77af3384ffed5c24e94fe6eda8bcf7de91d1f0382f",
+        "count": 0
+      },
+      "startup": {
+        "VmHWM": 806768,
+        "VmRSS": 806768,
+        "RssAnon": 798732,
+        "VmSwap": 0,
+        "Threads": 3,
+        "anon": 819818496,
+        "file": 422514688,
+        "kernel": 15486976,
+        "max": 915,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1256497152,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      },
+      "keyword_first": {
+        "ms": 897.64,
+        "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+        "count": 20
+      },
+      "keyword_warm": [
+        {
+          "ms": 47.07,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 50.13,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 53.74,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        }
+      ],
+      "after_keywords": {
+        "VmHWM": 968840,
+        "VmRSS": 968840,
+        "RssAnon": 960776,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 985751552,
+        "file": 255868928,
+        "kernel": 15855616,
+        "max": 1551,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1256402944,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      },
+      "commentary_first": {
+        "ms": 90.33,
+        "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+        "count": 5
+      },
+      "commentary_warm": [
+        {
+          "ms": 44.42,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 40.11,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 37.2,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 39.65,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 34.01,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 31.03,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 29.85,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 31.81,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 29.99,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 36.14,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        }
+      ],
+      "after_commentary": {
+        "VmHWM": 999532,
+        "VmRSS": 999532,
+        "RssAnon": 991468,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 1017180160,
+        "file": 224866304,
+        "kernel": 15826944,
+        "max": 1690,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1257189376,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      }
+    },
+    {
+      "label": "before",
+      "run": 1,
+      "startup_ms": 8971.27,
+      "health": {
+        "ms": 21.28,
+        "sha256": "158ad3648fd9b02bdce78f77af3384ffed5c24e94fe6eda8bcf7de91d1f0382f",
+        "count": 0
+      },
+      "startup": {
+        "VmHWM": 806800,
+        "VmRSS": 806800,
+        "RssAnon": 798732,
+        "VmSwap": 0,
+        "Threads": 3,
+        "anon": 819818496,
+        "file": 422375424,
+        "kernel": 15745024,
+        "max": 941,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1256976384,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      },
+      "keyword_first": {
+        "ms": 263.0,
+        "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+        "count": 20
+      },
+      "keyword_warm": [
+        {
+          "ms": 39.17,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 38.8,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 38.33,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        }
+      ],
+      "after_keywords": {
+        "VmHWM": 968848,
+        "VmRSS": 968848,
+        "RssAnon": 960752,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 985726976,
+        "file": 256176128,
+        "kernel": 15978496,
+        "max": 1576,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1256820736,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      },
+      "commentary_first": {
+        "ms": 44.69,
+        "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+        "count": 5
+      },
+      "commentary_warm": [
+        {
+          "ms": 31.16,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 30.79,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 30.72,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 30.92,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 31.26,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 32.02,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 31.2,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 31.58,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 30.99,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 31.29,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        }
+      ],
+      "after_commentary": {
+        "VmHWM": 999556,
+        "VmRSS": 999556,
+        "RssAnon": 991460,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 1017171968,
+        "file": 224673792,
+        "kernel": 16048128,
+        "max": 1716,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1257512960,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      }
+    },
+    {
+      "label": "before",
+      "run": 2,
+      "startup_ms": 5205.1,
+      "health": {
+        "ms": 24.75,
+        "sha256": "158ad3648fd9b02bdce78f77af3384ffed5c24e94fe6eda8bcf7de91d1f0382f",
+        "count": 0
+      },
+      "startup": {
+        "VmHWM": 806796,
+        "VmRSS": 806796,
+        "RssAnon": 798728,
+        "VmSwap": 0,
+        "Threads": 3,
+        "anon": 819814400,
+        "file": 422375424,
+        "kernel": 15626240,
+        "max": 943,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1256603648,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      },
+      "keyword_first": {
+        "ms": 291.12,
+        "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+        "count": 20
+      },
+      "keyword_warm": [
+        {
+          "ms": 40.65,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 41.76,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 40.25,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        }
+      ],
+      "after_keywords": {
+        "VmHWM": 968836,
+        "VmRSS": 968836,
+        "RssAnon": 960740,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 985714688,
+        "file": 256176128,
+        "kernel": 15986688,
+        "max": 1575,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1257074688,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      },
+      "commentary_first": {
+        "ms": 43.21,
+        "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+        "count": 5
+      },
+      "commentary_warm": [
+        {
+          "ms": 28.74,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 28.74,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 28.17,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 28.69,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 27.94,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 28.42,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 27.95,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 28.25,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 28.24,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 27.81,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        }
+      ],
+      "after_commentary": {
+        "VmHWM": 999544,
+        "VmRSS": 999544,
+        "RssAnon": 991448,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 1017163776,
+        "file": 224350208,
+        "kernel": 16080896,
+        "max": 1718,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1256628224,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      }
+    }
+  ],
+  "after": [
+    {
+      "label": "after",
+      "run": 0,
+      "startup_ms": 8128.72,
+      "health": {
+        "ms": 35.73,
+        "sha256": "158ad3648fd9b02bdce78f77af3384ffed5c24e94fe6eda8bcf7de91d1f0382f",
+        "count": 0
+      },
+      "startup": {
+        "VmHWM": 509884,
+        "VmRSS": 509884,
+        "RssAnon": 502044,
+        "VmSwap": 0,
+        "Threads": 3,
+        "anon": 516009984,
+        "file": 671268864,
+        "kernel": 15024128,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1201737728,
+        "memory.peak": 1203007488,
+        "memory.swap.current": 0
+      },
+      "keyword_first": {
+        "ms": 277.74,
+        "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+        "count": 20
+      },
+      "keyword_warm": [
+        {
+          "ms": 214.72,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 215.06,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 227.61,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        }
+      ],
+      "after_keywords": {
+        "VmHWM": 536152,
+        "VmRSS": 536152,
+        "RssAnon": 528308,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 542904320,
+        "file": 671297536,
+        "kernel": 15106048,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1228177408,
+        "memory.peak": 1230401536,
+        "memory.swap.current": 0
+      },
+      "commentary_first": {
+        "ms": 52.7,
+        "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+        "count": 5
+      },
+      "commentary_warm": [
+        {
+          "ms": 1.23,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.16,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 2.01,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.05,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.84,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.83,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.02,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.56,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.31,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.57,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        }
+      ],
+      "after_commentary": {
+        "VmHWM": 560484,
+        "VmRSS": 560484,
+        "RssAnon": 552548,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 567730176,
+        "file": 674754560,
+        "kernel": 15171584,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1256685568,
+        "memory.peak": 1258266624,
+        "memory.swap.current": 0
+      }
+    },
+    {
+      "label": "after",
+      "run": 1,
+      "startup_ms": 8747.72,
+      "health": {
+        "ms": 52.89,
+        "sha256": "158ad3648fd9b02bdce78f77af3384ffed5c24e94fe6eda8bcf7de91d1f0382f",
+        "count": 0
+      },
+      "startup": {
+        "VmHWM": 509960,
+        "VmRSS": 509960,
+        "RssAnon": 502044,
+        "VmSwap": 0,
+        "Threads": 3,
+        "anon": 516009984,
+        "file": 669057024,
+        "kernel": 15020032,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1199259648,
+        "memory.peak": 1200812032,
+        "memory.swap.current": 0
+      },
+      "keyword_first": {
+        "ms": 787.63,
+        "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+        "count": 20
+      },
+      "keyword_warm": [
+        {
+          "ms": 544.9,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 547.18,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 576.78,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        }
+      ],
+      "after_keywords": {
+        "VmHWM": 536236,
+        "VmRSS": 536236,
+        "RssAnon": 528316,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 542912512,
+        "file": 669085696,
+        "kernel": 14848000,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1226547200,
+        "memory.peak": 1228455936,
+        "memory.swap.current": 0
+      },
+      "commentary_first": {
+        "ms": 122.19,
+        "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+        "count": 5
+      },
+      "commentary_warm": [
+        {
+          "ms": 6.3,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 3.28,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 3.43,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 3.58,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 4.53,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 4.78,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 7.14,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 5.81,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 4.82,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 28.4,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        }
+      ],
+      "after_commentary": {
+        "VmHWM": 560556,
+        "VmRSS": 560556,
+        "RssAnon": 552544,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 567721984,
+        "file": 672542720,
+        "kernel": 15294464,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1255055360,
+        "memory.peak": 1256144896,
+        "memory.swap.current": 0
+      }
+    },
+    {
+      "label": "after",
+      "run": 2,
+      "startup_ms": 30000.49,
+      "health": {
+        "ms": 38.5,
+        "sha256": "158ad3648fd9b02bdce78f77af3384ffed5c24e94fe6eda8bcf7de91d1f0382f",
+        "count": 0
+      },
+      "startup": {
+        "VmHWM": 509920,
+        "VmRSS": 509920,
+        "RssAnon": 502004,
+        "VmSwap": 0,
+        "Threads": 3,
+        "anon": 515969024,
+        "file": 669057024,
+        "kernel": 15011840,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1199591424,
+        "memory.peak": 1200574464,
+        "memory.swap.current": 0
+      },
+      "keyword_first": {
+        "ms": 667.37,
+        "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+        "count": 20
+      },
+      "keyword_warm": [
+        {
+          "ms": 306.51,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 301.92,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 292.49,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        }
+      ],
+      "after_keywords": {
+        "VmHWM": 536196,
+        "VmRSS": 536196,
+        "RssAnon": 528276,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 542875648,
+        "file": 669085696,
+        "kernel": 14811136,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1226493952,
+        "memory.peak": 1227837440,
+        "memory.swap.current": 0
+      },
+      "commentary_first": {
+        "ms": 75.98,
+        "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+        "count": 5
+      },
+      "commentary_warm": [
+        {
+          "ms": 3.87,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 3.61,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 6.95,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 5.11,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 3.74,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 3.8,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 3.87,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 4.06,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 3.71,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 3.7,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        }
+      ],
+      "after_commentary": {
+        "VmHWM": 560508,
+        "VmRSS": 560508,
+        "RssAnon": 552496,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 567672832,
+        "file": 672542720,
+        "kernel": 14876672,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1253994496,
+        "memory.peak": 1255858176,
+        "memory.swap.current": 0
+      }
+    }
+  ],
+  "before-latency": [
+    {
+      "label": "before-latency",
+      "run": 0,
+      "startup_ms": 6028.35,
+      "health": {
+        "ms": 20.65,
+        "sha256": "158ad3648fd9b02bdce78f77af3384ffed5c24e94fe6eda8bcf7de91d1f0382f",
+        "count": 0
+      },
+      "startup": {
+        "VmHWM": 806808,
+        "VmRSS": 806808,
+        "RssAnon": 798728,
+        "VmSwap": 0,
+        "Threads": 3,
+        "anon": 819818496,
+        "file": 422113280,
+        "kernel": 15749120,
+        "max": 942,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1256488960,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      },
+      "keyword_first": {
+        "ms": 267.7,
+        "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+        "count": 20
+      },
+      "keyword_warm": [
+        {
+          "ms": 38.87,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 38.74,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 38.95,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 39.25,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 38.13,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 38.32,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 38.6,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 38.11,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 38.86,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 38.31,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 37.91,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 39.29,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 38.08,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 37.92,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 39.46,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        }
+      ],
+      "after_keywords": {
+        "VmHWM": 968896,
+        "VmRSS": 968896,
+        "RssAnon": 960788,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 985763840,
+        "file": 256176128,
+        "kernel": 15986688,
+        "max": 1575,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1257500672,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      },
+      "commentary_first": {
+        "ms": 44.33,
+        "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+        "count": 5
+      },
+      "commentary_warm": [
+        {
+          "ms": 29.1,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 29.7,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 29.98,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 30.58,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 29.92,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 32.9,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 30.64,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 29.63,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 29.94,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 30.91,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        }
+      ],
+      "after_commentary": {
+        "VmHWM": 999584,
+        "VmRSS": 999584,
+        "RssAnon": 991476,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 1017188352,
+        "file": 224411648,
+        "kernel": 16056320,
+        "max": 1717,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1256607744,
+        "memory.peak": 1258291200,
+        "memory.swap.current": 0
+      },
+      "scripture_first": {
+        "ms": 3.82,
+        "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+        "count": 20
+      },
+      "scripture_warm": [
+        {
+          "ms": 2.62,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.47,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.56,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.51,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.55,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.77,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.65,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.58,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 3.22,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.67,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.73,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.69,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.6,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.54,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.6,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        }
+      ],
+      "john_first": {
+        "ms": 1.46,
+        "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+        "count": 20
+      },
+      "john_warm": [
+        {
+          "ms": 1.92,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.19,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.2,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.21,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.18,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.12,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.32,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 2.01,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.22,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 2.25,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 0.94,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 0.91,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 0.91,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.15,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.3,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        }
+      ]
+    }
+  ],
+  "after-latency": [
+    {
+      "label": "after-latency",
+      "run": 0,
+      "startup_ms": 5036.77,
+      "health": {
+        "ms": 21.62,
+        "sha256": "158ad3648fd9b02bdce78f77af3384ffed5c24e94fe6eda8bcf7de91d1f0382f",
+        "count": 0
+      },
+      "startup": {
+        "VmHWM": 509964,
+        "VmRSS": 509964,
+        "RssAnon": 502048,
+        "VmSwap": 0,
+        "Threads": 3,
+        "anon": 516014080,
+        "file": 669057024,
+        "kernel": 15011840,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1199247360,
+        "memory.peak": 1200562176,
+        "memory.swap.current": 0
+      },
+      "keyword_first": {
+        "ms": 231.29,
+        "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+        "count": 20
+      },
+      "keyword_warm": [
+        {
+          "ms": 207.73,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 207.39,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 202.7,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 203.17,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 204.51,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 214.3,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 217.32,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 217.54,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 207.64,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 204.58,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 204.26,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 204.12,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 207.47,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 217.23,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        },
+        {
+          "ms": 219.81,
+          "sha256": "461564cd6558f0925c2efad729e153b6485f7affae26474e01fd884fa0ff738a",
+          "count": 20
+        }
+      ],
+      "after_keywords": {
+        "VmHWM": 536272,
+        "VmRSS": 536272,
+        "RssAnon": 528352,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 542949376,
+        "file": 669085696,
+        "kernel": 15261696,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1226682368,
+        "memory.peak": 1228218368,
+        "memory.swap.current": 0
+      },
+      "commentary_first": {
+        "ms": 46.1,
+        "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+        "count": 5
+      },
+      "commentary_warm": [
+        {
+          "ms": 1.51,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.64,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.22,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.21,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.19,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.12,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.13,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.35,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 1.61,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        },
+        {
+          "ms": 2.01,
+          "sha256": "b65a6c4f220f38b25a243dae40b90a385da018addd81d283e30a78242757e6d4",
+          "count": 5
+        }
+      ],
+      "after_commentary": {
+        "VmHWM": 560580,
+        "VmRSS": 560580,
+        "RssAnon": 552568,
+        "VmSwap": 0,
+        "Threads": 4,
+        "anon": 567746560,
+        "file": 672542720,
+        "kernel": 15167488,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory.current": 1254785024,
+        "memory.peak": 1256599552,
+        "memory.swap.current": 0
+      },
+      "scripture_first": {
+        "ms": 17.83,
+        "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+        "count": 20
+      },
+      "scripture_warm": [
+        {
+          "ms": 3.25,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.77,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.99,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.8,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.79,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.9,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.71,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.72,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.66,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 4.02,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 3.58,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 3.07,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.9,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 3.83,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        },
+        {
+          "ms": 2.9,
+          "sha256": "910a056bc26845db0d65401e1b0e67e44c191c410733d0d7301ce88aa949e304",
+          "count": 20
+        }
+      ],
+      "john_first": {
+        "ms": 2.92,
+        "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+        "count": 20
+      },
+      "john_warm": [
+        {
+          "ms": 1.19,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.09,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 2.19,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.09,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.11,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.14,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.09,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.05,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.7,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 2.04,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.26,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.1,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.06,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.05,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        },
+        {
+          "ms": 1.11,
+          "sha256": "9f91feeacc6299097a4b6a9467089f5682bd554c613c42e2a1a44266ea124ecc",
+          "count": 20
+        }
+      ]
+    }
+  ]
+}

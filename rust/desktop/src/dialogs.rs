@@ -97,6 +97,7 @@ impl Desktop {
             )
             .show(ctx, |ui| {
                 ui.set_width(width);
+                ui.style_mut().spacing.scroll.floating = false;
                 let study_editor = dialog == Dialog::Study && self.study.editing.is_some();
                 let mut save_note = false;
                 if dialog == Dialog::Settings {
@@ -244,9 +245,7 @@ impl Desktop {
                         .min_scrolled_height(body_height)
                         .auto_shrink([false, false])
                         .drag_to_scroll(!touch.controls_scrolling);
-                    if let Some(offset) = touch.offset {
-                        area = area.vertical_scroll_offset(offset);
-                    }
+                    area = area.vertical_scroll_offset(touch.offset.unwrap_or(self.search_scroll));
                     let output =
                         area.show(ui, |ui| self.search_dialog(ui, ctx, touch.suppress_click));
                     self.search_scroll = output.state.offset.y;
@@ -382,6 +381,7 @@ impl Desktop {
                     self.jump_corpus = corpus;
                     self.jump_filter.clear();
                     self.jump_author.clear();
+                    self.library_author_picker.reset();
                     self.library_about = false;
                     let saved = self
                         .saved_library_location(corpus)
@@ -400,14 +400,12 @@ impl Desktop {
         });
         if let Some(saved) = self.saved_library_location(self.jump_corpus).cloned() {
             if ui
-                .add(
-                    egui::Link::new(
-                        RichText::new(format!("Last place · {}", saved.reference))
-                            .size(12.0)
-                            .color(p.accent)
-                            .underline(),
-                    ),
-                )
+                .add(egui::Link::new(
+                    RichText::new(format!("Last place · {}", saved.reference))
+                        .size(12.0)
+                        .color(p.accent)
+                        .underline(),
+                ))
                 .clicked()
                 && !suppress_click
             {
@@ -447,9 +445,10 @@ impl Desktop {
                 .collect::<Vec<_>>();
             authors.sort();
             authors.dedup();
-            let mut choices = vec![(String::new(), "All authors".to_owned())];
-            choices.extend(authors.into_iter().map(|author| (author.clone(), author)));
-            if let Some(author) = jump_picker(ui, "jump-author", &self.jump_author, &choices) {
+            if let Some(author) =
+                self.library_author_picker
+                    .show(ui, &self.jump_author, &authors, suppress_click)
+            {
                 self.jump_author = author;
             }
         }
@@ -498,96 +497,122 @@ impl Desktop {
                 });
             }
         } else {
-            touch_scroll::vertical(
-                ui,
-                "jump-works",
-                (ui.ctx().screen_rect().height() * 0.23)
-                    .clamp(120.0, if compact { 174.0 } else { 260.0 }),
-                false,
-                |ui, inner_suppress| {
-                    for book in &books {
-                        let width = (ui.available_width() - 60.0).max(100.0);
-                        ui.horizontal(|ui| {
-                            let (rect, response) =
-                                ui.allocate_exact_size(egui::vec2(width, 56.0), Sense::click());
-                            response.widget_info(|| {
-                                egui::WidgetInfo::labeled(
-                                    egui::WidgetType::Button,
-                                    ui.is_enabled(),
-                                    format!(
-                                        "{} · {}",
-                                        book.title,
+            let works_height = (ui.ctx().screen_rect().height() * 0.23)
+                .clamp(120.0, if compact { 174.0 } else { 260.0 });
+            let scroll_hint = if books.len() as f32 * 62.0 > works_height {
+                " · scroll to browse"
+            } else {
+                ""
+            };
+            ui.label(
+                RichText::new(format!("{} works{scroll_hint}", books.len()))
+                    .size(11.0)
+                    .color(p.muted),
+            );
+            egui::Frame::NONE
+                .fill(p.panel)
+                .stroke(Stroke::new(1.0_f32, p.line))
+                .inner_margin(6.0)
+                .corner_radius(6.0)
+                .show(ui, |ui| {
+                    touch_scroll::vertical(
+                        ui,
+                        "jump-works",
+                        works_height,
+                        false,
+                        |ui, inner_suppress| {
+                            for book in &books {
+                                let width = (ui.available_width() - 60.0).max(100.0);
+                                ui.horizontal(|ui| {
+                                    let (rect, response) = ui.allocate_exact_size(
+                                        egui::vec2(width, 56.0),
+                                        Sense::click(),
+                                    );
+                                    response.widget_info(|| {
+                                        egui::WidgetInfo::labeled(
+                                            egui::WidgetType::Button,
+                                            ui.is_enabled(),
+                                            format!(
+                                                "{} · {}",
+                                                book.title,
+                                                book.author
+                                                    .as_deref()
+                                                    .unwrap_or("Early Christian writings")
+                                            ),
+                                        )
+                                    });
+                                    let selected = self.jump_book == book.id;
+                                    ui.painter().rect(
+                                        rect,
+                                        4.0,
+                                        if selected {
+                                            p.accent.gamma_multiply(0.10)
+                                        } else {
+                                            p.panel
+                                        },
+                                        Stroke::new(1.0_f32, p.line),
+                                        egui::StrokeKind::Inside,
+                                    );
+                                    for (row, text) in [
+                                        book.title.as_str(),
                                         book.author
                                             .as_deref()
-                                            .unwrap_or("Early Christian writings")
-                                    ),
-                                )
-                            });
-                            let selected = self.jump_book == book.id;
-                            ui.painter().rect(
-                                rect,
-                                4.0,
-                                if selected {
-                                    p.accent.gamma_multiply(0.10)
-                                } else {
-                                    p.panel
-                                },
-                                Stroke::new(1.0_f32, p.line),
-                                egui::StrokeKind::Inside,
-                            );
-                            for (row, text) in [
-                                book.title.as_str(),
-                                book.author.as_deref().unwrap_or("Early Christian writings"),
-                            ]
-                            .iter()
-                            .enumerate()
-                            {
-                                let mut job = egui::text::LayoutJob::simple(
-                                    (*text).into(),
-                                    FontId::proportional(if row == 0 { 13.0 } else { 11.0 }),
-                                    if row == 0 { p.ink } else { p.muted },
-                                    width - 20.0,
-                                );
-                                job.wrap.max_rows = 1;
-                                job.wrap.break_anywhere = true;
-                                let galley = ui.fonts(|fonts| fonts.layout_job(job));
-                                ui.painter().galley(
-                                    rect.min + egui::vec2(10.0, 9.0 + row as f32 * 20.0),
-                                    galley,
-                                    p.ink,
-                                );
+                                            .unwrap_or("Early Christian writings"),
+                                    ]
+                                    .iter()
+                                    .enumerate()
+                                    {
+                                        let mut job = egui::text::LayoutJob::simple(
+                                            (*text).into(),
+                                            FontId::proportional(if row == 0 {
+                                                13.0
+                                            } else {
+                                                11.0
+                                            }),
+                                            if row == 0 { p.ink } else { p.muted },
+                                            width - 20.0,
+                                        );
+                                        job.wrap.max_rows = 1;
+                                        job.wrap.break_anywhere = true;
+                                        let galley = ui.fonts(|fonts| fonts.layout_job(job));
+                                        ui.painter().galley(
+                                            rect.min + egui::vec2(10.0, 9.0 + row as f32 * 20.0),
+                                            galley,
+                                            p.ink,
+                                        );
+                                    }
+                                    if response.clicked() && !suppress_click && !inner_suppress {
+                                        self.jump_book = book.id.clone();
+                                        self.jump_chapter = 1;
+                                        self.library_about = false;
+                                    }
+                                    let favorite = self.state.favorite_books.contains(&book.id);
+                                    if icons::button(
+                                        ui,
+                                        icons::Icon::Star,
+                                        "",
+                                        egui::vec2(42.0, 56.0),
+                                        favorite,
+                                    )
+                                    .on_hover_text(if favorite {
+                                        "Remove favorite"
+                                    } else {
+                                        "Favorite work"
+                                    })
+                                    .clicked()
+                                        && !suppress_click
+                                        && !inner_suppress
+                                    {
+                                        self.toggle_favorite(&book.id);
+                                    }
+                                });
                             }
-                            if response.clicked() && !suppress_click && !inner_suppress {
-                                self.jump_book = book.id.clone();
-                                self.jump_chapter = 1;
-                                self.library_about = false;
+                            if books.is_empty() {
+                                ui.label("No matches");
                             }
-                            let favorite = self.state.favorite_books.contains(&book.id);
-                            if icons::button(
-                                ui,
-                                icons::Icon::Star,
-                                "",
-                                egui::vec2(42.0, 56.0),
-                                favorite,
-                            )
-                            .on_hover_text(if favorite {
-                                "Remove favorite"
-                            } else {
-                                "Favorite work"
-                            })
-                            .clicked()
-                                && !suppress_click
-                                && !inner_suppress
-                            {
-                                self.toggle_favorite(&book.id);
-                            }
-                        });
-                    }
-                    if books.is_empty() {
-                        ui.label("No matches");
-                    }
-                },
-            );
+                        },
+                    );
+                });
         }
         ui.add_space(12.0);
         ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
@@ -1454,6 +1479,7 @@ impl Desktop {
     }
     pub(super) fn settings_dialog(&mut self, ui: &mut egui::Ui) {
         let previous = self.state.scripture_translation;
+        let mut translation = previous;
         ui.horizontal(|ui| {
             if control(ui, "Account & sync…").clicked() {
                 self.dialog = Some(Dialog::Account);
@@ -1467,12 +1493,12 @@ impl Desktop {
                 })
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
-                        &mut self.state.scripture_translation,
+                        &mut translation,
                         reading_translation::Translation::Web,
                         "WEB · World English Bible",
                     );
                     ui.selectable_value(
-                        &mut self.state.scripture_translation,
+                        &mut translation,
                         reading_translation::Translation::Msb,
                         "MSB · Majority Standard Bible",
                     );
@@ -1480,9 +1506,7 @@ impl Desktop {
                 .response
                 .on_hover_text("Bible translation");
         });
-        if self.state.scripture_translation != previous {
-            self.scroll_target = Some(self.state.location_passage_id.clone());
-        }
+        self.set_translation(translation);
         ui.add_space(6.0);
         let p = self.state.theme.palette();
         let presets = [
@@ -1684,6 +1708,7 @@ impl Desktop {
             .downloads
             .get_or_insert_with(|| downloads::Downloads::new(&self.library));
         ui.label("All Bible and Early Christian texts are included offline. Audio streams until you choose to download it.");
+        ui.label("Offline Bible recordings use WEB. MSB recordings stream online.");
         ui.label(
             RichText::new(
                 "Keep the app open while downloading. Completed tracks are kept if interrupted.",

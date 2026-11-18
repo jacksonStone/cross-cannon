@@ -12,7 +12,7 @@
     "dev": "npm run build:browser && scripts/rust.sh run --locked -p r-cross-cannon",
     "start": "target/release/r-cross-cannon",
     "typecheck": "tsc --noEmit",
-    "test:unit": "node --import tsx --test scripts/lib/scripture-cache.test.ts scripts/lib/audio-alignment.test.ts scripts/export-kindle-bible.test.ts scripts/export-kindle-first-clement.test.ts scripts/rust-server-build.test.mjs scripts/browser-audio.test.mjs scripts/browser-precompression.test.mjs rust/api/src/accounts/assets/account.test.mjs && python3 scripts/test-classics-modernization.py && python3 scripts/test-classics-commentary.py && python3 scripts/test-server-release.py",
+    "test:unit": "node --import tsx --test scripts/lib/scripture-cache.test.ts scripts/lib/audio-alignment.test.ts scripts/export-kindle-bible.test.ts scripts/export-kindle-first-clement.test.ts scripts/rust-server-build.test.mjs scripts/browser-audio.test.mjs scripts/browser-precompression.test.mjs scripts/browser-worker.test.mjs rust/api/src/accounts/assets/account.test.mjs && python3 scripts/test-classics-modernization.py && python3 scripts/test-classics-commentary.py && python3 scripts/test-server-release.py && python3 scripts/test-browser-assets.py",
     "parse:church-fathers": "python3 scripts/parse-church-fathers.py",
     "build:church-fathers-preview": "python3 scripts/build-church-fathers-preview-assets.py",
     "build:church-fathers-audio-alignment": "node --import tsx scripts/build-church-fathers-audio-alignment.ts",

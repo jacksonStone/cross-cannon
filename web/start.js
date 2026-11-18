@@ -1,6 +1,8 @@
 import {connect,updateSurface,signIn,signOut,openURL,isActive,activityGeneration,safeInsets} from './platform.js';
 import {legacyCheckpoint} from './migrate.js';
 import {connectMedia,audioCommand,downloadCommand} from './media.js';
+// Build-time pin: an incumbent worker may still cache the mutable manifest alias.
+const manifestURL='/browser/manifest.__READER_VERSION__.json';
 const loading=document.getElementById('loading');
 function libraryStatus(text){
   let status=document.getElementById('library-status');
@@ -51,7 +53,7 @@ async function acquireReaderSession(){
 }
 try {
   await acquireReaderSession();
-  const response=await fetch('/browser/manifest.json',{cache:'no-cache'});
+  const response=await fetch(manifestURL);
   if(!response.ok)throw Error('The reader build is unavailable');
   const manifest=await response.json();
   globalThis.crossCanonPlatform={updateSurface,signIn,signOut,openURL,audioCommand,downloadCommand,isActive,activityGeneration,safeInsets,libraryStatus};

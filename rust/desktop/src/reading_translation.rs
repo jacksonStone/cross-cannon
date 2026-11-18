@@ -1,4 +1,4 @@
-//! Reading text only. Search requests and the canonical Library remain WEB.
+//! Selected reading text and recordings. Search and canonical identity remain WEB.
 use super::*;
 use cross_canon_core::Verse;
 use std::collections::{HashMap, HashSet};
@@ -11,9 +11,97 @@ pub(super) enum Translation {
     Msb,
 }
 
+#[derive(Deserialize)]
+struct RecordingBook {
+    prefix: String,
+    chapters: u32,
+}
+
+fn msb_recordings() -> &'static HashMap<String, RecordingBook> {
+    static BOOKS: std::sync::OnceLock<HashMap<String, RecordingBook>> = std::sync::OnceLock::new();
+    BOOKS.get_or_init(|| {
+        #[derive(Deserialize)]
+        struct Manifest {
+            books: HashMap<String, RecordingBook>,
+        }
+        serde_json::from_str::<Manifest>(include_str!(
+            "../../../public/scripture-translations/msb-audio.json"
+        ))
+        .expect("validated MSB recording catalog")
+        .books
+    })
+}
+
+impl Translation {
+    pub(super) fn audio(
+        self,
+        library: &Library,
+        chapter_id: &str,
+    ) -> Option<cross_canon_core::AudioLocation> {
+        let (book, chapter) = library.chapter(chapter_id)?;
+        if self == Self::Msb && book.corpus == Corpus::Scripture {
+            if let Some(recording) = msb_recordings().get(&book.title) {
+                if (1..=recording.chapters).contains(&chapter.number) {
+                    return Some(cross_canon_core::AudioLocation {
+                        url: format!(
+                            "https://openbible.com/audio/msb/{}_{:03}_D.mp3",
+                            recording.prefix, chapter.number
+                        ),
+                        start_seconds: 0.0,
+                        end_seconds: None,
+                    });
+                }
+                return None;
+            }
+        }
+        // Books outside MSB's scope display WEB text and retain its recordings.
+        library.audio(chapter_id)
+    }
+
+    pub(super) fn fallback(
+        self,
+        library: &Library,
+        chapter_id: &str,
+    ) -> Option<cross_canon_core::AudioLocation> {
+        let (book, _) = library.chapter(chapter_id)?;
+        if self == Self::Msb
+            && book.corpus == Corpus::Scripture
+            && msb_recordings().contains_key(&book.title)
+        {
+            return None;
+        }
+        library.original_audio(chapter_id)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn translation_audio_catalog_covers_every_msb_chapter() {
+        let text: Text = serde_json::from_str(include_str!(
+            "../../../public/scripture-translations/msb.json"
+        ))
+        .unwrap();
+        let recordings = msb_recordings();
+        assert_eq!(recordings.len(), 66);
+        assert_eq!(
+            recordings
+                .values()
+                .map(|book| book.chapters as usize)
+                .sum::<usize>(),
+            1189
+        );
+        for id in text.chapters.keys() {
+            let (book, chapter) = id.rsplit_once(':').unwrap();
+            let chapter: u32 = chapter.parse().unwrap();
+            assert!(
+                (1..=recordings[book].chapters).contains(&chapter),
+                "Missing MSB audio: {id}"
+            );
+        }
+    }
 
     #[test]
     fn full_msb_reading_preserves_web_ids_search_text_and_complete_verse_coverage() {
