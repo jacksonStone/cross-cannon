@@ -87,7 +87,7 @@ def main():
         for source in (ROOT/'web').iterdir():
             if source.is_file(): shutil.copy2(source,staging/source.name)
         (staging/'fonts').mkdir()
-        for name in ['SourceSerif4-Semibold.ttf','SourceSerif4-Bold.ttf']:
+        for name in ['SourceSerif4-Regular.ttf','SourceSerif4-Semibold.ttf','SourceSerif4-Bold.ttf']:
             shutil.copy2(ROOT/'rust/desktop/fonts'/name,staging/'fonts'/name)
         shutil.copy2(ROOT/'rust/desktop/fonts/Inter.ttf',staging/'fonts/Inter.ttf')
         archive = json.loads((staging/'archive.json').read_text())

@@ -162,6 +162,7 @@ impl Desktop {
         self.jump_corpus = passage.corpus;
         self.jump_filter.clear();
         self.jump_author.clear();
+        self.library_author_picker.reset();
         self.library_about = false;
         self.dialog = Some(Dialog::Library);
     }

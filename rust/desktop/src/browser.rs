@@ -128,6 +128,34 @@ pub fn dispatch(json: &str) -> std::result::Result<(), JsValue> {
                 INPUT.lock().unwrap().push(input);
             }
         }
+    } else if event.action == "key" {
+        if let (Some(ctx), Ok(value)) = (CONTEXT.get(), event.book.parse::<u64>()) {
+            let key = match event.id.as_str() {
+                "ArrowUp" => Key::ArrowUp,
+                "ArrowDown" => Key::ArrowDown,
+                "Enter" => Key::Enter,
+                "Escape" => Key::Escape,
+                _ => return Ok(()),
+            };
+            if let Ok(id) = serde_json::from_value::<Id>(serde_json::json!(value)) {
+                if ctx.memory(|memory| memory.has_focus(id)) {
+                    // Text replacement/selection may still be queued from the DOM.
+                    // Apply navigation after that edit, as with semantic clicks.
+                    let events = [true, false].map(|pressed| egui::Event::Key {
+                        key,
+                        physical_key: None,
+                        pressed,
+                        repeat: false,
+                        modifiers: egui::Modifiers::NONE,
+                    });
+                    if SELECTION.with(|slot| slot.borrow().is_some()) {
+                        AFTER_TEXT.lock().unwrap().extend(events);
+                    } else {
+                        INPUT.lock().unwrap().extend(events);
+                    }
+                }
+            }
+        }
     } else if event.action == "text" || event.action == "selection" {
         if let (Some(ctx), Ok(id)) = (CONTEXT.get(), event.book.parse::<u64>()) {
             let selection: TextSelection =

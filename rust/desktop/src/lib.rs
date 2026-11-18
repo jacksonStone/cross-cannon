@@ -4,6 +4,7 @@ mod audio;
 #[cfg(target_arch = "wasm32")]
 #[path = "platform/browser_audio.rs"]
 mod audio;
+mod author_picker;
 #[cfg(target_arch = "wasm32")]
 mod browser;
 #[cfg(target_arch = "wasm32")]
@@ -151,6 +152,7 @@ struct Desktop {
     jump_chapter: u32,
     jump_corpus: Corpus,
     jump_author: String,
+    library_author_picker: author_picker::AuthorPicker,
     back: Vec<String>,
     forward: Vec<String>,
     query: String,
@@ -296,6 +298,7 @@ impl Desktop {
             jump_chapter,
             jump_corpus,
             jump_author: String::new(),
+            library_author_picker: Default::default(),
             back: vec![],
             forward: vec![],
             query: String::new(),
@@ -474,6 +477,8 @@ impl Desktop {
             return;
         }
         self.busy = true;
+        self.search_scroll = 0.0;
+        self.search_touch.cancel();
         self.message.clear();
         let request = self.search_request();
         self.results_semantic = request.web;
@@ -645,8 +650,11 @@ impl Desktop {
             }
         }
         if ctx.input(|i| i.modifiers.command && i.key_pressed(Key::F)) {
+            let edit_query = self.dialog == Some(Dialog::Search) || self.results.is_empty();
             self.dialog = Some(Dialog::Search);
-            ctx.memory_mut(|m| m.request_focus(Id::new("search-query")));
+            if edit_query {
+                ctx.memory_mut(|m| m.request_focus(Id::new("search-query")));
+            }
         }
         if ctx.input(|i| i.modifiers.command && i.key_pressed(Key::J)) {
             self.show_library();

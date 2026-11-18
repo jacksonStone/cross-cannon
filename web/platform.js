@@ -126,7 +126,7 @@ function updateReader(next) {
   root.dataset.theme = next.theme === 2 ? 'dark' : 'light';
   document.querySelector('meta[name=theme-color]').content = next.paper;
   $('reader-jump').textContent = next.title;
-  $('reader-jump').setAttribute('aria-label', `Library, ${next.collection}, ${next.title}`);
+  $('reader-jump').setAttribute('aria-label', `Current reading, ${next.collection}, ${next.title}`);
   $('reader-text').classList.toggle('work', !next.scripture);
   if (next.chapters) renderChapters(next.chapters);
   for (const p of $('reader-text').querySelectorAll('.passage')) {
@@ -213,6 +213,14 @@ function renderAccessibility(tree) {
       if (tag === 'input' || tag === 'textarea') {
         element.autocomplete = 'off';
         element.addEventListener('focus', () => emit('accessibility',node.id,'focus'));
+        // Committing a suggestion releases Rust focus while the DOM input can
+        // remain active. A second click must reopen its completion list.
+        element.addEventListener('pointerdown',()=>{if(document.activeElement===element)emit('accessibility',node.id,'focus');});
+        if(tag==='input')element.addEventListener('keydown',event=>{
+          if(!event.isComposing&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&['ArrowUp','ArrowDown','Enter','Escape'].includes(event.key)){
+            event.preventDefault();event.stopPropagation();emit('key',event.key,node.id);
+          }
+        });
         const selection=()=>JSON.stringify({text:element.value,start:element.selectionStart??0,end:element.selectionEnd??0});
         element.addEventListener('input', () => emit('text',selection(),node.id));
         element.addEventListener('select', () => emit('selection',selection(),node.id));
@@ -311,7 +319,8 @@ export function connect(send, icons) {
   passageTools.append($('reader-reference'),$('passage-actions'));
   $('reader-footer').prepend(passageTools);
   $('reader-tools').innerHTML=icons.tools;
-  $('reader-jump').onclick=()=>emit('library');$('reader-tools').onclick=openTools;
+  $('reader-library').querySelector('.library-icon').innerHTML=icons.library;
+  $('reader-library').onclick=()=>emit('library');$('reader-tools').onclick=openTools;
   for(const [label,action,icon,text] of [['Highlight passage','highlight','highlight','Highlight'],['Passage notes','note','note','Notes'],['View commentaries','commentary','commentary','Commentaries'],['Similar passages','similar','search','Similar passages'],['Close passage actions','clear','close','']]) {
     const b=button(label,action,icon);b.id='action-'+action;
     if(text){const span=document.createElement('span');span.className='action-label';span.textContent=text;span.setAttribute('aria-hidden','true');b.append(span);}

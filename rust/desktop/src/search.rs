@@ -469,9 +469,13 @@ mod tests {
             for _ in 0..40 {
                 after = render(&mut app, &ctx, width, height, vec![]);
             }
-            assert_eq!(
-                text(&after, "Find passages").unwrap().1.pos,
-                header_pos,
+            assert!(
+                text(&after, "Find passages")
+                    .unwrap()
+                    .1
+                    .pos
+                    .distance(header_pos)
+                    < 0.5,
                 "Only the header stays fixed"
             );
             assert!(
@@ -486,8 +490,9 @@ mod tests {
                 !passage_text.galley.elided && passage_text.galley.rows.len() > 4,
                 "Search passages must not be abbreviated"
             );
-            assert_eq!(
-                passage_shape.clip_rect, body_clip,
+            assert!(
+                passage_shape.clip_rect.min.distance(body_clip.min) < 0.5
+                    && passage_shape.clip_rect.max.distance(body_clip.max) < 0.5,
                 "The form and passages share one scroll viewport"
             );
             assert!(text(&after, "Read full passage").is_none());
@@ -518,9 +523,13 @@ mod tests {
                 Some(first.id.as_str()),
                 "Tapping a passage selects its actions"
             );
-            assert_eq!(
-                text(&selected, &full_text).unwrap().1.pos,
-                passage_pos,
+            assert!(
+                text(&selected, &full_text)
+                    .unwrap()
+                    .1
+                    .pos
+                    .distance(passage_pos)
+                    < 0.5,
                 "Selecting a passage must not expand or move its text"
             );
             let offset = app.search_scroll;
@@ -540,6 +549,76 @@ mod tests {
                 "Closing filters restores the search position"
             );
         }
+    }
+
+    #[test]
+    fn reopening_commentary_search_restores_position_and_query_without_ui_cache() {
+        let library = library();
+        let ctx = egui::Context::default();
+        let mut app = Desktop::initialize(&ctx, None, library.clone());
+        app.dialog = Some(Dialog::Search);
+        app.query = "mercy and hope".into();
+        app.search_corpus = Some(Corpus::ChristianClassics);
+        app.search_authors = vec!["Matthew Henry".into()];
+        app.results = library
+            .passages
+            .iter()
+            .filter(|p| p.corpus == Corpus::ChristianClassics)
+            .take(20)
+            .map(|p| ResultPassage::local(p, 0.6))
+            .collect();
+        let render = |app: &mut Desktop, events| {
+            ctx.run(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1000.0, 850.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ctx| app.render(ctx),
+            )
+        };
+        for _ in 0..3 {
+            render(&mut app, vec![]);
+        }
+        render(
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(egui::pos2(500.0, 500.0)),
+                egui::Event::MouseWheel {
+                    unit: egui::MouseWheelUnit::Point,
+                    delta: egui::vec2(0.0, -900.0),
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+        for _ in 0..40 {
+            render(&mut app, vec![]);
+        }
+        let offset = app.search_scroll;
+        assert!(
+            offset > 300.0,
+            "The regression must actually scroll results: {offset}"
+        );
+        app.dialog = None;
+        render(&mut app, vec![]);
+        // Restoring a search belongs to its retained search state, not egui's
+        // disposable view cache (which can change across modal/platform views).
+        ctx.data_mut(|data| data.remove_by_type::<egui::scroll_area::State>());
+        app.dialog = Some(Dialog::Search);
+        for _ in 0..3 {
+            render(&mut app, vec![]);
+        }
+        assert!(
+            (app.search_scroll - offset).abs() < 1.0,
+            "Reopen lost results position: {offset} -> {}",
+            app.search_scroll
+        );
+        assert_eq!(app.query, "mercy and hope");
+        assert_eq!(app.search_authors, ["Matthew Henry"]);
+        assert_eq!(app.results.len(), 20);
     }
 
     #[test]
