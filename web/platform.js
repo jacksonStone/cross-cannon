@@ -293,7 +293,7 @@ function renderSettings() {
     const b=document.createElement('button');b.className='setting-row';b.textContent=label;b.setAttribute('aria-pressed',String(values.every((n,i)=>Math.abs(n-[model.fontScale,model.lineHeight,model.width][i])<.002)));b.onclick=()=>['font','spacing','width'].forEach((id,i)=>preference(id,values[i]));text.append(b);
   }
   for(const [title,id,key,choices,footer] of [
-    ['Bible translation','translation','translation',['World English Bible','Majority Standard Bible'],'Search uses the World English Bible index. Recordings remain WEB audio.'],
+    ['Bible translation','translation','translation',['World English Bible','Majority Standard Bible'],'Audio follows your translation. MSB recordings stream online. Offline audio downloads use WEB. Search uses the World English Bible index.'],
     ['Theme','theme','theme',['Paper','Sepia','Dark','High contrast'],''],
     ['Scripture canon','canon','canon',['Protestant','Catholic','Orthodox'],'']]) {
     const group=settingSection(title,footer);choices.forEach((label,value)=>{const b=document.createElement('button');b.className='setting-row';b.textContent=label;b.setAttribute('aria-pressed',String(model[key]===value));b.dataset.setting=id+value;b.onclick=()=>preference(id,value);group.append(b);});

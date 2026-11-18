@@ -234,7 +234,7 @@ float cross_canon_keyboard_height(void) {
 }
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     if (section == 0) return @"Text follows your iPhone’s Larger Text and Bold Text settings. These adjustments apply on top of your system size.";
-    if (section == 1) return @"Search uses the World English Bible index. Recordings remain WEB audio.";
+    if (section == 1) return @"Audio follows your translation. MSB recordings stream online. Offline audio downloads use WEB. Search uses the World English Bible index.";
     if (section == 4) return CCValue(self.reader.model, @"info");
     return nil;
 }

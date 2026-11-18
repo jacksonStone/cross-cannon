@@ -48,20 +48,42 @@ pub(super) fn queue_link(link: &str, ctx: &egui::Context) {
 }
 
 impl Desktop {
+    pub(super) fn set_translation(&mut self, translation: reading_translation::Translation) {
+        if self.state.scripture_translation == translation {
+            return;
+        }
+        self.state.scripture_translation = translation;
+        self.scroll_target = Some(self.state.location_passage_id.clone());
+        self.account.persist_now = true;
+        if self
+            .audio_chapter
+            .as_deref()
+            .and_then(|id| self.library.chapter(id))
+            .is_some_and(|(book, _)| book.corpus == Corpus::Scripture)
+        {
+            let chapter = self.audio_chapter.take().unwrap();
+            if self.playing {
+                self.play_audio(&chapter);
+            } else {
+                let _ = self.audio_tx.send(audio::Command::Stop);
+            }
+        }
+    }
+
     pub(super) fn play_audio(&mut self, chapter_id: &str) {
+        let translation = self.state.scripture_translation;
         if self.audio_chapter.as_deref() == Some(chapter_id) {
             let _ = self.audio_tx.send(audio::Command::Toggle);
-        } else if let Some(audio) = self.library.audio(chapter_id) {
+        } else if translation.audio(&self.library, chapter_id).is_some() {
             let (book, _) = self.library.chapter(chapter_id).unwrap();
             let mut sources = downloads::PlaybackSources::new(&self.library.root);
             let chapters = book
                 .chapters
                 .iter()
                 .filter_map(|chapter| {
-                    let mut audio = self.library.audio(&chapter.id)?;
-                    let fallback = self
-                        .library
-                        .original_audio(&chapter.id)
+                    let mut audio = translation.audio(&self.library, &chapter.id)?;
+                    let fallback = translation
+                        .fallback(&self.library, &chapter.id)
                         .filter(|original| original.url != audio.url);
                     let mut normalize = |location: &mut cross_canon_core::AudioLocation| {
                         location.url = sources.resolve(&location.url);
@@ -80,7 +102,6 @@ impl Desktop {
                 })
                 .collect::<Vec<_>>();
             let index = chapters.iter().position(|c| c.id == chapter_id).unwrap();
-            let _ = audio;
             let _ = self
                 .audio_tx
                 .send(audio::Command::Play(audio::PlaybackPlan {
@@ -264,6 +285,73 @@ pub(super) fn passage_from_link(library: &Library, text: &str) -> Option<String>
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn translation_audio_follows_reader_setting() {
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        let mut app = Desktop::initialize(&egui::Context::default(), None, library.clone());
+        let (tx, rx) = mpsc::channel();
+        app.audio_tx = Arc::new(tx);
+        app.state.scripture_translation = reading_translation::Translation::Msb;
+        app.play_audio("John:3");
+        let audio::Command::Play(plan) = rx.try_recv().unwrap() else {
+            panic!("Expected a playback plan");
+        };
+        assert!(
+            plan.chapters[plan.index].audio.url.contains("/msb/"),
+            "MSB reading must play MSB audio, got {}",
+            plan.chapters[plan.index].audio.url,
+        );
+        assert!(
+            plan.chapters
+                .iter()
+                .all(|chapter| chapter.fallback.is_none()),
+            "MSB must never fall back silently to WEB audio"
+        );
+
+        // Changing translation must replace a playing track, even in the same Chapter.
+        app.playing = true;
+        app.set_translation(reading_translation::Translation::Web);
+        let audio::Command::Play(plan) = rx.try_recv().unwrap() else {
+            panic!("Translation change must replace the active recording");
+        };
+        assert!(!plan.chapters[plan.index].audio.url.contains("/msb/"));
+        assert_eq!(plan.chapters[plan.index].id, "John:3");
+        app.set_translation(reading_translation::Translation::Msb);
+        let audio::Command::Play(plan) = rx.try_recv().unwrap() else {
+            panic!("Switching back must start MSB, not toggle the previous recording");
+        };
+        assert_eq!(
+            plan.chapters[plan.index].audio.url,
+            "https://openbible.com/audio/msb/MSB_43_Jhn_003_D.mp3"
+        );
+
+        app.playing = false;
+        app.set_translation(reading_translation::Translation::Web);
+        assert!(matches!(rx.try_recv().unwrap(), audio::Command::Stop));
+        app.play_audio("John:3");
+        assert!(
+            matches!(rx.try_recv().unwrap(), audio::Command::Play(_)),
+            "Paused playback must not resume the previous translation"
+        );
+
+        app.audio_chapter = None;
+        app.play_audio("anf09:xii.iv.i");
+        let audio::Command::Play(plan) = rx.try_recv().unwrap() else {
+            panic!("Expected Early Christian audio");
+        };
+        app.playing = true;
+        app.set_translation(reading_translation::Translation::Msb);
+        assert!(
+            rx.try_recv().is_err(),
+            "Bible settings must leave Work audio playing"
+        );
+        assert_eq!(
+            plan.chapters[plan.index].audio.url,
+            library.audio("anf09:xii.iv.i").unwrap().url
+        );
+    }
     #[test]
     fn corpus_locations_history_favorites_and_reader_links_survive_navigation() {
         let library = Arc::new(

@@ -43,7 +43,14 @@ streams those artifacts; it never refreshes them during requests or releases.
 WEB passage IDs and stored vectors remain the search identity. MSB is a
 Book/Chapter/verse text projection over that identity, shared by reading, result
 text and commentary context. Its 66-Book scope falls back explicitly to WEB for
-other Books; existing Scripture recordings remain WEB.
+other Books. Playback uses the selected translation: WEB retains its existing
+continuous recordings; MSB streams the chapter recordings published by
+[MajorityBible.com](https://majoritybible.com/index.html) at OpenBible.com.
+`public/scripture-translations/msb-audio.json` pins the 66 Book filename prefixes
+and complete 1,189-Chapter coverage checked against the publisher's directory.
+MSB playback never falls back to a different translation. Changing translation
+replaces active Scripture playback; paused playback restarts in the new translation
+on the next Play. Optional offline audio downloads currently contain WEB recordings.
 
 `public/scripture-translations/manifest.json` records the pinned public-domain
 eBible USFM source and hash. Reproduce the reading assets from that archive with:

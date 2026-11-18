@@ -24,7 +24,8 @@ def inputs():
     paths = [ROOT/'Cargo.toml', ROOT/'Cargo.lock', ROOT/'scripture-cache/manifest.json',
              ROOT/'public/church-fathers-preview/manifest.json', ROOT/'public/church-fathers-preview/books.json',
              ROOT/'public/christian-classics-text/manifest.json', ROOT/'public/christian-classics-text/books.json',
-             ROOT/'public/scripture-translations/msb.json', Path(__file__)]
+             ROOT/'public/scripture-translations/msb.json',
+             ROOT/'public/scripture-translations/msb-audio.json', Path(__file__)]
     for folder in ['rust/core', 'rust/desktop', 'web']:
         paths += [p for p in (ROOT/folder).rglob('*') if p.is_file() and p.suffix in {'.rs','.toml','.m','.ttf','.js','.css','.html'}]
     paths += [ROOT/'scripts/lib/native_catalog.py', ROOT/'scripts/lib/browser_assets.py', ROOT/'scripts/precompress-browser.mjs']

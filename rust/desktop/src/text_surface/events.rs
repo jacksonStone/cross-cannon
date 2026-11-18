@@ -151,9 +151,7 @@ pub(super) fn apply(app: &mut Desktop, ctx: &egui::Context, event: Event) -> Eff
                 Preference::Spacing(value) => app.state.line_height = value,
                 Preference::Width(value) => app.state.width = value,
                 Preference::Canon(canon) => app.update_canon(canon),
-                Preference::Translation(translation) => {
-                    app.state.scripture_translation = translation
-                }
+                Preference::Translation(translation) => app.set_translation(translation),
                 Preference::Theme(theme) => {
                     app.state.theme = theme;
                     theme.apply(ctx);

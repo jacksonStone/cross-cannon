@@ -1479,6 +1479,7 @@ impl Desktop {
     }
     pub(super) fn settings_dialog(&mut self, ui: &mut egui::Ui) {
         let previous = self.state.scripture_translation;
+        let mut translation = previous;
         ui.horizontal(|ui| {
             if control(ui, "Account & sync…").clicked() {
                 self.dialog = Some(Dialog::Account);
@@ -1492,12 +1493,12 @@ impl Desktop {
                 })
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
-                        &mut self.state.scripture_translation,
+                        &mut translation,
                         reading_translation::Translation::Web,
                         "WEB · World English Bible",
                     );
                     ui.selectable_value(
-                        &mut self.state.scripture_translation,
+                        &mut translation,
                         reading_translation::Translation::Msb,
                         "MSB · Majority Standard Bible",
                     );
@@ -1505,9 +1506,7 @@ impl Desktop {
                 .response
                 .on_hover_text("Bible translation");
         });
-        if self.state.scripture_translation != previous {
-            self.scroll_target = Some(self.state.location_passage_id.clone());
-        }
+        self.set_translation(translation);
         ui.add_space(6.0);
         let p = self.state.theme.palette();
         let presets = [
@@ -1709,6 +1708,7 @@ impl Desktop {
             .downloads
             .get_or_insert_with(|| downloads::Downloads::new(&self.library));
         ui.label("All Bible and Early Christian texts are included offline. Audio streams until you choose to download it.");
+        ui.label("Offline Bible recordings use WEB. MSB recordings stream online.");
         ui.label(
             RichText::new(
                 "Keep the app open while downloading. Completed tracks are kept if interrupted.",
