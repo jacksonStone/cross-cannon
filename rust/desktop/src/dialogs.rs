@@ -268,7 +268,7 @@ impl Desktop {
                         (ctx.screen_rect().bottom() - insets.bottom - ui.cursor().top() - 16.0)
                             .clamp(48.0, 420.0)
                     };
-                    touch_scroll::vertical(
+                    touch_scroll::vertical_with_visibility(
                         ui,
                         match dialog {
                             Dialog::Library => "library-body",
@@ -286,6 +286,11 @@ impl Desktop {
                         },
                         body_height,
                         dialog != Dialog::Account,
+                        if dialog == Dialog::Library {
+                            egui::scroll_area::ScrollBarVisibility::AlwaysHidden
+                        } else {
+                            egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded
+                        },
                         |ui, suppress_click| match dialog {
                             Dialog::Library => self.library_dialog(ui, suppress_click),
                             Dialog::Settings => self.settings_dialog(ui),
@@ -352,10 +357,18 @@ impl Desktop {
         self.update_canon(canon);
     }
 
-    fn library_book(&mut self, ui: &mut egui::Ui, choices: &[(String, String)]) {
+    fn library_book(
+        &mut self,
+        ui: &mut egui::Ui,
+        choices: &[(String, String)],
+        suppress_click: bool,
+    ) {
         let p = self.state.theme.palette();
         ui.label(RichText::new("Book").strong().color(p.muted));
-        if let Some(book) = jump_picker(ui, "jump-book", &self.jump_book, choices) {
+        if let Some(book) =
+            self.library_book_picker
+                .show(ui, &self.jump_book, choices, suppress_click)
+        {
             self.jump_book = book;
             self.jump_chapter = 1;
             self.library_about = false;
@@ -382,6 +395,7 @@ impl Desktop {
                     self.jump_filter.clear();
                     self.jump_author.clear();
                     self.library_author_picker.reset();
+                    self.library_book_picker.reset();
                     self.library_about = false;
                     let saved = self
                         .saved_library_location(corpus)
@@ -489,11 +503,11 @@ impl Desktop {
                 .map(|book| (book.id.clone(), book.title.clone()))
                 .collect::<Vec<_>>();
             if compact {
-                self.library_book(ui, &choices);
+                self.library_book(ui, &choices, suppress_click);
             } else {
                 ui.columns(2, |columns| {
                     self.library_canon(&mut columns[0]);
-                    self.library_book(&mut columns[1], &choices);
+                    self.library_book(&mut columns[1], &choices, suppress_click);
                 });
             }
         } else {
@@ -1861,40 +1875,6 @@ impl Desktop {
             downloads.pause();
         }
     }
-}
-
-fn jump_picker(
-    ui: &mut egui::Ui,
-    id: &'static str,
-    selected: &str,
-    choices: &[(String, String)],
-) -> Option<String> {
-    let mut next = None;
-    let label = choices
-        .iter()
-        .find(|(value, _)| value == selected)
-        .map(|(_, label)| label.as_str())
-        .unwrap_or("Choose a book");
-    let height = (ui.ctx().screen_rect().height() * 0.4).clamp(120.0, 260.0);
-    ui.spacing_mut().interact_size.y = 44.0;
-    let picker = egui::ComboBox::from_id_salt(id)
-        .width(ui.available_width() - 16.0)
-        .height(height + 10.0)
-        .selected_text(label)
-        .show_ui(ui, |ui| {
-            touch_scroll::vertical(ui, id, height, false, |ui, suppress_click| {
-                for (value, label) in choices {
-                    if ui.selectable_label(value == selected, label).clicked() && !suppress_click {
-                        next = Some(value.clone());
-                        ui.close_menu();
-                    }
-                }
-            });
-        });
-    picker.response.widget_info(|| {
-        egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, ui.is_enabled(), label)
-    });
-    next
 }
 
 #[cfg(test)]

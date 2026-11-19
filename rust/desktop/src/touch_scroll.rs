@@ -187,6 +187,24 @@ pub(super) fn vertical<R>(
     fill: bool,
     content: impl FnOnce(&mut egui::Ui, bool) -> R,
 ) -> egui::scroll_area::ScrollAreaOutput<R> {
+    vertical_with_visibility(
+        ui,
+        id,
+        height,
+        fill,
+        egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded,
+        content,
+    )
+}
+
+pub(super) fn vertical_with_visibility<R>(
+    ui: &mut egui::Ui,
+    id: &'static str,
+    height: f32,
+    fill: bool,
+    visibility: egui::scroll_area::ScrollBarVisibility,
+    content: impl FnOnce(&mut egui::Ui, bool) -> R,
+) -> egui::scroll_area::ScrollAreaOutput<R> {
     let memory_id = ui.make_persistent_id((id, "touch"));
     let mut viewport = ui
         .ctx()
@@ -241,6 +259,7 @@ pub(super) fn vertical<R>(
     );
     let mut area = egui::ScrollArea::vertical()
         .id_salt(id)
+        .scroll_bar_visibility(visibility)
         .animated(false)
         .max_height(height)
         .auto_shrink([false, true])
