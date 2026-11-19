@@ -47,7 +47,11 @@ impl Translation {
                             "https://openbible.com/audio/msb/{}_{:03}_D.mp3",
                             recording.prefix, chapter.number
                         ),
-                        start_seconds: 0.0,
+                        start_seconds: if matches!(chapter_id, "Matthew:6" | "Matthew:7") {
+                            3.0
+                        } else {
+                            0.0
+                        },
                         end_seconds: None,
                     });
                 }
