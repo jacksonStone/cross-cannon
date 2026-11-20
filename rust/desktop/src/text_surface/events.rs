@@ -16,6 +16,9 @@ enum Command {
     Clear,
     Extend { book: String, forward: bool },
     Jump,
+    OpenPassage(String),
+    OpenChapter { book: String, chapter: u32, verse: u32 },
+    Favorite(String),
     Dialog(Dialog),
     Library,
     Audio,
@@ -64,6 +67,13 @@ impl Command {
                 forward: event.action == "next",
             },
             "jump" => Self::Jump,
+            "open-passage" => Self::OpenPassage(event.id),
+            "open-chapter" => Self::OpenChapter {
+                book: event.book,
+                chapter: event.id.parse().ok()?,
+                verse: event.value.to_string().parse().ok()?,
+            },
+            "favorite-work" => Self::Favorite(event.book),
             "search" => Self::Dialog(Dialog::Search),
             "settings" => Self::Dialog(Dialog::Settings),
             "library" => Self::Library,
@@ -152,6 +162,30 @@ pub(super) fn apply(app: &mut Desktop, ctx: &egui::Context, event: Event) -> Eff
             }
         }
         Command::Jump => app.show_library(),
+        Command::OpenPassage(id) => {
+            if app.library.passage(&id).is_some() {
+                app.open(id);
+            }
+        }
+        Command::OpenChapter { book, chapter, verse } => {
+            let target = app.library.book(&book).and_then(|book| {
+                let chapter = book.chapters.iter().find(|entry| entry.number == chapter)?;
+                if verse == 0 {
+                    return chapter.passage_ids.first();
+                }
+                if book.corpus != Corpus::Scripture {
+                    return None;
+                }
+                chapter.passage_ids.iter().find(|id| app.library.passage(id).is_some_and(|p| (p.verse_start..=p.verse_end).contains(&verse)))
+            });
+            if let Some(id) = target.cloned() {
+                app.open(id);
+            }
+        }
+        Command::Favorite(book) => {
+            app.toggle_favorite(&book);
+            app.account.persist_now = true;
+        }
         Command::Dialog(dialog) => app.dialog = Some(dialog),
         Command::Library => app.show_library(),
         Command::Audio => app.play_audio(&app.active_chapter_id.clone()),

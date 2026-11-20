@@ -65,6 +65,7 @@ fn content_type(name: &str) -> Option<&'static str> {
         "ttf" => "font/ttf",
         "svg" => "image/svg+xml",
         "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
         "webmanifest" => "application/manifest+json",
         _ => return None,
     })

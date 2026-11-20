@@ -408,13 +408,22 @@ impl Desktop {
             .as_ref()
             .and_then(|id| self.library.passage(id))
             .map(|p| &p.reference);
+        let library_locations = [Corpus::Scripture, Corpus::EarlyChristian, Corpus::ChristianClassics]
+            .map(|corpus| {
+                self.saved_library_location(corpus).map(|location| serde_json::json!({
+                    "id":location.id, "book":location.book_id, "chapter":location.chapter,
+                    "reference":location.reference
+                }))
+            });
         platform::send(
             &serde_json::json!({
-                "visible": true, "book": book.id, "title": format!("{} {}", book.title, passage.chapter),
+                "visible": true, "book": book.id, "chapter": passage.chapter, "title": format!("{} {}", book.title, passage.chapter),
                 "collection": collection_name(book.corpus), "scripture": book.corpus == Corpus::Scripture,
                 "chapters": chapters, "jump": jump, "location": self.state.location_passage_id,
                 "link": navigation::reader_link(&passage),
                 "selected": self.selected, "reference": reference,
+                "libraryLocations": library_locations,
+                "favoriteWorks": self.state.favorite_books,
                 "fontScale": self.state.font_scale, "lineHeight": self.state.line_height,
             "width": self.state.width,
                 "theme": match self.state.theme { Theme::Paper => 0, Theme::Sepia => 1, Theme::Dark => 2, Theme::Contrast => 3 },
