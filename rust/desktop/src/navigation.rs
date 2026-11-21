@@ -301,16 +301,28 @@ mod tests {
                 panic!("Expected a Matthew playback plan");
             };
             assert_eq!(plan.chapters[plan.index].id, id);
-            assert_eq!(plan.chapters[plan.index].audio.start_seconds, 3.0);
+            assert_eq!(
+                plan.chapters[plan.index].audio.start_seconds,
+                reading_translation::Translation::Msb
+                    .audio(&library, id)
+                    .unwrap()
+                    .start_seconds
+            );
             // The same plan drives automatic advancement into chapter 7.
-            for (chapter, start) in [(5, 0.0), (6, 3.0), (7, 3.0), (8, 0.0)] {
+            for chapter in [5, 6, 7, 8] {
                 let source = &plan
                     .chapters
                     .iter()
                     .find(|c| c.id == format!("Matthew:{chapter}"))
                     .unwrap()
                     .audio;
-                assert_eq!(source.start_seconds, start);
+                assert_eq!(
+                    source.start_seconds,
+                    reading_translation::Translation::Msb
+                        .audio(&library, &format!("Matthew:{chapter}"))
+                        .unwrap()
+                        .start_seconds
+                );
                 assert!(source.end_seconds.is_none());
             }
             assert_eq!(

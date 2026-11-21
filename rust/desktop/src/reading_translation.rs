@@ -32,6 +32,33 @@ fn msb_recordings() -> &'static HashMap<String, RecordingBook> {
     })
 }
 
+fn msb_start_seconds(chapter_id: &str) -> f64 {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Offset {
+        status: String,
+        start_seconds: Option<f64>,
+    }
+    #[derive(Deserialize)]
+    struct Offsets {
+        chapters: HashMap<String, Offset>,
+    }
+    static OFFSETS: std::sync::OnceLock<Offsets> = std::sync::OnceLock::new();
+    let offsets = OFFSETS.get_or_init(|| {
+        serde_json::from_str(include_str!(
+            "../../../public/scripture-translations/msb-audio-offsets.json"
+        ))
+        .expect("validated MSB chapter intro offsets")
+    });
+    offsets
+        .chapters
+        .get(chapter_id)
+        .filter(|entry| entry.status == "detected")
+        .and_then(|entry| entry.start_seconds)
+        .filter(|value| value.is_finite() && (0.0..8.0).contains(value))
+        .unwrap_or(0.0)
+}
+
 impl Translation {
     pub(super) fn audio(
         self,
@@ -47,11 +74,7 @@ impl Translation {
                             "https://openbible.com/audio/msb/{}_{:03}_D.mp3",
                             recording.prefix, chapter.number
                         ),
-                        start_seconds: if matches!(chapter_id, "Matthew:6" | "Matthew:7") {
-                            3.0
-                        } else {
-                            0.0
-                        },
+                        start_seconds: msb_start_seconds(chapter_id),
                         end_seconds: None,
                     });
                 }
@@ -81,6 +104,14 @@ impl Translation {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn translation_audio_uses_detected_intro_and_preserves_unknown_chapters() {
+        // Genesis 1's word ending is confirmed against the local audio pause.
+        assert_eq!(msb_start_seconds("Genesis:1"), 2.573);
+        assert_eq!(msb_start_seconds("Tobit:1"), 0.0);
+        assert_eq!(msb_start_seconds("Genesis:999"), 0.0);
+    }
 
     #[test]
     fn translation_audio_catalog_covers_every_msb_chapter() {

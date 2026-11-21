@@ -3,7 +3,7 @@ use axum::{
     body::Body,
     extract::{Path, State},
     http::{HeaderMap, Method, StatusCode, Uri},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
     routing::get,
     Router,
 };
@@ -21,6 +21,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(root: PathBuf) -> Router<S> {
         .route("/christian-classics-text/{file}", get(preview))
         .route("/christian-classics-text/chapters/{file}", get(chapter))
         .route("/audio/WEBD_AT/{file}", get(original_audio))
+        .route("/audio/msb/{file}", get(msb_audio))
         .route("/audio/continuous/{file}", get(continuous_audio))
         .route("/cross-canon-sw-release-test.js", get(service_worker_test))
         .with_state(root)
@@ -164,6 +165,41 @@ async fn original_audio(
     }
     serve_file(
         root.join("storage/audio/WEBD_AT"),
+        &file,
+        "audio/mpeg",
+        "public, max-age=86400",
+        &method,
+        &headers,
+        Some(false),
+    )
+    .await
+}
+// Local development uses unchanged publisher recordings. Releases exclude audio
+// storage; missing copies redirect to the same MSB source.
+async fn msb_audio(
+    State(root): State<PathBuf>,
+    Path(file): Path<String>,
+    method: Method,
+    headers: HeaderMap,
+) -> Response {
+    if !file
+        .strip_prefix("MSB_")
+        .and_then(|s| s.strip_suffix("_D.mp3"))
+        .is_some_and(|s| !s.is_empty() && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_'))
+    {
+        return not_found();
+    }
+    let directory = root.join("storage/audio/MSB");
+    if matches!(fs::try_exists(directory.join(&file)).await, Ok(false)) {
+        let mut response =
+            Redirect::temporary(&format!("https://openbible.com/audio/msb/{file}")).into_response();
+        response
+            .headers_mut()
+            .insert("cache-control", "no-store".parse().unwrap());
+        return response;
+    }
+    serve_file(
+        directory,
         &file,
         "audio/mpeg",
         "public, max-age=86400",
@@ -384,6 +420,7 @@ mod tests {
             "scripture-cache",
             "public/church-fathers-preview/chapters",
             "storage/audio/WEBD_AT",
+            "storage/audio/MSB",
             "storage/audio/continuous",
         ] {
             fs::create_dir_all(root.join(directory)).await.unwrap();
@@ -394,6 +431,7 @@ mod tests {
                 b"0123456789".as_slice(),
             ),
             ("storage/audio/WEBD_AT/test.mp3", b"0123456789"),
+            ("storage/audio/MSB/MSB_01_Gen_001_D.mp3", b"0123456789"),
             ("scripture-cache/0123456789abcdef.json", b"{}"),
             ("scripture-cache/0123456789abcdef.json.gz", b"compressed"),
             ("public/church-fathers-preview/books.json", b"{}"),
@@ -402,6 +440,48 @@ mod tests {
             fs::write(root.join(path), data).await.unwrap();
         }
         let app = router::<()>(root.clone());
+        for method in ["GET", "HEAD"] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method(method)
+                        .uri("/audio/msb/MSB_01_Gen_001_D.mp3")
+                        .header("range", "bytes=3-5")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), 206);
+            assert_eq!(response.headers()["content-length"], "3");
+            assert_eq!(response.headers()["content-range"], "bytes 3-5/10");
+            let bytes = response.into_body().collect().await.unwrap().to_bytes();
+            assert_eq!(
+                bytes.as_ref(),
+                if method == "HEAD" {
+                    b"".as_slice()
+                } else {
+                    b"345".as_slice()
+                }
+            );
+        }
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/audio/msb/MSB_01_Gen_002_D.mp3")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 307);
+        assert_eq!(
+            response.headers()["location"],
+            "https://openbible.com/audio/msb/MSB_01_Gen_002_D.mp3"
+        );
+        assert_eq!(response.headers()["cache-control"], "no-store");
         for (range, expected, text) in [
             ("bytes=3-5", 206, "345"),
             ("bytes=-2", 206, "89"),
@@ -480,6 +560,7 @@ mod tests {
             "/church-fathers-preview/chapters/escape.json",
             "/church-fathers-preview/chapters/%2e%2e%2fbooks.json",
             "/audio/WEBD_AT/%2e%2e%2ftest.mp3",
+            "/audio/msb/%2e%2e%2ftest.mp3",
             "/audio/continuous/missing.m4a",
         ] {
             let r = app
