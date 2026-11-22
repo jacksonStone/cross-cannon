@@ -6,7 +6,7 @@ import vm from 'node:vm';
 
 const source = await readFile(new URL(existsSync(new URL('../web/media.js', import.meta.url))?'../web/media.js':'../public/browser/media.js', import.meta.url), 'utf8');
 const continuous = JSON.parse(await readFile(new URL('../public/continuous-audio.json', import.meta.url), 'utf8')).chapters;
-function harness({rejectEarlySeek=false}={}) {
+function harness({rejectEarlySeek=false,hostname='www.crosscanon.com'}={}) {
   const players = [], events = [], actions = {};
   class Audio extends EventTarget {
     constructor() { super(); this.time=0; this.readyState=0; this.paused=true; this.seeking=false; this.plays=[]; players.push(this); }
@@ -21,7 +21,7 @@ function harness({rejectEarlySeek=false}={}) {
     async playing() { this.readyState=4; this.dispatchEvent(new Event('playing')); for (const pending of this.plays.splice(0)) pending.resolve(); await new Promise(setImmediate); }
     event(name) { this.dispatchEvent(new Event(name)); }
   }
-  const context={Audio, navigator:{mediaSession:{setActionHandler:(name,fn)=>actions[name]=fn}}, MediaMetadata:class {constructor(data){Object.assign(this,data);}}, URL, JSON, Number, console};
+  const context={Audio, location:{hostname}, navigator:{mediaSession:{setActionHandler:(name,fn)=>actions[name]=fn}}, MediaMetadata:class {constructor(data){Object.assign(this,data);}}, URL, JSON, Number, console};
   vm.runInNewContext(source.replace(/^export /gm,'')+'\nglobalThis.adapter={audioCommand,connectMedia};',context);
   context.adapter.connectMedia(json=>events.push(JSON.parse(json)));
   return {players,events,actions,command:command=>context.adapter.audioCommand(JSON.stringify(command))};
@@ -32,6 +32,17 @@ function plan(index=1) {
   return {action:'play',plan:{chapters,index}};
 }
 const chapterEvents=h=>h.events.filter(e=>e.id==='chapter').map(e=>e.book);
+
+test('local development plays MSB copies and production retains the publisher URL',()=>{
+  for(const hostname of ['127.0.0.1','localhost','[::1]','www.crosscanon.com']){
+    const h=harness({hostname}), command=plan(0);
+    const remote='https://openbible.com/audio/msb/MSB_01_Gen_001_D.mp3';
+    command.plan.chapters[0].audio={url:remote,startSeconds:2.54,endSeconds:null};
+    h.command(command);
+    assert.equal(h.players.at(-1).src,hostname==='www.crosscanon.com'?remote:'/audio/msb/MSB_01_Gen_001_D.mp3');
+    h.players.at(-1).metadata(); assert.equal(h.players.at(-1).currentTime,2.54);
+  }
+});
 
 test('playing Genesis 2 uses its real serialized chapter offset, including after metadata loads',async()=>{
   const h=harness(); const command=plan(); h.command(command);

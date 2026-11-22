@@ -3,6 +3,11 @@ let send, player, plan, controller, activeSource;
 export function connectMedia(dispatch) { send = dispatch; }
 const emit = (id, book='') => send?.(JSON.stringify({action:'audio-event', id, book}));
 function current() { return plan?.chapters[plan.index]; }
+function playbackURL(url) {
+  if(typeof location!=='undefined'&&['localhost','127.0.0.1','[::1]'].includes(location.hostname)&&
+      /^https:\/\/openbible\.com\/audio\/msb\/MSB_[A-Za-z0-9_]+_D\.mp3$/.test(url))return new URL(url).pathname;
+  return url;
+}
 function stopPlayer() {
   const old=player;
   // Invalidate listeners before pause/load dispatches events from the old source.
@@ -50,7 +55,7 @@ function loadChapter(useFallback=false) {
     else emit('error','Audio unavailable. Check your connection or download it first.');
   });
   if('mediaSession' in navigator) navigator.mediaSession.metadata=new MediaMetadata({title:chapter.title,artist:'Cross Canon'});
-  audio.src=source.url;
+  audio.src=playbackURL(source.url);
   // Set the default playback position now, in the user's Play gesture. Engines
   // that defer seeking until metadata arrives use the listener above.
   try { seek(); } catch {}

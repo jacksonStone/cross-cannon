@@ -26,6 +26,7 @@ mkdir -p .tmp
 export CROSS_CANNON_UPDATE_DB=0
 run_step 'Off-server tooling tests' npm run test:unit
 run_step 'Browser audio playback' node --test scripts/browser-audio-browser.test.mjs
+run_step 'Saved reader theme before first paint' node scripts/browser-theme-startup.test.mjs
 run_step 'Shared text artifacts' scripts/rust.sh test --locked -p cross-canon-core
 run_step 'Selected translation audio' scripts/rust.sh test --locked -p cross-canon-desktop translation_audio
 run_step 'Off-server TypeScript tooling' npm run typecheck
@@ -50,9 +51,12 @@ run_step 'Compatibility listener shares the same server' curl -fsS "http://${ver
 run_step 'Rust browser artifact and workers' node scripts/smoke-browser-artifact.mjs "$base_url"
 run_step 'Installed reader upgrades and offline startup' env BROWSER_TEST_URL="$base_url" node scripts/browser-upgrade.test.mjs
 run_step 'Mouse wheel scrolling over dialog buttons' env BROWSER_TEST_URL="$base_url" node scripts/browser-scroll.test.mjs
-run_step 'Library navigation, author suggestions and retained search' env BROWSER_TEST_URL="$base_url" node scripts/browser-library.test.mjs
+run_step 'Illustrated Library and Scripture picker' env BROWSER_TEST_URL="$base_url" node scripts/browser-library-navigation.test.mjs
+run_step 'Shared Library navigation, author suggestions and retained search' env BROWSER_TEST_URL="$base_url" node scripts/browser-library.test.mjs
 run_step 'Translation selection reaches browser audio' env BROWSER_TEST_URL="$base_url" node scripts/browser-translation-audio.test.mjs
 run_step 'Passage actions follow desktop selections' env BROWSER_TEST_URL="$base_url" node scripts/browser-passage-actions.test.mjs
+run_step 'iPhone safe areas, theme background and passage toggles' env BROWSER_TEST_URL="$base_url" node scripts/browser-reader-chrome.test.mjs
+run_step 'Commentary verse links return to Scripture' env BROWSER_TEST_URL="$base_url" node scripts/browser-commentary-links.test.mjs
 run_step 'Mobile startup budget' env BROWSER_TEST_URL="$base_url" node scripts/browser-startup.test.mjs
 run_step 'Continuous Scripture book scrolling' env BROWSER_TEST_URL="$base_url" node scripts/browser-book-scroll.test.mjs
 run_step 'Compatibility search forms use Rust' node --import tsx scripts/smoke-rust-web.ts "$base_url"

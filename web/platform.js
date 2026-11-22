@@ -1,4 +1,5 @@
 // DOM is a rendering/effects adapter. Canonical state and decisions live in Rust.
+import {connectLibrary} from './library.js';
 let dispatch;
 let model = {};
 let lastLink = location.pathname + location.search;
@@ -19,6 +20,7 @@ const button = (label, action, icon, className = 'icon') => {
 };
 const escapeCSS = (value) => CSS.escape(value);
 const passageElement = (id) => $('reader-text').querySelector(`[data-passage-id="${escapeCSS(id)}"]`);
+function selectPassage(id) { emit(model.selected === id ? 'clear' : 'select', id); }
 function captureAnchor() {
   const scroller = $('reader-scroll');
   const top = scroller.getBoundingClientRect().top;
@@ -67,12 +69,33 @@ function renderChapters(chapters) {
       }
       const heading = document.createElement('h2'); heading.textContent = chapter.title; section.append(heading);
       for (const key of ['subtitle','edition']) if (chapter[key]) { const p = document.createElement('p'); p.className = key; p.textContent = chapter[key]; section.append(p); }
+      let group;
       for (const source of chapter.paragraphs) {
+        if (source.scripture_group && group?.dataset.groupId !== source.scripture_group) {
+          group = document.createElement('div'); group.className = 'commentary-group';
+          group.dataset.groupId = source.scripture_group; section.append(group);
+        } else if (!source.scripture_group) group = null;
+        const container = group ?? section;
         const p = document.createElement('p'); p.className = 'passage'; p.dataset.passageId = source.id;
         p.dataset.link = source.link; p.dataset.reference = source.reference; p.tabIndex = 0;
-        p.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();emit('select',source.id);}});
+        p.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();selectPassage(source.id);}});
         if (source.highlight) { p.classList.add('highlight'); p.style.setProperty('--highlight', highlightColor(source.highlight)); }
-        p.append(textWithRanges(source)); section.append(p);
+        p.append(textWithRanges(source)); container.append(p);
+        if (source.scripture_links?.length) {
+          const links = document.createElement('div'); links.className = 'scripture-links';
+          links.setAttribute('aria-label', 'Linked scripture');
+          for (const target of source.scripture_links) {
+            const link = document.createElement('a'); link.textContent = target.reference;
+            link.href = target.link.replace(/^https:\/\/www\.crosscanon\.com/, '');
+            link.setAttribute('aria-label', `Read ${target.reference} in Scripture`);
+            link.addEventListener('click', event => {
+              if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+              event.preventDefault(); emit('scripture', source.id, target.id);
+            });
+            links.append(link);
+          }
+          container.append(links);
+        }
       }
     }
     desired.push(section);
@@ -124,7 +147,14 @@ function updateReader(next) {
   root.style.setProperty('--line-height', next.lineHeight);
   root.style.setProperty('--column', `${next.width - 20}px`);
   root.dataset.theme = next.theme === 2 ? 'dark' : 'light';
+  root.style.colorScheme = next.theme === 2 ? 'dark' : 'light';
   document.querySelector('meta[name=theme-color]').content = next.paper;
+  document.querySelector('meta[name=apple-mobile-web-app-status-bar-style]').content = next.theme === 2 ? 'black-translucent' : 'default';
+  const audio = $('reader-audio');
+  const audioLabel = next.playing ? 'Pause audio' : 'Play audio';
+  audio.innerHTML = iconMarkup[next.playing ? 'pause' : 'play'] ?? '';
+  audio.setAttribute('aria-label', audioLabel); audio.title = audioLabel;
+  audio.dataset.playing = String(next.playing); audio.disabled = !next.audio;
   $('reader-jump').textContent = next.title;
   $('reader-jump').setAttribute('aria-label', `Current reading, ${next.collection}, ${next.title}`);
   $('reader-text').classList.toggle('work', !next.scripture);
@@ -313,14 +343,16 @@ export async function signOut() {
   catch(error){emit('browser-status',String(error));}
 }
 export function openURL(url) { if(/^https?:\/\//.test(url)) window.open(url,'_blank','noopener,noreferrer'); }
-export function connect(send, icons) {
+export function connect(send, icons, books) {
   dispatch=send;iconMarkup=icons;
   passageTools=document.createElement('div');passageTools.id='passage-tools';
   passageTools.append($('reader-reference'),$('passage-actions'));
   $('reader-footer').prepend(passageTools);
   $('reader-tools').innerHTML=icons.tools;
   $('reader-library').querySelector('.library-icon').innerHTML=icons.library;
-  $('reader-library').onclick=()=>emit('library');$('reader-tools').onclick=openTools;
+  connectLibrary($('library-navigation'), books, () => model, emit, icons);
+  $('reader-tools').onclick=openTools;
+  $('reader-audio').onclick=()=>emit('audio');
   for(const [label,action,icon,text] of [['Highlight passage','highlight','highlight','Highlight'],['Passage notes','note','note','Notes'],['View commentaries','commentary','commentary','Commentaries'],['Similar passages','similar','search','Similar passages'],['Close passage actions','clear','close','']]) {
     const b=button(label,action,icon);b.id='action-'+action;
     if(text){const span=document.createElement('span');span.className='action-label';span.textContent=text;span.setAttribute('aria-hidden','true');b.append(span);}
@@ -344,7 +376,11 @@ export function connect(send, icons) {
   $('reader-scroll').addEventListener('scroll',scheduleLocation,{passive:true});
   let down;
   $('reader-text').addEventListener('pointerdown',(e)=>{down={x:e.clientX,y:e.clientY,id:e.target.closest('.passage')?.dataset.passageId};});
-  $('reader-text').addEventListener('pointerup',(e)=>{if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<8&&!getSelection()?.toString()&&down.id){emit('select',down.id);}});
+  $('reader-text').addEventListener('pointerup',(e)=>{
+    const start=down;down=null;
+    if(start&&Math.hypot(e.clientX-start.x,e.clientY-start.y)<8&&!getSelection()?.toString()&&start.id)selectPassage(start.id);
+  });
+  $('reader-text').addEventListener('pointercancel',()=>{down=null;});
   window.addEventListener('popstate',()=>{lastLink=location.pathname+location.search;emit('link','https://www.crosscanon.com'+lastLink);});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')reportLocation();else emit('resume');});
   let resizeAnchor=captureAnchor();
@@ -360,5 +396,9 @@ export function activityGeneration(){return foregroundGeneration;}
 export function safeInsets(){
   const viewport=window.visualViewport;
   const bottom=viewport?Math.max(0,innerHeight-viewport.height-viewport.offsetTop):0;
-  return [0,0,bottom,0];
+  // Use the same CSS safe area as the reading surface, including while that
+  // surface is hidden for a canvas dialog. The keyboard can require more room.
+  const style=getComputedStyle($('reader'));
+  const padding=side=>parseFloat(style[side])||0;
+  return [padding('paddingTop'),padding('paddingLeft'),Math.max(padding('paddingBottom'),bottom),padding('paddingRight')];
 }

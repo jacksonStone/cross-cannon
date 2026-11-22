@@ -43,7 +43,10 @@ try {
   await page.click('#tools-menu [aria-label="Reader settings"]');await shot(page,'mobile-settings');
   await page.click('#reader-settings [data-setting="theme2"]');await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');await shot(page,'mobile-settings-dark');
   await page.click('#reader-settings [data-setting="theme0"]');await page.click('#settings-done');
-  await page.click('#reader-library');await page.waitForSelector('#dialog-accessibility input, #dialog-accessibility textarea');await shot(page,'mobile-library');
+  await page.click('#reader-library');await page.waitForSelector('#library-navigation[open]');await shot(page,'mobile-library');
+  await page.click('#library-navigation .library-close');
+  await page.evaluate(()=>window.crossCanonReader.dispatch(JSON.stringify({action:'library'})));
+  await page.waitForSelector('#dialog-accessibility input, #dialog-accessibility textarea');
   report.push({library:await nodes(page)});
   const genesis=await page.$('#dialog-accessibility [aria-label="Genesis"]');
   const before=await genesis.boundingBox();
@@ -58,7 +61,7 @@ try {
   await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await page.waitForFunction((y)=>{const e=document.querySelector('#dialog-accessibility [aria-label="Genesis"]');return !e||e.getBoundingClientRect().top<y-30;},{timeout:10000},before.y);
   report.push({touchScrollOverButton:true});await close(page);
-  await page.click('#reader-library');await page.waitForSelector('#dialog-accessibility [aria-label="Close"]');await shot(page,'mobile-jump');await close(page);
+  await page.click('#reader-jump');await page.waitForSelector('#library-navigation[open]');await shot(page,'mobile-jump');await page.click('#library-navigation .library-close');
   await page.click('#reader-tools');await page.click('#tools-menu [aria-label="Search"]');await page.waitForSelector('#dialog-accessibility input, #dialog-accessibility textarea');await shot(page,'mobile-search');
   await click(page,'Filters');await page.waitForSelector('#dialog-accessibility [aria-label="Done"]');await shot(page,'mobile-filters');await click(page,'Done');
   await click(page,'Search Keywords');
@@ -111,7 +114,7 @@ try {
     await page.waitForFunction(()=>document.querySelector('#app-canvas').width===Math.round(innerWidth*devicePixelRatio));
     await shot(page,`${label}-reader`);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-    await page.click('#reader-library');await page.waitForSelector('#dialog-accessibility [aria-label="Close"]');await shot(page,`${label}-library`);await close(page);
+    await page.click('#reader-library');await page.waitForSelector('#library-navigation[open]');await shot(page,`${label}-library`);await page.click('#library-navigation .library-close');
     await page.click('#reader-tools');await page.click('#tools-menu [aria-label="Search"]');await page.waitForSelector('#dialog-accessibility [aria-label="Close"]');await shot(page,`${label}-search`);await close(page);
   }
   // Server-only account documents must not restore retired storage writers or

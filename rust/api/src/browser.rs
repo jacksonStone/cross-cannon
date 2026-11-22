@@ -128,6 +128,7 @@ async fn public_asset(
         "manifest.webmanifest",
         "og-image.png",
         "og-image.svg",
+        "msb-audio-offsets.json",
     ]
     .contains(&name.as_str())
     {
@@ -137,7 +138,11 @@ async fn public_asset(
         root.join("public"),
         &name,
         content_type(&name).unwrap(),
-        "public, max-age=3600",
+        if name == "msb-audio-offsets.json" {
+            "public, max-age=300"
+        } else {
+            "public, max-age=3600"
+        },
         method,
         headers,
     )
@@ -316,7 +321,61 @@ mod tests {
         )
         .await
         .unwrap();
+        for (suffix, bytes) in [
+            ("", b"{\"Genesis:1\":2.46}".as_slice()),
+            (".gz", b"gzip offsets"),
+            (".br", b"brotli offsets"),
+        ] {
+            tokio::fs::write(
+                root.join(format!("public/msb-audio-offsets.json{suffix}")),
+                bytes,
+            )
+            .await
+            .unwrap();
+        }
         let app = router::<()>(root.clone());
+        for (encoding, body, coding) in [
+            ("identity", "{\"Genesis:1\":2.46}", None),
+            ("gzip", "gzip offsets", Some("gzip")),
+            ("br,gzip", "brotli offsets", Some("br")),
+        ] {
+            for method in ["GET", "HEAD"] {
+                let response = app
+                    .clone()
+                    .oneshot(
+                        Request::builder()
+                            .method(method)
+                            .uri("/msb-audio-offsets.json")
+                            .header("accept-encoding", encoding)
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+                assert_eq!(response.status(), 200);
+                assert_eq!(
+                    response.headers()["content-type"],
+                    "application/json; charset=utf-8"
+                );
+                assert_eq!(response.headers()["cache-control"], "public, max-age=300");
+                assert_eq!(
+                    response
+                        .headers()
+                        .get("content-encoding")
+                        .map(|v| v.to_str().unwrap()),
+                    coding
+                );
+                let bytes = response.into_body().collect().await.unwrap().to_bytes();
+                assert_eq!(
+                    bytes.as_ref(),
+                    if method == "HEAD" {
+                        b"".as_slice()
+                    } else {
+                        body.as_bytes()
+                    }
+                );
+            }
+        }
         for path in [
             "/",
             "/reader/0c558fd2c95099cf1909774d?selected=16",
