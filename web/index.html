@@ -4,6 +4,38 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#fbfaf7">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script>
+// Paint only: Rust still restores and validates the canonical reader state.
+// Home Screen chrome can retain the launch color, so do this before CSS/WASM.
+(() => {
+  try {
+    const checkpoint = JSON.parse(localStorage.getItem('cross-canon/browser-reader-v1') || 'null');
+    let theme = checkpoint?.reader?.match(/\btheme\s*:\s*(Paper|Sepia|Dark|Contrast)\b/)?.[1];
+    if (!theme) {
+      const legacy = JSON.parse(localStorage.getItem('cross-cannon:reader-settings:v1') || 'null');
+      theme = ({paper:'Paper',sepia:'Sepia',dark:'Dark',contrast:'Contrast'})[legacy?.theme];
+    }
+    const palette = {
+      Paper:['#fbfaf7','#24211d','#686058','#8f3526'],
+      Sepia:['#f4ecd9','#2e2419','#71624f','#8f3526'],
+      Dark:['#171717','#eee9de','#bbb1a2','#f1b38c'],
+      Contrast:['#ffffff','#000000','#333333','#000000'],
+    }[theme];
+    if (!palette) return;
+    const root = document.documentElement;
+    ['--paper','--ink','--muted','--accent'].forEach((key,i) => root.style.setProperty(key,palette[i]));
+    root.style.backgroundColor = 'var(--paper)';
+    root.dataset.theme = theme === 'Dark' ? 'dark' : 'light';
+    root.style.colorScheme = theme === 'Dark' ? 'dark' : 'light';
+    document.querySelector('meta[name=theme-color]').content = palette[0];
+    // Older iOS releases need this standalone fallback; newer iOS samples CSS.
+    document.querySelector('meta[name=apple-mobile-web-app-status-bar-style]').content = theme === 'Dark' ? 'black-translucent' : 'default';
+  } catch (_) { /* Unavailable or malformed storage must not block startup. */ }
+})();
+</script>
 <meta name="description" content="Read Scripture, Early Christian Works and Christian Classics with Cross Canon.">
 <title>Cross Canon</title>
 <link rel="icon" href="/favicon-c26c421629d8.svg" type="image/svg+xml">
@@ -16,13 +48,14 @@
 <div id="loading" role="status"><span class="brand-mark">✣</span><h1>Cross Canon</h1><p>Opening your library…</p><progress aria-label="Loading library"></progress></div>
 <canvas id="app-canvas" tabindex="-1" aria-label="Cross Canon dialogs"></canvas>
 <main id="reader" hidden>
-<header><h1 id="reader-jump"></h1><button class="icon tools" id="reader-tools" aria-label="Reader tools" aria-expanded="false"></button><button id="reader-library" aria-label="Open Library"><span class="library-icon" aria-hidden="true"></span></button></header>
+<header><button type="button" id="reader-jump" aria-haspopup="dialog"></button><button class="icon tools" id="reader-tools" aria-label="Reader tools" aria-expanded="false"></button><button class="icon audio" id="reader-audio" type="button" aria-label="Play audio" title="Play audio"></button><button id="reader-library" aria-label="Open Library" aria-haspopup="dialog"><span class="library-icon" aria-hidden="true"></span></button></header>
 <div id="reader-scroll" tabindex="0" aria-label="Reading text"><article id="reader-text"></article></div>
 <footer id="reader-footer" hidden><div id="reader-reference"></div><nav id="passage-actions" aria-label="Passage actions"></nav><p id="reader-status" role="status"></p></footer>
 </main>
 <div id="dialog-accessibility"></div>
 <dialog id="tools-menu" aria-label="Reader tools"></dialog>
 <dialog id="reader-settings" aria-labelledby="settings-title"><div class="sheet-header"><h2 id="settings-title">Reader settings</h2><button id="settings-done">Done</button></div><div id="settings-content"></div></dialog>
+<dialog id="library-navigation" aria-labelledby="library-title"></dialog>
 <script type="module" src="/browser/start.js"></script>
 </body>
 </html>

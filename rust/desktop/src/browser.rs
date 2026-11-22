@@ -230,6 +230,35 @@ struct Prepared {
 }
 thread_local! { static PREPARED: std::cell::RefCell<Option<Prepared>> = const { std::cell::RefCell::new(None) }; }
 
+/// Project the offline identity index before it moves into the reader. No text
+/// fragment is needed to browse a work or to validate a Scripture reference.
+#[wasm_bindgen]
+pub fn library_navigation_json() -> std::result::Result<String, JsValue> {
+    PREPARED.with(|slot| {
+        let prepared = slot.borrow();
+        let prepared = prepared.as_ref().ok_or_else(|| JsValue::from_str("Reader not prepared"))?;
+        let library = &prepared.library;
+        let books = library.books.iter().filter(|book| !book.chapters.is_empty()).map(|book| {
+            let chapters = book.chapters.iter().map(|chapter| {
+                if book.corpus == Corpus::Scripture {
+                    let verses: Vec<_> = chapter.passage_ids.iter().filter_map(|id| library.passage(id))
+                        .map(|passage| [passage.verse_start, passage.verse_end]).collect();
+                    serde_json::json!([chapter.number, verses])
+                } else {
+                    serde_json::json!([chapter.number, chapter.title])
+                }
+            }).collect::<Vec<_>>();
+            let metadata = prepared.catalog.works.get(&book.id);
+            serde_json::json!({"id":book.id,"title":book.title,"author":book.author,"corpus":book.corpus,
+                "translator":metadata.and_then(|value| value.translator.as_deref()),
+                "edition":metadata.and_then(|value| value.edition.as_deref()),
+                "chapters":chapters,"catholic":Canon::Catholic.includes(&book.title),
+                "protestant":Canon::Protestant.includes(&book.title)})
+        }).collect::<Vec<_>>();
+        serde_json::to_string(&books).map_err(|error| JsValue::from_str(&error.to_string()))
+    })
+}
+
 // Resolve the exact saved/deep-linked Passage before requesting any reading text.
 #[wasm_bindgen]
 pub fn prepare(

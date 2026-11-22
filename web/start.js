@@ -64,8 +64,9 @@ try {
     engine,resource(manifest.library),resource(manifest.catalog,'text'),resource(manifest.archive,'json'),legacyCheckpoint()
   ]);
   progress.value=2;
-  connect(wasm.dispatch,JSON.parse(wasm.icons_json()));connectMedia(wasm.dispatch);
   const chapters=JSON.parse(wasm.prepare(library,catalog,legacy,JSON.stringify(archive)));
+  connect(wasm.dispatch,JSON.parse(wasm.icons_json()),JSON.parse(wasm.library_navigation_json()));
+  connectMedia(wasm.dispatch);
   const sources=[...new Map(chapters.map(id=>[archive[id].text,archive[id]])).values()];
   const fragments=await Promise.all(sources.map(async source=>{
     const [bytes,reading]=await Promise.all([resource(source.text),source.reading?resource(source.reading,'text'):'']);

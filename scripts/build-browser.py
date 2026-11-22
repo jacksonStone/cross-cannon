@@ -25,9 +25,13 @@ def inputs():
              ROOT/'public/church-fathers-preview/manifest.json', ROOT/'public/church-fathers-preview/books.json',
              ROOT/'public/christian-classics-text/manifest.json', ROOT/'public/christian-classics-text/books.json',
              ROOT/'public/scripture-translations/msb.json',
-             ROOT/'public/scripture-translations/msb-audio.json', Path(__file__)]
-    for folder in ['rust/core', 'rust/desktop', 'web']:
+             ROOT/'public/scripture-translations/msb-audio.json',
+             ROOT/'public/msb-audio-offsets.json', Path(__file__)]
+    for folder in ['rust/core', 'rust/desktop']:
         paths += [p for p in (ROOT/folder).rglob('*') if p.is_file() and p.suffix in {'.rs','.toml','.m','.ttf','.js','.css','.html'}]
+    paths += [p for p in (ROOT/'web').iterdir() if p.is_file()]
+    paths += [ROOT/'docs/research/library-cover-inventory.json', ROOT/'assets/library-covers/bible-sinai-hero.jpg']
+    paths += list((ROOT/'assets/library-covers/thumbnails').glob('*.jpg'))
     paths += [ROOT/'scripts/lib/native_catalog.py', ROOT/'scripts/lib/browser_assets.py', ROOT/'scripts/precompress-browser.mjs']
     value = hashlib.sha256()
     for path in sorted(set(paths)):
@@ -56,6 +60,24 @@ def valid_manifest():
 
 def run(*args):
     subprocess.run([str(a) for a in args], cwd=ROOT, check=True)
+
+
+def stage_library_covers(staging):
+    inventory = json.loads((ROOT/'docs/research/library-cover-inventory.json').read_text())
+    covers = staging/'covers'
+    covers.mkdir()
+
+    def stage(path):
+        name = path.stem+'.'+digest(path)[:20]+path.suffix
+        shutil.copy2(path, covers/name)
+        return '/browser/covers/'+name
+
+    art = {key: stage(ROOT/'assets/library-covers/thumbnails'/(key.replace(':', '-')+'.jpg'))
+           for key in inventory['sources'] if key != inventory['bible']}
+    books = {work_id: art[record['source']] for work_id, record in inventory['works'].items()}
+    bible = stage(ROOT/'assets/library-covers/bible-sinai-hero.jpg')
+    (staging/'library-covers.js').write_text('export const covers='+json.dumps(books,separators=(',',':'))+';\n'
+        +'export const bibleArt='+json.dumps(bible)+';\n')
 
 def main():
     existing = valid_manifest()
@@ -87,6 +109,10 @@ def main():
         run(sys.executable,ROOT/'scripts/lib/native_catalog.py',ROOT,staging/'catalog.json')
         for source in (ROOT/'web').iterdir():
             if source.is_file(): shutil.copy2(source,staging/source.name)
+        stage_library_covers(staging)
+        with (staging/'reader.css').open('a') as css:
+            css.write('\n'+(staging/'library.css').read_text())
+        (staging/'library.css').unlink()
         (staging/'fonts').mkdir()
         for name in ['SourceSerif4-Regular.ttf','SourceSerif4-Semibold.ttf','SourceSerif4-Bold.ttf']:
             shutil.copy2(ROOT/'rust/desktop/fonts'/name,staging/'fonts'/name)

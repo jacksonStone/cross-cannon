@@ -70,9 +70,14 @@ own chapter sequence. The focused Passage is the persisted source of truth.
 Adapters retain passage anchors through typography changes and chapter prepends,
 with verse numbers hidden in the main flow.
 
-Library combines collection, book/work, chapter and verse selection in one shared
-picker, with a Last place shortcut for each collection. Library, search, account,
-and study dialogs share egui widgets. A narrow
+The browser Library opens an illustrated reading home and a searchable work
+catalog. Its Scripture picker keeps verse buttons below the chapter buttons;
+choosing a chapter updates the verses, while Read chapter opens its beginning.
+Direct reference lookup also opens a passage. The browser projects book, chapter, and
+verse ranges from the offline Rust identity index. Rust validates navigation and
+resolves the destination to a Passage. Cover thumbnails use content-addressed
+browser assets staged with the offline release. The native Library, search,
+account, and study dialogs use shared egui widgets. A narrow
 eframe platform-output hook exports clipped AccessKit nodes to UIKit or semantic
 HTML buttons/inputs. The HTML adapter maps UTF-16 selections to Rust character
 offsets and waits for pending text/selection changes before formatting actions.

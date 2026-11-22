@@ -12,9 +12,13 @@ pub(super) enum Effect {
 enum Command {
     Location { book: String, id: String },
     Select { book: String, id: String },
+    Scripture { source: String, target: String },
     Clear,
     Extend { book: String, forward: bool },
     Jump,
+    OpenPassage(String),
+    OpenChapter { book: String, chapter: u32, verse: u32 },
+    Favorite(String),
     Dialog(Dialog),
     Library,
     Audio,
@@ -54,11 +58,22 @@ impl Command {
                 id: event.id,
             },
             "clear" => Self::Clear,
+            "scripture" => Self::Scripture {
+                source: event.id,
+                target: event.book,
+            },
             "next" | "previous" => Self::Extend {
                 book: event.book,
                 forward: event.action == "next",
             },
             "jump" => Self::Jump,
+            "open-passage" => Self::OpenPassage(event.id),
+            "open-chapter" => Self::OpenChapter {
+                book: event.book,
+                chapter: event.id.parse().ok()?,
+                verse: event.value.to_string().parse().ok()?,
+            },
+            "favorite-work" => Self::Favorite(event.book),
             "search" => Self::Dialog(Dialog::Search),
             "settings" => Self::Dialog(Dialog::Settings),
             "library" => Self::Library,
@@ -129,12 +144,48 @@ pub(super) fn apply(app: &mut Desktop, ctx: &egui::Context, event: Event) -> Eff
             }
         }
         Command::Clear => app.selected = None,
+        Command::Scripture { source, target } => {
+            if passage_in_reader(app, &app.current_passage().book_id, &source)
+                && app.library.passage(&source).is_some_and(|passage| {
+                    app.catalog
+                        .scripture_links(&app.library, passage)
+                        .iter()
+                        .any(|link| link.id == target)
+                })
+            {
+                app.open(target);
+            }
+        }
         Command::Extend { book, forward } => {
             if book == app.current_passage().book_id {
                 return Effect::Extend { forward };
             }
         }
         Command::Jump => app.show_library(),
+        Command::OpenPassage(id) => {
+            if app.library.passage(&id).is_some() {
+                app.open(id);
+            }
+        }
+        Command::OpenChapter { book, chapter, verse } => {
+            let target = app.library.book(&book).and_then(|book| {
+                let chapter = book.chapters.iter().find(|entry| entry.number == chapter)?;
+                if verse == 0 {
+                    return chapter.passage_ids.first();
+                }
+                if book.corpus != Corpus::Scripture {
+                    return None;
+                }
+                chapter.passage_ids.iter().find(|id| app.library.passage(id).is_some_and(|p| (p.verse_start..=p.verse_end).contains(&verse)))
+            });
+            if let Some(id) = target.cloned() {
+                app.open(id);
+            }
+        }
+        Command::Favorite(book) => {
+            app.toggle_favorite(&book);
+            app.account.persist_now = true;
+        }
         Command::Dialog(dialog) => app.dialog = Some(dialog),
         Command::Library => app.show_library(),
         Command::Audio => app.play_audio(&app.active_chapter_id.clone()),
@@ -230,6 +281,41 @@ mod tests {
 
     fn send(app: &mut Desktop, ctx: &egui::Context, json: serde_json::Value) -> Effect {
         apply(app, ctx, serde_json::from_value(json).unwrap())
+    }
+
+    #[test]
+    fn scripture_event_opens_only_a_linked_target_from_the_current_work() {
+        let library = Arc::new(
+            Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
+        );
+        let ctx = egui::Context::default();
+        let mut app = Desktop::initialize(&ctx, None, library.clone());
+        let source = library.passage("classics:henry:Prov.16:4-6").unwrap();
+        let links = app.catalog.scripture_links(&library, source);
+        let target = &links[0].id;
+        app.open(source.id.clone());
+        send(
+            &mut app,
+            &ctx,
+            serde_json::json!({"action":"scripture", "id":source.id, "book":"unknown"}),
+        );
+        assert_eq!(app.state.location_passage_id, source.id);
+        send(
+            &mut app,
+            &ctx,
+            serde_json::json!({"action":"scripture", "id":source.id, "book":target}),
+        );
+        assert_eq!(&app.state.location_passage_id, target);
+        assert_eq!(app.back.last(), Some(&source.id));
+        // A stale commentary event must not navigate after the reader changed books.
+        app.open(library.chapter("John:3").unwrap().1.passage_ids[0].clone());
+        let before = app.state.location_passage_id.clone();
+        send(
+            &mut app,
+            &ctx,
+            serde_json::json!({"action":"scripture", "id":source.id, "book":target}),
+        );
+        assert_eq!(app.state.location_passage_id, before);
     }
 
     #[test]

@@ -32,7 +32,36 @@ try {
     assert.equal(geometry.libraryLabel,'');
     if(width>=700){assert.equal(geometry.weight,'400');assert.ok(geometry.readingWidth<=864);}
     await page.screenshot({path:`${output}/${label}-reader.png`});
-    await page.click('#reader-library');
+    const picker='#library-navigation';
+    await page.click('#reader-jump');
+    const book=picker+' [data-reference-search]';
+    await page.waitForSelector(book,{visible:true});
+    await pause();await page.screenshot({path:`${output}/${label}-bible.png`});
+    const replaceBook=async text=>{
+      await page.$eval(book,field=>{field.value='';field.dispatchEvent(new Event('input',{bubbles:true}));});
+      await page.type(book,text);
+    };
+    const bookResult=title=>page.waitForFunction(expected=>
+      [...document.querySelectorAll('#library-navigation [data-match] strong')].some(node=>node.textContent===expected),{},title);
+    await replaceBook('1 jOh');
+    await bookResult('1 John');
+    assert.equal(await page.$eval(picker+' .library-matches',e=>e.textContent.includes('Genesis')),false);
+    await pause();await page.screenshot({path:`${output}/${label}-bible-autocomplete.png`});
+    await page.keyboard.press('Enter');
+    await page.waitForSelector(picker+'[data-step="chapters"] [data-chapter="5"]',{visible:true});
+    assert.equal(await page.$(picker+' [data-chapter="6"]'),null,'1 John has five chapters');
+    await replaceBook('zzzz');
+    await page.waitForSelector(picker+' .library-matches .library-empty',{visible:true});
+    await page.keyboard.press('Enter');
+    assert.equal(await page.$eval(book,e=>e.value),'zzzz','Empty results do not select a book');
+    await replaceBook('gEn');
+    await bookResult('Genesis');
+    await page.click(picker+' [data-match="0"]');
+    await page.waitForSelector(picker+'[data-step="chapters"] [data-chapter="50"]');
+    await pause();await page.screenshot({path:`${output}/${label}-bible-selected.png`});
+    await page.click(picker+' .library-close');
+    // The shared author picker still serves native readers.
+    await page.evaluate(() => window.crossCanonReader.dispatch(JSON.stringify({action:'library'})));
     await page.waitForSelector(selector('Choose where to read'));
     await page.click(selector('Fathers'));
     const author=selector('Find a Library author');
@@ -98,7 +127,7 @@ try {
     assert.equal(await page.$eval(query,e=>e.value),'mercy');
     assert.equal(await page.$eval(selector('CLASSICS'),e=>e.getAttribute('aria-pressed')),'true');
     assert.deepEqual(errors,[]);
-    results.push({viewport:label,...geometry,restoredResultY:anchor.y,queryRetained:true,authorKeyboardSelection:true,authorPointerSelection:true,worksScroll:true});
+    results.push({viewport:label,...geometry,restoredResultY:anchor.y,queryRetained:true,bookKeyboardSelection:true,bookPointerSelection:true,authorKeyboardSelection:true,authorPointerSelection:true,worksScroll:true});
     await context.close();page=null;
   }
 } catch(error) {

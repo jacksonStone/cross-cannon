@@ -52,6 +52,75 @@ MSB playback never falls back to a different translation. Changing translation
 replaces active Scripture playback; paused playback restarts in the new translation
 on the next Play. Optional offline audio downloads currently contain WEB recordings.
 
+Download the complete MSB recordings and index only their eight-second openings:
+
+```bash
+npm run prepare:msb-audio -- --download-only
+npm run prepare:msb-audio
+```
+
+The recordings stay unchanged under ignored `storage/audio/MSB/`. On localhost,
+browser playback uses `/audio/msb/` and the Rust server serves these copies with
+byte ranges; missing copies redirect to the publisher. Hosted playback retains
+the publisher URL. Shared playback uses
+`public/msb-audio-offsets.json` to start at the word-ending timestamp of “Audio
+Bible,” preserving the book/chapter announcement. This minified map contains only
+chapter IDs and offsets in seconds, for example `{"Genesis:1":2.46}`. Fetch it at
+`/msb-audio-offsets.json`; prebuilt Brotli/gzip encodings and five-minute HTTP
+caching keep transfers small. Detailed transcripts and provenance remain in
+`public/scripture-translations/msb-audio-offsets.json`. Uncertain offsets remain null
+and play from zero; `docs/research/msb-audio-offset-review.md` lists them.
+No silence or extra padding is required after the phrase. Missing or conflicting
+word timings remain on the review list without another API call.
+
+Preparation uses eight download workers and four transcription workers by default
+(`--jobs` and `--transcription-jobs`). `--limit` scopes an initial trial without
+discarding other indexed chapters. It requires curl, ffmpeg, ffprobe, and
+`OPENAI_API_KEY` for transcription. Only decoded mono WAV windows contained in the
+first eight seconds are uploaded; full recordings never go to transcription. The existing timestamp-capable
+`whisper-1` API costs $0.006/minute: 1,189 × 8 seconds is approximately $0.9512.
+It is deprecated with a scheduled February 26, 2027 shutdown; this explicit
+maintenance tool uses it for word timestamps, which the cheaper mini model does
+not supply. See [OpenAI pricing](https://developers.openai.com/api/docs/pricing#transcription-and-speech)
+and [timestamp support](https://developers.openai.com/api/docs/guides/speech-to-text#timestamps).
+
+Every download receipt, source checksum, raw transcript, offset, and API cost
+reservation is saved atomically under `storage/audio/MSB/.work/`. The aggregate
+offset/review files refresh after every chapter. Rerun the same command to resume;
+completed chapters use their cached results, including uncertain ones. Interrupted
+uploads without saved responses require review and are never silently retried.
+Use `--reanalyze` to apply updated matching rules to cached transcripts without
+making any transcription requests.
+`--retry-with-context` gives older uncertain transcripts one explicit retry with
+the current recording context; both transcript variants remain cached. The prompt
+describes an English chapter recording and its announcements without supplying the
+target phrase or chapter text. Already completed current-context results are reused.
+The SDK has automatic retries disabled; `--retry-errors` explicitly retries failed
+or interrupted requests, while `--max-cost` defaults to a cumulative $1.25 cap
+including all recorded request attempts. It is a duration-based estimate, not a
+provider billing receipt. No database, embedding, or deployment task is involved.
+
+Retry the saved review cohort with an intro-focused transcription pass:
+
+```bash
+npm run prepare:msb-audio -- --retry-review --transcription-jobs 6 --max-cost 1.50
+```
+
+This round snapshots its chapter IDs and previous results in
+`storage/audio/MSB/.work/intro-focus-v2-session.json`. Each request keeps time zero
+and ends in the long gap after the chapter heading when one is detectable, never
+after the eighth second. A dictionary-style prompt names Audio Bible, the book,
+and chapter. Original transcripts stay intact under their original filenames;
+retry clips, responses, and pending requests have separate profile names.
+Confidence is evaluated only on the introduction, so later verse/silence errors
+do not invalidate a confident opening. A high no-speech score alone does not
+reject a good decode. The matcher compares all cached word-ending timestamps:
+it retains usable older evidence when a retry is worse and flags
+conflicting boundaries rather than selecting one. Previously confirmed chapters
+outside the cohort are preserved. Repeating this command resumes the same round
+without sending its completed requests again. Add `--reanalyze` to recompute
+that cohort using only its cached responses.
+
 `public/scripture-translations/manifest.json` records the pinned public-domain
 eBible USFM source and hash. Reproduce the reading assets from that archive with:
 

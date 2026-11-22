@@ -184,6 +184,7 @@ impl Desktop {
         self.jump_filter.clear();
         self.jump_author.clear();
         self.library_author_picker.reset();
+        self.library_book_picker.reset();
         self.library_about = false;
         self.dialog = Some(Dialog::Library);
     }
@@ -294,6 +295,45 @@ mod tests {
         let (tx, rx) = mpsc::channel();
         app.audio_tx = Arc::new(tx);
         app.state.scripture_translation = reading_translation::Translation::Msb;
+        for id in ["Matthew:6", "Matthew:7"] {
+            app.play_audio(id);
+            let audio::Command::Play(plan) = rx.try_recv().unwrap() else {
+                panic!("Expected a Matthew playback plan");
+            };
+            assert_eq!(plan.chapters[plan.index].id, id);
+            assert_eq!(
+                plan.chapters[plan.index].audio.start_seconds,
+                reading_translation::Translation::Msb
+                    .audio(&library, id)
+                    .unwrap()
+                    .start_seconds
+            );
+            // The same plan drives automatic advancement into chapter 7.
+            for chapter in [5, 6, 7, 8] {
+                let source = &plan
+                    .chapters
+                    .iter()
+                    .find(|c| c.id == format!("Matthew:{chapter}"))
+                    .unwrap()
+                    .audio;
+                assert_eq!(
+                    source.start_seconds,
+                    reading_translation::Translation::Msb
+                        .audio(&library, &format!("Matthew:{chapter}"))
+                        .unwrap()
+                        .start_seconds
+                );
+                assert!(source.end_seconds.is_none());
+            }
+            assert_eq!(
+                reading_translation::Translation::Web
+                    .audio(&library, id)
+                    .unwrap()
+                    .start_seconds,
+                library.audio(id).unwrap().start_seconds,
+                "WEB retains its existing chapter alignment"
+            );
+        }
         app.play_audio("John:3");
         let audio::Command::Play(plan) = rx.try_recv().unwrap() else {
             panic!("Expected a playback plan");
