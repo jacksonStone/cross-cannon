@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 type BookIndex = {
   books: Array<{
@@ -233,8 +235,15 @@ if (options.overlayPath) {
       verse: verse.verse, originalText: verse.text, modernizedText: verse.modernizedText
     }))
   };
+  const encoder = fileURLToPath(new URL("./compact-classics-modernization.py", import.meta.url));
+  const compact = spawnSync("python3", [encoder, "--stdin"], {
+    input: JSON.stringify(overlay), encoding: "utf8", maxBuffer: 64 * 1024 * 1024
+  });
+  if (compact.error || compact.status !== 0) {
+    throw new Error(`Could not encode modernization: ${compact.error?.message ?? compact.stderr}`);
+  }
   fs.mkdirSync(path.dirname(options.overlayPath), { recursive: true });
-  fs.writeFileSync(options.overlayPath, `${JSON.stringify(overlay, null, 2)}\n`, "utf8");
+  fs.writeFileSync(options.overlayPath, compact.stdout, "utf8");
 }
 
 for (const filePath of options.overlayPath ? [] : changedFiles) {
