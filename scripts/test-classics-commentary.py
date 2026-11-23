@@ -1,11 +1,17 @@
 """Regression coverage for source-derived Scripture ranges, including Henry IV."""
 import importlib.util
+import io
 import json
 from pathlib import Path
+import tempfile
 import unittest
 import struct
 import zlib
 from xml.etree import ElementTree as ET
+from contextlib import redirect_stdout
+from unittest.mock import patch
+
+from classics_modernization import compact_overlay, overlay_bytes
 
 spec = importlib.util.spec_from_file_location('classics_import', Path(__file__).with_name('import-christian-classics.py'))
 importer = importlib.util.module_from_spec(spec)
@@ -14,6 +20,47 @@ from lib.sword_commentary import decode_records, kjv_keys
 
 
 class CommentaryTest(unittest.TestCase):
+    def test_import_main_reapplies_legacy_and_compact_overlays_identically(self):
+        # Bounded parser output isolates storage/reapplication from the large
+        # pinned-source parser tests below. Exercise the real import assembly,
+        # sentence identities, coverage, metadata, hashes and output catalogs.
+        chapter = importer.chapter('Ps', 1, 'Psalm 1', [
+            'The old account. Further old prose.', '“Keep this quotation.”'],
+            ranges=[[1, 2], [3, 3]], quotations=[False, True])
+        slugs = ['imitation', 'catena', 'henry', 'wesley', 'jfb', 'keil-delitzsch', 'treasury-of-david']
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, out = root / 'source', root / 'out'
+            overlays = source / 'modernization'
+            overlays.mkdir(parents=True)
+            (source / 'sources.json').write_text('{"sources":[]}')
+            legacy = []
+            for slug in slugs:
+                overlay = {'workId': f'classics:{slug}', 'chapterId': f'classics:{slug}:Ps.1', 'entries': [
+                    {'verse': 1, 'originalText': 'The old account.', 'modernizedText': 'The modern account.'},
+                    {'verse': 2, 'originalText': 'Further old prose.', 'modernizedText': 'Further modern prose.'},
+                    {'verse': 3, 'originalText': '“Keep this quotation.”', 'modernizedText': '“Keep this quotation.”'}]}
+                legacy.append(overlay)
+                (overlays / f'{slug}.json').write_text(json.dumps(overlay))
+            parsers = {name: lambda *args: [chapter] for name in (
+                'imitation', 'catena', 'henry', 'wesley', 'jfb', 'sword_commentary')}
+            with patch.multiple(importer, SOURCE=source, OUT=out, **parsers), \
+                    patch('sys.argv', ['import-christian-classics.py']), redirect_stdout(io.StringIO()):
+                importer.main()
+                baseline = {str(p.relative_to(out)): p.read_bytes() for p in out.rglob('*') if p.is_file()}
+                for overlay, slug in zip(legacy, slugs):
+                    (overlays / f'{slug}.json').write_bytes(overlay_bytes(compact_overlay(overlay)))
+                importer.main()
+                self.assertEqual({str(p.relative_to(out)): p.read_bytes() for p in out.rglob('*') if p.is_file()}, baseline)
+                for book in json.loads((out / 'books.json').read_bytes())['books']:
+                    asset = json.loads((out / 'chapters' / book['chapters'][0]['assetPath'].split('/')[-1]).read_bytes())
+                    self.assertEqual(asset['verses'][0]['text'], 'The old account.')
+                    self.assertEqual(asset['verses'][0]['modernizedText'], 'The modern account.')
+                    self.assertEqual(asset['verses'][0]['sourceParagraph'], 1)
+                    self.assertTrue(asset['verses'][2]['scriptureQuotation'])
+                    self.assertEqual(asset['verses'][0]['scriptureVerseStart'], 1)
+                    self.assertEqual(asset['verses'][0]['scriptureVerseEnd'], 2)
+
     def test_sword_linked_verses_keep_one_text_and_their_full_range(self):
         body = '<p>One discussion of three verses.</p>'.encode()
         packed = zlib.compress(body)

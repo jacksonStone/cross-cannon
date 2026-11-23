@@ -33,6 +33,7 @@
     "prepare:msb-audio": "node --import tsx scripts/prepare-msb-audio.ts",
     "verify:continuous-audio": "node --import tsx scripts/verify-continuous-audio.ts",
     "publish:christian-classics-modernization": "python3 scripts/publish-classics-modernization.py",
+    "compact:christian-classics-modernization": "python3 scripts/compact-classics-modernization.py",
     "import:christian-classics": "python3 scripts/import-christian-classics.py",
     "index:christian-classics": "node --import tsx scripts/index-church-fathers.ts --input public/christian-classics-text/books.json --db storage/christian-classics.db --batch-size 256 --embedding-jobs 4",
     "update-db:accounts": "CROSS_CANNON_UPDATE_DB=1 scripts/rust.sh run --locked -p r-cross-cannon -- --init-accounts \"${ACCOUNTS_DATABASE_PATH:-storage/accounts.db}\"",

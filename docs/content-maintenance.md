@@ -192,6 +192,14 @@ imports reapply durable overlays. The
 [modernization prompt](church-fathers-modernization-prompt.md) defines editorial
 requirements. `modernize:church-fathers` is the explicit provider-backed alternative.
 
+Durable overlays use source-pinned UTF-8 patches (`format: 2`); the assembler
+emits this format automatically. Legacy full-text overlays remain readable.
+Run `npm run compact:christian-classics-modernization` for a checked dry run,
+then append `-- --write` to convert existing overlays. Conversion verifies every
+source, reconstructed result and original approved overlay byte before writing.
+It does not republish Chapters or change review receipts, databases or indexes.
+See [the storage format and review compatibility](modernization-format.md).
+
 ## Audio alignment and continuous recordings
 
 Recordings and alignment are maintained independently from app releases:
