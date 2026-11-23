@@ -15,9 +15,13 @@ npm run ship:docker
 npm run verify-prod
 ```
 
-`ship` verifies locally, obtains the Linux binary through hosted CI, packages
-matching browser assets, activates, then verifies production. `ship:docker`
-uses a local Docker Linux x86-64 builder instead. For packaging without
+`ship` compares the active release with the local compiler/build recipe, served
+files and service unit. An exact match runs maintenance tooling tests and
+typechecking, then production verification; it does not build, package, upload or
+restart. Any runtime change runs the full local verification suite. The hosted
+Linux build starts before that suite so the two overlap; both must pass before
+upload. A matching validated Linux artifact is reused automatically. `ship:docker`
+uses a local Docker Linux x86-64 builder when needed. For packaging without
 contacting production:
 
 ```bash
@@ -25,12 +29,31 @@ contacting production:
 ./deploy.sh --build-local --build-only
 ```
 
+`./deploy.sh --plan` performs a read-only comparison against production without
+building or uploading. `npm run ship -- --force` runs full verification and
+activation even when the runtime matches. `npm run verify` always runs all tests.
+
+An unchanged-runtime decision requires a current validated browser artifact,
+exact compiler/build-recipe inputs, exact served file hashes and service unit,
+and an intact active release checked under the shared deployment lock. Every
+ship invocation hashes deployed files once. A second check within that same
+invocation can reuse the byte proof only if the receipt, file set, inode, device,
+size, mode, mtime and ctime are unchanged. The proof token is never persisted.
+Concurrent edits/deployments cause a retry, and production checks still run.
+Existing receipts are supported by validating their actual BUILD-INFO and
+matching its Git revision's compiler/build recipe; a missing proof forces the
+normal path.
+
 The workstation needs `EC2_PEM_PATH` and `EC2_PUBLIC_IP`. Hosted builds also need
 a usable Git SSH identity. The compiler snapshot includes current uncommitted
 Rust/Cargo inputs without changing the checkout/index or publishing unrelated
 history. The repository and historical `ops/rust-api-ci-release` build branch
 are public. `--revision <full SHA>` reuses a hosted binary only when its compiler
-inputs match the current checkout. Docker contexts must be local.
+and build recipe match the current checkout. Automatic reuse also validates
+architecture, checksums and source revision. Changing the Rust/Cargo tree,
+Docker recipe, pinned image/toolchain, Linux test workflow or artifact validation
+policy invalidates reuse. Maintenance documents and unrelated tooling do not.
+Docker contexts must be local.
 
 Browser WASM builds require the explicit toolchain described in
 [README](../README.md). Both binary and browser artifacts build off-server.
@@ -38,6 +61,11 @@ Compiler-input fingerprints, the browser receipt, ELF architecture and file
 checksums are validated before upload. Archives reject databases, live storage,
 secrets, symlinks and Node runtime files. Production runs no build or dependency
 installation.
+
+Release logs include elapsed times for inspection, verification, artifact
+selection/download, packaging, upload, activation and production checks. Changed
+releases retain the complete archive transfer and atomic activation protocol;
+this optimization does not introduce incremental updates to a live app.
 
 For UI changes, run verification, capture relevant desktop/mobile screenshots
 under `docs/screenshots/`, and share previews when requested before activation.
