@@ -171,12 +171,18 @@ account checks. `npm run verify:browser` exercises the actual WASM reader at
 phone, tablet, desktop and wide sizes. `verify:offline` manages that same Rust
 binary and records screenshots under `docs/screenshots/`.
 
-`npm run ship` verifies, builds off-server, deploys and checks production. The
-hosted Linux compiler snapshot includes current uncommitted Rust source without
-pushing unrelated local history. The binary's compiler inputs must match the
-current checkout before packaging it with the tested browser release. The
-Docker alternative compiles/tests that binary on a local Linux x86-64 builder.
-Remote Docker contexts are refused.
+`npm run ship` compares compiler/build-recipe inputs, validated browser output,
+served files and the service unit with the intact active release. Unchanged
+runtime files run maintenance tests/typechecking and production verification,
+with no build, archive, upload or restart. Application changes run the full local
+suite, overlapping a needed hosted Linux build, then use the existing complete
+archive and atomic activation. Checksummed Linux artifacts with matching Rust,
+toolchain/image, recipe and test-policy inputs are reused across unrelated Git
+commits. The compiler snapshot still includes uncommitted Rust source without
+changing the checkout/index or pushing unrelated history. Packaging pins the
+exact verified file set and hashes. Phase timings make release costs visible.
+The Docker alternative compiles/tests that binary on a local Linux x86-64
+builder. Remote Docker contexts are refused. `npm run verify` always stays full.
 
 Production receives a checksummed Rust executable, static resources and unit;
 it receives no Node modules, server JavaScript, package manager or compiler.

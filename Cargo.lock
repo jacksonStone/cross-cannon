@@ -919,6 +919,7 @@ dependencies = [
 name = "cross-canon-desktop"
 version = "0.1.0"
 dependencies = [
+ "ab_glyph",
  "anyhow",
  "cc",
  "chrono",

@@ -2,6 +2,7 @@
 //! This crate has no networking, database writes, or artifact generation.
 mod fragments;
 mod keyword;
+mod packed;
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -446,8 +447,10 @@ impl Library {
     pub fn from_bytes(root: &Path, bytes: &[u8]) -> Result<Self> {
         use bincode::Options;
         use std::io::Read;
-        const HEADER: &[u8] = b"CCLIB\0\x03\0";
-        const GZIP_HEADER: &[u8] = b"CCLIB\0\x02\0";
+        const HEADER: &[u8] = b"CCLIB\0\x05\0";
+        const GZIP_HEADER: &[u8] = b"CCLIB\0\x04\0";
+        const OLD_NATIVE_HEADER: &[u8] = b"CCLIB\0\x03\0";
+        const OLD_GZIP_HEADER: &[u8] = b"CCLIB\0\x02\0";
         const INDEX_HEADER: &[u8] = b"CCIDX\0\x01\0";
         const LEGACY_HEADER: &[u8] = b"CCLIB\0\x01\0";
         // Seven Classics exceed the former 512 MiB serialized-text ceiling.
@@ -456,11 +459,13 @@ impl Library {
         anyhow::ensure!(
             bytes.starts_with(HEADER)
                 || bytes.starts_with(GZIP_HEADER)
+                || bytes.starts_with(OLD_NATIVE_HEADER)
+                || bytes.starts_with(OLD_GZIP_HEADER)
                 || bytes.starts_with(LEGACY_HEADER)
                 || bytes.starts_with(INDEX_HEADER),
             "Unsupported native library format"
         );
-        let expanded = if bytes.starts_with(HEADER) {
+        let expanded = if bytes.starts_with(HEADER) || bytes.starts_with(OLD_NATIVE_HEADER) {
             #[cfg(target_arch = "wasm32")]
             anyhow::bail!("Browser libraries use the portable gzip format");
             #[cfg(not(target_arch = "wasm32"))]
@@ -484,7 +489,10 @@ impl Library {
                 anyhow::ensure!(decoded.len() as u64 == size, "Invalid native library size");
                 Some(decoded)
             }
-        } else if bytes.starts_with(GZIP_HEADER) || bytes.starts_with(INDEX_HEADER) {
+        } else if bytes.starts_with(GZIP_HEADER)
+            || bytes.starts_with(OLD_GZIP_HEADER)
+            || bytes.starts_with(INDEX_HEADER)
+        {
             let mut decoded = Vec::new();
             flate2::read::GzDecoder::new(&bytes[HEADER.len()..])
                 .take(MAX_LIBRARY_BYTES + 1)
@@ -502,10 +510,14 @@ impl Library {
         if bytes.starts_with(INDEX_HEADER) {
             return fragments::decode(root, payload);
         }
-        let mut library: Self = bincode::DefaultOptions::new()
-            .with_limit(MAX_LIBRARY_BYTES)
-            .deserialize(payload)
-            .context("Invalid packaged native library")?;
+        let mut library: Self = if bytes.starts_with(HEADER) || bytes.starts_with(GZIP_HEADER) {
+            packed::decode(root, payload, MAX_LIBRARY_BYTES)?
+        } else {
+            bincode::DefaultOptions::new()
+                .with_limit(MAX_LIBRARY_BYTES)
+                .deserialize(payload)
+                .context("Invalid packaged native library")?
+        };
         library.root = root.to_path_buf();
         library.rebuild_indexes()?;
         library.validate()?;
@@ -557,13 +569,14 @@ impl Library {
         use bincode::Options;
         use std::io::Write;
         let mut output = std::io::BufWriter::new(fs::File::create(path)?);
-        output.write_all(b"CCLIB\0\x03\0")?;
-        let bytes = bincode::DefaultOptions::new().serialize(self)?;
-        output.write_all(&(bytes.len() as u64).to_le_bytes())?;
+        output.write_all(b"CCLIB\0\x05\0")?;
+        let stored = packed::borrow(self);
+        let size = bincode::DefaultOptions::new().serialized_size(&stored)?;
+        output.write_all(&size.to_le_bytes())?;
         let mut compressed = zstd::stream::write::Encoder::new(output, 9)?;
         compressed.include_checksum(true)?;
-        compressed.set_pledged_src_size(Some(bytes.len() as u64))?;
-        compressed.write_all(&bytes)?;
+        compressed.set_pledged_src_size(Some(size))?;
+        bincode::DefaultOptions::new().serialize_into(&mut compressed, &stored)?;
         let mut output = compressed.finish()?;
         output.flush()?;
         Ok(())
@@ -574,29 +587,9 @@ impl Library {
         use bincode::Options;
         use std::io::Write;
         let mut output = std::io::BufWriter::new(fs::File::create(path)?);
-        output.write_all(b"CCLIB\0\x02\0")?;
+        output.write_all(b"CCLIB\0\x04\0")?;
         let mut compressed = flate2::write::GzEncoder::new(output, flate2::Compression::default());
-        // HashMap iteration must not make unchanged reading text a different
-        // 64 MB download on every code release. This has Library's exact wire
-        // field order; only the serialized audio map's iteration is sorted.
-        #[derive(Serialize)]
-        struct Portable<'a> {
-            version: &'a str,
-            books: &'a [Book],
-            passages: &'a [Passage],
-            audio: BTreeMap<&'a str, &'a AudioLocation>,
-        }
-        let portable = Portable {
-            version: &self.version,
-            books: &self.books,
-            passages: &self.passages,
-            audio: self
-                .audio
-                .iter()
-                .map(|(key, value)| (key.as_str(), value))
-                .collect(),
-        };
-        bincode::DefaultOptions::new().serialize_into(&mut compressed, &portable)?;
+        bincode::DefaultOptions::new().serialize_into(&mut compressed, &packed::borrow(self))?;
         compressed.finish()?.flush()?;
         Ok(())
     }

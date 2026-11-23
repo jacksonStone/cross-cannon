@@ -43,6 +43,16 @@ preservation, atomic activation and rollback. They reject storage/database data,
 secrets and Node runtime files. `scripts/release-server.py` is the shared release
 entry point; the API is never released independently.
 
+`npm run ship` checks the active release and local runtime inputs first. If the
+Rust/compiler recipe, served assets and service unit are unchanged, it runs
+tooling tests/typechecking and production verification without a Linux build,
+archive, upload or restart. Changed runtime inputs run full `npm run verify`;
+hosted CI starts first so its build overlaps local verification. Existing Linux
+artifacts are reused only with matching compiler/build-recipe inputs and valid
+checksums/architecture. `./deploy.sh --plan` is a read-only production comparison;
+`--force` disables the unchanged-runtime shortcut. `npm run verify` always runs
+the complete suite.
+
 The one `cross-cannon` service listens on 3005 and compatibility port 3006 using
 one shared Library. Deployment stops/disables the old `r-cross-cannon` service.
 Never start a second full-library smoke instance on the 2 GB production host.

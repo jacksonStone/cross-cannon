@@ -530,7 +530,7 @@ mod tests {
     }
 
     #[test]
-    fn real_commentary_dialog_shows_compact_quotes_and_source_actions() {
+    fn real_commentary_dialog_shows_longer_quotes_and_scrollable_source_actions() {
         let library = Arc::new(
             Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap(),
         );
@@ -557,7 +557,7 @@ mod tests {
                 "The real read-only commentary dialog must not request a keyboard"
             );
         }
-        let nodes = modal_nodes(
+        let mut nodes = modal_nodes(
             &ctx,
             output
                 .unwrap()
@@ -566,6 +566,41 @@ mod tests {
                 .as_ref()
                 .unwrap(),
         );
+        assert!(nodes.iter().any(|n| n["label"]
+            .as_str()
+            .is_some_and(|text| text.chars().count() > 220)));
+        // Longer passages put source actions below the initial phone viewport.
+        // They must remain reachable through the commentary body's scroll area.
+        for _ in 0..5 {
+            for frame in 0..20 {
+                let output = ctx.run(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(390.0, 844.0),
+                        )),
+                        events: if frame == 0 {
+                            vec![
+                                egui::Event::PointerMoved(egui::pos2(200.0, 600.0)),
+                                egui::Event::MouseWheel {
+                                    unit: egui::MouseWheelUnit::Point,
+                                    delta: egui::vec2(0.0, -350.0),
+                                    modifiers: egui::Modifiers::NONE,
+                                },
+                            ]
+                        } else {
+                            vec![]
+                        },
+                        ..Default::default()
+                    },
+                    |ctx| app.render(ctx),
+                );
+                nodes.extend(modal_nodes(
+                    &ctx,
+                    output.platform_output.accesskit_update.as_ref().unwrap(),
+                ));
+            }
+        }
         assert!(
             nodes.iter().any(|n| n["label"]
                 .as_str()

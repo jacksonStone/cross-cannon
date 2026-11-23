@@ -290,7 +290,12 @@ fn apply_display(result: &mut Value, chapter: &Value, exclude_quotations: bool) 
     result["highlightPassage"]["reference"] = json!(reference);
     result["highlightPassage"]["text"] = json!(displayed
         .iter()
-        .filter_map(|verse| verse["text"].as_str())
+        .filter_map(|verse| {
+            verse["modernizedText"]
+                .as_str()
+                .filter(|text| !text.trim().is_empty())
+                .or_else(|| verse["text"].as_str())
+        })
         .collect::<Vec<_>>()
         .join(" "));
     Ok(())
@@ -348,6 +353,25 @@ mod tests {
         assert_eq!(result["highlightPassage"]["id"], "ccw:original");
         assert_eq!(result["highlightPassage"]["rangeLabel"], "4-6");
         assert_eq!(result["score"], 0.7);
+    }
+
+    #[test]
+    fn search_and_source_display_prefer_modernized_text_with_original_fallback() {
+        let chapter = json!({"book":"Henry", "reference":"Acts 6", "verses":[
+            {"verse":1,"text":"Thou art called.","modernizedText":"You are called.","sourceParagraph":1},
+            {"verse":2,"text":"An unchanged sentence.","sourceParagraph":1},
+            {"verse":3,"text":"An original fallback.","modernizedText":"  ","sourceParagraph":1}
+        ]});
+        for exclude_quotations in [false, true] {
+            let mut result = json!({"score":0.7,"highlightPassage":{"id":"ccw:original","verseStart":1,"verseEnd":1}});
+            apply_display(&mut result, &chapter, exclude_quotations).unwrap();
+            assert_eq!(
+                result["highlightPassage"]["text"],
+                "You are called. An unchanged sentence. An original fallback."
+            );
+            assert_eq!(result["highlightPassage"]["id"], "ccw:original");
+            assert_eq!(result["score"], 0.7);
+        }
     }
 
     #[test]

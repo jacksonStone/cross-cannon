@@ -347,14 +347,19 @@ fn prepare_inner(
     Ok(serde_json::to_string(&chapters)?)
 }
 #[wasm_bindgen]
-pub fn stage_fragment(bytes: Vec<u8>, reading_json: &str) -> std::result::Result<(), JsValue> {
+pub fn stage_fragment(
+    bytes: Vec<u8>,
+    reading_json: &str,
+    catalog_json: &str,
+) -> std::result::Result<(), JsValue> {
     PREPARED
         .with(|slot| -> Result<()> {
             let mut slot = slot.borrow_mut();
             let prepared = slot.as_mut().context("Reader not prepared")?;
-            prepared
-                .library
-                .install_fragment(Library::from_bytes(std::path::Path::new(""), &bytes)?)?;
+            let fragment = Library::from_bytes(std::path::Path::new(""), &bytes)?;
+            let details = prepared.catalog.decode_fragment(&fragment, catalog_json)?;
+            prepared.library.install_fragment(fragment)?;
+            prepared.catalog.install_fragment(details);
             if !reading_json.is_empty() {
                 prepared.reading.add_json(&prepared.library, reading_json)?;
             }
@@ -363,7 +368,21 @@ pub fn stage_fragment(bytes: Vec<u8>, reading_json: &str) -> std::result::Result
         .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 #[wasm_bindgen]
+pub fn configure_fonts(
+    serif: Vec<u8>,
+    semibold: Vec<u8>,
+    bold: Vec<u8>,
+    inter: Vec<u8>,
+) -> std::result::Result<(), JsValue> {
+    theme::configure_browser_fonts([serif, semibold, bold, inter])
+        .map_err(|error| JsValue::from_str(&error.to_string()))
+}
+
+#[wasm_bindgen]
 pub async fn start(canvas: web_sys::HtmlCanvasElement) -> std::result::Result<(), JsValue> {
+    if !theme::browser_fonts_ready() {
+        return Err(JsValue::from_str("Browser fonts not configured"));
+    }
     let Prepared {
         library,
         catalog,

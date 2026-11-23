@@ -1,4 +1,4 @@
-//! Compare lossless codecs against the actual v2 prepared text library.
+//! Compare lossless codecs against an existing prepared gzip text library.
 use std::{io::Read, time::Instant};
 
 fn main() -> anyhow::Result<()> {
@@ -7,8 +7,8 @@ fn main() -> anyhow::Result<()> {
         .expect("existing gzip native-library.bin");
     let file = std::fs::read(path)?;
     anyhow::ensure!(
-        file.starts_with(b"CCLIB\0\x02\0"),
-        "Expected a v2 gzip library"
+        file.starts_with(b"CCLIB\0\x02\0") || file.starts_with(b"CCLIB\0\x04\0"),
+        "Expected a v2 or v4 gzip library"
     );
     let start = Instant::now();
     let mut original = Vec::new();

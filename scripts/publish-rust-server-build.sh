@@ -10,6 +10,12 @@ parent="$(git rev-parse origin/main)"
 existing="$(git ls-remote origin "refs/heads/$build_branch" | awk '{print $1}')"
 if [[ -n "$existing" ]]; then
   git fetch --quiet origin "$build_branch"
+  # A maintenance-only main commit must not invalidate a tested Linux binary.
+  # Compare actual compiler/recipe inputs before composing the snapshot tree.
+  if [[ "$(python3 scripts/lib/release_inputs.py "$existing")" == match ]]; then
+    printf '%s\n' "$existing"
+    exit 0
+  fi
   parent="$existing"
 fi
 index_path="$(mktemp "$PWD/.tmp/rust-build-index.XXXXXX")"
@@ -21,7 +27,11 @@ git add -- Cargo.toml Cargo.lock rust .github/workflows/rust-server-release.yml 
   deploy.sh scripts/release-server.py scripts/activate-server.py scripts/test-server-release.py \
   scripts/build-rust-server-container.sh scripts/fetch-rust-server-release.py \
   scripts/validate-rust-server-artifact.py scripts/rust-server-build.test.mjs \
-  scripts/publish-rust-server-build.sh
+  scripts/publish-rust-server-build.sh scripts/lib/release_inputs.py \
+  scripts/inspect-server-release.py scripts/test-release-efficiency.py
+if [[ -e .dockerignore ]] || git ls-files --error-unmatch .dockerignore >/dev/null 2>&1; then
+  git add -A -- .dockerignore
+fi
 # The base branch may predate the unified server cleanup. Remove retired release
 # paths from this temporary snapshot as well; the real checkout/index is untouched.
 git update-index --force-remove -- .github/workflows/rust-api-release.yml \

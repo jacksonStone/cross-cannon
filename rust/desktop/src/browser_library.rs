@@ -11,12 +11,14 @@ use std::{
 pub(super) struct Source {
     pub text: String,
     pub reading: Option<String>,
+    pub catalog: Option<String>,
 }
 static SOURCES: OnceLock<HashMap<String, Source>> = OnceLock::new();
 struct Loaded {
     key: String,
     bytes: Vec<u8>,
     reading: Option<String>,
+    catalog: Option<String>,
 }
 static COMPLETED: Mutex<Vec<(String, Result<Loaded, String>)>> = Mutex::new(Vec::new());
 thread_local! {
@@ -52,23 +54,28 @@ async fn fetch(source: Source) -> Result<Loaded> {
         "This text is not available offline yet. Reconnect and try again."
     );
     let bytes = response.bytes().await?.to_vec();
-    let reading = if let Some(path) = source.reading {
+    async fn optional_text(
+        client: &platform::HttpClient,
+        path: Option<String>,
+    ) -> Result<Option<String>> {
+        let Some(path) = path else { return Ok(None) };
         let response = client
             .get(format!("{}{}", browser::origin(), path))
             .send()
             .await?;
         anyhow::ensure!(
             response.status().is_success(),
-            "The reading translation is not available yet."
+            "The reading details are not available yet. Reconnect and try again."
         );
-        Some(response.text().await?)
-    } else {
-        None
-    };
+        Ok(Some(response.text().await?))
+    }
+    let reading = optional_text(&client, source.reading).await?;
+    let catalog = optional_text(&client, source.catalog).await?;
     Ok(Loaded {
         key: source.text,
         bytes,
         reading,
+        catalog,
     })
 }
 pub(super) fn request(library: &Library, chapters: impl IntoIterator<Item = String>) {
@@ -207,14 +214,22 @@ pub(super) fn tick(app: &mut Desktop, ctx: &egui::Context) {
 }
 fn apply(app: &mut Desktop, loaded: Loaded) -> Result<()> {
     let fragment = Library::from_bytes(std::path::Path::new(""), &loaded.bytes)?;
+    let details = app
+        .catalog
+        .decode_fragment(&fragment, loaded.catalog.as_deref().unwrap_or(""))?;
     Arc::make_mut(&mut app.library).install_fragment(fragment)?;
+    Arc::make_mut(&mut app.catalog).install_fragment(details);
     if let Some(json) = loaded.reading {
         Arc::make_mut(&mut app.reading_text).add_json(&app.library, &json)?;
     }
     Ok(())
 }
 
-async fn hydrate(library: &Library, chapters: Vec<String>) -> Result<Library> {
+async fn hydrate(
+    library: &Library,
+    catalog: &catalog::Catalog,
+    chapters: Vec<String>,
+) -> Result<(Library, catalog::Catalog)> {
     let wanted: HashSet<_> = chapters
         .iter()
         .filter_map(|id| sources().get(id))
@@ -226,6 +241,7 @@ async fn hydrate(library: &Library, chapters: Vec<String>) -> Result<Library> {
         .map(|(id, _)| id.clone())
         .collect();
     let mut snapshot = library.fragment(&all)?;
+    let mut catalog = catalog.clone();
     let mut fetched = HashSet::new();
     for id in chapters {
         if snapshot.chapter_ready(&id) {
@@ -239,14 +255,15 @@ async fn hydrate(library: &Library, chapters: Vec<String>) -> Result<Library> {
             continue;
         }
         let loaded = fetch(source).await?;
-        snapshot.install_fragment(Library::from_bytes(
-            std::path::Path::new(""),
-            &loaded.bytes,
-        )?)?;
+        let fragment = Library::from_bytes(std::path::Path::new(""), &loaded.bytes)?;
+        let details =
+            catalog.decode_fragment(&fragment, loaded.catalog.as_deref().unwrap_or(""))?;
+        snapshot.install_fragment(fragment)?;
+        catalog.install_fragment(details);
         let key = loaded.key.clone();
         COMPLETED.lock().unwrap().push((key, Ok(loaded)));
     }
-    Ok(snapshot)
+    Ok((snapshot, catalog))
 }
 
 pub(super) async fn search(
@@ -270,7 +287,7 @@ pub(super) async fn search(
             .map(|b| b.id.clone())
             .collect();
     }
-    let (snapshot, mut hits) = if keyword && !online() {
+    let (snapshot, catalog, mut hits) = if keyword && !online() {
         let chapters = library
             .books
             .iter()
@@ -281,7 +298,7 @@ pub(super) async fn search(
             })
             .flat_map(|b| b.chapters.iter().map(|c| c.id.clone()))
             .collect();
-        let snapshot = hydrate(&library, chapters).await?;
+        let (snapshot, catalog) = hydrate(&library, &catalog, chapters).await?;
         let hits = snapshot
             .search(
                 &request.query,
@@ -297,7 +314,7 @@ pub(super) async fn search(
                     .map(|p| ResultPassage::local(p, h.score))
             })
             .collect();
-        (snapshot, hits)
+        (snapshot, catalog, hits)
     } else {
         let payload = search::fetch_payload(api, &request).await?;
         let chapters = payload["results"]
@@ -316,7 +333,7 @@ pub(super) async fn search(
         if chapters.is_empty() {
             return Ok(vec![]);
         }
-        let snapshot = hydrate(&library, chapters).await?;
+        let (snapshot, catalog) = hydrate(&library, &catalog, chapters).await?;
         let hits = if keyword {
             payload["results"]
                 .as_array()
@@ -339,7 +356,7 @@ pub(super) async fn search(
                 &payload,
             )?
         };
-        (snapshot, hits)
+        (snapshot, catalog, hits)
     };
     for hit in &mut hits {
         catalog.decorate(&snapshot, hit);

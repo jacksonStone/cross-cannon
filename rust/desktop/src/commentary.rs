@@ -43,7 +43,7 @@ impl Desktop {
         let p = self.state.theme.palette();
         ui.label(RichText::new(&selection.reference).font(heading(22.0)));
         ui.label(
-            RichText::new(excerpt(&selection.text, 180))
+            RichText::new(excerpt(&selection.text, 1200))
                 .font(FontId::proportional(16.0))
                 .color(p.muted),
         );
@@ -70,7 +70,7 @@ impl Desktop {
                     })
                     .show(ui, |ui| {
                         ui.label(
-                            RichText::new(excerpt(&note.text, 220))
+                            RichText::new(excerpt(&note.text, 1200))
                                 .font(FontId::proportional(18.0)),
                         );
                         if ui
@@ -104,27 +104,29 @@ impl Desktop {
     }
 }
 
-/// A source-worded preview; the complete contiguous section stays in `Note`.
+/// Keep ordinary passages complete, including paragraph breaks. Only shorten a
+/// section when it is at least a third longer than the preview target.
 fn excerpt(text: &str, limit: usize) -> String {
-    let mut preview = String::new();
-    let mut length = 0;
-    let mut words = text.split_whitespace().peekable();
-    while let Some(word) = words.peek() {
-        let added = word.chars().count() + usize::from(!preview.is_empty());
-        if length + added > limit && !preview.is_empty() {
-            break;
-        }
-        if !preview.is_empty() {
-            preview.push(' ');
-        }
-        preview.push_str(words.next().unwrap());
-        length += added;
+    if text.chars().count() <= limit.saturating_add(limit / 3) {
+        return text.to_owned();
     }
-    if words.peek().is_none() {
-        return preview;
-    }
+    let end = text
+        .char_indices()
+        .nth(limit)
+        .map_or(text.len(), |(i, _)| i);
+    let candidate = &text[..end];
+    let end = if text[end..].starts_with(char::is_whitespace) {
+        end
+    } else {
+        candidate.rfind(char::is_whitespace).unwrap_or_else(|| {
+            text[end..]
+                .find(char::is_whitespace)
+                .map_or(text.len(), |next| end + next)
+        })
+    };
+    let mut preview = text[..end].trim_end().to_owned();
     if let Some((end, _)) = preview.rmatch_indices(['.', '!', '?']).find(|(end, mark)| {
-        *end >= limit / 2
+        preview[..*end].chars().count() >= limit / 2
             && (*mark != "."
                 || !preview[..*end]
                     .chars()
@@ -132,9 +134,8 @@ fn excerpt(text: &str, limit: usize) -> String {
                     .is_some_and(|c| c.is_ascii_digit()))
     }) {
         preview.truncate(end + 1);
-    } else {
-        preview.push('…');
     }
+    preview.push('…');
     preview
 }
 
@@ -143,22 +144,44 @@ mod tests {
     use super::excerpt;
 
     #[test]
-    fn excerpts_keep_source_sentences_and_do_not_cut_unicode_words() {
-        let text = "Christ’s rest is a gift.\n\nHe calls the weary to himself. His yoke is easy.";
-        assert_eq!(
-            excerpt(text, 200),
-            "Christ’s rest is a gift. He calls the weary to himself. His yoke is easy."
+    fn ordinary_commentary_passages_remain_complete_with_paragraph_breaks() {
+        let text = format!(
+            "{}\n\n{}",
+            "A complete thought. ".repeat(35),
+            "Another thought. ".repeat(45)
         );
-        assert_eq!(excerpt(text, 30), "Christ’s rest is a gift.");
+        assert!(text.chars().count() > 1200 && text.chars().count() <= 1600);
+        assert_eq!(excerpt(&text, 1200), text);
+    }
+
+    #[test]
+    fn long_sections_keep_paragraphs_and_mark_omitted_text() {
+        let text = format!(
+            "{}\n\n{}",
+            "A complete thought. ".repeat(25),
+            "Another thought. ".repeat(100)
+        );
+        let preview = excerpt(&text, 1200);
+        assert!(preview.contains("\n\n"));
+        assert!(preview.ends_with(".…"));
+        assert!(preview.chars().count() <= 1201);
+        assert!(text.starts_with(preview.trim_end_matches('…')));
+    }
+
+    #[test]
+    fn excerpts_keep_sentences_and_do_not_cut_unicode_words() {
+        let text = "Christ’s rest is a gift.\n\nHe calls the weary to himself. His yoke is easy.";
+        assert_eq!(excerpt(text, 200), text);
+        assert_eq!(excerpt(text, 30), "Christ’s rest is a gift.…");
         assert_eq!(
             excerpt(
                 "A complete sentence ends here? 11. A second thought continues.",
                 35
             ),
-            "A complete sentence ends here?"
+            "A complete sentence ends here?…"
         );
         assert_eq!(
-            excerpt("Ἀγάπη is patient and kind", 18),
+            excerpt("Ἀγάπη is patient and kind", 16),
             "Ἀγάπη is patient…"
         );
     }

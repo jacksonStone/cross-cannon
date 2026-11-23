@@ -4,7 +4,7 @@ use super::*;
 use serde_json::Value;
 use std::{collections::HashMap, fs, path::Path, sync::OnceLock};
 
-#[derive(Default, Deserialize)]
+#[derive(Clone, Default, Deserialize)]
 pub(super) struct Catalog {
     #[serde(default)]
     pub works: HashMap<String, WorkDetails>,
@@ -30,7 +30,7 @@ pub(super) struct SourceDetails {
     pub source_url: Option<String>,
 }
 
-#[derive(Default, Deserialize)]
+#[derive(Clone, Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 struct ChapterDetails {
     scripture_reference: Option<ScriptureReference>,
@@ -40,7 +40,7 @@ struct ChapterDetails {
     loaded_paragraphs: OnceLock<Vec<Paragraph>>,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, PartialEq, Eq, Deserialize)]
 struct ScriptureReference {
     book: String,
     chapter: u32,
@@ -70,6 +70,47 @@ pub(super) struct ScriptureGroup {
 }
 
 impl Catalog {
+    /// Validate details against the decoded Chapter fragment before its text
+    /// becomes ready. Discovery retains the expected Scripture references.
+    #[cfg(any(target_arch = "wasm32", test))]
+    pub(super) fn decode_fragment(&self, library: &Library, json: &str) -> Result<Self> {
+        let details: Self = if json.is_empty() {
+            Self::default()
+        } else {
+            serde_json::from_str(json)?
+        };
+        anyhow::ensure!(
+            details.works.is_empty(),
+            "Chapter details must not replace Work metadata"
+        );
+        for (id, chapter) in &details.chapters {
+            anyhow::ensure!(
+                library.chapter(id).is_some(),
+                "Unknown catalog fragment Chapter"
+            );
+            anyhow::ensure!(
+                self.chapters
+                    .get(id)
+                    .map(|expected| &expected.scripture_reference)
+                    .is_none_or(|expected| expected == &chapter.scripture_reference),
+                "Catalog fragment Scripture reference mismatch"
+            );
+        }
+        for chapter in library.books.iter().flat_map(|book| &book.chapters) {
+            anyhow::ensure!(
+                !self.chapters.contains_key(&chapter.id)
+                    || details.chapters.contains_key(&chapter.id),
+                "Missing catalog fragment Chapter"
+            );
+        }
+        Ok(details)
+    }
+
+    #[cfg(any(target_arch = "wasm32", test))]
+    pub(super) fn install_fragment(&mut self, details: Self) {
+        self.chapters.extend(details.chapters);
+    }
+
     /// Presentation groups retain every canonical Passage and its study anchors.
     /// Only consecutive passages with identical nonempty coverage share a group.
     pub fn scripture_groups(
@@ -251,7 +292,7 @@ impl Catalog {
         catalog
     }
 
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(any(target_arch = "wasm32", test))]
     pub fn commentary_chapters(&self, source: &Passage) -> Vec<String> {
         self.chapters
             .iter()
@@ -496,6 +537,69 @@ impl ChapterDetails {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn progressive_catalog_validates_matching_details_and_preserves_commentary_discovery() {
+        let library = library();
+        let chapter_id = "classics:henry:Prov.16";
+        let fragment = library.fragment(&[chapter_id.into()]).unwrap();
+        let source = library
+            .passage(&library.book("Proverbs").unwrap().chapters[15].passage_ids[0])
+            .unwrap();
+        let reference = serde_json::json!({"book":"Proverbs","chapter":16});
+        let mut progressive: Catalog = serde_json::from_value(serde_json::json!({"chapters": {
+            chapter_id: {"scriptureReference":reference}
+        }}))
+        .unwrap();
+        let full_json = serde_json::json!({"chapters": {chapter_id: {
+            "scriptureReference":reference,
+            "paragraphs":[
+                {"start":1,"end":3,"scriptureStart":1,"scriptureEnd":2,"scriptureQuotation":true},
+                {"start":4,"end":6,"scriptureStart":1,"scriptureEnd":2}
+            ]
+        }}});
+        let full: Catalog = serde_json::from_value(full_json.clone()).unwrap();
+        assert_eq!(
+            progressive.commentary_chapters(source),
+            full.commentary_chapters(source)
+        );
+        assert!(progressive.decode_fragment(&fragment, "").is_err());
+        assert!(progressive.decode_fragment(&fragment, "{").is_err());
+        let mut wrong = full_json.clone();
+        wrong["chapters"][chapter_id]["scriptureReference"]["chapter"] = serde_json::json!(17);
+        assert!(progressive
+            .decode_fragment(&fragment, &wrong.to_string())
+            .is_err());
+        let unknown = serde_json::json!({"chapters":{"unknown":{"paragraphs":[]}}});
+        assert!(progressive
+            .decode_fragment(&fragment, &unknown.to_string())
+            .is_err());
+        assert!(
+            progressive.chapters[chapter_id].paragraphs.is_empty(),
+            "Failed details must not modify the catalog"
+        );
+        let details = progressive
+            .decode_fragment(&fragment, &full_json.to_string())
+            .unwrap();
+        progressive.install_fragment(details);
+        let passage = fragment
+            .passage(&fragment.books[0].chapters[0].passage_ids[0])
+            .unwrap();
+        assert_eq!(
+            progressive.scripture_links(&library, passage),
+            full.scripture_links(&library, passage)
+        );
+        assert_eq!(
+            progressive.quotation_ranges(&library, passage, &passage.text),
+            full.quotation_ranges(&library, passage, &passage.text)
+        );
+        let expected = full.commentaries(&library, source);
+        let actual = progressive.commentaries(&library, source);
+        assert_eq!(actual.len(), expected.len());
+        assert!(!actual.is_empty());
+        assert_eq!(actual[0].notes[0].reference, expected[0].notes[0].reference);
+        assert_eq!(actual[0].notes[0].text, expected[0].notes[0].text);
+    }
 
     fn library() -> Arc<Library> {
         static LIBRARY: OnceLock<Arc<Library>> = OnceLock::new();

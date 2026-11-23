@@ -78,26 +78,12 @@ pub fn serif(size: f32) -> FontId {
 pub fn heading(size: f32) -> FontId {
     FontId::new(size, FontFamily::Name("serif-semibold".into()))
 }
-pub fn fonts(ctx: &egui::Context) {
+fn font_definitions(
+    custom: impl IntoIterator<Item = (&'static str, egui::FontData)>,
+) -> egui::FontDefinitions {
     let mut fonts = egui::FontDefinitions::default();
-    for (name, bytes) in [
-        (
-            "serif",
-            include_bytes!("../fonts/SourceSerif4-Regular.ttf").as_slice(),
-        ),
-        (
-            "serif-bold",
-            include_bytes!("../fonts/SourceSerif4-Bold.ttf").as_slice(),
-        ),
-        (
-            "serif-semibold",
-            include_bytes!("../fonts/SourceSerif4-Semibold.ttf").as_slice(),
-        ),
-        ("inter", include_bytes!("../fonts/Inter.ttf").as_slice()),
-    ] {
-        fonts
-            .font_data
-            .insert(name.into(), egui::FontData::from_static(bytes).into());
+    for (name, data) in custom {
+        fonts.font_data.insert(name.into(), data.into());
         if name == "inter" {
             fonts
                 .families
@@ -110,5 +96,115 @@ pub fn fonts(ctx: &egui::Context) {
                 .insert(FontFamily::Name(name.into()), vec![name.into()]);
         }
     }
-    ctx.set_fonts(fonts);
+    fonts
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn native_fonts() -> egui::FontDefinitions {
+    font_definitions([
+        (
+            "serif",
+            egui::FontData::from_static(include_bytes!("../fonts/SourceSerif4-Regular.ttf")),
+        ),
+        (
+            "serif-bold",
+            egui::FontData::from_static(include_bytes!("../fonts/SourceSerif4-Bold.ttf")),
+        ),
+        (
+            "serif-semibold",
+            egui::FontData::from_static(include_bytes!("../fonts/SourceSerif4-Semibold.ttf")),
+        ),
+        (
+            "inter",
+            egui::FontData::from_static(include_bytes!("../fonts/Inter.ttf")),
+        ),
+    ])
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+fn downloaded_fonts(bytes: [Vec<u8>; 4]) -> anyhow::Result<egui::FontDefinitions> {
+    // Validate with egui's parser before publishing any of the downloaded set.
+    // Malformed responses must be recoverable startup errors, not font panics.
+    let names = ["serif", "serif-semibold", "serif-bold", "inter"];
+    let custom = names
+        .into_iter()
+        .zip(bytes)
+        .map(|(name, bytes)| {
+            ab_glyph::FontRef::try_from_slice(&bytes)
+                .map_err(|_| anyhow::anyhow!("Invalid browser font: {name}"))?;
+            Ok((name, egui::FontData::from_owned(bytes)))
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    Ok(font_definitions(custom))
+}
+
+#[cfg(target_arch = "wasm32")]
+static BROWSER_FONTS: std::sync::OnceLock<egui::FontDefinitions> = std::sync::OnceLock::new();
+
+#[cfg(target_arch = "wasm32")]
+pub(super) fn configure_browser_fonts(bytes: [Vec<u8>; 4]) -> anyhow::Result<()> {
+    let fonts = downloaded_fonts(bytes)?;
+    BROWSER_FONTS
+        .set(fonts)
+        .map_err(|_| anyhow::anyhow!("Browser fonts already configured"))
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(super) fn browser_fonts_ready() -> bool {
+    BROWSER_FONTS.get().is_some()
+}
+
+pub fn fonts(ctx: &egui::Context) {
+    #[cfg(not(target_arch = "wasm32"))]
+    ctx.set_fonts(native_fonts());
+    #[cfg(target_arch = "wasm32")]
+    ctx.set_fonts(
+        BROWSER_FONTS
+            .get()
+            .expect("Browser fonts checked before starting reader")
+            .clone(),
+    );
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    use super::*;
+
+    fn downloads() -> [Vec<u8>; 4] {
+        let fonts = native_fonts();
+        ["serif", "serif-semibold", "serif-bold", "inter"]
+            .map(|name| fonts.font_data[name].font.to_vec())
+    }
+
+    #[test]
+    fn downloaded_fonts_preserve_custom_bytes_and_native_fallbacks() {
+        let native = native_fonts();
+        let downloaded = downloaded_fonts(downloads()).unwrap();
+        assert_eq!(native.families, downloaded.families);
+        assert_eq!(native.font_data.len(), downloaded.font_data.len());
+        for (name, data) in &native.font_data {
+            assert_eq!(data.font, downloaded.font_data[name].font, "{name}");
+        }
+        let defaults = egui::FontDefinitions::default();
+        assert_eq!(
+            downloaded.families[&FontFamily::Monospace],
+            defaults.families[&FontFamily::Monospace]
+        );
+        assert_eq!(
+            &downloaded.families[&FontFamily::Proportional][1..],
+            defaults.families[&FontFamily::Proportional]
+        );
+    }
+
+    #[test]
+    fn malformed_downloaded_fonts_are_rejected_without_partial_configuration() {
+        for index in 0..4 {
+            for invalid in [vec![], b"not a font".to_vec()] {
+                let mut bytes = downloads();
+                bytes[index] = invalid;
+                assert!(downloaded_fonts(bytes).is_err());
+                assert!(downloaded_fonts(downloads()).is_ok());
+            }
+        }
+    }
 }

@@ -72,10 +72,16 @@ separate downloads. See [native builds and device checks](docs/native-apps.md).
 ## Release
 
 ```bash
-npm run ship                 # verify, build off-server, deploy, verify production
+npm run ship                 # verify, release changed runtime, verify production
 npm run ship:docker          # use a local Docker Linux builder
 npm run verify-prod          # check the existing production release
 ```
+
+Unchanged runtime files use a maintenance check and production verification,
+with no build, upload or restart. Application changes run full verification;
+Linux CI overlaps the local checks, and matching verified binaries are reused.
+`npm run verify` always runs the full suite. `./deploy.sh --plan` previews whether
+production needs a new release.
 
 Releases contain a Rust executable and static resources. Production installs
 no compiler, Node or npm. The `cross-cannon` service shares one Library between

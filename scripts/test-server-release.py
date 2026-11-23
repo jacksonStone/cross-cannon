@@ -57,6 +57,7 @@ class RustServerReleaseTest(unittest.TestCase):
         self.addCleanup(patch.stopall)
         patch.object(release, 'ROOT', self.root).start()
         patch.object(release, 'compiler_inputs', return_value={'rust/core/src/lib.rs': 'fixture'}).start()
+        patch.object(release, 'binary_inputs', return_value={'recipe': 'fixture'}).start()
         patch.object(release.subprocess, 'run').start()
 
     def package(self):
@@ -99,6 +100,17 @@ class RustServerReleaseTest(unittest.TestCase):
         with patch.object(release, 'compiler_inputs', return_value={'changed': 'source'}):
             with self.assertRaisesRegex(ValueError, 'Rust sources changed'):
                 release.package_artifact(self.artifact, self.archive, {'original': 'source'})
+        self.assertFalse(self.archive.exists())
+
+    def test_unverified_file_cannot_enter_package_after_validation_started(self):
+        from types import SimpleNamespace
+        before = release.runtime_snapshot()
+        def inject(*args):
+            (self.root / 'public/unverified.js').write_text('Added after app verification')
+        with patch.object(release, 'module', return_value=SimpleNamespace(validate=inject)):
+            with self.assertRaisesRegex(ValueError, 'Runtime files changed after verification'):
+                release.package_artifact(self.artifact, self.archive, release.compiler_inputs(),
+                                         verified_snapshot=before)
         self.assertFalse(self.archive.exists())
 
     def test_remote_rejects_unlisted_or_duplicate_members_before_extraction(self):
