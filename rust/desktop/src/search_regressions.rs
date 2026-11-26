@@ -126,7 +126,9 @@ fn online_failure_recovers_to_local_keywords() {
     ready(&mut app, &ctx);
     assert!(app.results.is_empty());
     assert!(app.message.contains("unreachable"), "{}", app.message);
-    app.semantic = false;
+    click(&mut app, &ctx, "Switch to keywords");
+    assert!(!app.semantic);
+    assert_eq!(app.query, "beginning");
     app.search_books = vec!["Genesis".into()];
     app.search(&ctx, None);
     ready(&mut app, &ctx);

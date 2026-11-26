@@ -69,7 +69,7 @@ impl Desktop {
         let label = format!("Library · {} {} ⌄", focused.book, focused.chapter);
         // Reserve the same title width in both states. Tools float above the reader,
         // so toggling them cannot change title fitting or the reader's origin.
-        let title_width = (ui.available_width() - 56.0).max(20.0);
+        let title_width = (ui.available_width() - 104.0).max(20.0);
         let fathers = focused.corpus != Corpus::Scripture;
         let base = if fathers {
             if compact {
@@ -95,12 +95,17 @@ impl Desktop {
         let galley = ui.fonts(|f| f.layout(label.clone(), heading(size), p.ink, title_width));
         let kicker = if fathers { 18.0 } else { 0.0 };
         let height = (galley.size().y + kicker + 18.0).max(if compact { 63.0 } else { 61.0 });
-        let (rect, header_response) =
-            ui.allocate_exact_size(egui::vec2(ui.available_width(), height), Sense::click());
+        let (rect, _) =
+            ui.allocate_exact_size(egui::vec2(ui.available_width(), height), Sense::hover());
+        self.jump_button_rect =
+            Rect::from_min_max(rect.min, egui::pos2(rect.right() - 104.0, rect.bottom()));
+        let header_response = ui.interact(
+            self.jump_button_rect,
+            Id::new("reader-library-title"),
+            Sense::click(),
+        );
         header_response
             .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, &label));
-        self.jump_button_rect =
-            Rect::from_min_max(rect.min, egui::pos2(rect.right() - 56.0, rect.bottom()));
         if header_response.on_hover_text("Open Library").clicked() {
             self.show_library();
         }
@@ -116,6 +121,24 @@ impl Desktop {
         }
         ui.painter()
             .galley(title_origin + egui::vec2(0.0, kicker), galley, p.ink);
+        let search_rect = Rect::from_min_size(
+            egui::pos2(rect.right() - 92.0, rect.top() + 9.0),
+            egui::vec2(44.0, 44.0),
+        );
+        let mut search_ui = ui.new_child(egui::UiBuilder::new().max_rect(search_rect));
+        if icons::button(
+            &mut search_ui,
+            icons::Icon::Search,
+            "",
+            egui::vec2(44.0, 44.0),
+            false,
+        )
+        .on_hover_text("Search themes or keywords")
+        .clicked()
+        {
+            self.tools = false;
+            self.show_text_search();
+        }
         let actions = Rect::from_min_size(
             egui::pos2(rect.right() - 44.0, rect.top() + 9.0),
             egui::vec2(44.0, 44.0),
@@ -201,7 +224,7 @@ impl Desktop {
                         .on_hover_text("Search")
                         .clicked()
                     {
-                        self.dialog = Some(Dialog::Search);
+                        self.show_text_search();
                     }
                 }
                 5 => {

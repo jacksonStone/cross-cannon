@@ -390,7 +390,9 @@ float cross_canon_keyboard_height(void) {
         forControlEvents:UIControlEventTouchUpInside];
     self.toolsButton = [self button:@"ellipsis.circle" label:@"Reader tools" action:@"tools"];
     self.toolsButton.showsMenuAsPrimaryAction = YES;
-    UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[self.titleButton, self.toolsButton]];
+    UIButton *searchButton = [self button:@"magnifyingglass" label:@"Search" action:@"search"];
+    searchButton.accessibilityIdentifier = @"reader-search";
+    UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[self.titleButton, searchButton, self.toolsButton]];
     header.alignment = UIStackViewAlignmentCenter;
     header.spacing = 4;
     header.translatesAutoresizingMaskIntoConstraints = NO;
@@ -402,6 +404,7 @@ float cross_canon_keyboard_height(void) {
     self.titleHeight.active = YES;
     [self.titleButton.topAnchor constraintEqualToAnchor:header.topAnchor].active = YES;
     [self.titleButton.bottomAnchor constraintEqualToAnchor:header.bottomAnchor].active = YES;
+    [searchButton.widthAnchor constraintEqualToConstant:44].active = YES;
     [self.toolsButton.widthAnchor constraintEqualToConstant:44].active = YES;
 
     self.text = [[CCReadingText alloc] initWithFrame:CGRectZero textContainer:nil];

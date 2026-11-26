@@ -171,6 +171,7 @@ struct Desktop {
     search_tx: Sender<SearchOutput>,
     search_rx: Receiver<SearchOutput>,
     search_generation: u64,
+    search_failed: bool,
     busy: bool,
     message: String,
     scroll_target: Option<String>,
@@ -318,6 +319,7 @@ impl Desktop {
             search_tx,
             search_rx,
             search_generation: 0,
+            search_failed: false,
             busy: false,
             message: String::new(),
             scroll_target: Some(state.location_passage_id),
@@ -458,6 +460,21 @@ impl Desktop {
             Corpus::Scripture => false,
         }
     }
+    fn show_text_search(&mut self) {
+        if self.search_source.take().is_some() {
+            // Return to a text query, not the last passage's "Find similar" view.
+            self.search_generation += 1;
+            self.busy = false;
+            self.semantic = true;
+            self.search_failed = false;
+            self.message.clear();
+            self.results.clear();
+            self.selected_result = None;
+            self.search_scroll = 0.0;
+        }
+        self.dialog = Some(Dialog::Search);
+    }
+
     fn search(&mut self, ctx: &egui::Context, source_id: Option<String>) {
         if self.busy {
             return;
@@ -479,6 +496,7 @@ impl Desktop {
             return;
         }
         self.busy = true;
+        self.search_failed = false;
         self.search_scroll = 0.0;
         self.search_touch.cancel();
         self.message.clear();
@@ -612,7 +630,10 @@ impl Desktop {
                         };
                         self.results = hits
                     }
-                    Err(error) => self.message = error,
+                    Err(error) => {
+                        self.search_failed = true;
+                        self.message = error;
+                    }
                 }
             }
         }
@@ -653,7 +674,7 @@ impl Desktop {
         }
         if ctx.input(|i| i.modifiers.command && i.key_pressed(Key::F)) {
             let edit_query = self.dialog == Some(Dialog::Search) || self.results.is_empty();
-            self.dialog = Some(Dialog::Search);
+            self.show_text_search();
             if edit_query {
                 ctx.memory_mut(|m| m.request_focus(Id::new("search-query")));
             }

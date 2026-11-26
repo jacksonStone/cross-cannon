@@ -186,6 +186,7 @@ pub(super) fn apply(app: &mut Desktop, ctx: &egui::Context, event: Event) -> Eff
             app.toggle_favorite(&book);
             app.account.persist_now = true;
         }
+        Command::Dialog(Dialog::Search) => app.show_text_search(),
         Command::Dialog(dialog) => app.dialog = Some(dialog),
         Command::Library => app.show_library(),
         Command::Audio => app.play_audio(&app.active_chapter_id.clone()),

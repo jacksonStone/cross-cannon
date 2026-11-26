@@ -141,7 +141,7 @@ pub(super) async fn fetch_payload(api: &str, request: &SearchRequest) -> Result<
         .json(request)
         .send()
         .await
-        .context("Search service is unreachable. Try again online or select Search Keywords.")?;
+        .context("Search service is unreachable. Check your connection and try again.")?;
     let status = response.status();
     let payload: Value = response
         .json()
@@ -439,7 +439,7 @@ mod tests {
                 text(&before, "Find passages").expect("The search header must be visible");
             let header_pos = title.pos;
             let (mode, _) =
-                text(&before, "Search Index (Online)").expect("The form begins visible");
+                text(&before, "Theme Search (Online)").expect("The form begins visible");
             let body_clip = mode.clip_rect;
             assert!(
                 body_clip.height()
@@ -479,7 +479,7 @@ mod tests {
                 "Only the header stays fixed"
             );
             assert!(
-                text(&after, "Search Index (Online)").is_none_or(|(shape, t)| !shape
+                text(&after, "Theme Search (Online)").is_none_or(|(shape, t)| !shape
                     .clip_rect
                     .contains_rect(Rect::from_min_size(t.pos, t.galley.size()))),
                 "The form must scroll away like mobile web"

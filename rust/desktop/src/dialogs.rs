@@ -788,7 +788,11 @@ impl Desktop {
                 if ui
                     .selectable_label(
                         self.semantic || self.search_source.is_some(),
-                        "Search Index (Online)",
+                        if self.search_source.is_some() {
+                            "Similar Passages (Online)"
+                        } else {
+                            "Theme Search (Online)"
+                        },
                     )
                     .clicked()
                     && !suppress_click
@@ -903,6 +907,16 @@ impl Desktop {
                     });
             } else {
                 ui.label(
+                    RichText::new(if self.semantic {
+                        "Describe an idea or ask a question in your own words."
+                    } else {
+                        "Enter words that appear in the text. Works offline with downloaded text."
+                    })
+                    .size(12.0)
+                    .color(p.muted),
+                );
+                ui.add_space(4.0);
+                ui.label(
                     RichText::new(if self.search_corpus == Some(Corpus::Scripture) {
                         "SEARCH BIBLE FOR…"
                     } else if self.search_corpus == Some(Corpus::ChristianClassics) {
@@ -917,15 +931,15 @@ impl Desktop {
                 ui.add_space(4.0);
                 let field = ui.add(
                     egui::TextEdit::multiline(&mut self.query)
-                        .desired_rows(4)
+                        .desired_rows(2)
                         .id(Id::new("search-query"))
-                        .hint_text(if compact {
-                            "Search by theme or words…"
+                        .hint_text(if self.semantic {
+                            "e.g. How do I stop worrying about tomorrow?"
                         } else {
-                            "Hope after death, greed and money problems, anxiety…"
+                            "e.g. resurrection"
                         })
                         .font(FontId::proportional(16.0))
-                        .min_size(egui::vec2(0.0, if compact { 132.0 } else { 110.0 }))
+                        .min_size(egui::vec2(0.0, 74.0))
                         .char_limit(500)
                         .margin(if compact {
                             egui::vec2(10.0, 10.0)
@@ -945,6 +959,24 @@ impl Desktop {
                     node.set_role(egui::accesskit::Role::MultilineTextInput);
                     node.set_value(self.query.clone());
                 });
+                if self.semantic && self.query.trim().is_empty() {
+                    ui.horizontal_wrapped(|ui| {
+                        for example in [
+                            "Worry about tomorrow",
+                            "Wealth and greed",
+                            "Hope after death",
+                        ] {
+                            if ui
+                                .add(egui::Button::new(example).min_size(egui::vec2(0.0, 44.0)))
+                                .clicked()
+                                && !suppress_click
+                            {
+                                self.query = example.into();
+                                self.message.clear();
+                            }
+                        }
+                    });
+                }
             }
             ui.add_space(if compact { 4.0 } else { 10.0 });
             let action_layout = if compact {
@@ -1014,14 +1046,6 @@ impl Desktop {
                 },
             );
         });
-        if !self.semantic && self.search_source.is_none() {
-            ui.add_space(8.0);
-            ui.label(
-                RichText::new("Keyword search matches every word in your query. Works offline.")
-                    .size(11.0)
-                    .color(p.muted),
-            );
-        }
         ui.add_space(if compact { 4.0 } else { 12.0 });
         ui.separator();
         ui.add_space(if compact { 2.0 } else { 10.0 });
@@ -1030,6 +1054,26 @@ impl Desktop {
                 ui.spinner();
                 ui.label("Finding passages…");
             });
+        } else if self.search_failed
+            && self.semantic
+            && self.search_source.is_none()
+            && !self.message.is_empty()
+        {
+            ui.label(
+                RichText::new("Theme search couldn’t finish.")
+                    .strong()
+                    .color(p.ink),
+            );
+            ui.label(RichText::new(&self.message).color(p.muted));
+            if ui
+                .add(egui::Button::new("Switch to keywords").min_size(egui::vec2(0.0, 44.0)))
+                .clicked()
+                && !suppress_click
+            {
+                self.semantic = false;
+                self.message.clear();
+                self.search_failed = false;
+            }
         } else if !self.message.is_empty() {
             ui.label(RichText::new(&self.message).color(p.muted));
         } else if self.results.is_empty() {
