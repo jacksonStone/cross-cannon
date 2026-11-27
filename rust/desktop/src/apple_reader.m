@@ -1004,7 +1004,6 @@ float cross_canon_keyboard_height(void) {
         self.readingBottom.active = YES;
     }
     NSArray *items = @[@[@"Reader settings", @"textformat.size", @"settings"],
-        @[@"Search", @"magnifyingglass", @"search"],
         @[[model[@"playing"] boolValue] ? @"Pause audio" : @"Play audio", @"playpause", @"audio"],
         @[@"Audio downloads", @"arrow.down.circle", @"downloads"], @[@"Account and sync", @"person.crop.circle", @"account"]];
     NSMutableArray *menu = [NSMutableArray new];

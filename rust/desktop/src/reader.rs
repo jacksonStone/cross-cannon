@@ -200,9 +200,9 @@ impl Desktop {
     }
     fn toolbar_controls(&mut self, ui: &mut egui::Ui, focused: &Passage) {
         let order = if Self::compact(ui.ctx()) {
-            [0, 4, 3, 2, 5]
+            [0, 4, 2, 5]
         } else {
-            [0, 2, 3, 4, 5]
+            [0, 2, 4, 5]
         };
         for action in order {
             match action {
@@ -217,14 +217,6 @@ impl Desktop {
                 2 => {
                     if control(ui, "Aa").on_hover_text("Reader settings").clicked() {
                         self.dialog = Some(Dialog::Settings);
-                    }
-                }
-                3 => {
-                    if icons::button(ui, icons::Icon::Search, "", egui::vec2(44.0, 44.0), false)
-                        .on_hover_text("Search")
-                        .clicked()
-                    {
-                        self.show_text_search();
                     }
                 }
                 5 => {
