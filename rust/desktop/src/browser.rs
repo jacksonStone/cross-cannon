@@ -191,6 +191,27 @@ pub fn dispatch(json: &str) -> std::result::Result<(), JsValue> {
                 }
             }
         }
+    } else if event.action == "search-touch" {
+        // Use the same direct manipulation and fling as a touch that starts
+        // on the canvas. Routing through wheel input smooths each finger move
+        // independently and loses the gesture when the hit-tested widget clips.
+        let phase = match event.book.as_str() {
+            "start" => egui::TouchPhase::Start,
+            "move" => egui::TouchPhase::Move,
+            "end" => egui::TouchPhase::End,
+            _ => egui::TouchPhase::Cancel,
+        };
+        if let Ok(x) = event.id.parse::<f32>() {
+            if x.is_finite() && event.value.is_finite() {
+                INPUT.lock().unwrap().push(egui::Event::Touch {
+                    device_id: egui::TouchDeviceId(u64::MAX),
+                    id: egui::TouchId(0),
+                    phase,
+                    pos: egui::pos2(x, event.value),
+                    force: None,
+                });
+            }
+        }
     } else if event.action == "scroll" {
         if let (Some(ctx), Ok(id)) = (CONTEXT.get(), event.id.parse::<u64>()) {
             if let Ok(id) = serde_json::from_value::<Id>(serde_json::json!(id)) {
