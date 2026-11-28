@@ -233,7 +233,7 @@ impl Desktop {
                         if ui.selectable_label(!self.narration.recorded,"AI narration").clicked() { self.select_audio_source(false); }
                         if self.state.scripture_translation.audio(&self.library,&focused.chapter_id).is_some() && ui.selectable_label(self.narration.recorded,"Recorded audio").clicked() { self.select_audio_source(true); }
                     }
-                    if self.audio_chapter.is_some() && ui.button("Stop audio").clicked() { self.stop_audio(); }
+                    if (self.audio_chapter.is_some() || self.narration.has_session()) && ui.button("Stop audio").clicked() { self.stop_audio(); }
                     let available = self.audio_available(&focused.chapter_id);
                     if ui
                         .add_enabled_ui(available, |ui| {

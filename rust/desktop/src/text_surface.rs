@@ -437,7 +437,7 @@ impl Desktop {
                 "audioLabel": self.audio_label(), "aiNarration": self.narration.selected(),
                 "narrationEnabled": self.narration.enabled,
                 "recordedAvailable": self.state.scripture_translation.audio(&self.library,&self.active_chapter_id).is_some(),
-                "audioActive": self.audio_chapter.is_some() || self.narration.waiting(),
+                "audioActive": self.audio_chapter.is_some() || self.narration.has_session(),
                 "versionControl": self.has_text_version_control(), "original": self.state.original,
                 "previous": self.text_surface.window.start > 0,
                 "next": self.text_surface.window.end < reading_chapters.len(),
