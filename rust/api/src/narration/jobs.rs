@@ -37,15 +37,18 @@ pub(super) struct Jobs {
     active: Mutex<Option<Active>>,
     managed: Mutex<HashMap<String, String>>,
     changed: Notify,
+    interrupted: Mutex<HashSet<String>>,
 }
 impl Jobs {
     pub fn open(cache: Arc<Cache>) -> Result<Arc<Self>, Failure> {
         let mut managed = HashMap::new();
+        let mut interrupted = HashSet::new();
         for (id, value) in cache.job_all()? {
-            let mut r: Record = serde_json::from_str(&value).map_err(|_| Failure::unavailable())?;
+            let r: Record = serde_json::from_str(&value).map_err(|_| Failure::unavailable())?;
             if r.state == "running" {
-                r.state = "interrupted".into();
-                cache.job_put(&id, &serde_json::to_string(&r).unwrap())?;
+                // Reconciliation is read-only: a full cache must not disable
+                // existing playback merely to persist a restart marker.
+                interrupted.insert(id.clone());
             }
             if r.activated {
                 for unit in &r.units {
@@ -58,6 +61,7 @@ impl Jobs {
             active: Mutex::new(None),
             managed: Mutex::new(managed),
             changed: Notify::new(),
+            interrupted: Mutex::new(interrupted),
         }))
     }
     pub fn identity(account: &str, chapter: &ResolvedChapter, units: &[String]) -> String {
@@ -98,10 +102,18 @@ impl Jobs {
         Ok(r)
     }
     pub fn get(&self, id: &str) -> Result<Option<Record>, Failure> {
-        self.cache
+        let record = self
+            .cache
             .job_get(id)?
-            .map(|v| serde_json::from_str(&v).map_err(|_| Failure::unavailable()))
-            .transpose()
+            .map(|v| serde_json::from_str::<Record>(&v).map_err(|_| Failure::unavailable()))
+            .transpose()?;
+        Ok(record.map(|mut r| {
+            if r.state == "running" && self.interrupted.lock().map_or(true, |ids| ids.contains(id))
+            {
+                r.state = "interrupted".into();
+            }
+            r
+        }))
     }
     fn put(&self, r: &Record) -> Result<(), Failure> {
         self.cache.job_put(
@@ -152,6 +164,10 @@ impl Jobs {
         r.state = "running".into();
         r.activated = true;
         self.put(&r)?;
+        self.interrupted
+            .lock()
+            .map_err(|_| Failure::unavailable())?
+            .remove(&r.id);
         {
             let mut managed = self.managed.lock().map_err(|_| Failure::unavailable())?;
             for u in &r.units {
@@ -185,7 +201,11 @@ impl Jobs {
             }
             .into();
             // Clear the flight only after its terminal state is durable.
-            let _ = jobs.put(&r);
+            if jobs.put(&r).is_err() {
+                if let Ok(mut ids) = jobs.interrupted.lock() {
+                    ids.insert(r.id.clone());
+                }
+            }
             if let Ok(mut a) = jobs.active.lock() {
                 *a = None;
             }
@@ -217,6 +237,21 @@ impl Jobs {
     ) -> Result<(), Failure> {
         let service = state.service.as_ref().ok_or_else(Failure::unavailable)?;
         let mut pcm = 0u64;
+        // Retained units after a gap also need a copy in the final file. Count
+        // all of them before paying to fill that gap, not only the played prefix.
+        let mut cached_pcm = 0u64;
+        for id in &r.units {
+            let path = self.cache.unit_path(id)?;
+            match chapter_audio::inspect_part(&path) {
+                Ok(meta) => {
+                    cached_pcm = cached_pcm
+                        .checked_add(meta.pcm_bytes)
+                        .ok_or_else(Failure::capacity)?
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(_) => return Err(Failure::provider()),
+            }
+        }
         let mut paths = Vec::new();
         for (index, id) in r.units.iter().enumerate() {
             if cancelled.load(Ordering::SeqCst) {
@@ -239,8 +274,9 @@ impl Jobs {
             {
                 return Err(Failure::missing());
             }
-            if self.cache.cached(id)?.is_none() {
-                self.cache.ensure_assembly_headroom(pcm)?;
+            let missing = self.cache.cached(id)?.is_none();
+            if missing {
+                self.cache.ensure_assembly_headroom(cached_pcm)?;
             }
             if cancelled.load(Ordering::SeqCst) {
                 return Err(Failure::unavailable());
@@ -255,6 +291,11 @@ impl Jobs {
                 .await?;
             let path = self.cache.unit_path(id)?;
             let meta = chapter_audio::inspect_part(&path).map_err(|_| Failure::provider())?;
+            if missing {
+                cached_pcm = cached_pcm
+                    .checked_add(meta.pcm_bytes)
+                    .ok_or_else(Failure::capacity)?;
+            }
             pcm = pcm
                 .checked_add(meta.pcm_bytes)
                 .ok_or_else(Failure::capacity)?;

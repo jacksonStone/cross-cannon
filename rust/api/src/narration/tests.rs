@@ -1966,3 +1966,71 @@ async fn chapter_stop_or_revocation_finishes_only_inflight_unit_and_explicit_pla
         task.abort();
     }
 }
+
+#[tokio::test]
+async fn interrupted_chapter_reopens_at_full_storage_and_saved_units_remain_free() {
+    let f = Fixture::new();
+    let (provider, calls, _, task) = mock().await;
+    let cache = f.cache(4);
+    let app = f.app(cache.clone(), provider);
+    let plan = chapter_plan(&app, &f.cookie, "John:3").await;
+    let unit = plan["units"][0]["url"].as_str().unwrap();
+    assert_eq!(
+        request(&app, "GET", unit, Some(&f.cookie), None)
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    let id = plan["job"]["id"].as_str().unwrap();
+    let mut record: jobs::Record =
+        serde_json::from_str(&cache.job_get(id).unwrap().unwrap()).unwrap();
+    record.state = "running".into();
+    record.activated = true;
+    cache
+        .job_put(id, &serde_json::to_string(&record).unwrap())
+        .unwrap();
+    drop(app);
+    drop(cache);
+    task.abort();
+    // Fill to the configured ceiling; startup must not need another metadata
+    // write just to classify the prior process's interrupted job.
+    let filler = f.root.join("cache/full-storage-fixture");
+    std::fs::File::create(&filler)
+        .unwrap()
+        .set_len(2 * cache::MAX_CLIP_BYTES)
+        .unwrap();
+    let ceiling = std::fs::read_dir(f.root.join("cache"))
+        .unwrap()
+        .map(|e| e.unwrap().metadata().unwrap().len())
+        .sum::<u64>();
+    let cache = Cache::open(
+        f.root.join("cache"),
+        Limits {
+            daily_attempts: 0,
+            daily_characters: 0,
+            max_disk_bytes: ceiling,
+            concurrency: 1,
+        },
+    )
+    .unwrap();
+    let app = f.app(cache, ProviderConfig::loopback("ws://127.0.0.1:1".into()));
+    let status = data(
+        request(
+            &app,
+            "GET",
+            plan["job"]["statusUrl"].as_str().unwrap(),
+            Some(&f.cookie),
+            None,
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(status["state"], "interrupted");
+    assert_eq!(
+        request(&app, "GET", unit, Some(&f.cookie), None)
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+}
