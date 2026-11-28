@@ -114,6 +114,10 @@ pub struct GeneratedAudio {
 pub enum ProviderError {
     InvalidInput,
     Unavailable,
+    Authentication,
+    RateLimited,
+    Quota,
+    RequestLimited,
     Timeout,
     Protocol,
     TooLarge,
@@ -125,6 +129,10 @@ impl fmt::Display for ProviderError {
         f.write_str(match self {
             Self::InvalidInput => "AI narration settings or text are unsupported.",
             Self::Unavailable => "AI narration provider is unavailable. Try again.",
+            Self::Authentication => "AI narration provider authentication failed.",
+            Self::RateLimited => "AI narration provider rate limit reached. Try again later.",
+            Self::Quota => "AI narration provider quota is exhausted.",
+            Self::RequestLimited => "AI narration provider request limit reached.",
             Self::Timeout => "AI narration timed out. Try again.",
             Self::Protocol => "AI narration returned an invalid response. Try again.",
             Self::TooLarge => "AI narration exceeded the segment limit.",
@@ -134,6 +142,73 @@ impl fmt::Display for ProviderError {
     }
 }
 impl std::error::Error for ProviderError {}
+impl ProviderError {
+    pub(super) fn failure_code(self) -> &'static str {
+        match self {
+            Self::InvalidInput => "provider_invalid_input",
+            Self::Unavailable => "provider_unavailable",
+            Self::Authentication => "provider_authentication",
+            Self::RateLimited => "provider_rate_limit",
+            Self::Quota => "provider_quota",
+            Self::RequestLimited => "provider_request_limit",
+            Self::Timeout => "provider_timeout",
+            Self::Protocol => "provider_protocol",
+            Self::TooLarge => "provider_segment_limit",
+            Self::Incomplete => "provider_incomplete",
+            Self::TranscriptMismatch => "provider_transcript_mismatch",
+        }
+    }
+}
+// Only recognized, non-sensitive error categories leave this boundary. Provider
+// messages, arbitrary codes, URLs, text and credentials are never retained.
+fn classify_provider_error(error: &Value) -> ProviderError {
+    let code = error["code"].as_str().unwrap_or("");
+    let kind = error["type"].as_str().unwrap_or("");
+    if matches!(
+        code,
+        "insufficient_quota"
+            | "credit_balance_exhausted"
+            | "organization_usage_limit_exceeded"
+            | "organization_spend_limit_exceeded"
+            | "project_spend_limit_exceeded"
+    ) || kind == "insufficient_quota"
+    {
+        ProviderError::Quota
+    } else if matches!(
+        code,
+        "invalid_api_key" | "invalid_authentication" | "authentication_error"
+    ) || kind == "authentication_error"
+    {
+        ProviderError::Authentication
+    } else if matches!(code, "rate_limit_exceeded" | "slow_down") || kind == "rate_limit_error" {
+        ProviderError::RateLimited
+    } else {
+        ProviderError::Unavailable
+    }
+}
+fn classify_handshake_error(error: tokio_tungstenite::tungstenite::Error) -> ProviderError {
+    use tokio_tungstenite::tungstenite::Error;
+    let Error::Http(response) = error else {
+        return ProviderError::Unavailable;
+    };
+    if let Some(body) = response
+        .body()
+        .as_ref()
+        .filter(|body| body.len() <= 64 * 1024)
+    {
+        if let Ok(value) = serde_json::from_slice::<Value>(body) {
+            let classified = classify_provider_error(&value["error"]);
+            if classified != ProviderError::Unavailable {
+                return classified;
+            }
+        }
+    }
+    match response.status().as_u16() {
+        401 | 403 => ProviderError::Authentication,
+        429 => ProviderError::RequestLimited,
+        _ => ProviderError::Unavailable,
+    }
+}
 
 pub async fn synthesize(
     provider: &ProviderConfig,
@@ -159,7 +234,7 @@ pub async fn synthesize(
             .max_frame_size(Some(1024 * 1024));
         let (mut socket, _) = connect_async_with_config(request, Some(config), false)
             .await
-            .map_err(|_| ProviderError::Unavailable)?;
+            .map_err(classify_handshake_error)?;
         let result = run_protocol(&mut socket, settings, text).await;
         // Dropping the socket on cancellation/error also closes the provider
         // connection; neither a background retry nor queued generation survives.
@@ -216,7 +291,7 @@ async fn run_protocol<S: AsyncRead + AsyncWrite + Unpin>(
         let event: Value = serde_json::from_str(&raw).map_err(|_| ProviderError::Protocol)?;
         let kind = event["type"].as_str().ok_or(ProviderError::Protocol)?;
         match kind {
-            "error" => return Err(ProviderError::Unavailable),
+            "error" => return Err(classify_provider_error(&event["error"])),
             "session.created" if phase == 0 => {
                 send(
                     socket,
@@ -376,7 +451,12 @@ impl AudioAccumulator {
             "response.done" => {
                 let response = &event["response"];
                 if response["status"] != "completed" {
-                    return Err(ProviderError::Incomplete);
+                    let classified = classify_provider_error(&response["status_details"]["error"]);
+                    return Err(if classified == ProviderError::Unavailable {
+                        ProviderError::Incomplete
+                    } else {
+                        classified
+                    });
                 }
                 // One audio message only: no tool calls or second narration can
                 // be hidden in an otherwise successful provider response.

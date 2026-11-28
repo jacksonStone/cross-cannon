@@ -2216,3 +2216,50 @@ async fn chapter_progress_counts_saved_units_after_a_gap_without_charging_status
     assert_eq!(calls.load(Ordering::SeqCst), count - 1);
     task.abort();
 }
+
+#[tokio::test]
+async fn failed_job_retains_a_safe_provider_reason_across_restart() {
+    let f = Fixture::new();
+    let (provider, calls, fail, task) = mock().await;
+    fail.store(true, Ordering::SeqCst);
+    let cache = f.cache();
+    let app = f.app(cache.clone(), provider);
+    let plan = chapter_plan(&app, &f.cookie, "John:3").await;
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_A}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let status = wait_chapter(&app, &f.cookie, &plan).await;
+    assert_eq!(status["state"], "failed");
+    assert_eq!(status["failureCode"], "provider_unavailable");
+    assert!(!status.to_string().contains("private provider detail"));
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    drop(app);
+    drop(cache);
+    task.abort();
+    let app = f.app(
+        f.cache_with_characters(0),
+        ProviderConfig::loopback("ws://127.0.0.1:1".into()),
+    );
+    let reopened = data(
+        request(
+            &app,
+            "GET",
+            plan["job"]["statusUrl"].as_str().unwrap(),
+            Some(&f.cookie),
+            None,
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(reopened["failureCode"], "provider_unavailable");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+}

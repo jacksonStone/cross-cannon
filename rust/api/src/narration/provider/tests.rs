@@ -345,3 +345,86 @@ fn malformed_pcm_and_excessive_audio_are_rejected() {
         Err(ProviderError::Incomplete)
     ));
 }
+
+#[tokio::test]
+async fn upstream_failure_classes_are_preserved_without_raw_error_bodies() {
+    for (code, expected) in [
+        (
+            "rate_limit_exceeded",
+            "AI narration provider rate limit reached. Try again later.",
+        ),
+        (
+            "insufficient_quota",
+            "AI narration provider quota is exhausted.",
+        ),
+        (
+            "invalid_api_key",
+            "AI narration provider authentication failed.",
+        ),
+    ] {
+        let (provider, handle)=mock_provider(vec![json!({"type":"error","error":{"code":code,"message":"private-upstream-body-and-secret-marker"}})]).await;
+        let error = match synthesize(&provider, &SpeechSettings::default(), SOURCE).await {
+            Err(error) => error,
+            Ok(_) => panic!("Expected rejected provider response"),
+        };
+        assert_eq!(error.to_string(), expected);
+        assert!(!format!("{error:?}").contains("private-upstream"));
+        handle.await.unwrap();
+    }
+}
+
+#[test]
+fn handshake_failure_classification_keeps_only_safe_categories() {
+    use tokio_tungstenite::tungstenite::Error;
+    for (status, body, expected) in [
+        (401, None, ProviderError::Authentication),
+        (429, None, ProviderError::RequestLimited),
+        (503, None, ProviderError::Unavailable),
+        (
+            429,
+            Some(json!({"error":{"code":"credit_balance_exhausted","message":"private-secret"}})),
+            ProviderError::Quota,
+        ),
+        (
+            429,
+            Some(
+                json!({"error":{"code":"project_spend_limit_exceeded","message":"private-secret"}}),
+            ),
+            ProviderError::Quota,
+        ),
+        (
+            429,
+            Some(json!({"error":{"code":"slow_down","message":"private-secret"}})),
+            ProviderError::RateLimited,
+        ),
+    ] {
+        let response = axum::http::Response::builder()
+            .status(status)
+            .body(body.map(|value| value.to_string().into_bytes()))
+            .unwrap();
+        let error = classify_handshake_error(Error::Http(Box::new(response)));
+        assert_eq!(error, expected);
+        assert!(!error.to_string().contains("private-secret"));
+    }
+    let unknown =
+        classify_provider_error(&json!({"code":"private-secret","message":"private-secret"}));
+    assert_eq!(unknown, ProviderError::Unavailable);
+    assert_eq!(unknown.failure_code(), "provider_unavailable");
+}
+
+#[test]
+fn failed_terminal_response_preserves_provider_quota_without_accepting_audio() {
+    let mut events = successful_events(SOURCE);
+    let final_event = events.last_mut().unwrap();
+    final_event["response"]["status"] = json!("failed");
+    final_event["response"]["status_details"] =
+        json!({"error":{"code":"organization_usage_limit_exceeded","message":"private-secret"}});
+    let mut accumulator = AudioAccumulator::default();
+    for event in &events[..events.len() - 1] {
+        accumulator.receive(event).unwrap();
+    }
+    assert_eq!(
+        accumulator.receive(events.last().unwrap()).unwrap_err(),
+        ProviderError::Quota
+    );
+}

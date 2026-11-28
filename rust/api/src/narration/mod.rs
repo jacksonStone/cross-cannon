@@ -36,41 +36,54 @@ use std::{
 pub(super) struct Failure {
     status: StatusCode,
     message: &'static str,
+    code: &'static str,
 }
 impl Failure {
     fn unavailable() -> Self {
         Self {
             status: StatusCode::SERVICE_UNAVAILABLE,
+            code: "service_unavailable",
             message: "AI narration is temporarily unavailable.",
         }
     }
     fn missing() -> Self {
         Self {
             status: StatusCode::NOT_FOUND,
+            code: "source_changed",
             message: "Narration unit unavailable. Start AI narration again.",
         }
     }
     fn capacity() -> Self {
         Self {
             status: StatusCode::INSUFFICIENT_STORAGE,
+            code: "storage_full",
             message: "AI narration storage is full. Existing narration can still play.",
         }
     }
     fn budget() -> Self {
         Self {
             status: StatusCode::TOO_MANY_REQUESTS,
+            code: "character_budget",
             message: "The daily AI narration allowance is used. Saved narration can still play.",
         }
     }
     fn busy() -> Self {
         Self {
             status: StatusCode::TOO_MANY_REQUESTS,
+            code: "busy",
             message: "AI narration is busy. Try again shortly.",
+        }
+    }
+    fn from_provider(error: provider::ProviderError) -> Self {
+        Self {
+            code: error.failure_code(),
+            ..Self::provider()
         }
     }
     fn provider() -> Self {
         Self {
             status: StatusCode::BAD_GATEWAY,
+            code: "provider_rejected",
             message: "AI reading could not be verified. Tap Play to retry.",
         }
     }

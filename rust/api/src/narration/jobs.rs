@@ -26,6 +26,8 @@ pub(super) struct Record {
     pub state: String,
     pub completed: usize,
     pub activated: bool,
+    #[serde(default)]
+    pub failure_code: Option<String>,
 }
 struct Active {
     id: String,
@@ -97,6 +99,7 @@ impl Jobs {
             state: "ready".into(),
             completed: 0,
             activated: false,
+            failure_code: None,
         };
         self.put(&r)?;
         Ok(r)
@@ -132,7 +135,7 @@ impl Jobs {
         Some(json!({"id":r.id,"url":format!("/api/narration/chapter/{}",r.id),"title":r.title}))
     }
     pub fn status(&self, r: &Record) -> Value {
-        json!({"id":r.id,"state":r.state,"completedUnits":r.completed,"totalUnits":r.units.len(),"completedChapter":self.completed(r)})
+        json!({"id":r.id,"state":r.state,"completedUnits":r.completed,"totalUnits":r.units.len(),"completedChapter":self.completed(r),"failureCode":r.failure_code})
     }
     pub fn start(
         self: &Arc<Self>,
@@ -147,6 +150,7 @@ impl Jobs {
         if self.cache.canceled_intent(&r.id, &intent)? {
             return Err(Failure {
                 status: axum::http::StatusCode::CONFLICT,
+                code: "request_cancelled",
                 message: "This narration request was stopped. Tap Play to resume.",
             });
         }
@@ -162,6 +166,7 @@ impl Jobs {
         }
         let mut r = r;
         r.state = "running".into();
+        r.failure_code = None;
         r.activated = true;
         self.put(&r)?;
         self.interrupted
@@ -185,6 +190,7 @@ impl Jobs {
             let result = jobs
                 .build(&mut r, &state, &user, &headers, &cancelled)
                 .await;
+            r.failure_code = result.as_ref().err().map(|error| error.code.to_owned());
             r.state = match result {
                 Ok(()) => "complete",
                 Err(_) if cancelled.load(Ordering::SeqCst) => "cancelled",

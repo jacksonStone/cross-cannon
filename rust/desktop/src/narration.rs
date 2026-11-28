@@ -166,6 +166,7 @@ struct BuildSession {
     credentials: Credentials,
     intent: String,
     cancelled: AtomicBool,
+    start_finished: AtomicBool,
     job: Mutex<Option<Job>>,
 }
 impl BuildSession {
@@ -176,6 +177,7 @@ impl BuildSession {
             credentials,
             intent: random.iter().map(|byte| format!("{byte:02x}")).collect(),
             cancelled: AtomicBool::new(false),
+            start_finished: AtomicBool::new(false),
             job: Mutex::new(None),
         }))
     }
@@ -194,7 +196,11 @@ impl BuildSession {
         job.validate()?;
         *self.job.lock().unwrap() = Some(job.clone());
         ensure!(!self.cancelled.load(Ordering::SeqCst), "Narration stopped");
-        build_request(&self.credentials, &job.start_url, &self.intent).await?;
+        let result = build_request(&self.credentials, &job.start_url, &self.intent).await;
+        // Until Start finishes, GET can still describe a previous terminal run.
+        // Open after errors too: a lost reply may hide an accepted worker.
+        self.start_finished.store(true, Ordering::SeqCst);
+        result?;
         ensure!(!self.cancelled.load(Ordering::SeqCst), "Narration stopped");
         Ok(())
     }
@@ -493,7 +499,11 @@ impl Narration {
         // per session; terminal states remain visible until a manual Play.
         let ongoing = self.progress.as_ref().is_none_or(BuildProgress::ongoing);
         if ongoing {
-            if let Some(build) = self.build.as_ref() {
+            if let Some(build) = self
+                .build
+                .as_ref()
+                .filter(|build| build.start_finished.load(Ordering::SeqCst))
+            {
                 let job = build.job.lock().unwrap().clone();
                 if let Some(job) = job {
                     ctx.request_repaint_after(Duration::from_secs(1));
@@ -1218,6 +1228,51 @@ mod tests {
                 assert!(state.problem.is_none());
                 assert_eq!(state.status().unwrap(), progress(status, 2).label());
             }
+        }
+    }
+    #[test]
+    fn polling_gate_opens_after_start_success_and_lost_reply_error() {
+        use std::io::{Read, Write};
+        for status in ["200 OK", "502 Bad Gateway"] {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            let mut c = credentials();
+            c.origin = format!("http://{}", listener.local_addr().unwrap());
+            let server = std::thread::spawn(move || {
+                let (mut stream, _) = listener.accept().unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                let mut request = [0; 4096];
+                let n = stream.read(&mut request).unwrap();
+                assert!(
+                    String::from_utf8_lossy(&request[..n]).starts_with("POST /api/narration/jobs/")
+                );
+                write!(
+                    stream,
+                    "HTTP/1.1 {status}\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{{}}"
+                )
+                .unwrap();
+            });
+            let build = BuildSession::new(c.clone()).unwrap();
+            *build.job.lock().unwrap() = Some(job());
+            let mut state = Narration::default();
+            state.credentials = Some(c.clone());
+            state.checked = Some(Instant::now());
+            state.build = Some(build.clone());
+            state.known_total = 4;
+            state.tick(&egui::Context::default(), Some((c.user, c.token, c.origin)));
+            assert!(
+                !state.polling,
+                "A pending Start must not poll the previous terminal record"
+            );
+            assert!(!build.start_finished.load(Ordering::SeqCst));
+            let result = platform::block_on(build.start(job()));
+            assert_eq!(result.is_ok(), status.starts_with("200"));
+            assert!(
+                build.start_finished.load(Ordering::SeqCst),
+                "Both success and error permit authoritative status recovery"
+            );
+            server.join().unwrap();
         }
     }
 }

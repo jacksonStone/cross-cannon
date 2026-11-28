@@ -561,9 +561,11 @@ impl Cache {
                     let result = async {
                         let audio = provider::synthesize(&provider, &settings, &text)
                             .await
-                            .map_err(|_| Failure::provider())?;
+                            .map_err(Failure::from_provider)?;
                         if !provider::transcript_matches(&text, &audio.transcript) {
-                            return Err(Failure::provider());
+                            return Err(Failure::from_provider(
+                                provider::ProviderError::TranscriptMismatch,
+                            ));
                         }
                         cache.save(&id, &audio.wav, &audio.usage)?;
                         Ok(Arc::new(audio.wav))
