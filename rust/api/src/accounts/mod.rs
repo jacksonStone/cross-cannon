@@ -1,6 +1,8 @@
 //! Account identity and durable synchronization for every reader adapter.
 mod auth;
 mod documents;
+#[path = "../narration/mod.rs"]
+mod narration;
 pub(crate) mod protocol;
 pub(crate) mod store;
 #[cfg(test)]
@@ -104,8 +106,9 @@ impl Accounts {
     }
 }
 
-pub(crate) fn router(root: PathBuf) -> Router {
-    routes(Arc::new(Accounts::from_env(&root)))
+pub(crate) fn router(root: PathBuf, library: Arc<cross_canon_core::Library>) -> Router {
+    let accounts = Arc::new(Accounts::from_env(&root));
+    routes(accounts.clone()).merge(narration::router(accounts, root, library))
 }
 fn routes(state: Arc<Accounts>) -> Router {
     Router::new()

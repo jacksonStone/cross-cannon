@@ -20,6 +20,7 @@ mod downloads;
 mod icons;
 mod mobile;
 mod navigation;
+mod narration;
 mod note_markdown;
 #[cfg(test)]
 mod performance;
@@ -186,6 +187,9 @@ struct Desktop {
     audio_rx: Receiver<audio::Event>,
     audio_chapter: Option<String>,
     playing: bool,
+    audio_loading: bool,
+    audio_private: bool,
+    narration: narration::Narration,
     downloads: Option<downloads::Downloads>,
     started: Instant,
     screenshot: Option<PathBuf>,
@@ -334,6 +338,9 @@ impl Desktop {
             audio_rx,
             audio_chapter: None,
             playing: false,
+            audio_loading: false,
+            audio_private: false,
+            narration: Default::default(),
             downloads: None,
             started: Instant::now(),
             screenshot: std::env::var_os("CROSS_CANON_SCREENSHOT").map(Into::into),
@@ -442,6 +449,11 @@ impl Desktop {
         self.library
             .passage(&self.state.location_passage_id)
             .unwrap()
+    }
+    fn set_original_view(&mut self, original: bool) {
+        // This is a reading preference. It never changes a narration plan or
+        // its current unit, even while narration is loading or paused.
+        self.state.original = original;
     }
     fn has_text_version_control(&self) -> bool {
         match self.current_passage().corpus {
@@ -593,6 +605,7 @@ impl Desktop {
         #[cfg(any(target_os = "ios", target_arch = "wasm32"))]
         self.text_surface_events(ctx);
         self.account_tick(ctx);
+        self.narration_tick(ctx);
         let owner = self
             .account
             .saved
@@ -639,7 +652,7 @@ impl Desktop {
         }
         while let Ok(event) = self.audio_rx.try_recv() {
             match event {
-                audio::Event::Loading => self.message = "Loading audio…".into(),
+                audio::Event::Loading => { self.audio_loading = true; self.message = if self.audio_private { "Loading AI narration…" } else { "Loading audio…" }.into(); },
                 audio::Event::Chapter(chapter) => {
                     let changed = self.audio_chapter.as_deref() != Some(&chapter);
                     let follow = self
@@ -658,18 +671,16 @@ impl Desktop {
                 }
                 audio::Event::Playing => {
                     self.playing = true;
-                    self.message.clear()
+                    self.audio_loading = false;
+                    self.message = if self.audio_private { "AI narration".into() } else { String::new() }
                 }
-                audio::Event::Paused => self.playing = false,
+                audio::Event::Paused => { self.playing = false; self.audio_loading = false; },
                 audio::Event::Stopped => {
                     self.playing = false;
+                    self.audio_loading = false;
                     self.audio_chapter = None
                 }
-                audio::Event::Error(error) => {
-                    self.playing = false;
-                    self.audio_chapter = None;
-                    self.message = error
-                }
+                audio::Event::Error(error) => self.audio_failed(error),
             }
         }
         if ctx.input(|i| i.modifiers.command && i.key_pressed(Key::F)) {

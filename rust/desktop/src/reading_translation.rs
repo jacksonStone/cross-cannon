@@ -47,6 +47,13 @@ fn msb_start_seconds(chapter_id: &str) -> f64 {
 }
 
 impl Translation {
+    pub(super) fn narration_version(self, book: &str) -> &'static str {
+        if self == Self::Msb && msb_recordings().contains_key(book) {
+            "msb"
+        } else {
+            "web"
+        }
+    }
     pub(super) fn audio(
         self,
         library: &Library,
@@ -98,6 +105,11 @@ mod tests {
         assert_eq!(msb_start_seconds("Genesis:1"), 2.46);
         assert_eq!(msb_start_seconds("Tobit:1"), 0.0);
         assert_eq!(msb_start_seconds("Genesis:999"), 0.0);
+        // Narration identity follows the selected edition even before a browser
+        // Chapter hydrates; books outside MSB retain the displayed WEB fallback.
+        assert_eq!(Translation::Msb.narration_version("Genesis"), "msb");
+        assert_eq!(Translation::Msb.narration_version("Tobit"), "web");
+        assert_eq!(Translation::Web.narration_version("Genesis"), "web");
     }
 
     #[test]

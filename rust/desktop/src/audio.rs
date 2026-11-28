@@ -32,11 +32,14 @@ pub struct PlaybackChapter {
 pub struct PlaybackPlan {
     pub chapters: Vec<PlaybackChapter>,
     pub index: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub private_token: Option<String>,
 }
 pub enum Command {
     Play(PlaybackPlan),
     Toggle,
     Stop,
+    StopForNarrationChapter(String),
     #[cfg(target_vendor = "apple")]
     Wake,
 }
@@ -105,7 +108,7 @@ pub fn start(root: PathBuf, ctx: eframe::egui::Context) -> (Arc<Sender<Command>>
                         ctx.request_repaint();
                     }
                 }
-                Ok(Command::Stop) => {
+                Ok(Command::Stop | Command::StopForNarrationChapter(_)) => {
                     if let Some(previous) = sink.take() {
                         previous.stop()
                     }
@@ -209,7 +212,7 @@ pub fn start(
                 }
             }
             Ok(Command::Toggle) => unsafe { cross_canon_audio_command(0) },
-            Ok(Command::Stop) => unsafe { cross_canon_audio_command(1) },
+            Ok(Command::Stop | Command::StopForNarrationChapter(_)) => unsafe { cross_canon_audio_command(1) },
             Ok(Command::Wake) => {}
             Err(_) => break,
         }

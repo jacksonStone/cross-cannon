@@ -11,11 +11,14 @@ pub(super) struct PlaybackChapter {
 pub(super) struct PlaybackPlan {
     pub chapters: Vec<PlaybackChapter>,
     pub index: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub private_token: Option<String>,
 }
 pub(super) enum Command {
     Play(PlaybackPlan),
     Toggle,
     Stop,
+    StopForNarrationChapter(String),
 }
 pub(super) enum Event {
     Loading,
@@ -42,6 +45,7 @@ pub(super) fn flush() {
                     Command::Play(plan) => serde_json::json!({"action":"play", "plan":plan}),
                     Command::Toggle => serde_json::json!({"action":"toggle"}),
                     Command::Stop => serde_json::json!({"action":"stop"}),
+                    Command::StopForNarrationChapter(chapter) => serde_json::json!({"action":"stopForNarrationChapter","chapter":chapter}),
                 };
                 browser::audio_command(&json.to_string());
             }

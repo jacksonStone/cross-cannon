@@ -228,12 +228,18 @@ impl Desktop {
                     }
                 }
                 _ => {
-                    let available = self.library.audio(&focused.chapter_id);
+                    if self.narration.enabled {
+                        ui.label("Audio source");
+                        if ui.selectable_label(!self.narration.recorded,"AI narration").clicked() { self.select_audio_source(false); }
+                        if self.state.scripture_translation.audio(&self.library,&focused.chapter_id).is_some() && ui.selectable_label(self.narration.recorded,"Recorded audio").clicked() { self.select_audio_source(true); }
+                    }
+                    if self.audio_chapter.is_some() && ui.button("Stop audio").clicked() { self.stop_audio(); }
+                    let available = self.audio_available(&focused.chapter_id);
                     if ui
-                        .add_enabled_ui(available.is_some(), |ui| {
+                        .add_enabled_ui(available, |ui| {
                             icons::button(
                                 ui,
-                                if self.playing
+                                if self.audio_control_playing(&focused.chapter_id)
                                     && self.audio_chapter.as_deref() == Some(&focused.chapter_id)
                                 {
                                     icons::Icon::Pause
@@ -246,11 +252,7 @@ impl Desktop {
                             )
                         })
                         .inner
-                        .on_hover_text(if focused.corpus == Corpus::Scripture {
-                            "Play or pause WEB chapter audio"
-                        } else {
-                            "Play or pause chapter audio"
-                        })
+                        .on_hover_text(self.audio_label())
                         .clicked()
                     {
                         self.play_audio(&focused.chapter_id);

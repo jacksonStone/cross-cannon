@@ -573,6 +573,10 @@ impl Account {
             self.sync_origin.clone()?,
         ))
     }
+    pub fn narration_credentials(&self) -> Option<(String, String, String)> {
+        if !self.signed_in() { return None; }
+        Some((self.saved.user.as_ref()?.id.clone(), self.token.clone()?, self.sync_origin.clone()?))
+    }
     pub fn signed_in(&self) -> bool {
         self.token.is_some() && !self.saved.revoke_pending && self.saved.user.is_some()
     }
@@ -996,6 +1000,7 @@ impl Desktop {
                 self.dialog = None;
             }
             if control(ui, "Sign out").clicked() {
+                self.stop_audio();
                 self.account.sign_out(ui.ctx());
             }
             let conflict = self
@@ -1851,5 +1856,138 @@ mod tests {
         app.account_tick(&ctx);
         assert_eq!(app.state.location_passage_id, guest);
         assert!(app.account.saved.profiles.contains_key("alice"));
+    }
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod narration_entry_tests {
+    use super::*;
+    use std::io::{Read, Write};
+    fn wait_until(mut check: impl FnMut() -> bool) {
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while !check() {
+            assert!(std::time::Instant::now() < deadline,"Narration worker did not complete");
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+    fn read_request(stream: &mut std::net::TcpStream) -> String {
+        stream.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
+        let mut data = vec![];
+        let mut buffer = [0; 4096];
+        loop {
+            let count = stream.read(&mut buffer).unwrap(); assert!(count > 0);
+            data.extend_from_slice(&buffer[..count]);
+            if let Some(header_end) = data.windows(4).position(|w| w == b"\r\n\r\n") {
+                let headers = String::from_utf8_lossy(&data[..header_end]).to_lowercase();
+                let length = headers.lines().find_map(|line| line.strip_prefix("content-length:").and_then(|s| s.trim().parse::<usize>().ok())).unwrap_or(0);
+                if data.len() >= header_end + 4 + length { break; }
+            }
+        }
+        String::from_utf8(data).unwrap()
+    }
+    fn reply(stream: &mut std::net::TcpStream, value: serde_json::Value) {
+        let body = value.to_string();
+        write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
+    }
+    #[test]
+    fn real_play_entry_preserves_recordings_and_owner_units_stop_on_account_change() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let origin = format!("http://{}",listener.local_addr().unwrap());
+        let server = std::thread::spawn(move || {
+            let (mut stream,_) = listener.accept().unwrap();
+            let request = read_request(&mut stream);
+            assert!(request.starts_with("GET /api/narration/capabilities "));
+            assert!(request.to_lowercase().contains("authorization: bearer private-test-session"));
+            reply(&mut stream,serde_json::json!({"enabled":true}));
+            let (mut stream,_) = listener.accept().unwrap();
+            let request = read_request(&mut stream);
+            assert!(request.starts_with("POST /api/narration/plan "));
+            let body:serde_json::Value = serde_json::from_str(request.split("\r\n\r\n").nth(1).unwrap()).unwrap();
+            assert_eq!(body,serde_json::json!({"chapterId":"anf03:vi.iv.i","version":"modernized"}));
+            let units = ["a","b"].map(|letter| {let id=letter.repeat(64);serde_json::json!({"id":id,"url":format!("/api/narration/audio/{id}"),"title":"On Prayer 1"})});
+            reply(&mut stream,serde_json::json!({"chapterId":"anf03:vi.iv.i","version":"modernized","units":units}));
+        });
+        let library=Arc::new(Library::load(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")).unwrap());
+        let ctx=egui::Context::default();
+        let mut app=Desktop::initialize(&ctx,None,library.clone());
+        let (tx,rx)=mpsc::channel();app.audio_tx=Arc::new(tx);
+        // Non-owner/default paths retain their existing recording and offsets.
+        app.play_audio("John:3");
+        let audio::Command::Play(recorded)=rx.try_recv().unwrap() else {panic!("Missing original recording")};
+        assert!(recorded.private_token.is_none());
+        let expected = downloads::PlaybackSources::new(&library.root).resolve(&reading_translation::Translation::Web.audio(&library,"John:3").unwrap().url);
+        assert_eq!(recorded.chapters[recorded.index].audio.url,expected);
+        app.stop_audio();let _=rx.try_recv();
+        app.account.saved.user=Some(User {id:"private-owner".into(),name:"Test Reader".into(),email:"reader@example.test".into()});
+        app.account.token=Some("private-test-session".into());app.account.sync_origin=Some(origin.clone());
+        wait_until(|| {app.narration_tick(&ctx);app.narration.enabled});
+        assert!(app.narration.selected());
+        assert_eq!(app.audio_label(),"Play AI narration");
+        app.set_original_view(true);
+        let chapter = &library.chapter("anf03:vi.iv.i").unwrap().1;
+        let on_prayer = library.passage(&chapter.passage_ids[0]).unwrap();
+        assert!(on_prayer.reader_text(app.state.original).contains("a new breadth be sewn"));
+        assert_eq!(app.narration_version("anf03:vi.iv.i"),"modernized");
+        let location = app.state.location_passage_id.clone();
+        let search_position = app.search_scroll;
+        app.play_audio("anf03:vi.iv.i");
+        assert!(app.narration.waiting());
+        app.set_original_view(false);
+        assert!(on_prayer.reader_text(app.state.original).contains("a new piece of cloth be sewn"));
+        app.set_original_view(true);
+        assert!(app.narration.waiting());
+        assert_eq!(app.audio_chapter.as_deref(),Some("anf03:vi.iv.i"));
+        assert!(rx.try_recv().is_err(),"Visual toggle must not stop or restart a pending narration");
+        assert_eq!(app.state.location_passage_id,location);
+        assert_eq!(app.search_scroll,search_position);
+        wait_until(|| {app.narration_tick(&ctx);!app.narration.waiting()});
+        let audio::Command::Play(plan)=rx.try_recv().unwrap() else {panic!("Missing AI units")};
+        assert_eq!(plan.chapters.len(),2);assert_eq!(plan.index,0);
+        assert_eq!(plan.private_token.as_deref(),Some("private-test-session"));
+        assert!(plan.chapters.iter().all(|c| c.id=="anf03:vi.iv.i" && c.fallback.is_none() && c.audio.url.starts_with(&origin) && c.title.ends_with("AI narration")));
+        // AI Play describes the selected chapter, not a different chapter still
+        // playing in the background. Merely navigating never requests speech.
+        app.playing=true;
+        app.set_original_view(false);
+        assert!(app.playing);
+        app.set_original_view(true);
+        assert!(app.playing);
+        assert_eq!(app.audio_chapter.as_deref(),Some("anf03:vi.iv.i"));
+        assert!(rx.try_recv().is_err(),"Visual toggle must not stop or restart playing narration");
+        app.playing=false;
+        app.set_original_view(false);
+        app.set_original_view(true);
+        assert!(!app.playing);
+        assert_eq!(app.audio_chapter.as_deref(),Some("anf03:vi.iv.i"));
+        assert!(rx.try_recv().is_err(),"Visual toggle must preserve paused narration");
+        app.state.scripture_translation=reading_translation::Translation::Msb;
+        assert_eq!(app.narration_version("John:3"),"msb");
+        app.state.scripture_translation=reading_translation::Translation::Web;
+        assert_eq!(app.narration_version("John:3"),"web");
+        app.playing=true;
+        app.active_chapter_id="anf03:vi.iv.i".into();
+        assert_eq!(app.audio_label(),"Pause AI narration");
+        app.active_chapter_id="anf03:vi.iv.ii".into();
+        assert_eq!(app.audio_label(),"Play AI narration");
+        assert!(!app.audio_control_playing("anf03:vi.iv.ii"));
+        app.active_chapter_id="anf03:vi.iv.i".into();
+        app.audio_failed("AI narration unavailable. Tap Play to retry.".into());
+        assert_eq!(app.audio_chapter.as_deref(),Some("anf03:vi.iv.i"));
+        // Retry remains an adapter command at its retained unit; no fresh plan.
+        app.play_audio("anf03:vi.iv.i");assert!(matches!(rx.try_recv(),Ok(audio::Command::Toggle)));
+        app.play_audio("anf03:vi.iv.ii");
+        assert!(matches!(rx.try_recv(),Ok(audio::Command::StopForNarrationChapter(chapter)) if chapter == "anf03:vi.iv.ii"));
+        assert!(app.narration.waiting());
+        app.select_audio_source(true);assert!(matches!(rx.try_recv(),Ok(audio::Command::Stop)));
+        app.play_audio("John:3");
+        let audio::Command::Play(recorded)=rx.try_recv().unwrap() else {panic!("Missing chosen recorded audio")};
+        assert!(recorded.private_token.is_none());
+        app.select_audio_source(false);let _=rx.try_recv();
+        app.audio_private=true;app.audio_chapter=Some("anf03:vi.iv.i".into());
+        app.account.saved.user=None;
+        app.narration_tick(&ctx);
+        assert!(matches!(rx.try_recv(),Ok(audio::Command::Stop)));
+        assert!(!app.narration.enabled);assert!(!app.audio_private);assert!(app.audio_chapter.is_none());
+        server.join().unwrap();
     }
 }

@@ -10,8 +10,10 @@ serde.workspace = true
 serde_json.workspace = true
 cross-canon-core.workspace = true
 axum = { version = "0.8", features = ["multipart"] }
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "fs", "io-util"] }
-futures-util = { version = "0.3", default-features = false, features = ["std"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "fs", "io-util", "time"] }
+futures-util = { version = "0.3", default-features = false, features = ["std", "sink"] }
+tokio-tungstenite = { version = "0.28", features = ["connect", "rustls-tls-webpki-roots"] }
+fs2 = "0.4"
 url = "2"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 rusqlite = { version = "0.32", features = ["bundled"] }

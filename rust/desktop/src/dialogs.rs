@@ -1739,7 +1739,8 @@ impl Desktop {
                 }
             });
             self.update_canon(canon);
-            ui.checkbox(&mut self.state.original, "Original Early Christian text");
+            let mut original = self.state.original;
+            if ui.checkbox(&mut original, "Original Early Christian text").changed() { self.set_original_view(original); }
             if control(ui, "Offline audio…").clicked() {
                 self.dialog = Some(Dialog::Downloads);
             }

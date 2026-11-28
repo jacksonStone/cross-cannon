@@ -67,6 +67,7 @@ fn internal(error: impl std::fmt::Display) -> ApiError {
 
 pub fn router(state: Arc<AppState>) -> Router {
     let root = state.engine.library.root.clone();
+    let state_library = state.engine.library.clone();
     let compatibility = compat::router(state.clone());
     let api = Router::new()
         .nest(
@@ -83,7 +84,7 @@ pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .merge(api)
         .merge(compatibility)
-        .merge(accounts::router(root.clone()))
+        .merge(accounts::router(root.clone(), state_library))
         .merge(resources::router(root.clone()))
         .merge(browser::router(root))
         .fallback(|| async {

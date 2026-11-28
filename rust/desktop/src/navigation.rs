@@ -52,6 +52,7 @@ impl Desktop {
         if self.state.scripture_translation == translation {
             return;
         }
+        if self.narration.has_session() { self.stop_audio(); }
         self.state.scripture_translation = translation;
         self.scroll_target = Some(self.state.location_passage_id.clone());
         self.account.persist_now = true;
@@ -71,6 +72,21 @@ impl Desktop {
     }
 
     pub(super) fn play_audio(&mut self, chapter_id: &str) {
+        if self.narration.selected() {
+            let version = self.narration_version(chapter_id);
+            if self.audio_chapter.as_deref() == Some(chapter_id) && !self.narration.waiting() && self.narration.active {
+                let _ = self.audio_tx.send(audio::Command::Toggle);
+                return;
+            }
+            if self.audio_chapter.as_deref().is_some_and(|id| id != chapter_id) { self.stop_audio_for_narration_chapter(chapter_id); }
+            if let Some(plan) = self.narration.play(chapter_id,version) {
+                self.narration.active = true; self.audio_private = true;
+                let _ = self.audio_tx.send(audio::Command::Play(plan));
+            }
+            self.audio_chapter = Some(chapter_id.into());
+            self.message = if self.narration.waiting_to_play() { "Loading AI narration…" } else { "AI narration paused" }.into();
+            return;
+        }
         let translation = self.state.scripture_translation;
         if self.audio_chapter.as_deref() == Some(chapter_id) {
             let _ = self.audio_tx.send(audio::Command::Toggle);
@@ -107,7 +123,9 @@ impl Desktop {
                 .send(audio::Command::Play(audio::PlaybackPlan {
                     chapters,
                     index,
+                    private_token: None,
                 }));
+            self.audio_private = false;
             self.audio_chapter = Some(chapter_id.to_owned());
             self.message = "Loading audio…".into();
         }

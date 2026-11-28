@@ -22,7 +22,7 @@ static void emit(NSDictionary *event) {
     cross_canon_audio_wake();
 }
 
-@interface CrossCanonAudio : NSObject
+@interface CrossCanonAudio : NSObject <NSURLSessionTaskDelegate>
 @property AVPlayer *player;
 @property NSArray<NSDictionary *> *chapters;
 @property NSInteger index;
@@ -34,6 +34,13 @@ static void emit(NSDictionary *event) {
 @property id observer;
 @property id endedObserver;
 @property NSString *url;
+@property NSString *privateToken;
+@property NSURLSession *privateSession;
+@property NSURLSessionDownloadTask *privateTask;
+@property NSURL *privateFile;
+- (void)clearPrivateUnit;
+- (void)loadPrivate:(NSString *)url generation:(NSUInteger)generation;
+- (void)failPrivate:(NSString *)message;
 - (void)load:(BOOL)seek;
 - (void)toggle;
 - (void)pause;
@@ -49,6 +56,11 @@ static void emit(NSDictionary *event) {
 @implementation CrossCanonAudio
 - (instancetype)init {
     if ((self = [super init])) {
+        // Remove only our private transient units after an interrupted prior run.
+        NSURL *temporary = [NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES];
+        for (NSURL *file in [NSFileManager.defaultManager contentsOfDirectoryAtURL:temporary includingPropertiesForKeys:nil options:0 error:nil]) {
+            if ([file.lastPathComponent hasPrefix:@"cc-private-narration-"]) [NSFileManager.defaultManager removeItemAtURL:file error:nil];
+        }
         self.player = [AVPlayer new];
         self.chapters = @[];
         [self.player addObserver:self forKeyPath:@"timeControlStatus" options:0 context:NULL];
@@ -125,11 +137,18 @@ static void emit(NSDictionary *event) {
 #if TARGET_OS_IPHONE
     [AVAudioSession.sharedInstance setActive:YES error:nil];
 #endif
-    self.wantsPlay = YES; [self.player play]; [self updateNowPlaying];
+    self.wantsPlay = YES;
+    if (self.privateToken.length && !self.privateTask && (!self.player.currentItem || self.player.currentItem.status == AVPlayerItemStatusFailed)) {
+        [self load:YES]; return;
+    }
+    [self.player play]; [self updateNowPlaying];
 }
 - (void)toggle { if (self.wantsPlay) [self pause]; else [self resume]; }
 - (void)seek:(double)seconds {
     if (!isfinite(seconds) || !self.chapters.count) return;
+    // A private unit has no seekable item until its authenticated download is
+    // installed. Do not invalidate that load's generation with a system seek.
+    if (self.privateToken.length && (self.privateTask || !self.privateFile)) return;
     self.seeking = YES;
     NSUInteger generation = ++self.generation;
     [self.player seekToTime:CMTimeMakeWithSeconds(MAX(0,seconds),600) toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(__unused BOOL finished) {
@@ -155,6 +174,7 @@ static void emit(NSDictionary *event) {
     }
 }
 - (void)stop {
+    [self clearPrivateUnit]; self.privateToken = nil;
     self.wantsPlay = NO; self.generation++;
     [self.player pause]; [self replaceItem:nil];
     self.chapters = @[]; self.url = nil;
@@ -183,6 +203,15 @@ static void emit(NSDictionary *event) {
     NSDictionary *audio = self.fallback ? track[@"fallback"] : track[@"audio"];
     NSString *url = audio[@"url"];
     if (![url isKindOfClass:NSString.class]) { [self stop]; return; }
+    [self clearPrivateUnit];
+    if (self.privateToken.length) {
+        self.seeking = NO; self.url = url;
+        [self.player pause]; [self replaceItem:nil];
+        emit(@{@"type":@"chapter", @"chapter":track[@"id"]});
+        emit(@{@"type":@"loading"});
+        [self loadPrivate:url generation:++self.generation];
+        return;
+    }
     self.seeking = seek;
     emit(@{@"type":@"chapter", @"chapter":track[@"id"]});
     emit(@{@"type":@"loading"});
@@ -205,6 +234,59 @@ static void emit(NSDictionary *event) {
         }];
     } else if (self.wantsPlay) { [self resume]; }
     [self updateNowPlaying];
+}
+// AI units use an ephemeral authenticated session. A unit is written only to
+// a private random temporary file, removed before the next unit or on stop.
+// Durable reuse is exclusively server-side, behind the verified account.
+- (void)clearPrivateUnit {
+    [self.privateTask cancel]; self.privateTask = nil;
+    [self.privateSession invalidateAndCancel]; self.privateSession = nil;
+    if (self.privateFile) [NSFileManager.defaultManager removeItemAtURL:self.privateFile error:nil];
+    self.privateFile = nil;
+}
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task willPerformHTTPRedirection:(NSHTTPURLResponse *)response newRequest:(NSURLRequest *)request completionHandler:(void (^)(NSURLRequest *))completionHandler {
+    // Never forward a native bearer token through a media redirect.
+    completionHandler(nil);
+}
+- (void)loadPrivate:(NSString *)url generation:(NSUInteger)generation {
+    NSURL *location = [NSURL URLWithString:url];
+    if (!location || ![location.path hasPrefix:@"/api/narration/audio/"]) { [self stop]; emit(@{@"type":@"error",@"message":@"Invalid AI narration address"}); return; }
+    NSURLSessionConfiguration *config = NSURLSessionConfiguration.ephemeralSessionConfiguration;
+    config.URLCache = nil; config.requestCachePolicy = NSURLRequestReloadIgnoringLocalCacheData;
+    config.HTTPCookieStorage = nil; config.HTTPShouldSetCookies = NO;
+    config.timeoutIntervalForRequest = 90; config.timeoutIntervalForResource = 120;
+    self.privateSession = [NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:location];
+    [request setValue:[@"Bearer " stringByAppendingString:self.privateToken] forHTTPHeaderField:@"Authorization"];
+    [request setValue:@"no-store" forHTTPHeaderField:@"Cache-Control"];
+    __weak CrossCanonAudio *weak = self;
+    self.privateTask = [self.privateSession downloadTaskWithRequest:request completionHandler:^(NSURL *temporary, NSURLResponse *response, NSError *error) {
+        NSHTTPURLResponse *http = (NSHTTPURLResponse *)response;
+        NSNumber *size; [temporary getResourceValue:&size forKey:NSURLFileSizeKey error:nil];
+        BOOL valid = !error && http.statusCode == 200 && [http.MIMEType hasPrefix:@"audio/"] && size.unsignedLongLongValue > 44 && size.unsignedLongLongValue <= 16 * 1024 * 1024;
+        NSURL *file = valid ? [[NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES] URLByAppendingPathComponent:[NSString stringWithFormat:@"cc-private-narration-%@.wav",NSUUID.UUID.UUIDString]] : nil;
+        if (valid) valid = [NSFileManager.defaultManager moveItemAtURL:temporary toURL:file error:nil];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            CrossCanonAudio *self = weak;
+            if (!self || self.generation != generation || !self.privateToken.length) { if(file) [NSFileManager.defaultManager removeItemAtURL:file error:nil]; return; }
+            self.privateTask = nil;
+            if (!valid) {
+                if(file) [NSFileManager.defaultManager removeItemAtURL:file error:nil];
+                [self failPrivate:http.statusCode == 429 ? @"AI narration limit reached. Try again later or choose Recorded audio." : @"AI narration unavailable. Tap Play to retry or choose Recorded audio."]; return;
+            }
+            self.privateFile = file;
+            [self replaceItem:[AVPlayerItem playerItemWithURL:file]];
+            if (self.wantsPlay) [self resume]; else [self updateNowPlaying];
+        });
+    }];
+    [self.privateTask resume];
+}
+- (void)failPrivate:(NSString *)message {
+    // Keep this authenticated plan and its current unit index for Play retry.
+    // Explicit stop/account changes still discard the complete private plan.
+    self.wantsPlay = NO; self.generation++; self.seeking = NO;
+    [self clearPrivateUnit]; [self.player pause]; [self replaceItem:nil];
+    [self updateNowPlaying]; emit(@{@"type":@"error",@"message":message});
 }
 - (void)advance {
     if (!self.chapters.count) return;
@@ -247,6 +329,8 @@ static void emit(NSDictionary *event) {
     if (!self.fallback && [fallback isKindOfClass:NSDictionary.class]) {
         emit(@{@"type":@"fallback"});
         self.fallback = YES; [self load:YES];
+    } else if (self.privateToken.length) {
+        [self failPrivate:@"AI narration unavailable. Tap Play to retry or choose Recorded audio."];
     } else {
         NSString *message = self.player.currentItem.error.localizedDescription ?: @"Recording is unavailable";
         [self stop]; emit(@{@"type":@"error", @"message":message});
@@ -263,6 +347,8 @@ void cross_canon_audio_play(const char *json) {
         NSDictionary *plan = [NSJSONSerialization JSONObjectWithData:[text dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
         NSArray *chapters = plan[@"chapters"]; NSInteger index = [plan[@"index"] integerValue];
         if (![chapters isKindOfClass:NSArray.class] || index < 0 || (NSUInteger)index >= chapters.count) return;
+        [engine clearPrivateUnit]; engine.generation++;
+        id token = plan[@"private_token"]; engine.privateToken = [token isKindOfClass:NSString.class] ? token : nil;
         engine.chapters = chapters; engine.index = index; engine.fallback = NO; engine.wantsPlay = YES;
         [engine load:YES];
     });

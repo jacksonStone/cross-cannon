@@ -1004,7 +1004,7 @@ float cross_canon_keyboard_height(void) {
         self.readingBottom.active = YES;
     }
     NSArray *items = @[@[@"Reader settings", @"textformat.size", @"settings"],
-        @[[model[@"playing"] boolValue] ? @"Pause audio" : @"Play audio", @"playpause", @"audio"],
+        @[model[@"audioLabel"] ?: ([model[@"playing"] boolValue] ? @"Pause audio" : @"Play audio"), @"playpause", @"audio"],
         @[@"Audio downloads", @"arrow.down.circle", @"downloads"], @[@"Account and sync", @"person.crop.circle", @"account"]];
     NSMutableArray *menu = [NSMutableArray new];
     __weak CCReaderView *weak = self;
@@ -1016,6 +1016,21 @@ float cross_canon_keyboard_height(void) {
         }];
         if ([item[2] isEqual:@"audio"] && ![model[@"audio"] boolValue]) action.attributes = UIMenuElementAttributesDisabled;
         [menu addObject:action];
+    }
+    if ([model[@"narrationEnabled"] boolValue]) {
+        NSMutableArray *sources = [NSMutableArray new];
+        for (NSString *source in @[@"ai", @"recorded"]) {
+            if ([source isEqual:@"recorded"] && ![model[@"recordedAvailable"] boolValue]) continue;
+            UIAction *action = [UIAction actionWithTitle:[source isEqual:@"ai"] ? @"AI narration" : @"Recorded audio" image:nil identifier:nil handler:^(__unused UIAction *a) {
+                CCEvent(@"audio-source", source, nil, 0);
+            }];
+            action.state = ([source isEqual:@"ai"] == [model[@"aiNarration"] boolValue]) ? UIMenuElementStateOn : UIMenuElementStateOff;
+            [sources addObject:action];
+        }
+        [menu addObject:[UIMenu menuWithTitle:@"Audio source" children:sources]];
+    }
+    if ([model[@"audioActive"] boolValue]) {
+        [menu addObject:[UIAction actionWithTitle:@"Stop audio" image:[UIImage systemImageNamed:@"stop.fill"] identifier:nil handler:^(__unused UIAction *a) { CCEvent(@"audio-stop",nil,nil,0); }]];
     }
     if ([model[@"versionControl"] boolValue]) {
         NSMutableArray *versions = [NSMutableArray new];
