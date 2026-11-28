@@ -1,0 +1,141 @@
+{
+  "catalogWorkCounts": {
+    "public/christian-classics-text/books.json": 7,
+    "public/church-fathers-preview/books.json": 410
+  },
+  "files": {
+    "public/christian-classics-text/books.json": {
+      "kind": "catalog-projection",
+      "sha256": "5db88e6ce486b97610e24ba6b4d96a0b6bace10a4ae34774c572a416516ba917"
+    },
+    "public/christian-classics-text/chapters/classics_treasury-of-david_Ps.119.5aebb02fc8d97c20.json": {
+      "kind": "exact",
+      "sha256": "5aebb02fc8d97c204b994bf82ff19f533f257bab603f29681a214155cdb1c8c7"
+    },
+    "public/church-fathers-preview/books.json": {
+      "kind": "catalog-projection",
+      "sha256": "033c2bda94ed1b8a780f8521aed57cca667559f549c2c95332b264a5299c9957"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.i.json": {
+      "kind": "exact",
+      "sha256": "cb9629040d20be014803c22e036202c8ff9080f4e04b2973dbc7bb440bddddfb"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.ii.json": {
+      "kind": "exact",
+      "sha256": "c9056a93cf6f02014abb1e1f844e88f8f5a303f77a41a48c493f1f590bbf3ac5"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.iii.json": {
+      "kind": "exact",
+      "sha256": "12833653e7f1a88993d260cddd9447be81b347dcb2ab68bece0c25f90a31378f"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.iv.json": {
+      "kind": "exact",
+      "sha256": "f2bf8a478d2ef97b656ab6365166aa5576dead3c5fb314d5311286cb16421fa4"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.ix.json": {
+      "kind": "exact",
+      "sha256": "828ef1b6ec355ec75fbcd170af2e10066ec382ddc8a57349c3e54fee42a532b9"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.v.json": {
+      "kind": "exact",
+      "sha256": "b7fc41588249be396ec711e502a3e3a8e4963b5f88b90cacadee76aee5674912"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.vi.json": {
+      "kind": "exact",
+      "sha256": "3ebfd3b4d71e6f63ad31c6cced85caf71803bca22036873bbc932e2b536ca407"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.vii.json": {
+      "kind": "exact",
+      "sha256": "9ae03230da6c4b55959588771c3be3cd0dca910a5003c8c751ec2f1c67f567a1"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.viii.json": {
+      "kind": "exact",
+      "sha256": "97ba9489200e6c49dd73a459f182001b0a63d9ad332c2635ad3ceee4f98ab317"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.x.json": {
+      "kind": "exact",
+      "sha256": "49b94867a6db187eacba4abd733509dd2628eb58aa2ed9ff6cda392df3c37c37"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xi.json": {
+      "kind": "exact",
+      "sha256": "e7e2b91de6bf422ec4ccefbbd59319bf92b6af1a5c2be44d703c627a2d082350"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xii.json": {
+      "kind": "exact",
+      "sha256": "b96043db731df8311855d0c3aa260f7aafb5677a7e87ff45ae64060525753c33"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xiii.json": {
+      "kind": "exact",
+      "sha256": "8e77abf8aa353477540f097ea1aa53278a9b5bbf55ca47d72864434e0da2fee1"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xiv.json": {
+      "kind": "exact",
+      "sha256": "58519ce878814a4599b8b4fd53da26f14efb35f6539b59abb9dd792f1fc007f7"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xix.json": {
+      "kind": "exact",
+      "sha256": "f050f044bffab5dba1b94c06b1bf0f86372ccf6be5056167613e24462b3bf206"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xv.json": {
+      "kind": "exact",
+      "sha256": "12eb7dcf12fa6f7023fbd583ae4d7d2beceb792b9b27b4ba7df1766cc157676d"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xvi.json": {
+      "kind": "exact",
+      "sha256": "20faac86dd4914a3fd68ec26787c5d72addfc1601e0976666296a8e7eaeddc5c"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xvii.json": {
+      "kind": "exact",
+      "sha256": "7b021befa068235154be88b43d92121bede61b867cd368095a27d659f07801f6"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xviii.json": {
+      "kind": "exact",
+      "sha256": "2710d6bcf1fff37b10f94813cc13ac650877471be64babdaf31024055a8995e3"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xx.json": {
+      "kind": "exact",
+      "sha256": "8d88b18830ccbe8a11092188f82303d96993a49d56db33839770d6a545c44cd3"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xxi.json": {
+      "kind": "exact",
+      "sha256": "8919657e81aab13a7632bd5acf3341c2b6558c59c4a96eea02163f991a215894"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xxii.json": {
+      "kind": "exact",
+      "sha256": "d3dad1c81cdd9623aedf9637cb691a7dfa383f8fa46f0d9360e7e6d46d5715b6"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xxiii.json": {
+      "kind": "exact",
+      "sha256": "fbf665dc359db8a7bd1f08b747df31e9323c3ea9fbbb2ac7810a6b18578fef3c"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xxiv.json": {
+      "kind": "exact",
+      "sha256": "99ffe1d85eebefd14eb299937c969e167748686232f4d798657abba648afb62d"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xxix.json": {
+      "kind": "exact",
+      "sha256": "bec26e0f398d97486e3d3b5e44f805040fc19b29367265046797872ca0f5cbb7"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xxv.json": {
+      "kind": "exact",
+      "sha256": "45f30d842c32c39324b8811a3e499cdd8355e4ee2e8e9a8234caddae4cd45f61"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xxvi.json": {
+      "kind": "exact",
+      "sha256": "6beddfb75910cb444077e998bae7b24d2456687245d9047c01ed885d3b2eb709"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xxvii.json": {
+      "kind": "exact",
+      "sha256": "9edc7f1ea522185e729673d147637b8c57bc431be9376d39ae523e71cef0aaf9"
+    },
+    "public/church-fathers-preview/chapters/anf03_vi.iv.xxviii.json": {
+      "kind": "exact",
+      "sha256": "34c8ba98c4c39df2af9381d6b48b2e347f9e39726328eb8be515cc021efd5857"
+    },
+    "public/scripture-translations/manifest.json": {
+      "kind": "exact",
+      "sha256": "878855dbae07c22f74302c2e797b88cdf14fca18086ca991753edbf9453e258d"
+    }
+  },
+  "schema": 1
+}

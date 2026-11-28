@@ -4,6 +4,8 @@ mod cache;
 mod catalog;
 mod provider;
 #[cfg(test)]
+mod test_inputs;
+#[cfg(test)]
 mod tests;
 
 use super::{

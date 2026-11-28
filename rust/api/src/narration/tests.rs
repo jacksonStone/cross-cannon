@@ -168,7 +168,7 @@ impl Fixture {
     }
     fn with_on_prayer() -> Self {
         let mut f = Self::new();
-        let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let repo = super::test_inputs::root();
         let index: Value = serde_json::from_slice(
             &std::fs::read(repo.join("public/church-fathers-preview/books.json")).unwrap(),
         )

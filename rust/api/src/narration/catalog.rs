@@ -475,7 +475,7 @@ mod tests {
                     &json!({"chapters":{}}),
                 );
             }
-            let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+            let repo = super::super::test_inputs::root();
             let catalog =
                 read_json(&repo.join("public/church-fathers-preview/books.json")).unwrap();
             let work = catalog["books"]
@@ -639,7 +639,7 @@ mod tests {
 
     #[test]
     fn every_current_work_matches_a_reviewed_source_and_new_sources_do_not() {
-        let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let repo = super::super::test_inputs::root();
         for (path, corpus) in [
             (
                 "public/church-fathers-preview/books.json",
@@ -664,7 +664,7 @@ mod tests {
     #[test]
     fn largest_existing_chapter_fits_bounded_plan_and_preserves_every_text_byte() {
         let fixture = Fixture::new();
-        let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let repo = super::super::test_inputs::root();
         let index = read_json(&repo.join("public/christian-classics-text/books.json")).unwrap();
         let mut work = index["books"]
             .as_array()
