@@ -240,10 +240,12 @@ impl Jobs {
         // Retained units after a gap also need a copy in the final file. Count
         // all of them before paying to fill that gap, not only the played prefix.
         let mut cached_pcm = 0u64;
+        let mut saved_units = 0usize;
         for id in &r.units {
             let path = self.cache.unit_path(id)?;
             match chapter_audio::inspect_part(&path) {
                 Ok(meta) => {
+                    saved_units += 1;
                     cached_pcm = cached_pcm
                         .checked_add(meta.pcm_bytes)
                         .ok_or_else(Failure::capacity)?
@@ -252,6 +254,8 @@ impl Jobs {
                 Err(_) => return Err(Failure::provider()),
             }
         }
+        r.completed = saved_units;
+        self.put(r)?;
         let mut paths = Vec::new();
         for (index, id) in r.units.iter().enumerate() {
             if cancelled.load(Ordering::SeqCst) {
@@ -300,8 +304,12 @@ impl Jobs {
                 .checked_add(meta.pcm_bytes)
                 .ok_or_else(Failure::capacity)?;
             paths.push(path);
-            r.completed = index + 1;
-            self.put(r)?;
+            if missing {
+                r.completed += 1;
+                self.put(r)?;
+            } else {
+                self.changed.notify_waiters();
+            }
         }
         if cancelled.load(Ordering::SeqCst) {
             return Err(Failure::unavailable());

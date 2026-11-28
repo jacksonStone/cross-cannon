@@ -75,7 +75,7 @@ impl Desktop {
         if self.narration.selected() {
             let version = self.narration_version(chapter_id);
             if self.audio_chapter.as_deref() == Some(chapter_id) && !self.narration.waiting() && self.narration.active {
-                if !self.narration.retry_build() {
+                if self.playing || self.audio_loading || !self.narration.retry_build() {
                     let _ = self.audio_tx.send(audio::Command::Toggle);
                 }
                 return;
@@ -86,7 +86,7 @@ impl Desktop {
                 let _ = self.audio_tx.send(audio::Command::Play(plan));
             }
             self.audio_chapter = Some(chapter_id.into());
-            self.message = if self.narration.waiting_to_play() { "Loading AI narration…" } else { "AI narration paused" }.into();
+            self.message = if self.narration.waiting_to_play() { "Preparing chapter audio…" } else { "AI narration paused" }.into();
             return;
         }
         let translation = self.state.scripture_translation;

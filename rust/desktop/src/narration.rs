@@ -62,6 +62,103 @@ impl Job {
 fn valid_id(id: &str) -> bool {
     id.len() == 64 && id.bytes().all(|b| b.is_ascii_hexdigit())
 }
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum BuildState {
+    Ready,
+    Running,
+    Complete,
+    Cancelled,
+    Budget,
+    StorageFull,
+    Failed,
+    Interrupted,
+}
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BuildProgress {
+    id: String,
+    state: BuildState,
+    completed_units: usize,
+    total_units: usize,
+    #[serde(default)]
+    completed_chapter: Option<Unit>,
+}
+impl BuildProgress {
+    fn validate(&self, job: &Job) -> Result<()> {
+        ensure!(
+            self.id == job.id
+                && self.total_units > 0
+                && self.total_units <= 8192
+                && self.completed_units <= self.total_units,
+            "Chapter progress could not be read. Tap Play to retry."
+        );
+        if let Some(chapter) = &self.completed_chapter {
+            ensure!(
+                valid_id(&chapter.id)
+                    && chapter.url == format!("/api/narration/chapter/{}", chapter.id),
+                "Chapter progress could not be read. Tap Play to retry."
+            );
+        }
+        ensure!(
+            self.state != BuildState::Complete
+                || (self.completed_units == self.total_units && self.completed_chapter.is_some()),
+            "Chapter progress could not be read. Tap Play to retry."
+        );
+        Ok(())
+    }
+    fn ongoing(&self) -> bool {
+        matches!(self.state, BuildState::Ready | BuildState::Running)
+    }
+    fn label(&self) -> String {
+        let saved = format!(
+            "{} of {} batches saved",
+            self.completed_units, self.total_units
+        );
+        match self.state {
+            BuildState::Running if self.completed_units < self.total_units => {
+                format!("{saved} · Preparing next batch")
+            }
+            BuildState::Running => format!("{saved} · Joining chapter audio…"),
+            BuildState::Ready => format!("{saved} · Ready to prepare chapter audio"),
+            BuildState::Complete => format!(
+                "Chapter audio saved · {} batches · Ready to replay",
+                self.total_units
+            ),
+            BuildState::Budget => {
+                format!("{saved} · Daily allowance reached. Play after the 00:00 UTC reset to continue.")
+            }
+            BuildState::StorageFull => {
+                format!("{saved} · Audio storage is full. Saved batches remain playable.")
+            }
+            BuildState::Failed => {
+                format!("{saved} · Batch preparation stopped. Tap Play to retry.")
+            }
+            BuildState::Interrupted => {
+                format!("{saved} · Chapter preparation was interrupted. Tap Play to resume.")
+            }
+            BuildState::Cancelled => {
+                format!("{saved} · Chapter preparation stopped. Tap Play to resume.")
+            }
+        }
+    }
+}
+fn request_problem(status: u16) -> &'static str {
+    match status {
+        401 => "Sign in again to prepare chapter audio.",
+        403 => "Your account does not have access to this chapter audio.",
+        400 | 404 | 422 => {
+            "This text edition cannot be narrated. Choose Recorded audio when available."
+        }
+        429 => {
+            "Chapter audio is paused by a generation limit. Tap Play later to resume saved batches."
+        }
+        507 => "Audio storage is full. Saved batches remain playable.",
+        _ => "Chapter audio request failed. Tap Play to retry.",
+    }
+}
+const CONNECTION_PROBLEM: &str = "Connection interrupted. Tap Play to retry chapter audio.";
+
 // This session exists before the metadata request, so Stop can invalidate a
 // pending plan. Registering the job and cancellation share one lock; the server
 // tombstones an intent even if cancel arrives before its matching start.
@@ -104,14 +201,18 @@ impl BuildSession {
 }
 async fn build_request(credentials: &Credentials, path: &str, intent: &str) -> Result<()> {
     let client = platform::http_client(Duration::from_secs(30))?;
-    platform::authenticated(
+    let response = platform::authenticated(
         client.post(format!("{}{}", credentials.origin, path)),
         &credentials.token,
     )
     .json(&serde_json::json!({"intent":intent}))
     .send()
-    .await?
-    .error_for_status()?;
+    .await
+    .map_err(|_| anyhow::anyhow!(CONNECTION_PROBLEM))?;
+    ensure!(
+        response.status().is_success(),
+        request_problem(response.status().as_u16())
+    );
     Ok(())
 }
 
@@ -119,7 +220,7 @@ pub(super) enum PlaybackAction {
     Play(audio::PlaybackPlan),
     Retry(Result<()>),
 }
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 struct Unit {
     id: String,
     url: String,
@@ -130,6 +231,8 @@ enum Event {
     Capability(Result<Capability>),
     Plan(String, String, Result<Plan>),
     Retry(Result<()>),
+    Metadata(usize),
+    Progress(String, Result<BuildProgress>),
 }
 
 pub(super) struct Narration {
@@ -148,6 +251,12 @@ pub(super) struct Narration {
     build: Option<Arc<BuildSession>>,
     retrying: bool,
     failed: bool,
+    known_total: usize,
+    progress: Option<BuildProgress>,
+    last_poll: Option<Instant>,
+    polling: bool,
+    problem: Option<String>,
+    poll_problem: Option<String>,
 }
 impl Default for Narration {
     fn default() -> Self {
@@ -168,10 +277,46 @@ impl Default for Narration {
             build: None,
             retrying: false,
             failed: false,
+            known_total: 0,
+            progress: None,
+            last_poll: None,
+            polling: false,
+            problem: None,
+            poll_problem: None,
         }
     }
 }
 impl Narration {
+    pub fn status(&self) -> Option<String> {
+        if !self.has_session() {
+            return None;
+        }
+        if let Some(problem) = &self.problem {
+            return Some(problem.clone());
+        }
+        if let Some(problem) = &self.poll_problem {
+            return Some(match &self.progress {
+                Some(progress) => format!(
+                    "{} of {} batches saved · {problem}",
+                    progress.completed_units, progress.total_units
+                ),
+                None => problem.clone(),
+            });
+        }
+        if let Some(progress) = &self.progress {
+            if progress.state == BuildState::Complete && self.failed {
+                return Some("Chapter audio saved · Playback paused. Tap Play to retry.".into());
+            }
+            return Some(progress.label());
+        }
+        if self.known_total > 0 {
+            return Some(format!(
+                "Preparing chapter audio · {} batches",
+                self.known_total
+            ));
+        }
+        Some("Preparing chapter audio…".into())
+    }
     pub fn selected(&self) -> bool {
         self.enabled && !self.recorded
     }
@@ -204,6 +349,12 @@ impl Narration {
         self.generation += 1;
         self.retrying = false;
         self.failed = false;
+        self.known_total = 0;
+        self.progress = None;
+        self.last_poll = None;
+        self.polling = false;
+        self.problem = None;
+        self.poll_problem = None;
         self.pending = None;
         self.ready = None;
         self.wants_play = false;
@@ -273,6 +424,34 @@ impl Narration {
                     }
                     self.enabled = capability.enabled;
                 }
+                Event::Metadata(total) => {
+                    self.known_total = total;
+                }
+                Event::Progress(id, result) => {
+                    self.polling = false;
+                    let job = self
+                        .build
+                        .as_ref()
+                        .and_then(|build| build.job.lock().unwrap().clone());
+                    if job.as_ref().is_none_or(|job| job.id != id) {
+                        continue;
+                    }
+                    match result.and_then(|progress| {
+                        progress.validate(job.as_ref().unwrap())?;
+                        Ok(progress)
+                    }) {
+                        Ok(progress) => {
+                            // A successful status read proves what happened after
+                            // an ambiguous/lost Start reply. Ready alone does not.
+                            if progress.state != BuildState::Ready {
+                                self.problem = None;
+                            }
+                            self.progress = Some(progress);
+                            self.poll_problem = None;
+                        }
+                        Err(error) => self.poll_problem = Some(error.to_string()),
+                    }
+                }
                 Event::Retry(result) => {
                     self.retrying = false;
                     self.failed = result.is_err();
@@ -287,11 +466,68 @@ impl Narration {
                     }
                     self.pending = None;
                     let result = result.and_then(|plan| {
+                        self.known_total = plan.units.len();
+                        if let Some(complete) = &plan.completed_chapter {
+                            self.progress = Some(BuildProgress {
+                                id: plan
+                                    .job
+                                    .as_ref()
+                                    .map(|job| job.id.clone())
+                                    .unwrap_or_else(|| complete.id.clone()),
+                                state: BuildState::Complete,
+                                completed_units: plan.units.len(),
+                                total_units: plan.units.len(),
+                                completed_chapter: Some(complete.clone()),
+                            });
+                        }
                         playback_plan(plan, &chapter, &version, self.credentials.as_ref().unwrap())
                     });
                     match result {
                         Ok(plan) if !self.wants_play => self.ready = Some((version, plan)),
                         other => output = Some(other.map(PlaybackAction::Play)),
+                    }
+                }
+            }
+        }
+        // Status reads never start or retry generation. One in-flight request
+        // per session; terminal states remain visible until a manual Play.
+        let ongoing = self.progress.as_ref().is_none_or(BuildProgress::ongoing);
+        if ongoing {
+            if let Some(build) = self.build.as_ref() {
+                let job = build.job.lock().unwrap().clone();
+                if let Some(job) = job {
+                    ctx.request_repaint_after(Duration::from_secs(1));
+                    if !self.polling
+                        && self
+                            .last_poll
+                            .is_none_or(|last| last.elapsed() >= Duration::from_secs(1))
+                    {
+                        self.polling = true;
+                        self.last_poll = Some(Instant::now());
+                        let credentials = build.credentials.clone();
+                        self.run(ctx, async move {
+                            let result = async {
+                                let client = platform::http_client(Duration::from_secs(15))?;
+                                let response = platform::authenticated(
+                                    client.get(format!("{}{}", credentials.origin, job.status_url)),
+                                    &credentials.token,
+                                )
+                                .send()
+                                .await
+                                .map_err(|_| anyhow::anyhow!(CONNECTION_PROBLEM))?;
+                                ensure!(
+                                    response.status().is_success(),
+                                    request_problem(response.status().as_u16())
+                                );
+                                response.json::<BuildProgress>().await.map_err(|_| {
+                                    anyhow::anyhow!(
+                                        "Chapter progress could not be read. Tap Play to retry."
+                                    )
+                                })
+                            }
+                            .await;
+                            Event::Progress(job.id, result)
+                        });
                     }
                 }
             }
@@ -329,30 +565,41 @@ impl Narration {
         self.wants_play = true;
         let chapter = chapter.to_string();
         let version = version.to_string();
+        let metadata_tx = self.tx.clone();
+        let generation = self.generation;
+        let metadata_context = self.context.clone();
         self.run(&self.context, async move {
             let result = async {
                 let client = platform::http_client(Duration::from_secs(30))?;
-                let response = platform::authenticated(client.post(format!("{}/api/narration/plan",credentials.origin)), &credentials.token)
-                    .json(&serde_json::json!({"chapterId":chapter,"version":version})).send().await?;
+                let response = platform::authenticated(
+                    client.post(format!("{}/api/narration/plan", credentials.origin)),
+                    &credentials.token,
+                )
+                .json(&serde_json::json!({"chapterId":chapter,"version":version}))
+                .send()
+                .await
+                .map_err(|_| anyhow::anyhow!(CONNECTION_PROBLEM))?;
                 if !response.status().is_success() {
                     let status = response.status();
                     // Never echo private URLs, credentials, provider errors or text.
-                    bail!(match status.as_u16() {
-                        401|403 => "AI narration is unavailable for this account. Sign in again or choose Recorded audio.",
-                        400|404|422 => "AI narration is unavailable for this text version. Choose Recorded audio when available.",
-                        429 => "AI narration limit reached. Try again later or choose Recorded audio.",
-                        _ => "AI narration could not load. Tap Play to retry.",
-                    });
+                    bail!(request_problem(status.as_u16()));
                 }
-                let plan = response.json::<Plan>().await?;
+                let plan = response.json::<Plan>().await.map_err(|_| {
+                    anyhow::anyhow!("Chapter audio response could not be read. Tap Play to retry.")
+                })?;
                 // Validate all private addresses before a server build can start.
                 playback_plan_ref(&plan, &chapter, &version)?;
+                let _ = metadata_tx.send((generation, Event::Metadata(plan.units.len())));
+                metadata_context.request_repaint();
                 if plan.completed_chapter.is_none() {
-                    if let Some(job) = plan.job.clone() { build.start(job).await?; }
+                    if let Some(job) = plan.job.clone() {
+                        build.start(job).await?;
+                    }
                 }
                 Ok(plan)
-            }.await;
-            Event::Plan(chapter,version,result)
+            }
+            .await;
+            Event::Plan(chapter, version, result)
         });
         None
     }
@@ -375,7 +622,13 @@ impl Narration {
             return false;
         };
         previous.cancel();
+        self.generation += 1;
         self.build = Some(build.clone());
+        self.progress = None;
+        self.poll_problem = None;
+        self.problem = None;
+        self.last_poll = None;
+        self.polling = false;
         self.retrying = true;
         self.wants_play = true;
         self.run(&self.context, async move {
@@ -454,6 +707,17 @@ fn playback_plan(
 }
 
 impl Desktop {
+    pub(super) fn reader_status(&self) -> String {
+        if let Some(error) = self.study.storage_error() {
+            return error.to_string();
+        }
+        if self.narration.selected() {
+            if let Some(status) = self.narration.status() {
+                return status;
+            }
+        }
+        self.message.clone()
+    }
     pub(super) fn narration_version(&self, chapter: &str) -> &'static str {
         let book = self
             .library
@@ -492,6 +756,7 @@ impl Desktop {
             self.audio_control_playing(&self.active_chapter_id),
         ) {
             (true, true) => "Pause AI narration",
+            (true, false) if self.narration.failed => "Retry chapter audio",
             (true, false) => "Play AI narration",
             (false, true) => "Pause audio",
             (false, false) => "Play audio",
@@ -556,23 +821,28 @@ impl Desktop {
         }
         if let Some(plan) = plan {
             match plan {
-                Ok(PlaybackAction::Retry(result)) => {
-                    match result {
-                        Ok(()) => { let _ = self.audio_tx.send(audio::Command::Toggle); }
-                        Err(_) => self.audio_failed("AI narration could not resume. Tap Play to retry or choose Recorded audio.".into()),
+                Ok(PlaybackAction::Retry(result)) => match result {
+                    Ok(()) => {
+                        let _ = self.audio_tx.send(audio::Command::Toggle);
                     }
-                }
+                    Err(error) => {
+                        self.narration.problem = Some(error.to_string());
+                        self.audio_failed(error.to_string());
+                    }
+                },
                 Ok(PlaybackAction::Play(plan)) => {
                     self.narration.active = true;
                     self.audio_private = true;
                     let _ = self.audio_tx.send(audio::Command::Play(plan));
                 }
-                Err(_) => {
+                Err(error) => {
+                    self.narration.failed = true;
+                    self.narration.problem = Some(error.to_string());
                     self.audio_chapter = None;
                     self.audio_loading = false;
                     self.audio_private = false;
                     self.playing = false;
-                    self.message = "AI narration is unavailable for this text or account. Check your connection and tap Play to retry, or choose Recorded audio.".into();
+                    self.message = error.to_string();
                 }
             }
         }
@@ -799,5 +1069,151 @@ mod tests {
             .is_err());
         assert!(state.build.is_none());
         server.join().unwrap();
+    }
+    fn progress(state: BuildState, saved: usize) -> BuildProgress {
+        BuildProgress {
+            id: job().id,
+            state,
+            completed_units: saved,
+            total_units: 4,
+            completed_chapter: None,
+        }
+    }
+    #[test]
+    fn batch_progress_is_typed_bounded_and_terminal_states_are_honest() {
+        let running = progress(BuildState::Running, 2);
+        running.validate(&job()).unwrap();
+        assert_eq!(
+            running.label(),
+            "2 of 4 batches saved · Preparing next batch"
+        );
+        assert!(running.ongoing());
+        for (state, expected) in [
+            (BuildState::Budget, "00:00 UTC reset"),
+            (BuildState::StorageFull, "storage is full"),
+            (BuildState::Failed, "Tap Play to retry"),
+            (BuildState::Interrupted, "Tap Play to resume"),
+            (BuildState::Cancelled, "Tap Play to resume"),
+        ] {
+            let status = progress(state, 2);
+            assert!(!status.ongoing());
+            assert!(status.label().contains("2 of 4 batches saved"));
+            assert!(status.label().contains(expected));
+            assert!(!status.label().to_lowercase().contains("unavailable"));
+            assert!(!status.label().contains("Preparing next batch"));
+        }
+        let mut invalid = running;
+        invalid.completed_units = 5;
+        assert!(invalid.validate(&job()).is_err());
+        invalid.completed_units = 2;
+        invalid.id = "f".repeat(64);
+        assert!(invalid.validate(&job()).is_err());
+        let incomplete = progress(BuildState::Complete, 4);
+        assert!(incomplete.validate(&job()).is_err());
+    }
+    #[test]
+    fn stop_clears_progress_and_late_old_status_cannot_restore_it() {
+        let ctx = egui::Context::default();
+        let mut state = Narration::default();
+        state.credentials = Some(credentials());
+        state.checked = Some(Instant::now());
+        state.active = true;
+        state.progress = Some(progress(BuildState::Running, 2));
+        let stale = state.generation;
+        state.stop();
+        assert!(state.progress.is_none() && !state.polling && state.known_total == 0);
+        state
+            .tx
+            .send((
+                stale,
+                Event::Progress(job().id, Ok(progress(BuildState::Budget, 2))),
+            ))
+            .unwrap();
+        let c = credentials();
+        state.tick(&ctx, Some((c.user, c.token, c.origin)));
+        assert!(state.progress.is_none());
+        assert!(state.status().is_none());
+    }
+    #[test]
+    fn known_metadata_and_safe_permission_errors_are_not_generic_unavailability() {
+        let mut state = Narration::default();
+        state.pending = Some(("chapter".into(), "modernized".into()));
+        assert_eq!(state.status().as_deref(), Some("Preparing chapter audio…"));
+        state.known_total = 12;
+        assert_eq!(
+            state.status().as_deref(),
+            Some("Preparing chapter audio · 12 batches")
+        );
+        assert_ne!(request_problem(401), request_problem(422));
+        assert_ne!(request_problem(429), CONNECTION_PROBLEM);
+        state.problem = Some(request_problem(403).into());
+        assert_eq!(state.status().as_deref(), Some(request_problem(403)));
+        assert!(!state
+            .status()
+            .unwrap()
+            .to_lowercase()
+            .contains("unavailable"));
+    }
+    #[test]
+    fn terminal_job_status_does_not_turn_cached_pause_resume_into_generation_retry() {
+        let c = credentials();
+        let mut state = Narration::default();
+        state.credentials = Some(c.clone());
+        state.checked = Some(Instant::now());
+        state.active = true;
+        let build = BuildSession::new(c.clone()).unwrap();
+        *build.job.lock().unwrap() = Some(job());
+        state.build = Some(build);
+        state
+            .tx
+            .send((
+                state.generation,
+                Event::Progress(job().id, Ok(progress(BuildState::Budget, 2))),
+            ))
+            .unwrap();
+        state.tick(&egui::Context::default(), Some((c.user, c.token, c.origin)));
+        assert!(state.status().unwrap().contains("Daily allowance reached"));
+        assert!(!state.failed);
+        assert!(
+            !state.retry_build(),
+            "Cached audio resume must not start another generation"
+        );
+        assert!(
+            !state.polling,
+            "Terminal status does not schedule another poll"
+        );
+    }
+    #[test]
+    fn verified_progress_replaces_a_lost_start_reply_but_ready_retains_it() {
+        let c = credentials();
+        let ctx = egui::Context::default();
+        let mut state = Narration::default();
+        state.credentials = Some(c.clone());
+        state.checked = Some(Instant::now());
+        state.last_poll = Some(Instant::now());
+        state.active = true;
+        let build = BuildSession::new(c.clone()).unwrap();
+        *build.job.lock().unwrap() = Some(job());
+        state.build = Some(build);
+        for status in [BuildState::Ready, BuildState::Running, BuildState::Budget] {
+            state.problem = Some(CONNECTION_PROBLEM.into());
+            state
+                .tx
+                .send((
+                    state.generation,
+                    Event::Progress(job().id, Ok(progress(status, 2))),
+                ))
+                .unwrap();
+            state.tick(
+                &ctx,
+                Some((c.user.clone(), c.token.clone(), c.origin.clone())),
+            );
+            if status == BuildState::Ready {
+                assert_eq!(state.status().as_deref(), Some(CONNECTION_PROBLEM));
+            } else {
+                assert!(state.problem.is_none());
+                assert_eq!(state.status().unwrap(), progress(status, 2).label());
+            }
+        }
     }
 }

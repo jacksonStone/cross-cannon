@@ -652,7 +652,7 @@ impl Desktop {
         }
         while let Ok(event) = self.audio_rx.try_recv() {
             match event {
-                audio::Event::Loading => { self.audio_loading = true; self.message = if self.audio_private { "Loading AI narration…" } else { "Loading audio…" }.into(); },
+                audio::Event::Loading => { self.audio_loading = true; self.message = if self.audio_private { "Preparing chapter audio…" } else { "Loading audio…" }.into(); },
                 audio::Event::Chapter(chapter) => {
                     let changed = self.audio_chapter.as_deref() != Some(&chapter);
                     let follow = self
@@ -769,7 +769,8 @@ impl Desktop {
         {
             self.tools = false;
         }
-        if !self.message.is_empty() && self.dialog.is_none() {
+        let reader_status = self.reader_status();
+        if !reader_status.is_empty() && self.dialog.is_none() {
             egui::Area::new(Id::new("status"))
                 .anchor(
                     Align2::RIGHT_BOTTOM,
@@ -778,7 +779,7 @@ impl Desktop {
                 .show(ctx, |ui| {
                     egui::Frame::popup(ui.style()).show(ui, |ui| {
                         ui.set_max_width(360.0_f32.min(ctx.screen_rect().width() - 40.0));
-                        ui.label(&self.message);
+                        ui.label(&reader_status);
                     });
                 });
         }

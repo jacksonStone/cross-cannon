@@ -2034,3 +2034,63 @@ async fn interrupted_chapter_reopens_at_full_storage_and_saved_units_remain_free
     );
     assert_eq!(calls.load(Ordering::SeqCst), 1);
 }
+
+#[tokio::test]
+async fn chapter_progress_counts_saved_units_after_a_gap_without_charging_status_reads() {
+    let f = Fixture::with_on_prayer();
+    let (provider, calls, _, task) = mock().await;
+    let chapter = catalog::resolve(&f.root, &f.library, "anf03:vi.iv.i", "modernized").unwrap();
+    let count = chapter.units.len();
+    assert!(count > 1);
+    let app = f.app(f.cache((count - 1) as u64), provider);
+    let plan = chapter_plan(&app, &f.cookie, "anf03:vi.iv.i").await;
+    for unit in plan["units"].as_array().unwrap().iter().skip(1) {
+        assert_eq!(
+            request(
+                &app,
+                "GET",
+                unit["url"].as_str().unwrap(),
+                Some(&f.cookie),
+                None
+            )
+            .await
+            .status(),
+            StatusCode::OK
+        );
+    }
+    assert_eq!(calls.load(Ordering::SeqCst), count - 1);
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_A}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let status = wait_chapter(&app, &f.cookie, &plan).await;
+    assert_eq!(status["state"], "budget");
+    assert_eq!(status["completedUnits"], count - 1);
+    assert_eq!(status["totalUnits"], count);
+    for _ in 0..3 {
+        assert_eq!(
+            data(
+                request(
+                    &app,
+                    "GET",
+                    plan["job"]["statusUrl"].as_str().unwrap(),
+                    Some(&f.cookie),
+                    None
+                )
+                .await
+            )
+            .await["completedUnits"],
+            count - 1
+        );
+    }
+    assert_eq!(calls.load(Ordering::SeqCst), count - 1);
+    task.abort();
+}

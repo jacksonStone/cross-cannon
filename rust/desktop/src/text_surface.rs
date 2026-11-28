@@ -441,7 +441,8 @@ impl Desktop {
                 "versionControl": self.has_text_version_control(), "original": self.state.original,
                 "previous": self.text_surface.window.start > 0,
                 "next": self.text_surface.window.end < reading_chapters.len(),
-                "status": if self.study.storage_error().is_some() { self.study.storage_error().unwrap_or_default() } else { &self.message },
+                "status": self.reader_status(),
+                "narrationStatus": if self.narration.selected() { self.narration.status() } else { None },
             }),
             false,
         );

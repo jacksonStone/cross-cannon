@@ -273,7 +273,7 @@ static void emit(NSDictionary *event) {
             self.privateTask = nil;
             if (!valid) {
                 if(file) [NSFileManager.defaultManager removeItemAtURL:file error:nil];
-                [self failPrivate:http.statusCode == 429 ? @"AI narration limit reached. Try again later or choose Recorded audio." : @"AI narration unavailable. Tap Play to retry or choose Recorded audio."]; return;
+                [self failPrivate:http.statusCode == 429 ? @"Batch audio is paused by a generation limit. Saved batches remain available." : @"Batch audio paused. Tap Play to retry the saved chapter."]; return;
             }
             self.privateFile = file;
             [self replaceItem:[AVPlayerItem playerItemWithURL:file]];
@@ -331,7 +331,7 @@ static void emit(NSDictionary *event) {
         emit(@{@"type":@"fallback"});
         self.fallback = YES; [self load:YES];
     } else if (self.privateToken.length) {
-        [self failPrivate:@"AI narration unavailable. Tap Play to retry or choose Recorded audio."];
+        [self failPrivate:@"Batch audio paused. Tap Play to retry the saved chapter."];
     } else {
         NSString *message = self.player.currentItem.error.localizedDescription ?: @"Recording is unavailable";
         [self stop]; emit(@{@"type":@"error", @"message":message});
