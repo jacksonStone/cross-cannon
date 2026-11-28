@@ -219,17 +219,29 @@ impl Fixture {
         );
         f
     }
-    fn cache(&self, attempts: u64) -> Arc<Cache> {
+    fn cache(&self) -> Arc<Cache> {
+        self.cache_with_characters(20000)
+    }
+    fn cache_with_characters(&self, characters: u64) -> Arc<Cache> {
         Cache::open(
             self.root.join("cache"),
             Limits {
-                daily_attempts: attempts,
-                daily_characters: 20000,
+                daily_characters: characters,
                 max_disk_bytes: 64 * 1024 * 1024,
                 concurrency: 1,
             },
         )
         .unwrap()
+    }
+    fn reserved_usage(&self) -> (u64, u64) {
+        rusqlite::Connection::open(self.root.join("cache/cache.sqlite"))
+            .unwrap()
+            .query_row(
+                "SELECT COALESCE(SUM(attempts),0),COALESCE(SUM(characters),0) FROM allowance",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap()
     }
     fn app(&self, cache: Arc<Cache>, provider: ProviderConfig) -> Router {
         routes(Arc::new(Routes {
@@ -456,7 +468,7 @@ async fn mock_with_transcripts(
 async fn owner_auth_concurrent_misses_persistent_replay_and_private_reads() {
     let f = Fixture::new();
     let (provider, calls, _, task) = mock().await;
-    let cache = f.cache(4);
+    let cache = f.cache();
     let app = f.app(cache.clone(), provider.clone());
     for cookie in [None, Some("invalid=cookie")] {
         assert_eq!(
@@ -518,7 +530,7 @@ async fn owner_auth_concurrent_misses_persistent_replay_and_private_reads() {
     drop(app);
     drop(cache);
     task.abort();
-    let restarted = f.app(f.cache(1), provider);
+    let restarted = f.app(f.cache(), provider);
     let replay = request(&restarted, "GET", &url, Some(&f.cookie), None).await;
     assert_eq!(replay.status(), StatusCode::OK);
     assert_eq!(replay.into_body().collect().await.unwrap().to_bytes(), a);
@@ -529,7 +541,12 @@ async fn owner_auth_concurrent_misses_persistent_replay_and_private_reads() {
 async fn failure_retry_budget_and_no_partial_cache() {
     let f = Fixture::new();
     let (provider, calls, fail, task) = mock().await;
-    let app = f.app(f.cache(2), provider);
+    let unit_chars = catalog::resolve(&f.root, &f.library, "John:3", "web")
+        .unwrap()
+        .units[0]
+        .chars()
+        .count() as u64;
+    let app = f.app(f.cache_with_characters(2 * unit_chars), provider);
     let url = plan_url(&app, &f.cookie).await;
     fail.store(true, Ordering::SeqCst);
     let failed = request(&app, "GET", &url, Some(&f.cookie), None).await;
@@ -559,10 +576,104 @@ async fn failure_retry_budget_and_no_partial_cache() {
 }
 
 #[tokio::test]
+async fn existing_attempt_usage_does_not_cap_deduplicated_misses_and_restart_replay_is_free() {
+    let f = Fixture::new();
+    let unit_chars = catalog::resolve(&f.root, &f.library, "John:3", "web")
+        .unwrap()
+        .units[0]
+        .chars()
+        .count() as u64;
+    let (provider, calls, _, task) = mock().await;
+    let cache = f.cache_with_characters(unit_chars);
+    let app = f.app(cache.clone(), provider);
+    let url = plan_url(&app, &f.cookie).await;
+    // Existing deployed attempt counters remain intact, but are usage only.
+    rusqlite::Connection::open(f.root.join("cache/cache.sqlite"))
+        .unwrap()
+        .execute("INSERT INTO allowance VALUES (unixepoch()/86400,10,0)", [])
+        .unwrap();
+    let (first, concurrent) = tokio::join!(
+        request(&app, "GET", &url, Some(&f.cookie), None),
+        request(&app, "GET", &url, Some(&f.cookie), None)
+    );
+    assert_eq!(first.status(), StatusCode::OK);
+    assert_eq!(concurrent.status(), StatusCode::OK);
+    let expected = first.into_body().collect().await.unwrap().to_bytes();
+    assert_eq!(
+        concurrent.into_body().collect().await.unwrap().to_bytes(),
+        expected
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert_eq!(f.reserved_usage(), (11, unit_chars));
+    drop(app);
+    drop(cache);
+    task.abort();
+    task.await.unwrap_err();
+    let app = f.app(
+        f.cache_with_characters(0),
+        ProviderConfig::loopback("ws://127.0.0.1:1".into()),
+    );
+    let replay = request(&app, "GET", &url, Some(&f.cookie), None).await;
+    assert_eq!(replay.status(), StatusCode::OK);
+    assert_eq!(
+        replay.into_body().collect().await.unwrap().to_bytes(),
+        expected
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert_eq!(f.reserved_usage(), (11, unit_chars));
+}
+
+#[tokio::test]
+async fn manual_failure_retries_have_no_attempt_cap_but_canonical_character_budget_still_binds() {
+    let f = Fixture::new();
+    let unit_chars = catalog::resolve(&f.root, &f.library, "John:3", "web")
+        .unwrap()
+        .units[0]
+        .chars()
+        .count() as u64;
+    let (provider, calls, fail, task) = mock().await;
+    let app = f.app(f.cache_with_characters(12 * unit_chars), provider);
+    let url = plan_url(&app, &f.cookie).await;
+    fail.store(true, Ordering::SeqCst);
+    for n in 1..=12 {
+        assert_eq!(
+            request(&app, "GET", &url, Some(&f.cookie), None)
+                .await
+                .status(),
+            StatusCode::BAD_GATEWAY
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), n);
+        assert_eq!(f.reserved_usage(), (n as u64, n as u64 * unit_chars));
+    }
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        12,
+        "failures must not automatically retry"
+    );
+    assert_eq!(
+        request(&app, "GET", &url, Some(&f.cookie), None)
+            .await
+            .status(),
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 12);
+    assert_eq!(f.reserved_usage(), (12, 12 * unit_chars));
+    assert!(std::fs::read_dir(f.root.join("cache"))
+        .unwrap()
+        .all(|entry| !entry
+            .unwrap()
+            .path()
+            .extension()
+            .is_some_and(|extension| extension == "wav" || extension == "partial")));
+    task.abort();
+}
+
+#[tokio::test]
 async fn unverified_identity_invalid_bearer_csrf_arbitrary_text_and_default_off_fail_closed() {
     let f = Fixture::new();
     let (provider, calls, _, task) = mock().await;
-    let app = f.app(f.cache(2), provider);
+    let app = f.app(f.cache(), provider);
     let bad = HttpRequest::builder()
         .method("POST")
         .uri("/api/narration/plan")
@@ -648,7 +759,7 @@ async fn unverified_identity_invalid_bearer_csrf_arbitrary_text_and_default_off_
 async fn native_bearer_works_without_browser_origin_and_revocation_blocks_saved_audio() {
     let f = Fixture::new();
     let (provider, calls, _, task) = mock().await;
-    let app = f.app(f.cache(1), provider);
+    let app = f.app(f.cache(), provider);
     let token = format!("ccn_{}", auth::nonce().unwrap());
     let token_hash = cache::hash(token.as_bytes());
     f.auth
@@ -717,7 +828,12 @@ async fn native_bearer_works_without_browser_origin_and_revocation_blocks_saved_
 async fn allowance_is_persistent_failures_count_and_disk_limit_does_not_block_hits() {
     let f = Fixture::new();
     let (provider, calls, fail, task) = mock().await;
-    let cache = f.cache(1);
+    let unit_chars = catalog::resolve(&f.root, &f.library, "John:3", "web")
+        .unwrap()
+        .units[0]
+        .chars()
+        .count() as u64;
+    let cache = f.cache_with_characters(unit_chars);
     let app = f.app(cache.clone(), provider.clone());
     let url = plan_url(&app, &f.cookie).await;
     fail.store(true, Ordering::SeqCst);
@@ -729,7 +845,7 @@ async fn allowance_is_persistent_failures_count_and_disk_limit_does_not_block_hi
     );
     drop(app);
     drop(cache);
-    let cache = f.cache(1);
+    let cache = f.cache_with_characters(unit_chars);
     let app = f.app(cache.clone(), provider.clone());
     fail.store(false, Ordering::SeqCst);
     assert_eq!(
@@ -739,11 +855,11 @@ async fn allowance_is_persistent_failures_count_and_disk_limit_does_not_block_hi
         StatusCode::TOO_MANY_REQUESTS
     );
     assert_eq!(calls.load(Ordering::SeqCst), 1);
-    // Explicit allowance increase allows one retry. Completed clip remains readable
+    // Explicit fixture character-budget increase allows one retry. Completed clip remains readable
     // when the storage ceiling is subsequently reduced below existing disk usage.
     drop(app);
     drop(cache);
-    let cache = f.cache(2);
+    let cache = f.cache_with_characters(2 * unit_chars);
     let app = f.app(cache.clone(), provider.clone());
     assert_eq!(
         request(&app, "GET", &url, Some(&f.cookie), None)
@@ -824,12 +940,11 @@ fn exact_identity_covers_account_version_source_voice_speed_and_protocol_and_cac
     assert!(!cache::valid_id("../../secrets"));
     assert!(!cache::valid_id(&"A".repeat(64)));
     let f = Fixture::new();
-    let cache = f.cache(1);
+    let cache = f.cache();
     assert!(
         Cache::open(
             f.root.join("cache"),
             Limits {
-                daily_attempts: 1,
                 daily_characters: 1000,
                 max_disk_bytes: 64 * 1024 * 1024,
                 concurrency: 1
@@ -840,7 +955,7 @@ fn exact_identity_covers_account_version_source_voice_speed_and_protocol_and_cac
     );
     drop(cache);
     std::fs::write(f.root.join("cache/interrupted.partial"), b"not audio").unwrap();
-    let _cache = f.cache(1);
+    let _cache = f.cache();
     assert!(!f.root.join("cache/interrupted.partial").exists());
 }
 
@@ -848,7 +963,7 @@ fn exact_identity_covers_account_version_source_voice_speed_and_protocol_and_cac
 async fn pending_synthesis_reserves_space_against_concurrent_plan_metadata() {
     let f = Fixture::new();
     let (provider, calls, _, task) = mock().await;
-    let cache = f.cache(3);
+    let cache = f.cache();
     let app = f.app(cache.clone(), provider);
     let url = plan_url(&app, &f.cookie).await;
     let used = std::fs::read_dir(f.root.join("cache"))
@@ -901,7 +1016,7 @@ async fn even_two_allowlisted_accounts_cannot_read_each_others_clips() {
     let f = Fixture::new();
     let (provider, calls, _, task) = mock().await;
     let other = f.token_for("second-owner@example.test", "second-owner-subject");
-    let cache_for_job = f.cache(4);
+    let cache_for_job = f.cache();
     let app = routes(Arc::new(Routes {
         accounts: f.accounts.clone(),
         root: f.root.clone(),
@@ -956,7 +1071,7 @@ async fn audio_done_then_incomplete_or_cancelled_never_promotes_and_completed_re
     let f = Fixture::new();
     let (provider, calls, _, task) =
         mock_with_statuses(vec!["incomplete", "cancelled", "completed"]).await;
-    let cache = f.cache(4);
+    let cache = f.cache();
     let app = f.app(cache.clone(), provider.clone());
     let url = plan_url(&app, &f.cookie).await;
     for status in ["incomplete", "cancelled"] {
@@ -986,7 +1101,7 @@ async fn audio_done_then_incomplete_or_cancelled_never_promotes_and_completed_re
     drop(app);
     drop(cache);
     task.abort();
-    let restarted = f.app(f.cache(4), provider);
+    let restarted = f.app(f.cache(), provider);
     assert_eq!(plan_url(&restarted, &f.cookie).await, url);
     let replay = request(&restarted, "GET", &url, Some(&f.cookie), None).await;
     assert_eq!(replay.status(), StatusCode::OK);
@@ -1006,7 +1121,7 @@ async fn on_prayer_submits_modernization_even_for_original_alias_and_only_change
     let f = Fixture::with_on_prayer();
     let submitted = Arc::new(std::sync::Mutex::new(Vec::new()));
     let (provider, calls, _, task) = mock_with_capture(Vec::new(), Some(submitted.clone())).await;
-    let app = f.app(f.cache(32), provider);
+    let app = f.app(f.cache(), provider);
     let get_plan = |version: &'static str| {
         request(
             &app,
@@ -1134,7 +1249,7 @@ async fn actual_canary_typography_promotes_only_complete_matching_audio_and_repl
         &source,
         &settings,
     );
-    let cache = f.cache(5);
+    let cache = f.cache();
     for (attempt, invalid) in ["incomplete", "cancelled", "failed", "wrong words"]
         .iter()
         .enumerate()
@@ -1181,7 +1296,6 @@ async fn actual_canary_typography_promotes_only_complete_matching_audio_and_repl
     let reopened = cache::Cache::open(
         f.root.join("cache"),
         cache::Limits {
-            daily_attempts: 0,
             daily_characters: 0,
             max_disk_bytes: 64 * 1024 * 1024,
             concurrency: 1,
@@ -1220,7 +1334,7 @@ async fn cedar_default_cannot_reuse_marin_clip_and_both_replay_without_provider(
     assert_ne!(old_id, new_id, "Cedar must not replay the prior voice");
     let (provider, calls, _, task) = mock().await;
     let provider = Arc::new(provider);
-    let cache = f.cache(2);
+    let cache = f.cache();
     let old = cache
         .clip(
             old_id.clone(),
@@ -1251,7 +1365,6 @@ async fn cedar_default_cannot_reuse_marin_clip_and_both_replay_without_provider(
     let reopened = Cache::open(
         f.root.join("cache"),
         Limits {
-            daily_attempts: 0,
             daily_characters: 0,
             max_disk_bytes: 64 * 1024 * 1024,
             concurrency: 1,
@@ -1318,7 +1431,7 @@ const INTENT_B: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 async fn chapter_batches_finish_without_fetching_units_and_reopen_as_one_ranged_file() {
     let f = Fixture::with_on_prayer();
     let (provider, calls, _, task) = mock().await;
-    let cache = f.cache(100);
+    let cache = f.cache();
     let app = f.app(cache.clone(), provider);
     let plan = chapter_plan(&app, &f.cookie, "anf03:vi.iv.i").await;
     let count = plan["units"].as_array().unwrap().len();
@@ -1419,7 +1532,7 @@ async fn chapter_batches_finish_without_fetching_units_and_reopen_as_one_ranged_
     drop(cache);
     task.abort();
     tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-    let cache = f.cache(0);
+    let cache = f.cache_with_characters(0);
     let offline = ProviderConfig::loopback("ws://127.0.0.1:1".into());
     let app = f.app(cache, offline);
     let replay = chapter_plan(&app, &f.cookie, "anf03:vi.iv.i").await;
@@ -1441,7 +1554,12 @@ async fn chapter_batches_finish_without_fetching_units_and_reopen_as_one_ranged_
 async fn chapter_allowance_stops_resumably_and_unit_get_never_retries_failed_job() {
     let f = Fixture::with_on_prayer();
     let (provider, calls, _, task) = mock().await;
-    let cache = f.cache(1);
+    let first_unit_chars = catalog::resolve(&f.root, &f.library, "anf03:vi.iv.i", "modernized")
+        .unwrap()
+        .units[0]
+        .chars()
+        .count() as u64;
+    let cache = f.cache_with_characters(first_unit_chars);
     let app = f.app(cache.clone(), provider.clone());
     let plan = chapter_plan(&app, &f.cookie, "anf03:vi.iv.i").await;
     assert_eq!(
@@ -1510,7 +1628,7 @@ async fn chapter_allowance_stops_resumably_and_unit_get_never_retries_failed_job
 async fn cancel_before_start_is_durable_and_fresh_intent_can_resume() {
     let f = Fixture::new();
     let (provider, calls, _, task) = mock().await;
-    let cache = f.cache(4);
+    let cache = f.cache();
     let app = f.app(cache.clone(), provider.clone());
     let plan = chapter_plan(&app, &f.cookie, "John:3").await;
     let cancel = plan["job"]["cancelUrl"].as_str().unwrap();
@@ -1541,7 +1659,7 @@ async fn cancel_before_start_is_durable_and_fresh_intent_can_resume() {
     assert_eq!(calls.load(Ordering::SeqCst), 0);
     drop(app);
     drop(cache);
-    let app = f.app(f.cache(4), provider);
+    let app = f.app(f.cache(), provider);
     assert_eq!(
         request(
             &app,
@@ -1610,7 +1728,7 @@ fn regression_routes(f: &Fixture, cache: Arc<Cache>, provider: ProviderConfig) -
 async fn chapter_recovery_reuses_published_file_and_stale_start_cannot_reset_completion() {
     let f = Fixture::new();
     let (provider, calls, _, task) = mock().await;
-    let cache = f.cache(1);
+    let cache = f.cache();
     let state = regression_routes(&f, cache.clone(), provider);
     let app = routes(state.clone());
     let plan = chapter_plan(&app, &f.cookie, "John:3").await;
@@ -1683,7 +1801,6 @@ async fn chapter_recovery_reuses_published_file_and_stale_start_cannot_reset_com
     let cache = Cache::open(
         f.root.join("cache"),
         Limits {
-            daily_attempts: 0,
             daily_characters: 0,
             max_disk_bytes: 64 * 1024 * 1024,
             concurrency: 1,
@@ -1746,7 +1863,7 @@ async fn chapter_parallel_plans_preserve_live_job_and_do_not_start_more_generati
     let f = Fixture::new();
     let submitted = Arc::new(std::sync::Mutex::new(Vec::new()));
     let (provider, calls, _, task) = mock_with_capture(Vec::new(), Some(submitted.clone())).await;
-    let cache = f.cache(2);
+    let cache = f.cache();
     let state = regression_routes(&f, cache, provider);
     let app = routes(state.clone());
     let plan = chapter_plan(&app, &f.cookie, "John:3").await;
@@ -1823,7 +1940,7 @@ async fn chapter_stop_or_revocation_finishes_only_inflight_unit_and_explicit_pla
         let submitted = Arc::new(std::sync::Mutex::new(Vec::new()));
         let (provider, calls, _, task) =
             mock_with_capture(Vec::new(), Some(submitted.clone())).await;
-        let cache = f.cache(100);
+        let cache = f.cache();
         let app = f.app(cache.clone(), provider);
         let plan = chapter_plan(&app, &f.cookie, "anf03:vi.iv.i").await;
         let units = plan["units"].as_array().unwrap();
@@ -1971,7 +2088,7 @@ async fn chapter_stop_or_revocation_finishes_only_inflight_unit_and_explicit_pla
 async fn interrupted_chapter_reopens_at_full_storage_and_saved_units_remain_free() {
     let f = Fixture::new();
     let (provider, calls, _, task) = mock().await;
-    let cache = f.cache(4);
+    let cache = f.cache();
     let app = f.app(cache.clone(), provider);
     let plan = chapter_plan(&app, &f.cookie, "John:3").await;
     let unit = plan["units"][0]["url"].as_str().unwrap();
@@ -2006,7 +2123,6 @@ async fn interrupted_chapter_reopens_at_full_storage_and_saved_units_remain_free
     let cache = Cache::open(
         f.root.join("cache"),
         Limits {
-            daily_attempts: 0,
             daily_characters: 0,
             max_disk_bytes: ceiling,
             concurrency: 1,
@@ -2042,7 +2158,13 @@ async fn chapter_progress_counts_saved_units_after_a_gap_without_charging_status
     let chapter = catalog::resolve(&f.root, &f.library, "anf03:vi.iv.i", "modernized").unwrap();
     let count = chapter.units.len();
     assert!(count > 1);
-    let app = f.app(f.cache((count - 1) as u64), provider);
+    let paid_characters = chapter
+        .units
+        .iter()
+        .skip(1)
+        .map(|unit| unit.chars().count() as u64)
+        .sum();
+    let app = f.app(f.cache_with_characters(paid_characters), provider);
     let plan = chapter_plan(&app, &f.cookie, "anf03:vi.iv.i").await;
     for unit in plan["units"].as_array().unwrap().iter().skip(1) {
         assert_eq!(

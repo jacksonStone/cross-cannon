@@ -125,7 +125,6 @@ impl Service {
         let cache = Cache::open(
             path,
             Limits {
-                daily_attempts: setting("CROSS_CANON_NARRATION_DAILY_ATTEMPTS", 40, 1, 1000)?,
                 daily_characters: setting(
                     "CROSS_CANON_NARRATION_DAILY_CHARACTERS",
                     20000,

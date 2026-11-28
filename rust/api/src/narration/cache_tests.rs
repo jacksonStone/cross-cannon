@@ -18,7 +18,6 @@ impl Temp {
         Cache::open(
             self.0.join("cache"),
             Limits {
-                daily_attempts: 1,
                 daily_characters: 20,
                 max_disk_bytes: 64 * 1024 * 1024,
                 concurrency: 1,
@@ -91,7 +90,6 @@ fn chapter_metadata_and_cancel_tombstones_survive_reopen_without_altering_clips_
     let reopened = Cache::open(
         root,
         Limits {
-            daily_attempts: 0,
             daily_characters: 0,
             max_disk_bytes: 64 * 1024 * 1024,
             concurrency: 1,

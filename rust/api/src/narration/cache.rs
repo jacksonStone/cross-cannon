@@ -74,7 +74,6 @@ pub(super) fn clip_id(
 }
 #[derive(Clone)]
 pub(super) struct Limits {
-    pub daily_attempts: u64,
     pub daily_characters: u64,
     pub max_disk_bytes: u64,
     pub concurrency: usize,
@@ -475,16 +474,12 @@ impl Cache {
         let day = day();
         tx.execute("INSERT OR IGNORE INTO allowance VALUES (?,0,0)", [day])
             .map_err(|_| Failure::unavailable())?;
-        let (attempts, chars): (u64, u64) = tx
-            .query_row(
-                "SELECT attempts,characters FROM allowance WHERE day=?",
-                [day],
-                |r| Ok((r.get(0)?, r.get(1)?)),
-            )
+        let chars: u64 = tx
+            .query_row("SELECT characters FROM allowance WHERE day=?", [day], |r| {
+                r.get(0)
+            })
             .map_err(|_| Failure::unavailable())?;
-        if attempts >= self.limits.daily_attempts
-            || chars.saturating_add(characters as u64) > self.limits.daily_characters
-        {
+        if chars.saturating_add(characters as u64) > self.limits.daily_characters {
             return Err(Failure::budget());
         }
         tx.execute(
