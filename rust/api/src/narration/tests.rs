@@ -238,6 +238,7 @@ impl Fixture {
             library: self.library.clone(),
             service: Some(Arc::new(Service {
                 owners: HashSet::from(["owner@example.test".into()]),
+                jobs: jobs::Jobs::open(cache.clone()).unwrap(),
                 cache,
                 settings: SpeechSettings::default(),
                 provider: Arc::new(provider),
@@ -900,6 +901,7 @@ async fn even_two_allowlisted_accounts_cannot_read_each_others_clips() {
     let f = Fixture::new();
     let (provider, calls, _, task) = mock().await;
     let other = f.token_for("second-owner@example.test", "second-owner-subject");
+    let cache_for_job = f.cache(4);
     let app = routes(Arc::new(Routes {
         accounts: f.accounts.clone(),
         root: f.root.clone(),
@@ -909,7 +911,8 @@ async fn even_two_allowlisted_accounts_cannot_read_each_others_clips() {
                 "owner@example.test".into(),
                 "second-owner@example.test".into(),
             ]),
-            cache: f.cache(4),
+            jobs: jobs::Jobs::open(cache_for_job.clone()).unwrap(),
+            cache: cache_for_job,
             settings: SpeechSettings::default(),
             provider: Arc::new(provider),
             resolution_slots: Arc::new(tokio::sync::Semaphore::new(2)),
@@ -1269,4 +1272,697 @@ async fn cedar_default_cannot_reuse_marin_clip_and_both_replay_without_provider(
         2,
         "Post-reopen replay must use neither provider nor budget"
     );
+}
+
+async fn chapter_plan(app: &Router, cookie: &str, chapter: &str) -> Value {
+    let response = request(
+        app,
+        "POST",
+        "/api/narration/plan",
+        Some(cookie),
+        Some(
+            json!({"chapterId":chapter,"version":if chapter=="John:3" {"web"} else {"modernized"}}),
+        ),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    data(response).await
+}
+async fn wait_chapter(app: &Router, cookie: &str, plan: &Value) -> Value {
+    for _ in 0..300 {
+        let status = data(
+            request(
+                app,
+                "GET",
+                plan["job"]["statusUrl"].as_str().unwrap(),
+                Some(cookie),
+                None,
+            )
+            .await,
+        )
+        .await;
+        if status["state"] != "running" {
+            return status;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    panic!("chapter did not reach terminal state")
+}
+fn start_path(plan: &Value) -> &str {
+    plan["job"]["startUrl"].as_str().unwrap()
+}
+const INTENT_A: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const INTENT_B: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+#[tokio::test]
+async fn chapter_batches_finish_without_fetching_units_and_reopen_as_one_ranged_file() {
+    let f = Fixture::with_on_prayer();
+    let (provider, calls, _, task) = mock().await;
+    let cache = f.cache(100);
+    let app = f.app(cache.clone(), provider);
+    let plan = chapter_plan(&app, &f.cookie, "anf03:vi.iv.i").await;
+    let count = plan["units"].as_array().unwrap().len();
+    assert!(count > 1);
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+    let (a, b) = tokio::join!(
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_A}))
+        ),
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_B}))
+        )
+    );
+    assert_eq!(a.status(), StatusCode::OK);
+    assert_eq!(b.status(), StatusCode::OK);
+    let done = wait_chapter(&app, &f.cookie, &plan).await;
+    assert_eq!(done["state"], "complete");
+    assert_eq!(done["completedUnits"], count);
+    assert_eq!(calls.load(Ordering::SeqCst), count);
+    let url = done["completedChapter"]["url"].as_str().unwrap().to_owned();
+    let bytes = request(&app, "GET", &url, Some(&f.cookie), None)
+        .await
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
+    assert_eq!(&bytes[..4], b"RIFF");
+    assert_eq!(
+        u32::from_le_bytes(bytes[40..44].try_into().unwrap()) as usize,
+        bytes.len() - 44
+    );
+    let expected_pcm = plan["units"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|u| {
+            std::fs::read(cache.unit_path(u["id"].as_str().unwrap()).unwrap()).unwrap()[44..]
+                .to_vec()
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+    assert_eq!(&bytes[44..], expected_pcm);
+    assert_eq!(
+        request(&app, "GET", &url, None, None).await.status(),
+        StatusCode::UNAUTHORIZED
+    );
+    let other = f.token_for("other@example.test", "other");
+    assert_eq!(
+        request(&app, "GET", &url, Some(&other), None)
+            .await
+            .status(),
+        StatusCode::FORBIDDEN
+    );
+    let ranged = app
+        .clone()
+        .oneshot(
+            HttpRequest::builder()
+                .uri(&url)
+                .header("cookie", &f.cookie)
+                .header("range", "bytes=44-51")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(ranged.status(), StatusCode::PARTIAL_CONTENT);
+    assert_eq!(
+        ranged.into_body().collect().await.unwrap().to_bytes(),
+        &bytes[44..52]
+    );
+    let head = request(&app, "HEAD", &url, Some(&f.cookie), None).await;
+    assert_eq!(head.status(), StatusCode::OK);
+    assert_eq!(
+        head.headers()["content-length"]
+            .to_str()
+            .unwrap()
+            .parse::<usize>()
+            .unwrap(),
+        bytes.len()
+    );
+    assert!(head
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes()
+        .is_empty());
+    drop(app);
+    drop(cache);
+    task.abort();
+    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    let cache = f.cache(0);
+    let offline = ProviderConfig::loopback("ws://127.0.0.1:1".into());
+    let app = f.app(cache, offline);
+    let replay = chapter_plan(&app, &f.cookie, "anf03:vi.iv.i").await;
+    assert_eq!(replay["completedChapter"]["url"], url);
+    assert_eq!(
+        request(&app, "GET", &url, Some(&f.cookie), None)
+            .await
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes(),
+        bytes
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), count);
+}
+
+#[tokio::test]
+async fn chapter_allowance_stops_resumably_and_unit_get_never_retries_failed_job() {
+    let f = Fixture::with_on_prayer();
+    let (provider, calls, _, task) = mock().await;
+    let cache = f.cache(1);
+    let app = f.app(cache.clone(), provider.clone());
+    let plan = chapter_plan(&app, &f.cookie, "anf03:vi.iv.i").await;
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_A}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let stopped = wait_chapter(&app, &f.cookie, &plan).await;
+    assert_eq!(stopped["state"], "budget");
+    assert_eq!(stopped["completedUnits"], 1);
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert!(stopped["completedChapter"].is_null());
+    assert_eq!(
+        request(
+            &app,
+            "GET",
+            plan["units"][0]["url"].as_str().unwrap(),
+            Some(&f.cookie),
+            None
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(
+            &app,
+            "GET",
+            plan["units"][1]["url"].as_str().unwrap(),
+            Some(&f.cookie),
+            None
+        )
+        .await
+        .status(),
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_B}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        wait_chapter(&app, &f.cookie, &plan).await["state"],
+        "budget"
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    task.abort();
+}
+
+#[tokio::test]
+async fn cancel_before_start_is_durable_and_fresh_intent_can_resume() {
+    let f = Fixture::new();
+    let (provider, calls, _, task) = mock().await;
+    let cache = f.cache(4);
+    let app = f.app(cache.clone(), provider.clone());
+    let plan = chapter_plan(&app, &f.cookie, "John:3").await;
+    let cancel = plan["job"]["cancelUrl"].as_str().unwrap();
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            cancel,
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_A}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_A}))
+        )
+        .await
+        .status(),
+        StatusCode::CONFLICT
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+    drop(app);
+    drop(cache);
+    let app = f.app(f.cache(4), provider);
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_A}))
+        )
+        .await
+        .status(),
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_B}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        wait_chapter(&app, &f.cookie, &plan).await["state"],
+        "complete"
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    task.abort();
+}
+
+#[test]
+fn chapter_range_parser_rejects_invalid_or_multiple_ranges() {
+    assert_eq!(audio_range(None, 100), Some((0, 99, false)));
+    assert_eq!(audio_range(Some("bytes=90-200"), 100), Some((90, 99, true)));
+    assert_eq!(audio_range(Some("bytes=-10"), 100), Some((90, 99, true)));
+    for invalid in [
+        "bytes=100-",
+        "bytes=9-2",
+        "bytes=0-1,4-5",
+        "bytes=-0",
+        "other=0-2",
+    ] {
+        assert_eq!(audio_range(Some(invalid), 100), None);
+    }
+}
+
+fn regression_routes(f: &Fixture, cache: Arc<Cache>, provider: ProviderConfig) -> Arc<Routes> {
+    Arc::new(Routes {
+        accounts: f.accounts.clone(),
+        root: f.root.clone(),
+        library: f.library.clone(),
+        service: Some(Arc::new(Service {
+            owners: HashSet::from(["owner@example.test".into()]),
+            jobs: jobs::Jobs::open(cache.clone()).unwrap(),
+            cache,
+            settings: SpeechSettings::default(),
+            provider: Arc::new(provider),
+            resolution_slots: Arc::new(tokio::sync::Semaphore::new(2)),
+        })),
+    })
+}
+
+#[tokio::test]
+async fn chapter_recovery_reuses_published_file_and_stale_start_cannot_reset_completion() {
+    let f = Fixture::new();
+    let (provider, calls, _, task) = mock().await;
+    let cache = f.cache(1);
+    let state = regression_routes(&f, cache.clone(), provider);
+    let app = routes(state.clone());
+    let plan = chapter_plan(&app, &f.cookie, "John:3").await;
+    let id = plan["job"]["id"].as_str().unwrap();
+    let stale = state
+        .service
+        .as_ref()
+        .unwrap()
+        .jobs
+        .get(id)
+        .unwrap()
+        .unwrap();
+    assert_eq!(stale.state, "ready");
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_A}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let completed = wait_chapter(&app, &f.cookie, &plan).await;
+    assert_eq!(completed["state"], "complete");
+    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    let url = completed["completedChapter"]["url"].as_str().unwrap();
+    let expected = request(&app, "GET", url, Some(&f.cookie), None)
+        .await
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
+    let mut headers = HeaderMap::new();
+    headers.insert("cookie", f.cookie.parse().unwrap());
+    let (user, _) = owner(&state, &headers, false).await.unwrap();
+    state
+        .service
+        .as_ref()
+        .unwrap()
+        .jobs
+        .start(stale, INTENT_B.into(), state.clone(), user, headers)
+        .unwrap();
+    assert_eq!(state.service.as_ref().unwrap().jobs.get(id).unwrap().unwrap().state, "complete", "start must reload the current record rather than overwrite completion with a stale ready record");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+
+    // Simulate a crash after atomic file publication but before the terminal DB
+    // update. Unit and chapter files are real outputs of the mock protocol path.
+    let mut interrupted = state
+        .service
+        .as_ref()
+        .unwrap()
+        .jobs
+        .get(id)
+        .unwrap()
+        .unwrap();
+    interrupted.state = "running".into();
+    interrupted.completed = 0;
+    cache
+        .job_put(id, &serde_json::to_string(&interrupted).unwrap())
+        .unwrap();
+    drop(app);
+    drop(state);
+    drop(cache);
+    task.abort();
+    task.await.unwrap_err();
+    let cache = Cache::open(
+        f.root.join("cache"),
+        Limits {
+            daily_attempts: 0,
+            daily_characters: 0,
+            max_disk_bytes: 64 * 1024 * 1024,
+            concurrency: 1,
+        },
+    )
+    .unwrap();
+    let state = regression_routes(
+        &f,
+        cache,
+        ProviderConfig::loopback("ws://127.0.0.1:1".into()),
+    );
+    assert_eq!(
+        state
+            .service
+            .as_ref()
+            .unwrap()
+            .jobs
+            .get(id)
+            .unwrap()
+            .unwrap()
+            .state,
+        "interrupted"
+    );
+    let app = routes(state);
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_B}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        wait_chapter(&app, &f.cookie, &plan).await["state"],
+        "complete"
+    );
+    assert_eq!(
+        request(&app, "GET", url, Some(&f.cookie), None)
+            .await
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes(),
+        expected
+    );
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        1,
+        "recovery needs neither provider access nor a generation budget"
+    );
+}
+
+#[tokio::test]
+async fn chapter_parallel_plans_preserve_live_job_and_do_not_start_more_generation() {
+    let f = Fixture::new();
+    let submitted = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let (provider, calls, _, task) = mock_with_capture(Vec::new(), Some(submitted.clone())).await;
+    let cache = f.cache(2);
+    let state = regression_routes(&f, cache, provider);
+    let app = routes(state.clone());
+    let plan = chapter_plan(&app, &f.cookie, "John:3").await;
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            start_path(&plan),
+            Some(&f.cookie),
+            Some(json!({"intent":INTENT_A}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    for _ in 0..200 {
+        if !submitted.lock().unwrap().is_empty() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+    }
+    assert_eq!(submitted.lock().unwrap().len(), 1);
+    let selected = catalog::resolve(&f.root, &f.library, "John:3", "web").unwrap();
+    let account = state
+        .service
+        .as_ref()
+        .unwrap()
+        .jobs
+        .get(plan["job"]["id"].as_str().unwrap())
+        .unwrap()
+        .unwrap()
+        .account;
+    let units = plan["units"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|u| u["id"].as_str().unwrap().to_owned())
+        .collect::<Vec<_>>();
+    let barrier = Arc::new(std::sync::Barrier::new(16));
+    let threads = (0..16)
+        .map(|_| {
+            let jobs = state.service.as_ref().unwrap().jobs.clone();
+            let selected = selected.clone();
+            let account = account.clone();
+            let units = units.clone();
+            let barrier = barrier.clone();
+            std::thread::spawn(move || {
+                barrier.wait();
+                let described = jobs.describe(&account, &selected, units).unwrap();
+                assert!(described.activated);
+                assert_ne!(
+                    described.state, "ready",
+                    "parallel planning must never overwrite an activated job"
+                );
+                described.id
+            })
+        })
+        .collect::<Vec<_>>();
+    for thread in threads {
+        assert_eq!(thread.join().unwrap(), plan["job"]["id"].as_str().unwrap());
+    }
+    assert_eq!(
+        wait_chapter(&app, &f.cookie, &plan).await["state"],
+        "complete"
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    task.abort();
+}
+
+#[tokio::test]
+async fn chapter_stop_or_revocation_finishes_only_inflight_unit_and_explicit_play_resumes() {
+    for revoke_session in [false, true] {
+        let f = Fixture::with_on_prayer();
+        let submitted = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let (provider, calls, _, task) =
+            mock_with_capture(Vec::new(), Some(submitted.clone())).await;
+        let cache = f.cache(100);
+        let app = f.app(cache.clone(), provider);
+        let plan = chapter_plan(&app, &f.cookie, "anf03:vi.iv.i").await;
+        let units = plan["units"].as_array().unwrap();
+        assert!(units.len() > 1);
+        assert_eq!(
+            request(
+                &app,
+                "POST",
+                start_path(&plan),
+                Some(&f.cookie),
+                Some(json!({"intent":INTENT_A}))
+            )
+            .await
+            .status(),
+            StatusCode::OK
+        );
+        for _ in 0..200 {
+            if !submitted.lock().unwrap().is_empty() {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        }
+        assert_eq!(submitted.lock().unwrap().len(), 1);
+        if revoke_session {
+            f.auth
+                .sign_out(f.cookie.split_once('=').unwrap().1)
+                .unwrap();
+        } else {
+            assert_eq!(
+                request(
+                    &app,
+                    "POST",
+                    plan["job"]["cancelUrl"].as_str().unwrap(),
+                    Some(&f.cookie),
+                    Some(json!({"intent":INTENT_A}))
+                )
+                .await
+                .status(),
+                StatusCode::OK
+            );
+        }
+        let mut terminal = None;
+        for _ in 0..300 {
+            let record: jobs::Record = serde_json::from_str(
+                &cache
+                    .job_get(plan["job"]["id"].as_str().unwrap())
+                    .unwrap()
+                    .unwrap(),
+            )
+            .unwrap();
+            if record.state != "running" {
+                terminal = Some(record);
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        let stopped = terminal.expect("cancel or revoked session must stop the chapter job");
+        assert_eq!(
+            stopped.state,
+            if revoke_session {
+                "failed"
+            } else {
+                "cancelled"
+            }
+        );
+        assert_eq!(stopped.completed, 1);
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            1,
+            "no second unit may be charged after Stop or session revocation"
+        );
+        let first =
+            std::fs::read(cache.unit_path(units[0]["id"].as_str().unwrap()).unwrap()).unwrap();
+        assert!(!cache
+            .unit_path(units[1]["id"].as_str().unwrap())
+            .unwrap()
+            .exists());
+        if revoke_session {
+            assert_eq!(
+                request(
+                    &app,
+                    "GET",
+                    units[0]["url"].as_str().unwrap(),
+                    Some(&f.cookie),
+                    None
+                )
+                .await
+                .status(),
+                StatusCode::UNAUTHORIZED
+            );
+        } else {
+            assert_eq!(
+                request(
+                    &app,
+                    "GET",
+                    units[1]["url"].as_str().unwrap(),
+                    Some(&f.cookie),
+                    None
+                )
+                .await
+                .status(),
+                StatusCode::BAD_GATEWAY
+            );
+        }
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            1,
+            "a failed-unit HTTP fetch must not restart generation"
+        );
+        let cookie = if revoke_session {
+            f.token_for("owner@example.test", "owner-subject")
+        } else {
+            f.cookie.clone()
+        };
+        assert_eq!(
+            request(
+                &app,
+                "POST",
+                start_path(&plan),
+                Some(&cookie),
+                Some(json!({"intent":INTENT_B}))
+            )
+            .await
+            .status(),
+            StatusCode::OK
+        );
+        assert_eq!(
+            wait_chapter(&app, &cookie, &plan).await["state"],
+            "complete"
+        );
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            units.len(),
+            "explicit resume reuses the first completed unit"
+        );
+        assert_eq!(
+            std::fs::read(cache.unit_path(units[0]["id"].as_str().unwrap()).unwrap()).unwrap(),
+            first
+        );
+        task.abort();
+    }
 }

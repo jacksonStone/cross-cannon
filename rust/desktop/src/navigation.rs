@@ -75,7 +75,9 @@ impl Desktop {
         if self.narration.selected() {
             let version = self.narration_version(chapter_id);
             if self.audio_chapter.as_deref() == Some(chapter_id) && !self.narration.waiting() && self.narration.active {
-                let _ = self.audio_tx.send(audio::Command::Toggle);
+                if !self.narration.retry_build() {
+                    let _ = self.audio_tx.send(audio::Command::Toggle);
+                }
                 return;
             }
             if self.audio_chapter.as_deref().is_some_and(|id| id != chapter_id) { self.stop_audio_for_narration_chapter(chapter_id); }

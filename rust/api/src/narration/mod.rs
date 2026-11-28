@@ -2,6 +2,8 @@
 //! Canonical text, rights, settings, allowance and cache reads are server owned.
 mod cache;
 mod catalog;
+mod chapter_audio;
+mod jobs;
 mod provider;
 #[cfg(test)]
 mod test_inputs;
@@ -90,6 +92,7 @@ struct Service {
     settings: SpeechSettings,
     provider: Arc<ProviderConfig>,
     resolution_slots: Arc<tokio::sync::Semaphore>,
+    jobs: Arc<jobs::Jobs>,
 }
 impl Service {
     fn from_env(root: &Path) -> anyhow::Result<Option<Arc<Self>>> {
@@ -148,6 +151,8 @@ impl Service {
         anyhow::ensure!(settings.valid(), "Unsupported narration settings");
         Ok(Some(Arc::new(Self {
             owners,
+            jobs: jobs::Jobs::open(cache.clone())
+                .map_err(|_| anyhow::anyhow!("Narration jobs unavailable"))?,
             cache,
             settings,
             provider: Arc::new(ProviderConfig::openai(key)),
@@ -212,6 +217,10 @@ fn routes(state: Arc<Routes>) -> Router {
         .route("/api/narration/capabilities", get(capabilities))
         .route("/api/narration/plan", post(plan))
         .route("/api/narration/audio/{id}", get(audio))
+        .route("/api/narration/jobs/{id}", get(job_status))
+        .route("/api/narration/jobs/{id}/start", post(job_start))
+        .route("/api/narration/jobs/{id}/cancel", post(job_cancel))
+        .route("/api/narration/chapter/{id}", get(chapter_audio_response))
         .layer(middleware::from_fn(private))
         .with_state(state)
 }
@@ -336,9 +345,17 @@ async fn plan(State(state): State<Arc<Routes>>, request: Request) -> Result<Resp
         .cache
         .describe(&descriptors)
         .map_err(IntoResponse::into_response)?;
+    let job = service
+        .jobs
+        .describe(
+            &account,
+            &resolved,
+            descriptors.iter().map(|(id, _)| id.clone()).collect(),
+        )
+        .map_err(IntoResponse::into_response)?;
     let units=descriptors.iter().enumerate().map(|(i,(id,_))|json!({"id":id,"url":format!("/api/narration/audio/{id}"),"title":format!("{} · {} of {}",resolved.title,i+1,descriptors.len())})).collect::<Vec<_>>();
     Ok(with_cookie(
-        Json(json!({"chapterId":resolved.chapter_id,"version":resolved.version,"units":units}))
+        Json(json!({"chapterId":resolved.chapter_id,"version":resolved.version,"units":units,"job":{"id":job.id,"startUrl":format!("/api/narration/jobs/{}/start",job.id),"cancelUrl":format!("/api/narration/jobs/{}/cancel",job.id),"statusUrl":format!("/api/narration/jobs/{}",job.id)},"completedChapter":service.jobs.completed(&job)}))
             .into_response(),
         cookie,
     ))
@@ -390,16 +407,25 @@ async fn audio(
     {
         return Err(Failure::missing().into_response());
     }
-    let bytes = service
-        .cache
-        .clip(
-            id,
-            text.clone(),
-            service.settings.clone(),
-            service.provider.clone(),
-        )
+    let bytes = if let Some(bytes) = service
+        .jobs
+        .managed_clip(&id)
         .await
-        .map_err(IntoResponse::into_response)?;
+        .map_err(IntoResponse::into_response)?
+    {
+        bytes
+    } else {
+        service
+            .cache
+            .clip(
+                id,
+                text.clone(),
+                service.settings.clone(),
+                service.provider.clone(),
+            )
+            .await
+            .map_err(IntoResponse::into_response)?
+    };
     Ok(with_cookie(
         (
             [("content-type", "audio/wav"), ("accept-ranges", "none")],
@@ -408,4 +434,237 @@ async fn audio(
             .into_response(),
         cookie,
     ))
+}
+
+async fn resolve_selection(
+    state: &Routes,
+    chapter: &str,
+    version: &str,
+) -> Result<catalog::ResolvedChapter, Failure> {
+    let service = state.service.as_ref().ok_or_else(Failure::unavailable)?;
+    let slot = service
+        .resolution_slots
+        .clone()
+        .try_acquire_owned()
+        .map_err(|_| Failure::busy())?;
+    let root = state.root.clone();
+    let library = state.library.clone();
+    let chapter = chapter.to_owned();
+    let version = version.to_owned();
+    tokio::task::spawn_blocking(move || {
+        let _slot = slot;
+        catalog::resolve(&root, &library, &chapter, &version).map_err(|_| Failure::missing())
+    })
+    .await
+    .map_err(|_| Failure::unavailable())?
+}
+async fn job_owner_valid(state: &Routes, user: &str, headers: &HeaderMap) -> Result<(), Failure> {
+    let (current, _) = owner(state, headers, false)
+        .await
+        .map_err(|_| Failure::missing())?;
+    if current != user {
+        return Err(Failure::missing());
+    }
+    Ok(())
+}
+async fn authorized_job(
+    state: &Routes,
+    headers: &HeaderMap,
+    id: &str,
+    write: bool,
+) -> Result<(String, Option<String>, jobs::Record), Response> {
+    let (user, cookie) = owner(state, headers, write).await?;
+    let service = state.service.as_ref().unwrap();
+    let r = service
+        .jobs
+        .get(id)
+        .map_err(IntoResponse::into_response)?
+        .ok_or_else(|| Failure::missing().into_response())?;
+    if r.account != hash(user.as_bytes()) {
+        return Err(Failure::missing().into_response());
+    }
+    let chapter = resolve_selection(state, &r.chapter, &r.version)
+        .await
+        .map_err(IntoResponse::into_response)?;
+    let units = chapter
+        .units
+        .iter()
+        .enumerate()
+        .map(|(i, text)| {
+            clip_id(
+                &r.account,
+                &chapter.chapter_id,
+                &chapter.version,
+                i,
+                &chapter.edition_identity,
+                text,
+                &service.settings,
+            )
+        })
+        .collect::<Vec<_>>();
+    if jobs::Jobs::identity(&r.account, &chapter, &units) != id {
+        return Err(Failure::missing().into_response());
+    }
+    Ok((user, cookie, r))
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct JobIntent {
+    intent: String,
+}
+async fn job_mutation(
+    state: Arc<Routes>,
+    id: String,
+    request: Request,
+    cancel: bool,
+) -> Result<Response, Response> {
+    let (user, cookie, r) = authorized_job(&state, request.headers(), &id, true).await?;
+    let auth_headers = request.headers().clone();
+    let input: JobIntent = serde_json::from_value(json_body(request, 256).await?)
+        .map_err(|_| error(StatusCode::BAD_REQUEST, "Invalid narration request."))?;
+    if input.intent.len() != 32
+        || !input
+            .intent
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    {
+        return Err(error(StatusCode::BAD_REQUEST, "Invalid narration request."));
+    }
+    let service = state.service.as_ref().unwrap().clone();
+    if cancel {
+        service.jobs.cancel(&id, &input.intent)
+    } else {
+        service
+            .jobs
+            .start(r, input.intent, state.clone(), user, auth_headers)
+    }
+    .map_err(IntoResponse::into_response)?;
+    let r = service
+        .jobs
+        .get(&id)
+        .map_err(IntoResponse::into_response)?
+        .ok_or_else(|| Failure::missing().into_response())?;
+    Ok(with_cookie(
+        Json(service.jobs.status(&r)).into_response(),
+        cookie,
+    ))
+}
+async fn job_start(
+    State(state): State<Arc<Routes>>,
+    UrlPath(id): UrlPath<String>,
+    request: Request,
+) -> Result<Response, Response> {
+    job_mutation(state, id, request, false).await
+}
+async fn job_cancel(
+    State(state): State<Arc<Routes>>,
+    UrlPath(id): UrlPath<String>,
+    request: Request,
+) -> Result<Response, Response> {
+    job_mutation(state, id, request, true).await
+}
+async fn job_status(
+    State(state): State<Arc<Routes>>,
+    UrlPath(id): UrlPath<String>,
+    headers: HeaderMap,
+) -> Result<Response, Response> {
+    let (_, cookie, r) = authorized_job(&state, &headers, &id, false).await?;
+    Ok(with_cookie(
+        Json(state.service.as_ref().unwrap().jobs.status(&r)).into_response(),
+        cookie,
+    ))
+}
+async fn chapter_audio_response(
+    State(state): State<Arc<Routes>>,
+    UrlPath(id): UrlPath<String>,
+    headers: HeaderMap,
+) -> Result<Response, Response> {
+    use tokio::io::{AsyncReadExt, AsyncSeekExt};
+    let (_, cookie, r) = authorized_job(&state, &headers, &id, false).await?;
+    let service = state.service.as_ref().unwrap();
+    if service.jobs.completed(&r).is_none() {
+        return Err(Failure::missing().into_response());
+    }
+    let path = service
+        .cache
+        .chapter_path(&id)
+        .map_err(IntoResponse::into_response)?;
+    let metadata =
+        chapter_audio::inspect_part(&path).map_err(|_| Failure::missing().into_response())?;
+    let range = headers.get("range").map(|v| v.to_str().unwrap_or(""));
+    let selection = audio_range(range, metadata.bytes);
+    let Some((start, end, partial)) = selection else {
+        return Ok((
+            StatusCode::RANGE_NOT_SATISFIABLE,
+            [("content-range", format!("bytes */{}", metadata.bytes))],
+        )
+            .into_response());
+    };
+    let mut file = tokio::fs::File::open(path)
+        .await
+        .map_err(|_| Failure::missing().into_response())?;
+    file.seek(std::io::SeekFrom::Start(start))
+        .await
+        .map_err(|_| Failure::unavailable().into_response())?;
+    let stream =
+        futures_util::stream::try_unfold((file, end - start + 1), |(mut file, left)| async move {
+            if left == 0 {
+                return Ok::<_, std::io::Error>(None);
+            }
+            let mut buffer = vec![0u8; left.min(64 * 1024) as usize];
+            let count = file.read(&mut buffer).await?;
+            if count == 0 {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::UnexpectedEof,
+                    "Incomplete narration",
+                ));
+            }
+            buffer.truncate(count);
+            Ok(Some((buffer, (file, left - count as u64))))
+        });
+    let mut response = Response::new(axum::body::Body::from_stream(stream));
+    *response.status_mut() = if partial {
+        StatusCode::PARTIAL_CONTENT
+    } else {
+        StatusCode::OK
+    };
+    let h = response.headers_mut();
+    h.insert("content-type", "audio/wav".parse().unwrap());
+    h.insert("accept-ranges", "bytes".parse().unwrap());
+    h.insert(
+        "content-length",
+        (end - start + 1).to_string().parse().unwrap(),
+    );
+    if partial {
+        h.insert(
+            "content-range",
+            format!("bytes {start}-{end}/{}", metadata.bytes)
+                .parse()
+                .unwrap(),
+        );
+    }
+    Ok(with_cookie(response, cookie))
+}
+fn audio_range(range: Option<&str>, len: u64) -> Option<(u64, u64, bool)> {
+    let Some(range) = range else {
+        return Some((0, len.checked_sub(1)?, false));
+    };
+    let (a, b) = range.strip_prefix("bytes=")?.split_once('-')?;
+    if a.is_empty() {
+        let suffix = b.parse::<u64>().ok()?;
+        if suffix == 0 {
+            return None;
+        }
+        return Some((len.saturating_sub(suffix), len.checked_sub(1)?, true));
+    }
+    let start = a.parse::<u64>().ok()?;
+    let end = if b.is_empty() {
+        len.checked_sub(1)?
+    } else {
+        b.parse::<u64>().ok()?.min(len.checked_sub(1)?)
+    };
+    if start > end || start >= len {
+        return None;
+    }
+    Some((start, end, true))
 }

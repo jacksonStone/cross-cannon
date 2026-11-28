@@ -250,7 +250,8 @@ static void emit(NSDictionary *event) {
 }
 - (void)loadPrivate:(NSString *)url generation:(NSUInteger)generation {
     NSURL *location = [NSURL URLWithString:url];
-    if (!location || ![location.path hasPrefix:@"/api/narration/audio/"]) { [self stop]; emit(@{@"type":@"error",@"message":@"Invalid AI narration address"}); return; }
+    BOOL completedChapter = [location.path hasPrefix:@"/api/narration/chapter/"];
+    if (!location || (![location.path hasPrefix:@"/api/narration/audio/"] && !completedChapter)) { [self stop]; emit(@{@"type":@"error",@"message":@"Invalid AI narration address"}); return; }
     NSURLSessionConfiguration *config = NSURLSessionConfiguration.ephemeralSessionConfiguration;
     config.URLCache = nil; config.requestCachePolicy = NSURLRequestReloadIgnoringLocalCacheData;
     config.HTTPCookieStorage = nil; config.HTTPShouldSetCookies = NO;
@@ -263,7 +264,7 @@ static void emit(NSDictionary *event) {
     self.privateTask = [self.privateSession downloadTaskWithRequest:request completionHandler:^(NSURL *temporary, NSURLResponse *response, NSError *error) {
         NSHTTPURLResponse *http = (NSHTTPURLResponse *)response;
         NSNumber *size; [temporary getResourceValue:&size forKey:NSURLFileSizeKey error:nil];
-        BOOL valid = !error && http.statusCode == 200 && [http.MIMEType hasPrefix:@"audio/"] && size.unsignedLongLongValue > 44 && size.unsignedLongLongValue <= 16 * 1024 * 1024;
+        BOOL valid = !error && http.statusCode == 200 && [http.MIMEType hasPrefix:@"audio/"] && size.unsignedLongLongValue > 44 && size.unsignedLongLongValue <= (completedChapter ? 512ULL : 16ULL) * 1024 * 1024;
         NSURL *file = valid ? [[NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES] URLByAppendingPathComponent:[NSString stringWithFormat:@"cc-private-narration-%@.wav",NSUUID.UUID.UUIDString]] : nil;
         if (valid) valid = [NSFileManager.defaultManager moveItemAtURL:temporary toURL:file error:nil];
         dispatch_async(dispatch_get_main_queue(), ^{

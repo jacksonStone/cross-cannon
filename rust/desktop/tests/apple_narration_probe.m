@@ -9,11 +9,11 @@ extern void cross_canon_audio_command(int command);
 extern char *cross_canon_audio_poll(void);
 extern void cross_canon_audio_free(char *event);
 void cross_canon_audio_wake(void) {}
-static void play(NSString *origin) {
+static void play(NSString *origin, BOOL completedChapter) {
     NSMutableArray *units = [NSMutableArray new];
-    for (NSString *letter in @[@"a",@"b"]) {
+    for (NSString *letter in completedChapter ? @[@"a"] : @[@"a",@"b"]) {
         NSString *identifier = [@"" stringByPaddingToLength:64 withString:letter startingAtIndex:0];
-        [units addObject:@{@"id":@"anf03:vi.iv.i",@"title":@"On Prayer 1 · AI narration",@"audio":@{@"url":[NSString stringWithFormat:@"%@/api/narration/audio/%@",origin,identifier],@"startSeconds":@0,@"endSeconds":NSNull.null},@"fallback":NSNull.null}];
+        [units addObject:@{@"id":@"anf03:vi.iv.i",@"title":@"On Prayer 1 · AI narration",@"audio":@{@"url":[NSString stringWithFormat:@"%@/api/narration/%@/%@",origin,completedChapter ? @"chapter" : @"audio",identifier],@"startSeconds":@0,@"endSeconds":NSNull.null},@"fallback":NSNull.null}];
     }
     NSData *data = [NSJSONSerialization dataWithJSONObject:@{@"chapters":units,@"index":@0,@"private_token":@"private-mock-session"} options:0 error:nil];
     cross_canon_audio_play([[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding].UTF8String);
@@ -45,7 +45,30 @@ static int retryCurrentUnit(void) {
 int main(int argc,char **argv) {
     @autoreleasepool {
         if (argc != 2 && argc != 3) return 2;
-        play([NSString stringWithUTF8String:argv[1]]);
+        BOOL completedChapter = argc == 3 && strcmp(argv[2],"--completed-chapter") == 0;
+        play([NSString stringWithUTF8String:argv[1]], completedChapter);
+        if (completedChapter) {
+            NSUInteger playing = 0; NSDate *started = NSDate.date;
+            while (-started.timeIntervalSinceNow < 8 && playing < 2) {
+                [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.03]];
+                char *raw;
+                while ((raw = cross_canon_audio_poll())) {
+                    NSString *text = [NSString stringWithUTF8String:raw]; puts(raw); cross_canon_audio_free(raw);
+                    NSDictionary *event = [NSJSONSerialization JSONObjectWithData:[text dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
+                    if ([event[@"type"] isEqual:@"error"]) return 10;
+                    if ([event[@"type"] isEqual:@"playing"]) {
+                        playing++;
+                        if (playing == 1) { cross_canon_audio_command(0); cross_canon_audio_command(0); }
+                    }
+                }
+            }
+            BOOL valid = playing == 2 && engine.chapters.count == 1 && engine.privateFile && [engine.url containsString:@"/api/narration/chapter/"];
+            cross_canon_audio_command(1);
+            [NSRunLoop.mainRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+            if (!valid || engine.privateFile || engine.privateToken.length) return 11;
+            puts("PASS: native completed chapter single private WAV, pause/resume, stop cleanup");
+            return 0;
+        }
         if (argc == 3 && strcmp(argv[2],"--retry-unit") == 0) return retryCurrentUnit();
         NSUInteger playing = 0, loading = 0; BOOL paused = NO, resumed = NO, loadingSeek = NO;
         NSDate *started = NSDate.date; double pauseTime = 0;
