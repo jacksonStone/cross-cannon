@@ -823,6 +823,9 @@ impl Desktop {
             match plan {
                 Ok(PlaybackAction::Retry(result)) => match result {
                     Ok(()) => {
+                        // Preserve preparing state until the adapter reports a
+                        // real Playing, Paused or Error event.
+                        self.audio_loading = true;
                         let _ = self.audio_tx.send(audio::Command::Toggle);
                     }
                     Err(error) => {
@@ -833,6 +836,7 @@ impl Desktop {
                 Ok(PlaybackAction::Play(plan)) => {
                     self.narration.active = true;
                     self.audio_private = true;
+                    self.audio_loading = true;
                     let _ = self.audio_tx.send(audio::Command::Play(plan));
                 }
                 Err(error) => {

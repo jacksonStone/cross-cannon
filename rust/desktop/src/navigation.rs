@@ -82,7 +82,7 @@ impl Desktop {
             }
             if self.audio_chapter.as_deref().is_some_and(|id| id != chapter_id) { self.stop_audio_for_narration_chapter(chapter_id); }
             if let Some(plan) = self.narration.play(chapter_id,version) {
-                self.narration.active = true; self.audio_private = true;
+                self.narration.active = true; self.audio_private = true; self.audio_loading = true;
                 let _ = self.audio_tx.send(audio::Command::Play(plan));
             }
             self.audio_chapter = Some(chapter_id.into());

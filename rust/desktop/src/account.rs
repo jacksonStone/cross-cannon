@@ -1941,6 +1941,11 @@ mod narration_entry_tests {
         assert_eq!(app.state.location_passage_id,location);
         assert_eq!(app.search_scroll,search_position);
         wait_until(|| {app.narration_tick(&ctx);!app.narration.waiting()});
+        // The metadata wait has ended, but the media adapter has not emitted
+        // Loading yet. This handoff must remain preparing without a Play pulse.
+        assert!(app.audio_loading);
+        assert!(!app.playing, "Preparing must not claim that audio is already playing");
+        assert!(app.audio_control_playing("anf03:vi.iv.i"));
         let audio::Command::Play(plan)=rx.try_recv().unwrap() else {panic!("Missing AI units")};
         assert_eq!(plan.chapters.len(),2);assert_eq!(plan.index,0);
         assert_eq!(plan.private_token.as_deref(),Some("private-test-session"));
